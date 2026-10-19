@@ -35,3 +35,5 @@ Everyone signs in with their email. A new email asks for first and last name, ro
 ## Setup
 
 In the repo Settings, under Pages, deploy from the branch that holds this code. Then open the site, sign in with your email (new people add their name, role and mobile), and enter a fine grained GitHub key with Contents read and write on bijankle/action-kanban-data, the local folder, and optionally a Gemini key from aistudio.google.com.
+
+The Drawings tab of an action (desktop) lists the P&IDs, PFDs, SLDs, schematics, datasheets and IOMs of its equipment, sub equipment included, from the plant document data. Pills narrow it by equipment and by kind. Each number opens the controlled copy in SharePoint, the i shows its title, and PDF downloads a copy for anyone without SharePoint; where there is a copy the arrow opens it in place (pages, zoom, fit, drag to pan). The work pack lists the same documents, one line each, with the links working in the PDF.

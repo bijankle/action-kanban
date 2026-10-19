@@ -580,10 +580,25 @@ html.dark .av-tab b{color:var(--ink)}
 .is-pill .ip-add:hover{background:var(--th);color:#fff}.is-pill .ip-x:hover{background:var(--line);color:var(--ink)}
 .k-electrical{--kc:#F2B03D}.k-upstream{--kc:#3B8FE0}.k-valve{--kc:#0E9AA7}.k-associated{--kc:#7C5CD6}.k-utility{--kc:#94a3b8}
 .ov-map img{width:100%;border-radius:10px;border:1px solid var(--line);display:block}.ov-map p{font-size:12px;font-style:italic;margin:6px 0 0;line-height:1.4}
-/* the equipment's drawings and documents (action Overview) */
-.ov-docs{margin-top:6px}.ov-docs h4{margin:14px 0 6px}
-.dc{width:100%;border-collapse:collapse;font-size:var(--fl)}.dc th{text-align:left;background:var(--th);color:#fff;font-weight:700;padding:6px 8px}
-.dc td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}.dc td:first-child{width:20%}.dc td:first-child small{display:block;color:var(--dim);font-size:calc(11.5px*var(--mt,1));margin-top:2px}
-.dc-i{display:flex;align-items:center;gap:6px;white-space:nowrap;line-height:1.7}.dc-i a{color:var(--accent);text-decoration:none}.dc-i a:hover{text-decoration:underline}
-.dc-pdf{font-size:10px;font-weight:800;letter-spacing:.3px;color:#fff!important;background:#c8281e;border-radius:4px;padding:0 4px;line-height:15px}.dc-pdf:hover{text-decoration:none!important;filter:brightness(1.1)}
-.dc-n{margin:6px 0 0;font-size:calc(12px*var(--mt,1))}
+/* the Drawings tab: pills, then a bar per document that opens into the viewer */
+.dw{padding:14px 18px 30px}
+.dw-p{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.dw-p2{padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:10px}.dw-p2 .pill{font-size:calc(12px*var(--mt,1))}
+.dw-l{display:flex;flex-direction:column;gap:6px}
+.dw-b{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}.dw-b.on{border-color:color-mix(in srgb,var(--th) 45%,var(--line))}
+.dw-h{display:flex;align-items:center;gap:10px;padding:7px 10px;min-height:40px}
+.dw-tg{flex:none;width:26px;height:26px;border:var(--ctl-bd);border-radius:7px;background:var(--panel2);color:var(--ink);cursor:pointer;font-size:12px;transition:transform .15s}.dw-b.on .dw-tg{transform:rotate(90deg)}.dw-tg0{flex:none;width:26px}
+.dw-k{flex:none;min-width:84px;font-size:var(--fl);font-weight:700;color:var(--dim)}
+.dw-a{font-weight:700;color:var(--accent);text-decoration:none;font-variant-numeric:tabular-nums}a.dw-a:hover{text-decoration:underline}
+.dw-r{font-size:var(--fl);color:var(--dim)}
+.dw-i{flex:none;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line2);background:none;color:var(--muted);font:italic 700 12px Georgia,serif;cursor:pointer;padding:0;line-height:16px}.dw-i:hover{border-color:var(--th);color:var(--th)}
+.dw-of{font-size:calc(11.5px*var(--mt,1));color:var(--muted);background:var(--panel2);border-radius:6px;padding:1px 7px}
+.dw-pop{position:fixed;z-index:30000;max-width:420px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-size:var(--fl)}
+.dw-n{margin-top:12px;font-size:calc(12px*var(--mt,1))}
+.dc-pdf{flex:none;font-size:10px;font-weight:800;letter-spacing:.3px;color:#fff!important;background:#c8281e;border-radius:4px;padding:0 5px;line-height:16px;text-decoration:none}.dc-pdf:hover{filter:brightness(1.1)}
+.pv{border-top:1px solid var(--line)}
+.pv-t{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--panel2);font-size:var(--fl)}
+.pv-t button{min-width:28px;height:26px;border:var(--ctl-bd);border-radius:7px;background:var(--panel);color:var(--ink);cursor:pointer;font-weight:700}.pv-t button:hover{border-color:var(--th)}
+.pv-n,.pv-z{min-width:56px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}.pv-s{color:var(--dim)}.pv-t a{color:var(--accent);text-decoration:none;font-weight:600;margin-left:10px}
+.pv-c{position:relative;height:min(72vh,820px);overflow:auto;background:#e9ebee;touch-action:none}html.dark .pv-c{background:#1b1d20}
+.pv-c canvas{display:block;margin:0 auto;background:#fff;box-shadow:0 1px 4px #0003}.pv-c.grab{cursor:grabbing}
+.pv-m{position:absolute;inset:0;display:grid;place-items:center}

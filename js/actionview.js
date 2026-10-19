@@ -5,7 +5,7 @@
 "use strict";
 const ActionView = (() => {
   const CORE = new Set(["title", "status", "priority", "problem", "solution", "notes"]);
-  const TABS = [["overview", "Overview"], ["mto", "MTO"], ["spares", "Spares"], ["isol", "Isolations"]];
+  const TABS = [["overview", "Overview"], ["mto", "MTO"], ["spares", "Spares"], ["isol", "Isolations"], ["drawings", "Drawings"]];
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
   let last = null;
   function render(el){ const a = App.act(App.selRef); if (!a) return; const ro = !Store.S.edit, p = Store.project(a._p) || {}, sub = App.sub || "overview";
@@ -20,12 +20,12 @@ const ActionView = (() => {
       + '<div class="av-st" data-f="status"></div><label class="sd-pr">Priority <span data-f="priority"></span></label><span class="grow"></span>'
       + (ro ? "" : '<button class="ic-b" type="button" data-k="del" title="Delete this action">🗑</button>') + '<button class="dl dl-pdf" type="button" data-k="wp" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares">' + DLI + '<b>PDF</b></button></div>'
       + '<div class="av-title" data-f="title"></div>' + steps(a, ro)
-      + '<div class="av-tabs">' + TABS.map(([k, t]) => { const c = k === "mto" ? n("mto") : k === "spares" ? n("spares") : k === "isol" ? n("isol") : 0; return '<button type="button" class="av-tab' + (k === sub ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'
+      + '<div class="av-tabs">' + TABS.map(([k, t]) => { const c = k === "mto" ? n("mto") : k === "spares" ? n("spares") : k === "isol" ? n("isol") : k === "drawings" ? Drawings.count(a) : 0; return '<button type="button" class="av-tab' + (k === sub ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'
       + '<div class="av-body' + (sub === "overview" ? " ov" : "") + '"></div></div>';
     $$(".av-head [data-f], .av-title[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     const ti = $(".av-title .in", el); if (ti) ti.placeholder = "Title";
     const body = $(".av-body", el);
-    if (sub === "overview") overview(body, a, ro); else if (sub === "isol") Isol.renderFor(body, a, keepP); else Parts.renderFor(body, a, sub, keepP);
+    if (sub === "overview") overview(body, a, ro); else if (sub === "isol") Isol.renderFor(body, a, keepP); else if (sub === "drawings") Drawings.renderFor(body, a); else Parts.renderFor(body, a, sub, keepP);
     body.scrollTop = sc;
     if (keep){ const t = $('[data-f="' + keep.f + '"] input, [data-f="' + keep.f + '"] textarea, [data-f="' + keep.f + '"] select', el); if (t){ if (t.tagName === keep.tag && t.tagName !== "SELECT" && t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { if (keep.s != null) t.setSelectionRange(keep.s, keep.e); } catch (e) {} } }
     $$(".av-head [data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a, list, i));
@@ -53,30 +53,14 @@ const ActionView = (() => {
       + '<div class="ov-r"><h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span></h4><div class="ph-block">' + (a.photos.length ? '<button type="button" class="ph-cover" data-k="viewall" title="Open the photos"><img alt=""><span class="ph-badge">📷 ' + a.photos.length + '</span></button>' : "")
       + '<div class="ph-btns"><button type="button" class="btn sm" data-k="viewall"' + (a.photos.length ? "" : " disabled") + '>Photos' + (a.photos.length ? " (" + a.photos.length + ")" : "") + '</button>' + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="addph">Upload photos</button><span class="dim">or drop photos and files anywhere on the action</span>') + '</div></div>'
       + '<div class="ov-map" hidden><h4>Expected location</h4><img alt="Expected location of the equipment"><p class="dim"></p></div>'
-      + '<h4>Details</h4><div class="det"></div><div class="sd-foot">' + (a.by ? "Last edited by " + esc(a.by) + " " + esc(fmtDate(a.mod)) : "") + (a.gps ? ' · <a target="_blank" rel="noopener" href="https://maps.google.com/?q=' + a.gps.lat + "," + a.gps.lng + '">Map pin</a>' : "") + '</div></div></div>'
-      + '<div class="ov-docs" hidden><h4>Drawings and documents</h4><div class="dc-b"></div></div>';
+      + '<h4>Details</h4><div class="det"></div><div class="sd-foot">' + (a.by ? "Last edited by " + esc(a.by) + " " + esc(fmtDate(a.mod)) : "") + (a.gps ? ' · <a target="_blank" rel="noopener" href="https://maps.google.com/?q=' + a.gps.lat + "," + a.gps.lng + '">Map pin</a>' : "") + '</div></div></div>';
     $$("[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     $$("[data-f=problem] textarea,[data-f=solution] textarea,[data-f=notes] textarea", el).forEach(t => t.rows = 4);
     const cv = $(".ph-cover img", el); if (cv){ cv.src = Media.src(a, a.photos[0], true); cv.onerror = () => { if (!cv.dataset.r){ cv.dataset.r = 1; cv.src = Media.src(a, a.photos[0]); } }; }
     files(a, $(".att-l", el), ro);
-    docsTable($(".ov-docs", el), a);
     const mp = $(".ov-map", el); SiteMap.forAction(a).then(sm => { if (!sm || !mp.isConnected) return; mp.hidden = false; $("img", mp).src = sm.url; $("p", mp).textContent = sm.note; }).catch(() => {});
     const det = $(".det", el); Store.fields().filter(f => !CORE.has(f.id) && !["mto", "sparelist", "isollist"].includes(f.type)).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); det.appendChild(r); });
     $$("[data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a)); }
-  /* the equipment's drawings and documents: a row per equipment tag, a column per kind; each number opens the controlled
-     copy in SharePoint, and PDF (when there is a copy) downloads it for anyone without SharePoint */
-  const DCOLS = [["process", "Process"], ["electrical", "Electrical"], ["docs", "Datasheets & IOMs"]];
-  const dcLink = d => '<span class="dc-i">' + (d.url ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener" title="' + esc((d.t || "") + (d.rev ? " (rev " + d.rev + ")" : "") + "\nOpen in SharePoint") + '">' + esc(d.n) + '</a>' : '<span title="' + esc(d.t || "") + '">' + esc(d.n) + '</span>')
-    + (d.pdf ? '<a class="dc-pdf" href="' + esc(d.pdf) + '" target="_blank" rel="noopener" download title="Download a PDF copy (no SharePoint needed)">PDF</a>' : "") + '</span>';
-  function docsTable(box, a){ const tags = Array.isArray(a.f.equipment) ? a.f.equipment.filter(Boolean) : []; if (!box || !tags.length || typeof Docs === "undefined") return;
-    box.hidden = false; const b = $(".dc-b", box); b.innerHTML = '<span class="dim">Finding the drawings and documents…</span>';
-    Promise.all([Docs.load(), Equip.load().catch(() => {})]).then(() => { if (!box.isConnected) return; const m = Docs.forTags(tags);
-      const any = tags.some(t => DCOLS.some(([k]) => (m.get(t) || {})[k] && m.get(t)[k].length));
-      b.innerHTML = !any ? '<span class="dim">No drawings or documents found for ' + esc(tags.join(", ")) + '.</span>'
-        : '<table class="dc"><thead><tr><th>Equipment</th>' + DCOLS.map(([, n]) => '<th>' + n + '</th>').join("") + '</tr></thead><tbody>' + tags.map(t => { const r = m.get(t) || {}, e = Equip.get(t) || {};
-          return '<tr><td><b>' + esc(t) + '</b>' + (e.n ? '<small>' + esc(e.n) + '</small>' : "") + '</td>' + DCOLS.map(([k]) => '<td>' + ((r[k] || []).map(dcLink).join("") || '<span class="dim">–</span>') + '</td>').join("") + '</tr>'; }).join("") + '</tbody></table>'
-          + '<p class="dim dc-n">Numbers open the controlled copy in SharePoint. PDF downloads a copy for anyone without SharePoint access: check its revision before use. The work pack lists the same, with working links.</p>'; })
-      .catch(e => { console.warn("documents", e); if (box.isConnected) b.innerHTML = '<span class="dim">Couldn\'t load the drawing and document lists.</span>'; }); }
   async function act(k, a, list, i){
     if (k === "x") App.select(null);
     else if (k === "prev" || k === "next"){ const b = list[i + (k === "next" ? 1 : -1)]; if (b) App.select(b._p + ":" + b.u); }

@@ -62,21 +62,24 @@ const Workpack = (() => {
         y += rowH + 8; } }
     const n = doc.getNumberOfPages(); for (let i = 1; i <= n; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text("Job " + Store.actId(a) + " work pack" + (Profile.name() ? "   Queries: " + [Profile.name(), Profile.get().mobile, Profile.get().email].filter(Boolean).join(", ") : "") + "   Page " + i + " of " + n, W / 2, 291, { align: "center" }); }
     return doc.output("blob"); }
+  /* one line per document, under a heading per equipment tag: kind, number (opens SharePoint), title, and a PDF badge
+     linked to the copy when there is one */
   async function docs(doc, a, P){ const tags = Array.isArray(a.f.equipment) ? a.f.equipment.filter(Boolean) : []; if (!tags.length || typeof Docs === "undefined") return;
-    await Docs.load(); const m = Docs.forTags(tags), K = ["process", "electrical", "docs"];
-    const rows = tags.map(t => ({ t, r: m.get(t) || {} })).filter(x => K.some(k => (x.r[k] || []).length)); if (!rows.length) return;
-    P.head("Drawings and documents"); const FS = 7.6, LH = FS * 1.15 * 25.4 / 72, PAD = 1.6;
-    doc.autoTable({ startY: P.y, head: [["Equipment", "Process", "Electrical", "Datasheets & IOMs"]],
-      body: rows.map(x => { const e = Equip.get(x.t) || {}; return [x.t + (e.n ? "\n" + e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "")].concat(K.map(k => (x.r[k] || []).map(d => d.n + (d.pdf ? "        " : "")).join("\n") || "–")); }),
-      margin: { top: 16, left: P.M, right: P.M, bottom: 16 }, styles: { font: "helvetica", fontSize: FS, cellPadding: PAD, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top", overflow: "linebreak" },
-      headStyles: { fillColor: P.rgb, textColor: 255, fontStyle: "bold", fontSize: 8.5 }, alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: { 0: { cellWidth: 36, fontStyle: "bold" }, 1: { textColor: [31, 95, 191] }, 2: { textColor: [31, 95, 191] }, 3: { textColor: [31, 95, 191] } },
-      /* each number becomes a link to SharePoint, and gets a PDF badge linked to the copy */
-      didDrawCell: c => { if (c.section !== "body" || !c.column.index) return; const ds = (rows[c.row.index].r[K[c.column.index - 1]] || []);
-        doc.setFontSize(FS); ds.forEach((d, i) => { const ty = c.y + PAD + i * LH, w = doc.getTextWidth(d.n), x = c.x + PAD; if (ty + LH > c.y + c.height + 0.5) return;
-          if (d.url) doc.link(x, ty, w, LH, { url: d.url });
-          if (d.pdf){ const bx = x + w + 1.5, bw = 6.4, bh = LH - 0.5; doc.setFillColor(200, 40, 30); doc.roundedRect(bx, ty + 0.25, bw, bh, 0.8, 0.8, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(5.6); doc.text("PDF", bx + bw / 2, ty + 0.25 + bh / 2 + 0.7, { align: "center" }); doc.setFont("helvetica", "normal"); doc.setFontSize(FS); doc.link(bx, ty, bw, LH, { url: d.pdf }); } }); } });
+    await Promise.all([Docs.load(), Equip.load().catch(() => {})]); const m = Drawings.collect(a), body = [], meta = new Map();
+    tags.forEach(t => { const ds = m.get(t) || []; if (!ds.length) return; const e = Equip.get(t) || {}, nm = e.n ? "  " + e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "";
+      body.push([{ content: t + nm + "   (" + ds.length + ")", colSpan: 5, styles: { fontStyle: "bold", fillColor: [234, 237, 241], textColor: 30 } }]);
+      ds.forEach(d => { const r = [d.kind, d.n, (d.t || "") + (d.of !== t ? "  [" + d.of + "]" : ""), d.rev || "", d.pdf ? "" : ""]; meta.set(r, d); body.push(r); }); });
+    if (!body.length) return;
+    P.head("Drawings and documents");
+    doc.autoTable({ startY: P.y, head: [["Kind", "Number", "Title", "Rev", "Copy"]], body, margin: { top: 16, left: P.M, right: P.M, bottom: 16 },
+      styles: { font: "helvetica", fontSize: 7.6, cellPadding: 1.4, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "middle", overflow: "linebreak" },
+      headStyles: { fillColor: P.rgb, textColor: 255, fontStyle: "bold", fontSize: 8.2 }, columnStyles: { 0: { cellWidth: 20, textColor: [90, 100, 112] }, 1: { cellWidth: 42, textColor: [31, 95, 191] }, 3: { cellWidth: 14 }, 4: { cellWidth: 12 } },
+      didDrawCell: c => { if (c.section !== "body") return; const d = meta.get(c.row.raw); if (!d) return; const C = c.cell;
+        if (c.column.index === 1 && d.url) doc.link(C.x, C.y, C.width, C.height, { url: d.url });
+        if (c.column.index === 4 && d.pdf){ const bw = 7, bh = 3.4, bx = C.x + (C.width - bw) / 2, by = C.y + (C.height - bh) / 2; doc.setFillColor(200, 40, 30); doc.roundedRect(bx, by, bw, bh, 0.8, 0.8, "F");
+          doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(5.8); doc.text("PDF", bx + bw / 2, by + bh / 2 + 0.75, { align: "center" }); doc.setFont("helvetica", "normal"); doc.link(C.x, C.y, C.width, C.height, { url: d.pdf }); } } });
     P.y = doc.lastAutoTable.finalY + 2.5; doc.setFontSize(7.8); doc.setTextColor(110); doc.setFont("helvetica", "italic");
-    doc.splitTextToSize("Numbers open the controlled copy in SharePoint (needs a SharePoint login). The red PDF badge downloads a copy for anyone without SharePoint access: check its revision against SharePoint before use. Print only what the job needs.", P.CW).forEach(l => { P.need(4); doc.text(l, P.M, P.y + 2); P.y += 3.6; });
+    doc.splitTextToSize("Numbers open the controlled copy in SharePoint (needs a SharePoint login). The red PDF badge downloads a copy for anyone without SharePoint access: check its revision against SharePoint before use. Sub equipment's documents are listed with their main equipment, its tag in brackets. Print only what the job needs.", P.CW).forEach(l => { P.need(4); doc.text(l, P.M, P.y + 2); P.y += 3.6; });
     doc.setFont("helvetica", "normal"); P.y += 4; }
   return { run, build };
 })();

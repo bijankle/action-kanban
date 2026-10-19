@@ -26,7 +26,7 @@ const Equip = (() => {
       const f = by === "n" ? n : t; out.push([f.startsWith(first) ? 0 : f.includes(first) ? 1 : 2, it]); if (out.length > 4000) break; }
     out.sort((a, b) => a[0] - b[0] || a[1].t.localeCompare(b[1].t)); return out.slice(0, 40).map(x => x[1]); }
   const get = t => (list || []).find(x => x.t === t);
-  return { load, find, get, raw: () => raw, get count(){ return (list || []).length; } };
+  return { load, find, get, raw: () => raw, list: () => list || [], get count(){ return (list || []).length; } };
 })();
 
 const Isol = (() => {
