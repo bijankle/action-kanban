@@ -22,7 +22,7 @@ const Mobile = (() => {
       + '<span class="m-c1"><span class="aid">' + esc(Store.actId(a)) + '</span><span class="stg">' + esc(s.name) + '</span></span><span class="m-t">' + esc(a.f.title || "") + '</span><span class="m-c2">' + (Store.selected().length > 1 ? esc(p.name) + " · " : "") + (a.photos.length ? "📷 " + a.photos.length : "") + (a.f.eta ? '  <span class="' + (a.f.eta === "TBC" ? "tbc" : "") + '">ETA ' + esc(fmtDate(a.f.eta)) + '</span>' : "") + '</span></button>'; };
   const wireCards = (pg, root) => $$(".m-card", pg).forEach(c => c.onclick = () => { open = c.dataset.ref; history.pushState({ m: 1 }, ""); render(root); });
   function render(root){ const a = open && App.act(open); if (open && !a) open = null;
-    const pg = shell(root); root.classList.toggle("m-in", !!a);
+    const pg = shell(root); root.classList.toggle("m-in", !!a); requestAnimationFrame(() => { const t = $(".m-top", root); if (t) root.style.setProperty("--mtop", t.offsetHeight + "px"); });   // what sticks under the top row sits just below it, whatever the sizes
     if (a) return detail(pg, a);
     if (tab === "settings") return settings(pg, root);
     if (tab === "kanban") return board(pg, root);
@@ -54,24 +54,26 @@ const Mobile = (() => {
     $$(".m-sh,.m-sm", pg).forEach(b => b.onclick = () => { App.pills.clear(); App.pills.add(b.dataset.s); tab = "actions"; lsSet("adMTab", tab); render(root); scrollTo(0, 0); });
     $$(".m-sa", pg).forEach(c => c.onclick = () => { open = c.dataset.ref; history.pushState({ m: 1 }, ""); render(root); }); }
   /* Settings: View (dark mode, theme, text size, font), How to use, About */
-  const TX = [0.8, 0.87, 1, 1.13, 1.27];
+  const STEPS = Array.from({ length: 15 }, (_, i) => +(0.8 + i * 0.05).toFixed(2));   // text and button sizes: 80% to 150% in 15 steps
+  const near = x => STEPS.reduce((b, y, i) => Math.abs(y - x) < Math.abs(STEPS[b] - x) ? i : b, 0);
   function settings(pg, root){ const v = App.viewGet();
     const sub = [["view", "View"], ["help", "How to use"], ["about", "About"]];
     pg.innerHTML = '<div class="m-top m-sth">' + LOGO(34) + '<b>Settings</b></div><div class="m-stt" role="tablist">' + sub.map(([k, n]) => '<button type="button" role="tab" data-st="' + k + '"' + (stab === k ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</div><div class="m-stb"></div>';
     $$("[data-st]", pg).forEach(b => b.onclick = () => { stab = b.dataset.st; lsSet("adMSt", stab); settings(pg, root); });
     $(".m-sth .logo", pg).onclick = () => { tab = "actions"; lsSet("adMTab", tab); render(root); };
-    const body = $(".m-stb", pg), ti = TX.reduce((b, x, i) => Math.abs(x - v.text) < Math.abs(TX[b] - v.text) ? i : b, 0);
+    const body = $(".m-stb", pg);
     if (stab === "view"){ FONTS.forEach(f => { if (f[3] && !document.getElementById("wf-" + f[0])){ const l = document.createElement("link"); l.id = "wf-" + f[0]; l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?family=" + f[3] + "&display=swap"; document.head.appendChild(l); } });   // so each font button shows in its own face
       body.innerHTML = '<div class="ap"><label class="ap-r"><span>Dark mode</span><input type="checkbox" class="ap-sw"' + (v.dark ? " checked" : "") + ' aria-label="Dark mode"></label>'
         + '<div class="ap-r ap-th"><span>Theme</span><div class="ap-thw"><div class="ap-ths" role="radiogroup" aria-label="Theme">' + THEMES.map(([k, n, c]) => '<button type="button" role="radio" data-th="' + k + '" aria-label="' + n + '" style="--c:' + c + '"' + (v.theme === k ? ' class="on"' : "") + '></button>').join("")
         + '<label class="ap-cu' + (v.theme === "custom" ? " on" : "") + '" style="--c:' + esc(v.custom) + '" aria-label="Your own colour"><input type="color" value="' + esc(v.custom) + '"></label></div><div class="ap-thn">' + esc(v.theme === "custom" ? "Your own colour" : (THEMES.find(t => t[0] === v.theme) || THEMES[0])[1]) + '</div></div></div>'
-        + '<label class="ap-r"><span>Text size</span><input type="range" min="0" max="' + (TX.length - 1) + '" step="1" value="' + ti + '" aria-label="Text size"></label>'
+        + [["text", "Text size"], ["btn", "Button size"]].map(([k, n]) => '<label class="ap-r ap-sz"><span>' + n + '</span><input type="range" data-sz="' + k + '" min="0" max="' + (STEPS.length - 1) + '" step="1" value="' + near(+v[k] || 1) + '" aria-label="' + n + '"><b class="ap-pc">' + Math.round((+v[k] || 1) * 100) + '%</b></label>').join("")
         + '<div class="ap-r ap-fo"><span>Font</span><div class="ap-fos">' + FONTS.map(([k, n, ff]) => '<button type="button" data-fo="' + k + '" style="font-family:' + esc(ff) + '"' + (v.font === k ? ' class="on"' : "") + '>' + esc(n) + '</button>').join("") + '</div></div></div>';
       const again = o => { App.viewSet(o); settings(pg, root); };
       $(".ap-sw", body).onchange = e => again({ dark: e.target.checked });
       $$("[data-th]", body).forEach(b => b.onclick = () => again({ theme: b.dataset.th }));
       const cu = $(".ap-cu input", body); cu.oninput = () => { App.viewSet({ theme: "custom", custom: cu.value }); $(".ap-cu", body).style.setProperty("--c", cu.value); }; cu.onchange = () => settings(pg, root);
-      const r = $("input[type=range]", body), fill = () => r.style.setProperty("--p", r.value / r.max * 100 + "%"); fill(); r.oninput = fill; r.onchange = () => again({ text: TX[+r.value] });
+      $$("[data-sz]", body).forEach(r => { const fill = () => { r.style.setProperty("--p", r.value / r.max * 100 + "%"); r.nextElementSibling.textContent = Math.round(STEPS[+r.value] * 100) + "%"; }; fill();
+        r.oninput = fill; r.onchange = () => again({ [r.dataset.sz]: STEPS[+r.value] }); });
       $$("[data-fo]", body).forEach(b => b.onclick = () => again({ font: b.dataset.fo })); }
     if (stab === "help") body.innerHTML = '<div class="st-l">' + [["Finding an action", "Search finds any word in an action: its ID, title, problem, solution, equipment tags and the rest. The pills under the search show one stage at a time; All shows every stage. The A* logo clears both and goes back to the top."],
       ["The Organizer", "The stages as a flow chart: read it left to right, then follow the arrow down to the next row. Each box shows its first few actions, highest priority first. Tap a stage name to see all its actions. On Hold sits outside the flow, with a dashed edge."],

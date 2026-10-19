@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.7.9";
+const APP_VERSION = "1.7.10";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -153,10 +153,11 @@ const App = (() => {
   async function reload(){ try { if (await Store.refresh(true)) render(); } catch (e){ note("Couldn't load: " + e.message); } render(); }
 
   /* ---------- view settings: theme colour (presets or any colour), dark mode, text size, font ---------- */
-  const viewGet = () => Object.assign({ theme: "slate", custom: "#475569", dark: false, text: 1, font: "default" }, lsGet("adView", {}));
+  const viewGet = () => Object.assign({ theme: "slate", custom: "#475569", dark: false, text: 1, font: "default", btn: 1 }, lsGet("adView", {}));
   const viewSet = o => { lsSet("adView", Object.assign(viewGet(), o)); applyView(); };
   function applyView(){ const v = viewGet(), r = document.documentElement;
-    r.dataset.theme = v.theme; r.classList.toggle("dark", !!v.dark); r.style.setProperty("--mt", v.text);
+    r.dataset.theme = v.theme; r.classList.toggle("dark", !!v.dark); r.style.setProperty("--mt", v.text); r.style.setProperty("--bz", v.btn || 1);
+    const tc = $('meta[name="theme-color"]'); if (tc) tc.content = v.dark ? "#141414" : "#ffffff";   // the phone's status bar matches the page
     const fo = FONTS.find(f => f[0] === v.font) || FONTS[0]; r.style.setProperty("--font", fo[2]);
     if (fo[3] && !document.getElementById("wf-" + fo[0])){ const l = document.createElement("link"); l.id = "wf-" + fo[0]; l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?family=" + fo[3] + "&display=swap"; document.head.appendChild(l); }
     if (v.theme === "custom"){ const c = v.custom; r.style.setProperty("--thb", c); r.style.setProperty("--thd", "color-mix(in srgb," + c + " 78%,#000)"); r.style.setProperty("--tht", "color-mix(in srgb," + c + " 10%,#fff)"); r.style.setProperty("--th-btn", "color-mix(in srgb," + c + " 85%,#fff)"); }
