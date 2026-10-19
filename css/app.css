@@ -465,3 +465,10 @@ html.dark .dl-xl b{color:#3fbf78}html.dark .dl-pdf b{color:#ff6b5b}
 header .status{flex:none}
 @media (max-width:1600px){ .bn{display:none} .tab{padding:6px 11px} }
 @media (max-width:1400px){ header .status span{display:none} header .status{padding:5px 9px} }
+
+/* tab islands, as in Project Library: Actions and Organizer | MTO, Spares, Isolations | Data validation (outlined) */
+.tabs+.tabs{margin-left:14px}
+.tabs-x{background:none;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 16%,var(--line))}
+.tabs-x .tab.on{background:color-mix(in srgb,var(--th) 14%,var(--panel));box-shadow:inset 0 0 0 1.5px var(--th);color:color-mix(in srgb,var(--th) 70%,var(--ink))}
+html.dark .tabs-x .tab.on{color:var(--ink)}
+@media (max-width:1400px){ .tabs+.tabs{margin-left:8px} .tab{padding:6px 9px} }
