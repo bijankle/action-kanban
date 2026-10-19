@@ -69,6 +69,7 @@ var IsolSuggest = (function () {
   const SUB_SCORE = { HU: 72, HY: 72, LU: 70, CM: 62, CU: 50, PK: 55, AG: 86, PP: 62, PS: 45, PW: 45, PO: 40, BLC: 52, LH: 48,
     CR: 44, WC: 40, MG: 45, CV: 58, FA: 58, FV: 58, SC: 42, FN: 22, HT: 20, BW: 40, RK: 50, HM: 45, GB: 60, PR: 34, AV: 34, RA: 25, MD: 15, WD: 15 };
   const FOLD_INTO = /^(HU|HY|LU|CM|CU|PK|AG|PP|CV|FA|FV|SC|MG|GB|BW|RK|BLC|LH)$/;   // units that small auxiliaries fold into
+  const SKIP_PARENT = /^(SE|HYD|FHR|HC|HD|CH|PSF|SIF|XM|BX|VL|ST)$/;
   const ELEC_KEEP = /variable speed|vsd|soft starter|isolator|local control|decontactor|control panel|bypass switch|key exchange|remote switching/i;
 
   function build(sd, extra) {
@@ -251,11 +252,15 @@ var IsolSuggest = (function () {
     if (!it) {
       const v = ix.cv.get(S);
       if (v) return finish(valveSubject(ix, v, add, out));
-      const e = ix.elec.get(S);
-      if (!e) return [];
-      if (!e.owner || !ix.eq.has(e.owner)) { const b = feedOf(ix, e); if (b) add(b, (ix.elec.get(sq(b)) || {}).name || "supply", "electrical", "supply to " + e.tag + ": isolate and lock", 90); return finish(out); }
-      it = ix.eq.get(e.owner);       // an electrical item: work on the equipment it belongs to
-      add(it.tag, it.name, "associated", tag + " belongs to it", 90);
+      // An electrical item (from the list, or a drive tag on the SLDs like F13PP401-VS): its supply, then the equipment it serves
+      const e = ix.elec.get(S), m = String(tag).toUpperCase().match(/^(F\d+[A-Z]+\d+[A-Z]?)(?:VS)?-[A-Z]+\d*$/);
+      const owner = e && e.owner || m && sq(m[1]);
+      if (!e && !(owner && ix.eq.has(owner))) return [];
+      const b = e && feedOf(ix, e);
+      if (b) add(b, (ix.elec.get(sq(b)) || {}).name || "switchboard / MCC", "electrical", "supply to " + tag + ": isolate and lock its feeder", 99);
+      if (!owner || !ix.eq.has(owner)) return finish(out);
+      it = ix.eq.get(owner);
+      add(it.tag, it.name, "associated", tag + " serves it: stop it before isolating", 90);
     }
     const label = s => { const o = ix.eq.get(sq(s)); return o ? o.tag + " " + o.name.toLowerCase() : s; };
     const restOf = n => startsName(n, it.n) ? n.slice(it.n.length + 1) : n;
@@ -278,7 +283,7 @@ var IsolSuggest = (function () {
           (isl ? "isolator panel on the VSD supply" : "drive") + " (SLD " + sheet + ", not in the electrical list): isolate and lock, prove dead", isl ? 97 - (o === it ? 0 : 3) : 99 - (o === it ? 0 : 3));
       }
       if (!(x.d || []).length && x.b && o.kw >= 1)
-        add(x.b, (ix.elec.get(sq(x.b)) || {}).name || "switchboard / MCC", "electrical", "board feeding " + o.tag + " (" + what(o) + ", SLD " + sheet + "): isolate and lock its feeder", 93 - (o === it ? 0 : 3));
+        add(x.b, (ix.elec.get(sq(x.b)) || {}).name || "switchboard / MCC (from the SLD)", "electrical", "board feeding " + o.tag + " (" + what(o) + ", SLD " + sheet + "): isolate and lock its feeder", 93 - (o === it ? 0 : 3));
     }
 
     // ----- sub-equipment by name prefix, tag in the name, or the subject's P&ID -----
@@ -288,6 +293,12 @@ var IsolSuggest = (function () {
     for (const p of it.pids) for (const o of ix.byPid.get(p) || [])
       if (o !== it && !subs.includes(o) && !motors.includes(o) && o.kw > 1 && o.area === it.area && head.length > 3 && hasWords(o.n, head) && o.code !== it.code) subs.push(o);
     const subSet = new Set(subs.map(o => o.s));
+
+    // ----- the parent it is part of (ROCKBREAKER HPU for ROCKBREAKER HPU COOLING FAN, F13-MB-401 for motor F13-MB-401A) -----
+    let parent = null;
+    for (const o of ix.byArea.get(it.area) || [])
+      if (o !== it && !SKIP_PARENT.test(o.code) && (startsName(it.n, o.n) || it.s.startsWith(o.s) && /^[A-Z]{1,2}$/.test(it.s.slice(o.s.length))) && (!parent || o.n.length > parent.n.length)) parent = o;
+    if (parent) add(parent.tag, parent.name, "associated", "parent equipment of " + it.tag + ": stop and isolate it too" + elecNote(ix, parent), 84);
 
     // ----- upstream: walk back through passive items to the first active one -----
     const seen = new Set([it.s]);
@@ -368,7 +379,7 @@ var IsolSuggest = (function () {
         let c = 0; for (const x of sig(u)) c += ws.has(x) ? wt(x) : -0.15 * wt(x);
         if (c <= 0) continue;
         if (ix.sheets(u.s).some(t => sh.includes(t))) c += 0.75;      // drawn on the same SLD sheet
-        if (c > bs + 0.2) { bs = c; best = u; tie = false; } else if (c > bs - 0.2) { tie = true; if (c > bs) { bs = c; best = u; } }
+        if (c > bs + 0.1) { bs = c; best = u; tie = false; } else if (c > bs - 0.1) { tie = true; if (c > bs) { bs = c; best = u; } }
       }
       if (tie && !/^(HT|FN)$/.test(o.code)) return null;      // can't tell which unit it serves: leave it on its own
       // Heaters and fans nobody claims belong with the main drive (agitator, or the first motor)
