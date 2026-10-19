@@ -1,7 +1,10 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.7.7";
+const APP_VERSION = "1.7.8";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
+/* fonts to pick from (View): the default, then web fonts loaded only when picked */
+const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
+  ["plex", "IBM Plex Sans", "'IBM Plex Sans',system-ui,sans-serif", "IBM+Plex+Sans:wght@400;500;600;700"], ["atkinson", "Atkinson (easy read)", "'Atkinson Hyperlegible',system-ui,sans-serif", "Atkinson+Hyperlegible:wght@400;700"]];
 const THEMES = [["slate", "Slate", "#475569"], ["graphite", "Graphite", "#52525b"], ["navy", "Navy", "#1E3A5F"], ["petrol", "Petrol", "#1F4F5A"], ["olive", "Olive", "#5A5A2E"], ["stone", "Stone", "#7A6A5D"], ["rust", "Rust", "#9A3412"], ["ink", "Ink", "#111827"]];
 
 const App = (() => {
@@ -149,16 +152,21 @@ const App = (() => {
     const pu = lsGet("adPendUser", null); if (Store.S.edit && pu){ lsSet("adPendUser", null); Store.saveUser(pu); } render(); }
   async function reload(){ try { if (await Store.refresh(true)) render(); } catch (e){ note("Couldn't load: " + e.message); } render(); }
 
-  /* ---------- view settings: theme colour (presets or any colour), dark mode, text size ---------- */
-  function applyView(){ const v = Object.assign({ theme: "slate", custom: "#475569", dark: false, text: 1 }, lsGet("adView", {})), r = document.documentElement;
+  /* ---------- view settings: theme colour (presets or any colour), dark mode, text size, font ---------- */
+  const viewGet = () => Object.assign({ theme: "slate", custom: "#475569", dark: false, text: 1, font: "default" }, lsGet("adView", {}));
+  const viewSet = o => { lsSet("adView", Object.assign(viewGet(), o)); applyView(); };
+  function applyView(){ const v = viewGet(), r = document.documentElement;
     r.dataset.theme = v.theme; r.classList.toggle("dark", !!v.dark); r.style.setProperty("--mt", v.text);
+    const fo = FONTS.find(f => f[0] === v.font) || FONTS[0]; r.style.setProperty("--font", fo[2]);
+    if (fo[3] && !document.getElementById("wf-" + fo[0])){ const l = document.createElement("link"); l.id = "wf-" + fo[0]; l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?family=" + fo[3] + "&display=swap"; document.head.appendChild(l); }
     if (v.theme === "custom"){ const c = v.custom; r.style.setProperty("--thb", c); r.style.setProperty("--thd", "color-mix(in srgb," + c + " 78%,#000)"); r.style.setProperty("--tht", "color-mix(in srgb," + c + " 10%,#fff)"); r.style.setProperty("--th-btn", "color-mix(in srgb," + c + " 85%,#fff)"); }
     else ["--thb", "--thd", "--tht", "--th-btn"].forEach(k => r.style.removeProperty(k));
     const fav = $('link[rel="icon"]'); if (fav){ const col = (getComputedStyle(r).getPropertyValue("--thb") || "#475569").trim(); fav.href = "data:image/svg+xml," + encodeURIComponent(LOGO(64, col.startsWith("color-mix") ? "#475569" : col).replace('class="logo" ', 'xmlns="http://www.w3.org/2000/svg" ')); } }
-  function viewMenu(drop){ const v = Object.assign({ theme: "slate", custom: "#475569", dark: false, text: 1 }, lsGet("adView", {}));
+  function viewMenu(drop){ const v = viewGet();
     drop.innerHTML = '<div class="mi-sub">Theme colour</div><div class="thp">' + THEMES.map(([id, n, c]) => '<button type="button" data-th="' + id + '" title="' + n + '" style="--c:' + c + '"' + (v.theme === id ? ' class="on"' : "") + '></button>').join("") + '<label class="thp-c' + (v.theme === "custom" ? " on" : "") + '" title="Make your own colour"><input type="color" value="' + esc(v.custom) + '"><span>Custom</span></label></div>'
       + '<div class="mi-sub">Appearance</div><div class="mi-seg"><button type="button" data-d="0"' + (!v.dark ? ' class="on"' : "") + '>Light</button><button type="button" data-d="1"' + (v.dark ? ' class="on"' : "") + '>Dark</button></div>'
       + '<div class="mi-sub">Text size</div><div class="mi-seg">' + [[0.87, "Smaller"], [1, "Normal"], [1.13, "Larger"], [1.27, "Largest"]].map(([k, n]) => '<button type="button" data-z="' + k + '"' + (+v.text === k ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</div>'
+      + '<div class="mi-sub">Font</div><div class="mi-fo">' + FONTS.map(([id, n, ff]) => '<button type="button" data-fo="' + id + '" style="font-family:' + esc(ff) + '"' + (v.font === id ? ' class="on"' : "") + '>' + esc(n) + '</button>').join("") + '</div>'
       + '<div class="msep"></div><button type="button" class="mi" data-k="cols">Table columns…</button><button type="button" class="mi" data-k="side">Reset side panel width</button>';
     const set = o => { lsSet("adView", Object.assign(v, o)); applyView(); viewMenu(drop); };
     $$("[data-th]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ theme: b.dataset.th }); });
@@ -166,6 +174,7 @@ const App = (() => {
     $(".thp-c input", drop).onchange = () => viewMenu(drop);
     $$("[data-d]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ dark: b.dataset.d === "1" }); });
     $$("[data-z]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ text: +b.dataset.z }); });
+    $$("[data-fo]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ font: b.dataset.fo }); });
     $("[data-k=cols]", drop).onclick = () => { closeMenus(); A.tab = "actions"; lsSet("adTab", "actions"); draw(); Table.columnsPop($("#colB")); };
     $("[data-k=side]", drop).onclick = () => { lsSet("adSideW", null); document.documentElement.style.removeProperty("--side-w"); closeMenus(); }; }
 
@@ -259,6 +268,6 @@ const App = (() => {
     addEventListener("beforeunload", e => { if (Store.S.dirty.size || Store.S.blobs.length){ Store.save(); e.preventDefault(); e.returnValue = ""; } });
     checkUpdate(); setInterval(checkUpdate, 30 * 60000);
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {}); }
-  return Object.assign(A, { act, render, renderStatus, select, openParts, othersChanged, clashes, who, ago, viewOnly, newAction, projBox, boot, settings });
+  return Object.assign(A, { act, render, renderStatus, select, openParts, othersChanged, clashes, who, ago, viewOnly, newAction, projBox, boot, settings, viewGet, viewSet, update });
 })();
 document.addEventListener("DOMContentLoaded", App.boot);
