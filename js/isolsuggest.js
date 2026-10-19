@@ -267,7 +267,9 @@ var IsolSuggest = (function () {
 
     // ----- electrical: the subject's motors, then every drive / isolator / LCS tied to them -----
     const motors = (ix.byArea.get(it.area) || []).filter(o => o.s !== it.s && o.s.startsWith(it.s) && /^[A-Z]{1,2}$/.test(o.s.slice(it.s.length)) && (o.kw > 0 || / MOTOR/.test(o.n)));
-    const own = [it].concat(motors);
+    // A tank or cell has no motor of its own: its agitator is its drive
+    const agit = it.kw > 1 ? [] : (ix.byArea.get(it.area) || []).filter(o => o.code === "AG" && startsName(o.n, it.n));
+    const own = [it].concat(motors, agit);
     motors.forEach((m, i) => add(m.tag, m.name, "electrical", "drive motor" + (m.kw ? ", " + m.kw + " kW" : "") + (m.starter ? " " + m.starter : "") +
       elecNote(ix, m) + ": isolate and lock at its starter / VSD, prove dead", 100 - i));
     for (const o of own) {
@@ -276,7 +278,7 @@ var IsolSuggest = (function () {
       if (items.some(x => x.score >= 94)) continue;
       // Not in the electrical list: the drive and isolator tags on its SLD, else the LV board it is on
       const x = ix.sld.get(o.s) || {};
-      const sheet = (x.s || []).find(t => !/-10906$/.test(t)) || (x.s || [])[0];
+      const sheet = (x.s || [])[0];      // sorted, so the HV overview (2000-F00-SLD-...) comes first for big drives
       for (const d of x.d || []) {
         const isl = /ISL(\d+)$/.exec(d);
         add(d, (isl ? o.name + " VSD isolator " + (+isl[1]) : o.name + (/-SS$/.test(d) ? " soft starter" : /-DPS$/.test(d) ? " decontactor" : " VSD")), "electrical",
@@ -297,7 +299,7 @@ var IsolSuggest = (function () {
     // ----- the parent it is part of (ROCKBREAKER HPU for ROCKBREAKER HPU COOLING FAN, F13-MB-401 for motor F13-MB-401A) -----
     let parent = null;
     for (const o of ix.byArea.get(it.area) || [])
-      if (o !== it && !SKIP_PARENT.test(o.code) && (startsName(it.n, o.n) || it.s.startsWith(o.s) && /^[A-Z]{1,2}$/.test(it.s.slice(o.s.length))) && (!parent || o.n.length > parent.n.length)) parent = o;
+      if (o !== it && !SKIP_PARENT.test(o.code) && (startsName(it.n, o.n) && !/^(FEED|DISCHARGE|UNDERFLOW|OVERFLOW|TAILS|AREA|ROOM)\b/.test(it.n.slice(o.n.length + 1)) || it.s.startsWith(o.s) && /^[A-Z]{1,2}$/.test(it.s.slice(o.s.length))) && (!parent || o.n.length > parent.n.length)) parent = o;
     if (parent) add(parent.tag, parent.name, "associated", "parent equipment of " + it.tag + ": stop and isolate it too" + elecNote(ix, parent), 84);
 
     // ----- upstream: walk back through passive items to the first active one -----
@@ -505,8 +507,10 @@ var IsolSuggest = (function () {
       const drive = /speed|vsd|soft|decontactor/i.test(ty) || /-(VS|SS|DPS)$/.test(e.tag);
       const lcs = /local control/i.test(ty) || /-LCS$/.test(e.tag);
       const through = lcs && (ix.cabTo.get(s) || []).some(c => c.power && sq(c.from) === e.s);      // power runs LCS -> motor: it has the isolator
+      // Further power cables into a drive are auxiliary supplies (control, UPS) that need isolating too
+      const aux = Array.from(new Set((ix.cabTo.get(e.s) || []).filter(c => c.power && c.from && c.from !== b).map(c => c.from)));
       r.push({ tag: e.tag, name: e.name || ty, board: b, score: drive ? 98 : /isolator/i.test(ty) || through ? 96 : lcs ? 70 : 60,
-        reason: (drive ? ty.toLowerCase() + (b ? " fed from " + b : "") + (e.mcc ? " (module " + e.mcc + ")" : "") + ": isolate and lock, prove dead" :
+        reason: (drive ? ty.toLowerCase() + (b ? " fed from " + b : "") + (e.mcc ? " (module " + e.mcc + ")" : "") + (aux.length ? ", auxiliary supply from " + aux.join(", ") : "") + ": isolate and lock, prove dead" :
           /isolator/i.test(ty) ? "local isolator" + (b ? " fed from " + b : "") + ": open and lock" :
           through ? "local control station with isolator, motor power runs through it" + (b ? " (fed from " + b + ")" : "") + ": open its isolator and lock" :
           lcs ? "local control station: stop and tag (not an isolation point on its own)" : ty.toLowerCase() + ": isolate") });
@@ -539,7 +543,7 @@ var IsolSuggest = (function () {
       LU: "lube unit", CM: "compressor", CU: "cooling unit", CR: "hoist / crane", LH: "liner handler", BLC: "ball charger", FN: "fan", HT: "heater", MG: "tramp magnet",
       BW: "blower", PR: "accumulator", AV: "accumulator", RA: "air receiver", RK: "rake", GB: "inching drive", HM: "hydraulic motor", WC: "trolley", CF: "flotation cell", CO: "concentrator" }[o.code];
     const kw = o.kw > 0 ? (o.kw >= 10 ? Math.round(o.kw) : o.kw) + " kW " + (o.starter && !/^FE/.test(o.starter) ? o.starter + " " : "") : "";
-    return (kw + (w || "unit")).trim();
+    return (kw + (w === undefined ? "unit" : w)).trim();
   }
 
   const ORDER = ["electrical", "upstream", "valve", "associated", "utility"];

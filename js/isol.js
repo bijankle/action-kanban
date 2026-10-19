@@ -53,7 +53,8 @@ const Isol = (() => {
   /* ---------- suggested isolations: what to isolate for the subject equipment, as pills to add or dismiss ---------- */
   let index = null, building = null;
   function idx(){ if (index || building || typeof IsolSuggest === "undefined") return index; const raw = Equip.raw(); if (!raw) return null;
-    building = new Promise(res => setTimeout(() => { try { index = IsolSuggest.build(raw); } catch (e){ console.warn("isolation suggestions", e); } building = null; res(); App.render(); }, 30)); return null; }
+    /* iso-extra.json (drives, isolator panels and boards from the single line diagrams, process streams from the PFD) is optional: without it the suggestions still come, just with fewer drives */
+    building = fetch("js/iso-extra.json?v=" + APP_VERSION).then(r => r.ok ? r.json() : null).catch(() => null).then(extra => new Promise(res => setTimeout(() => { try { index = IsolSuggest.build(raw, extra || undefined); } catch (e){ console.warn("isolation suggestions", e); } building = null; res(); App.render(); }, 30))); return null; }
   const KIND = { electrical: "Electrical", upstream: "Upstream feed", valve: "Valve", associated: "Associated", utility: "Utility" };
   function suggestions(a, tags){ const ix = idx(); if (!ix) return null; const have = new Set((a.isol || []).map(x => String(x.tag || "").toUpperCase())), seen = new Set(), out = [];
     tags.forEach(t => { let r = []; try { r = IsolSuggest.suggest(ix, t) || []; } catch (e){ console.warn(e); }
