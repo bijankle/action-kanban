@@ -2,8 +2,9 @@
    ball mill's lube units, motors and fans). Two rows of pills narrow the list: the equipment (All or one tag), then the
    kind (All, P&ID, PFD, SLD, Schematic, Datasheet, IOM…). Each document is a bar: its number opens the controlled
    copy in SharePoint, ⓘ shows its title, PDF downloads a copy, and when there is a copy the arrow opens it in place
-   with the essentials (pages, zoom, fit, drag to pan). Bars start closed. A tick on a document with a copy adds its
-   pages to the back of the work pack (a.dwgPick, the ticked numbers). The work pack uses the same lists. */
+   with the essentials (pages, zoom, fit, drag to pan). Bars start closed. A tick marks a document as needed for the
+   job (a.dwgPick, the ticked numbers, kept with the action); Download ticked saves each ticked one with a copy as its
+   own PDF, to print separately, and says at the top which didn't download and why. The work pack lists the register. */
 "use strict";
 const Drawings = (() => {
   const KORD = ["P&ID", "PFD", "SLD", "TLD", "Schematic", "Block diagram", "Datasheet", "IOM"];
@@ -34,19 +35,22 @@ const Drawings = (() => {
   function draw(el, a){ const ref = a._p + ":" + a.u, m = collect(a), s = st.get(ref) || { eq: "all", kind: "all" }; st.set(ref, s);
     const tags = [...m.keys()]; if (s.eq !== "all" && !m.has(s.eq)) s.eq = "all";
     const rows = []; tags.forEach(t => { if (s.eq === "all" || s.eq === t) m.get(t).forEach(d => rows.push([t, d])); });
-    const total = new Set(); m.forEach(l => l.forEach(d => total.add(d.n))); const had = cnt.get(ref); cnt.set(ref, total.size); if (had !== total.size) setTimeout(() => { const b = $('.av-tab[data-sub="drawings"]'); if (b) b.innerHTML = 'Drawings' + (total.size ? ' <b>' + total.size + '</b>' : ""); }, 0);
+    const total = new Set(), all = new Map(); m.forEach(l => l.forEach(d => { total.add(d.n); if (!all.has(d.n)) all.set(d.n, d); })); const had = cnt.get(ref); cnt.set(ref, total.size); if (had !== total.size) setTimeout(() => { const b = $('.av-tab[data-sub="drawings"]'); if (b) b.innerHTML = 'Drawings' + (total.size ? ' <b>' + total.size + '</b>' : ""); }, 0);
     const kinds = KORD.filter(k => rows.some(([, d]) => d.kind === k)); if (s.kind !== "all" && !kinds.includes(s.kind)) s.kind = "all";
     const shown = rows.filter(([, d]) => s.kind === "all" || d.kind === s.kind), seen = new Set(), list = shown.filter(([t, d]) => s.eq !== "all" || (!seen.has(d.n) && seen.add(d.n)));
     const pill = (k, v, label, n, on) => '<button type="button" class="pill' + (on ? " on" : "") + '" data-' + k + '="' + esc(v) + '">' + esc(label) + ' <b>' + n + '</b></button>';
     el.innerHTML = '<div class="dw"><div class="dw-p">' + pill("eq", "all", "All equipment", total.size, s.eq === "all") + tags.map(t => pill("eq", t, t, m.get(t).length, s.eq === t)).join("") + '</div>'
       + '<div class="dw-p dw-p2">' + pill("kind", "all", "All kinds", new Set(rows.map(([, d]) => d.n)).size, s.kind === "all") + kinds.map(k => pill("kind", k, k, new Set(rows.filter(([, d]) => d.kind === k).map(([, d]) => d.n)).size, s.kind === k)).join("") + '</div>'
-      + '<div class="dw-s">' + ((a.dwgPick || []).length ? '<b>' + a.dwgPick.length + '</b> ticked to add to the work pack' + (Store.S.edit ? ' <button type="button" class="link" data-k="clr">Clear ticks</button>' : "") : '<span class="dim">Tick the drawings to print with the work pack: their pages are added at the back.</span>') + '</div>'
+      + (fails.get(ref) ? '<div class="dw-f"><div class="dw-fh"><b>' + fails.get(ref).length + ' of the ticked didn\'t download</b><button type="button" class="ic-b sm" data-k="fx" title="Dismiss">✕</button></div>' + fails.get(ref).map(f => '<div>' + (f.d.url ? '<a href="' + esc(f.d.url) + '" target="_blank" rel="noopener">' + esc(f.d.n) + '</a>' : esc(f.d.n)) + ': ' + esc(f.why) + '</div>').join("") + '</div>' : "")
+      + '<div class="dw-s">' + ((a.dwgPick || []).length ? '<b>' + a.dwgPick.length + '</b> ticked for this job <button type="button" class="btn sm" data-k="dl">Download ticked (' + a.dwgPick.filter(n => (all.get(n) || {}).pdf).length + ')</button>' + (Store.S.edit ? ' <button type="button" class="link" data-k="clr">Clear ticks</button>' : "") : '<span class="dim">Tick the drawings and documents this job needs. The ticks are kept with the action, and Download ticked saves each one as its own PDF to print.</span>') + '</div>'
       + (list.length ? '<div class="dw-l">' + list.map(([t, d]) => bar(t, d, a)).join("") + '</div>' : '<p class="dim">No drawings or documents found' + (s.eq !== "all" ? " for " + esc(s.eq) : "") + '.</p>')
       + '<p class="dim dw-n">Numbers open the controlled copy in SharePoint. PDF downloads a copy for anyone without SharePoint access: check its revision before use. Sub equipment (lube units, motors, fans) is included with its main equipment.</p></div>';
     $$("[data-eq]", el).forEach(b => b.onclick = () => { s.eq = b.dataset.eq; draw(el, a); });
     $$("[data-kind]", el).forEach(b => b.onclick = () => { s.kind = b.dataset.kind; draw(el, a); });
     const pick = (n, on) => Store.mutate("a:" + a._p, () => { const set = new Set(a.dwgPick || []); on ? set.add(n) : set.delete(n); a.dwgPick = [...set]; Store.touch(a); });
     $$(".dw-ck input", el).forEach(c => c.onchange = () => pick(c.dataset.n, c.checked));
+    const dl = $("[data-k=dl]", el); if (dl) dl.onclick = () => download(el, a, all, dl);
+    const fx = $("[data-k=fx]", el); if (fx) fx.onclick = () => { fails.delete(ref); draw(el, a); };
     const clr = $("[data-k=clr]", el); if (clr) clr.onclick = () => Store.mutate("a:" + a._p, () => { a.dwgPick = []; Store.touch(a); });
     $$(".dw-b", el).forEach(r => { const k = r.dataset.key, [t, d] = list.find(([t, d]) => key(t, d) === k) || [];
       const tg = $(".dw-tg", r); if (tg) tg.onclick = () => { if (open.has(k)) open.delete(k); else open.add(k); r.classList.toggle("on", open.has(k)); show(r, d, k); };
@@ -54,12 +58,27 @@ const Drawings = (() => {
       if (open.has(k)) show(r, d, k); }); }
   function bar(t, d, a){ const k = key(t, d), e = Equip.get(d.of) || {}, on = (a.dwgPick || []).includes(d.n);
     return '<div class="dw-b' + (open.has(k) ? " on" : "") + (on ? " pk" : "") + '" data-key="' + esc(k) + '"><div class="dw-h">'
-      + (d.pdf ? '<label class="dw-ck" title="Add to the work pack"><input type="checkbox" data-n="' + esc(d.n) + '"' + (on ? " checked" : "") + (Store.S.edit ? "" : " disabled") + '></label>' : '<span class="dw-ck0" title="No PDF copy to add"></span>')
+      + '<label class="dw-ck" title="' + (d.pdf ? "Needed for this job" : "Needed for this job (no PDF copy: open it in SharePoint)") + '"><input type="checkbox" data-n="' + esc(d.n) + '"' + (on ? " checked" : "") + (Store.S.edit ? "" : " disabled") + '></label>'
       + (d.pdf ? '<button type="button" class="dw-tg" title="Show the drawing here" aria-label="Show the drawing">▸</button>' : '<span class="dw-tg0"></span>')
       + '<span class="dw-k">' + esc(d.kind) + '</span>' + (d.url ? '<a class="dw-a" href="' + esc(d.url) + '" target="_blank" rel="noopener" title="Open in SharePoint">' + esc(d.n) + '</a>' : '<span class="dw-a">' + esc(d.n) + '</span>')
       + (d.rev ? '<span class="dw-r">Rev ' + esc(d.rev) + '</span>' : "") + '<button type="button" class="dw-i" title="What is this?" aria-label="Document title">i</button>'
       + (!d.own ? '<span class="dw-of" title="' + esc(e.n || "") + '">' + esc(d.of) + '</span>' : "") + '<span class="grow"></span>'
       + (d.pdf ? '<a class="dc-pdf" href="' + esc(d.pdf.split("#")[0]) + '" target="_blank" rel="noopener" download title="Download a PDF copy (no SharePoint needed)' + (d.pdfRev ? ", rev " + esc(d.pdfRev) : "") + '">PDF</a>' : "") + '</div><div class="dw-v"></div></div>'; }
+  /* Download ticked: each ticked document with a copy saved as its own PDF (number and title as the name), one after
+     another; the ones that couldn't be saved are listed at the top of the tab, with why and their SharePoint link */
+  const fails = new Map();
+  async function download(el, a, all, btn){ const ref = a._p + ":" + a.u, ns = a.dwgPick || [], bad = []; let ok = 0;
+    btn.disabled = true; const lbl = btn.textContent;
+    for (const [i, n] of ns.entries()){ const d = all.get(n); btn.textContent = "Downloading " + (i + 1) + " of " + ns.length + "…";
+      if (!d){ bad.push({ d: { n }, why: "no longer listed for this equipment" }); continue; }
+      if (!d.pdf){ bad.push({ d, why: "no PDF copy, open it in SharePoint" }); continue; }
+      try { const r = await fetch(d.pdf.split("#")[0]); if (!r.ok) throw new Error(r.status === 404 ? "the PDF copy is missing" : "the copy didn't load (" + r.status + ")");
+        const b = await r.blob(); if (!/pdf/i.test(b.type) && b.size < 2000) throw new Error("the copy isn't a PDF");
+        Excel.save(new Blob([b], { type: "application/pdf" }), (d.n + (d.t ? " " + d.t : "")).replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120) + ".pdf"); ok++;
+        await new Promise(res => setTimeout(res, 350)); }   // (a pause between, so the browser takes each one)
+      catch (e){ bad.push({ d, why: /fetch|network/i.test(e.message) ? "no connection to the drawing copies" : e.message }); } }
+    if (bad.length) fails.set(ref, bad); else fails.delete(ref);
+    note(ok + " downloaded" + (bad.length ? ", " + bad.length + " didn't (listed at the top)" : ""), 5000); btn.textContent = lbl; btn.disabled = false; if (el.isConnected) draw(el, a); }
   /* the ⓘ callout: the title, which equipment it's for and why it's listed */
   function info(btn, t, d){ Fields.closePop(); const e = Equip.get(d.of) || {}, why = { tag: "names the tag", parent: "is its main equipment's", model: "is for its model", package: "is from its supply package" }[d.why];
     const p = h('<div class="pop dw-pop"><b>' + esc(d.n) + '</b><div>' + esc(d.t || "No title in the register") + '</div><div class="dim">' + esc(d.kind) + (d.rev ? ", rev " + esc(d.rev) : "") + (d.pdfRev ? " (PDF copy rev " + esc(d.pdfRev) + ")" : "")
