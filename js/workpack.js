@@ -45,7 +45,7 @@ const Workpack = (() => {
       a.rfq.slice().reverse().forEach(r => { need(5); doc.setTextColor(30); doc.text("Rev " + r.rev, M, y); doc.setTextColor(31, 95, 191); doc.textWithLink(r.name, M + 16, y, { url: GH.fileUrl(r.path) }); doc.setTextColor(120); doc.text(fmtDate(r.at) + (r.by ? ", " + r.by : "") + ", " + r.n + " items", W - M, y, { align: "right" }); y += 5; }); y += 2; }
     if ((a.quotes || []).length){ need(10); doc.setFontSize(9); doc.setTextColor(90); doc.setFont("helvetica", "bold"); doc.text("Quotes", M, y); y += 5; doc.setFont("helvetica", "normal");
       a.quotes.slice().reverse().forEach(f => { need(5); doc.setTextColor(31, 95, 191); doc.textWithLink(f.name, M, y, { url: Media.fileUrlOnline(a, f) }); doc.setTextColor(120); doc.text(fmtDate(f.added) + ", " + fmtSize(f.size || 0), W - M, y, { align: "right" }); y += 5; }); y += 2; }
-    head("Spare parts"); if ((a.spares || []).length) table(PCOLS.concat("Store location / notes"), a.spares.map(prow), pc); else para("No spare parts.", true);
+    head("Spares"); if ((a.spares || []).length) table(PCOLS.concat("Store location / notes"), a.spares.map(prow), pc); else para("No spares.", true);
     if (a.files.length){ head("Attachments"); doc.setFontSize(9.5); a.files.forEach(f => { need(5.5); doc.setTextColor(31, 95, 191); doc.textWithLink(f.name, M, y, { url: Media.fileUrlOnline(a, f) }); doc.setTextColor(120); doc.text(fmtSize(f.size || 0), W - M, y, { align: "right" }); y += 5.5; }); y += 2; }
     /* photos, two to a row */
     if (a.photos.length){ head("Photos (" + a.photos.length + ")"); const gw = (CW - 6) / 2, gh = 66;

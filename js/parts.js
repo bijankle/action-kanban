@@ -1,11 +1,11 @@
-/* The MTO and Spare parts tabs. Pick an action on the left; its list of parts is a simple table on the
+/* The MTO and Spares tabs. Pick an action on the left; its list of parts is a simple table on the
    right, ready to fill in. Each row can move across (MTO to spares, spares to MTO). The MTO also holds the
    quotes and the RFQ revisions: every RFQ PDF export takes the next rev letter and is kept for download. */
 "use strict";
 const Parts = (() => {
   const COLS = { mto: [["desc", "Description"], ["part", "Part / tag no."], ["qty", "Qty"], ["unit", "Unit"], ["notes", "Notes"]],
     spares: [["desc", "Description"], ["part", "Part / tag no."], ["qty", "Qty"], ["unit", "Unit"], ["notes", "Store location / notes"]] };
-  const NAME = { mto: "MTO", spares: "Spare parts" }, OTHER = { mto: "spares", spares: "mto" };
+  const NAME = { mto: "MTO", spares: "Spares" }, OTHER = { mto: "spares", spares: "mto" };
   const list = (a, k) => a[k] || (a[k] = []);
   const rev = n => { let s = ""; n++; while (n > 0){ const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };   // 0 → A, 25 → Z, 26 → AA
   const pRfq = (pid, name) => "data/p/" + pid + "/rfq/" + safeName(name);
@@ -34,14 +34,14 @@ const Parts = (() => {
     return '<div class="pt-head"><div><div class="pt-id"><span class="aid big">' + esc(Store.actId(a)) + '</span><span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span></div><div class="pt-title">' + (esc(a.f.title) || '<span class="dim">No title</span>') + '</div></div><span class="grow"></span>'
       + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="gem" title="Paste a list of parts and Gemini fills in the rows">Paste text</button>')
       + '<button type="button" class="dl dl-xl" data-k="xls" title="Export this ' + NAME[kind] + ' to Excel">' + DLI + '<b>XLSX</b></button>'
-      + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF. Each export is the next rev (A, B, C…) and is kept below." : "Export the spare parts list as a PDF") + '">' + DLI + '<b>PDF</b></button></div>'
+      + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF. Each export is the next rev (A, B, C…) and is kept below." : "Export the spares list as a PDF") + '">' + DLI + '<b>PDF</b></button></div>'
       + (kind === "mto" ? '<div class="pt-docs"><div class="pt-box pt-quotes"><div class="pt-bh"><b>Quotes</b><span class="dim">' + (a.quotes || []).length + '</span><span class="grow"></span>' + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="quote">Upload quotes</button>') + '</div>'
           + ((a.quotes || []).length ? (a.quotes || []).slice().reverse().map(f => '<div class="pt-file"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : "FILE") + '</span><button type="button" class="link" data-q="' + f.h + '">' + esc(f.name) + '</button><span class="dim">' + esc(fmtDate(f.added)) + ' · ' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" data-qx="' + f.h + '" title="Remove">✕</button>') + '</div>').join("") : '<div class="dim pt-drop">No quotes yet.' + (ro ? "" : " Upload them, or drop them here.") + '</div>') + '</div>'
         + '<div class="pt-box"><div class="pt-bh"><b>RFQ revisions</b><span class="dim">' + (a.rfq || []).length + '</span><span class="grow"></span><span class="dim">next export: Rev ' + rev((a.rfq || []).length) + '</span></div>'
           + ((a.rfq || []).length ? (a.rfq || []).slice().reverse().map(r => '<div class="pt-file"><span class="pt-rev">Rev ' + esc(r.rev) + '</span><button type="button" class="link" data-rfq="' + esc(r.rev) + '">' + esc(r.name) + '</button><span class="dim">' + esc(fmtDate(r.at)) + (r.by ? " · " + esc(r.by) : "") + ' · ' + r.n + ' item' + (r.n === 1 ? "" : "s") + '</span></div>').join("") : '<div class="dim">None yet. Export to PDF makes Rev A.</div>') + '</div></div>' : "")
       + '<table class="tbl pt-tbl"><thead><tr><th class="pt-no">Item</th>' + cols.map(([k, n]) => '<th class="pt-' + k + '">' + esc(n) + '</th>').join("") + '<th class="pt-act"></th></tr></thead><tbody>'
       + items.map(row).join("") + Array.from({ length: blanks }, (_, k) => blank(k)).join("") + '</tbody></table>'
-      + '<div class="dim pt-foot">' + (items.length ? items.length + " item" + (items.length > 1 ? "s" : "") : "Empty, type in the rows to fill it in") + (kind === "mto" && (a.spares || []).length ? " · " + a.spares.length + " more from spare parts, not on the RFQ" : "") + '</div>'; }
+      + '<div class="dim pt-foot">' + (items.length ? items.length + " item" + (items.length > 1 ? "s" : "") : "Empty, type in the rows to fill it in") + (kind === "mto" && (a.spares || []).length ? " · " + a.spares.length + " more from spares, not on the RFQ" : "") + '</div>'; }
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
 
   function wire(el, a, kind, ro){ const key = "a:" + a._p, items = list(a, kind);
@@ -71,7 +71,7 @@ const Parts = (() => {
       } catch (e){ alert("Couldn't add " + f.name + ": " + e.message); } } }
 
   /* ---------- exports ---------- */
-  const fname = (a, kind, r) => Store.actId(a) + " " + (kind === "mto" ? "RFQ Rev " + r : "Spare parts") + ".pdf";
+  const fname = (a, kind, r) => Store.actId(a) + " " + (kind === "mto" ? "RFQ Rev " + r : "Spares") + ".pdf";
   function excel(a, kind){ const items = list(a, kind); if (!items.length) return alert("Nothing to export yet.");
     const head = ["Item"].concat(COLS[kind].map(c => c[1])), rows = items.map((it, i) => [String(i + 1)].concat(COLS[kind].map(([k]) => it[k] || "")));
     Excel.save(Excel.book(head, rows, Store.actId(a) + " " + NAME[kind]), Store.actId(a) + " " + NAME[kind] + " " + new Date().toISOString().slice(0, 10) + ".xlsx"); }
@@ -81,7 +81,7 @@ const Parts = (() => {
   async function build(a, kind, r){ const jsPDF = await loadPdf(), doc = new jsPDF({ unit: "mm", format: "a4" }), p = Store.project(a._p) || {}, items = list(a, kind);
     const thb = (getComputedStyle(document.documentElement).getPropertyValue("--thb") || "#475569").trim(), rgb = /^#[0-9a-f]{6}$/i.test(thb) ? [1, 3, 5].map(i => parseInt(thb.substr(i, 2), 16)) : [71, 85, 105];
     doc.setFillColor(...rgb); doc.rect(0, 0, 210, 26, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(17);
-    doc.text(kind === "mto" ? "Request for Quotation" : "Spare parts list", 14, 13); doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.text(Store.actId(a) + "   " + (p.name || ""), 14, 20);
+    doc.text(kind === "mto" ? "Request for Quotation" : "Spares list", 14, 13); doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.text(Store.actId(a) + "   " + (p.name || ""), 14, 20);
     if (r){ doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("Rev " + r, 196, 14, { align: "right" }); }
     doc.setTextColor(30); doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text(doc.splitTextToSize(a.f.title || "", 182), 14, 36);
     doc.setFont("helvetica", "normal"); doc.setTextColor(90);

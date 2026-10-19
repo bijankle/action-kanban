@@ -33,7 +33,7 @@ function defaultConfig(){ const t = now(); const opt = (labels, colors) => label
       F("contractorPhone", "Contractor number", "phone", { link: "contractor" }),
       F("eta", "Parts receival ETA", "date", { table: true, tbc: true, na: true }),
       F("mto", "MTO", "mto", { table: true, core: true }),
-      F("sparelist", "Spare parts list", "sparelist", { core: true }),
+      F("sparelist", "Spares list", "sparelist", { core: true }),
       F("isollist", "Isolations", "isollist", { core: true })
     ],
     contacts: [] }; }
@@ -62,7 +62,7 @@ const Store = (() => {
   const ranked = st => visible().filter(a => a.stage === st).sort((x, y) => (x.rank || 0) - (y.rank || 0) || x.no - y.no);
   const priority = a => ranked(a.stage).indexOf(a) + 1;
   /* the search: every word typed has to appear somewhere in the action (ID, project, every field, notes,
-     MTO and spare parts rows, photo, file and quote names, the contractor's company and mobile) */
+     MTO and spares rows, photo, file and quote names, the contractor's company and mobile) */
   const hayCache = new WeakMap();
   function hay(a){ const c = hayCache.get(a); if (c && c.mod === a.mod) return c.t;
     const p = project(a._p) || {}, ct = contacts().find(x => x.name && x.name === a.f.contractor) || {};

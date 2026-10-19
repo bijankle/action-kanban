@@ -1,6 +1,6 @@
 {
  "v": 1,
- "mod": 1792416218674,
+ "mod": 1792416472299,
  "stages": [
   {
    "id": "st0",
@@ -287,14 +287,14 @@
   },
   {
    "id": "sparelist",
-   "label": "Spare parts list",
+   "label": "Spares list",
    "type": "sparelist",
    "builtin": true,
    "table": false,
    "tbc": false,
    "na": false,
    "core": true,
-   "mod": 1792414922474
+   "mod": 1792416472299
   },
   {
    "id": "isollist",

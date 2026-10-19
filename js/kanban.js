@@ -1,4 +1,4 @@
-/* The Kanban tab: one column per stage, like Trello, kept minimal. Drag cards between and within columns
+/* The Organizer tab: one column per stage, like Trello, kept minimal. Drag cards between and within columns
    (higher in a column = higher priority). Click a card for a callout with its problem, solution and photos;
    editing is done on the Actions tab. Double click a column name to rename it, drag its header to move it. */
 "use strict";

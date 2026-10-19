@@ -1,6 +1,6 @@
 /* How each kind of field shows and is edited. The kinds are set on the Data validation tab:
    text, long text, number, date, tick box, choice (one of a list), multi (tags), contact, phone,
-   plus the status (stage) and priority (place in its Kanban column). */
+   plus the status (stage) and priority (place in its Organizer column). */
 "use strict";
 const TYPES = { text: "Text", longtext: "Long text", number: "Number", date: "Date", check: "Tick box", choice: "Choice (one)", multi: "Tags (several)", contact: "Contact name", phone: "Contact number" };
 const Fields = (() => {
@@ -9,7 +9,7 @@ const Fields = (() => {
   const optLabels = f => (f.options || []).filter(o => !o.del).map(o => o.label);
   const optColor = (f, v) => { const o = (f.options || []).find(x => x.label === v); return o && o.color; };
   const val = (a, f) => f.id === "status" ? a.stage : f.id === "priority" ? Store.priority(a) : f.type === "mto" ? (a.mto || []).length : f.type === "sparelist" ? (a.spares || []).length : f.type === "isollist" ? (a.isol || []).length : (a.f || {})[f.id];
-  /* the MTO and spare parts counts: a link to that action on the MTO or Spare parts tab */
+  /* the MTO and spares counts: a link to that action on the MTO or Spares tab */
   const partsLink = (a, f) => { const n = val(a, f); return '<a href="#" class="mto-l' + (n ? "" : " none") + '" data-parts="' + ({ mto: "mto", sparelist: "spares", isollist: "isol" })[f.type] + '" data-ref="' + a._p + ":" + a.u + '">' + (n ? n + (f.type === "isollist" ? " isolation" : " x item") + (n > 1 ? "s" : "") : "None") + '</a>'; };
   /* plain text for search, export and Gemini */
   function text(a, f){ const v = val(a, f); if (f.type === "mto" || f.type === "sparelist" || f.type === "isollist") return v ? v + (f.type === "isollist" ? " isolations" : " items") : ""; if (f.type === "stage") return Store.stage(v).name; if (f.type === "check") return v ? "Yes" : "No";
