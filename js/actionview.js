@@ -16,14 +16,15 @@ const ActionView = (() => {
     const list = Table.rows(), i = list.indexOf(a), n = k => (a[k] || []).length;
     el.innerHTML = '<div class="av"><div class="av-head"><button type="button" class="btn ghost sm av-back" data-k="x" title="Back to the list (Esc)">‹ Actions</button>'
       + '<span class="av-nav"><button type="button" class="ic-b" data-k="prev" title="Previous action"' + (i > 0 ? "" : " disabled") + '>‹</button><span class="dim">' + (i >= 0 ? (i + 1) + " of " + list.length : "") + '</span><button type="button" class="ic-b" data-k="next" title="Next action"' + (i >= 0 && i < list.length - 1 ? "" : " disabled") + '>›</button></span>'
-      + '<span class="aid big">' + esc(Store.actId(a)) + '</span><span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'
-      + '<div class="av-st" data-f="status"></div><label class="sd-pr">Priority <span data-f="priority"></span></label><span class="grow"></span>'
+      + '<span class="aid big"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '>' + esc(Store.actId(a)) + '</span>' + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "")
+      + '<div class="av-st" data-f="status"></div><label class="sd-pr">Priority <span data-f="priority"></span></label><label class="sd-own" title="The action owner: their details go on the work pack">Owner <span class="own"></span></label><span class="grow"></span>'
       + (ro ? "" : '<button class="ic-b" type="button" data-k="del" title="Delete this action">🗑</button>') + '<button class="dl dl-pdf" type="button" data-k="wp" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares">' + DLI + '<b>PDF</b></button></div>'
       + '<div class="av-title" data-f="title"></div>' + steps(a, ro)
       + '<div class="av-tabs">' + TABS.map(([k, t]) => { const c = k === "mto" ? n("mto") : k === "spares" ? n("spares") : k === "isol" ? n("isol") : k === "drawings" ? Drawings.count(a) : 0; return '<button type="button" class="av-tab' + (k === sub ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'
       + '<div class="av-body' + (sub === "overview" ? " ov" : "") + '"></div></div>';
     $$(".av-head [data-f], .av-title[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     const ti = $(".av-title .in", el); if (ti) ti.placeholder = "Title";
+    ownerBox($(".own", el), a, ro);
     const body = $(".av-body", el);
     if (sub === "overview") overview(body, a, ro); else if (sub === "isol") Isol.renderFor(body, a, keepP); else if (sub === "drawings") Drawings.renderFor(body, a); else Parts.renderFor(body, a, sub, keepP);
     body.scrollTop = sc;
@@ -35,6 +36,22 @@ const ActionView = (() => {
     av.ondragleave = e => { if (!av.contains(e.relatedTarget)) av.classList.remove("drop"); };
     av.ondrop = e => { av.classList.remove("drop"); if (sub === "overview" && Media.hasDrop(e)){ e.preventDefault(); e.stopPropagation(); Media.dropOn(a, e); } }; }
 
+  /* the action owner: anyone signed in (or any name typed); their name, role, mobile and email go on the work pack */
+  function ownerBox(box, a, ro){ const cur = Store.owner(a), names = [...new Set(Store.users().map(u => [u.first, u.last].filter(Boolean).join(" ")).concat(Store.all().map(x => (x.owner || {}).n)).filter(Boolean))].sort();
+    if (ro){ box.innerHTML = '<b>' + esc(cur.n || "–") + '</b>'; return; }
+    box.innerHTML = '<input class="in sm" list="ownL" value="' + esc(cur.n || "") + '" placeholder="Who owns it" autocomplete="off"><datalist id="ownL">' + names.map(n => '<option value="' + esc(n) + '"></option>').join("") + '</datalist>';
+    const i = $("input", box); i.onchange = () => { const n = i.value.trim(); if (n === (cur.n || "")) return; const u = Store.users().find(x => [x.first, x.last].filter(Boolean).join(" ").toLowerCase() === n.toLowerCase());
+      Store.mutate("a:" + a._p, () => { if (n) a.owner = u ? { n: [u.first, u.last].filter(Boolean).join(" "), e: u.id } : { n }; else delete a.owner; Store.touch(a); }); Store.log("Changed the owner of " + Store.actId(a)); };
+    i.onkeydown = e => { if (e.key === "Enter") i.blur(); }; }
+  /* the change history: who changed what, and when, newest first (opened from the small link at the foot of Overview) */
+  function history(a){ const hs = (a.hist || []).slice().reverse();
+    const when = t => new Date(t).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    const m = modal('<h3>Change history <span class="dim">' + esc(Store.actId(a)) + (a.oldId ? ", was " + esc(a.oldId) : "") + '</span></h3>'
+      + (hs.length ? '<div class="ch-l">' + hs.map(h => '<div class="ch-e"><div class="ch-h"><b>' + esc(h.by || "Someone") + '</b><span class="dim">' + esc(when(h.t)) + (h.note ? " · " + esc(h.note) : "") + '</span></div>'
+          + (h.c || []).map(([k, f, t]) => '<div class="ch-c"><span class="ch-k">' + esc(k) + '</span>' + (f || t ? '<span class="ch-v">' + (f ? '<s>' + esc(f) + '</s>' : "") + (f && t ? ' → ' : "") + (t ? esc(t) : "") + '</span>' : "") + '</div>').join("") + '</div>').join("") + '</div>'
+        : '<p class="dim">No changes recorded yet. Changes are recorded from now on.</p>')
+      + '<p class="dim sm-t">Created ' + esc(when(a.created || a.mod)) + '. The last 400 changes are kept with the action.</p><div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>', { cls: "ch-win" });
+    $(".yn-yes", m).onclick = () => m.close(); }
   /* the workflow as steps (RFQ Sent, PO Sent and so on): done, current and to come, with the date each was
      reached; click one to move the action there. On hold sits apart, as a toggle. */
   function steps(a, ro){ const ss = Store.stages(), flow = ss.filter(s => s.kind !== "hold"), hs = ss.find(s => s.kind === "hold"), cur = Store.stage(a.stage), onHold = cur.kind === "hold";
@@ -53,7 +70,7 @@ const ActionView = (() => {
       + '<div class="ov-r"><h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span></h4><div class="ph-block">' + (a.photos.length ? '<button type="button" class="ph-cover" data-k="viewall" title="Open the photos"><img alt=""><span class="ph-badge">📷 ' + a.photos.length + '</span></button>' : "")
       + '<div class="ph-btns"><button type="button" class="btn sm" data-k="viewall"' + (a.photos.length ? "" : " disabled") + '>Photos' + (a.photos.length ? " (" + a.photos.length + ")" : "") + '</button>' + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="addph">Upload photos</button><span class="dim">or drop photos and files anywhere on the action</span>') + '</div></div>'
       + '<div class="ov-map" hidden><h4>Expected location</h4><img alt="Expected location of the equipment"><p class="dim"></p></div>'
-      + '<h4>Details</h4><div class="det"></div><div class="sd-foot">' + (a.by ? "Last edited by " + esc(a.by) + " " + esc(fmtDate(a.mod)) : "") + (a.gps ? ' · <a target="_blank" rel="noopener" href="https://maps.google.com/?q=' + a.gps.lat + "," + a.gps.lng + '">Map pin</a>' : "") + '</div></div></div>';
+      + '<h4>Details</h4><div class="det"></div><div class="sd-foot">' + (a.by ? "Last edited by " + esc(a.by) + " " + esc(fmtDate(a.mod)) + " · " : "") + '<button type="button" class="link ch-ln" data-k="hist">Change history</button>' + (a.gps ? ' · <a target="_blank" rel="noopener" href="https://maps.google.com/?q=' + a.gps.lat + "," + a.gps.lng + '">Map pin</a>' : "") + '</div></div></div>';
     $$("[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     $$("[data-f=problem] textarea,[data-f=solution] textarea,[data-f=notes] textarea", el).forEach(t => t.rows = 4);
     const cv = $(".ph-cover img", el); if (cv){ cv.src = Media.src(a, a.photos[0], true); cv.onerror = () => { if (!cv.dataset.r){ cv.dataset.r = 1; cv.src = Media.src(a, a.photos[0]); } }; }
@@ -65,6 +82,7 @@ const ActionView = (() => {
     if (k === "x") App.select(null);
     else if (k === "prev" || k === "next"){ const b = list[i + (k === "next" ? 1 : -1)]; if (b) App.select(b._p + ":" + b.u); }
     else if (k === "wp") Workpack.run(a);
+    else if (k === "hist") history(a);
     else if (k === "viewall") Media.view(a, 0);
     else if (k === "addph") Media.pickFiles(a, "image/*");
     else if (k === "addf") Media.pickFiles(a);

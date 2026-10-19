@@ -40,7 +40,9 @@ const Workpack = (() => {
     doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.text("Job ref", W - M, 9, { align: "right" }); doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text(Store.actId(a), W - M, 16, { align: "right" });
     doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text("Issued " + new Date().toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }), W - M, 22.5, { align: "right" });
     y = 41;
-    const pf = Profile.get(), cl = Profile.lines(); if (Profile.name()){ const bh = 6 + cl.length * 5; doc.setFillColor(243, 244, 246); doc.setDrawColor(...rgb); doc.setLineWidth(0.6); doc.roundedRect(M, y, CW, bh, 2, 2, "F"); doc.line(M, y, M, y + bh);
+    /* who to contact: the action's owner (their details from the people who've signed in), else whoever is making it */
+    const ow = Store.owner(a), pf = ow.n ? { email: ow.e } : Profile.get(), who = ow.n || Profile.name();
+    const cl = ow.n ? [ow.n + (ow.role ? ", " + ow.role : ""), [ow.mobile && "Mobile " + ow.mobile, ow.e].filter(Boolean).join("   ")].filter(Boolean) : Profile.lines(); if (who){ const bh = 6 + cl.length * 5; doc.setFillColor(243, 244, 246); doc.setDrawColor(...rgb); doc.setLineWidth(0.6); doc.roundedRect(M, y, CW, bh, 2, 2, "F"); doc.line(M, y, M, y + bh);
       doc.setFontSize(8); doc.setTextColor(110); doc.setFont("helvetica", "bold"); doc.text("CONTACT FOR QUERIES", M + 4, y + 4.5); doc.setFontSize(10); doc.setTextColor(30);
       cl.forEach((l, i) => { doc.setFont("helvetica", i ? "normal" : "bold"); doc.text(l, M + 52, y + 4.6 + i * 5); });
       if (pf.email){ doc.link(M + 52, y + 1 + (cl.length - 1) * 5, CW - 52, 5, { url: "mailto:" + pf.email }); } y += bh + 6; }
@@ -94,7 +96,7 @@ const Workpack = (() => {
       doc.setDrawColor(200); doc.setLineDashPattern([0.4, 1], 0); doc.setLineWidth(0.25); doc.line(x + doc.getTextWidth(lab) + 2, bl, W - M - doc.getTextWidth(String(pg)) - 2, bl); doc.setLineDashPattern([], 0);
       if (!e.sub){ doc.setDrawColor(225); doc.setLineWidth(0.2); doc.line(M, e.y + e.h - 0.6, W - M, e.y + e.h - 0.6); }   // a rule between the parts
       doc.link(M, e.y, CW, e.h, { pageNumber: pg }); });
-    for (let i = 1; i <= P; i++){ doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(140); doc.text("Job " + Store.actId(a) + " work pack" + (Profile.name() ? "   Queries: " + [Profile.name(), Profile.get().mobile, Profile.get().email].filter(Boolean).join(", ") : "") + "   Page " + i + " of " + N, W / 2, 291, { align: "center" });
+    for (let i = 1; i <= P; i++){ doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(140); doc.text("Job " + Store.actId(a) + " work pack" + (who ? "   Queries: " + (ow.n ? [ow.n, ow.mobile, ow.e] : [Profile.name(), Profile.get().mobile, Profile.get().email]).filter(Boolean).join(", ") : "") + "   Page " + i + " of " + N, W / 2, 291, { align: "center" });
       if (i > 1){ doc.setTextColor(31, 95, 191); doc.textWithLink("Contents", W - M, 291, { align: "right", pageNumber: 1 }); } }
     return doc.output("blob"); }
   /* the register: one line per document, under a heading per equipment tag: kind, number (opens SharePoint), title, and

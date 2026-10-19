@@ -606,3 +606,9 @@ html.dark .av-tab b{color:var(--ink)}
 .pv-c{position:relative;height:min(72vh,820px);overflow:auto;background:#e9ebee;touch-action:none}html.dark .pv-c{background:#1b1d20}
 .pv-c canvas{display:block;margin:0 auto;background:#fff;box-shadow:0 1px 4px #0003}.pv-c.grab{cursor:grabbing}
 .pv-m{position:absolute;inset:0;display:grid;place-items:center}
+/* the action owner (header) and the change history (a quiet link at the foot of Overview) */
+.sd-own{display:flex;align-items:center;gap:6px;font-size:var(--fl);color:var(--dim);font-weight:600}.sd-own .in{width:170px;height:30px}.sd-own b{color:var(--ink)}
+.ch-ln{font-size:inherit;color:var(--dim);text-decoration:underline;text-decoration-color:var(--line2)}.ch-ln:hover{color:var(--ink)}
+.ch-win{width:min(640px,94vw)}.ch-l{max-height:62vh;overflow:auto;display:flex;flex-direction:column;gap:2px;margin:6px 0}
+.ch-e{padding:8px 2px;border-bottom:1px solid var(--line)}.ch-h{display:flex;gap:10px;align-items:baseline;margin-bottom:3px}.ch-h .dim{font-size:var(--fl)}
+.ch-c{display:flex;gap:10px;font-size:var(--fl);line-height:1.45}.ch-k{flex:0 0 150px;color:var(--muted);font-weight:600}.ch-v{min-width:0;overflow-wrap:anywhere}.ch-v s{color:var(--dim)}

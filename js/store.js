@@ -75,7 +75,7 @@ const Store = (() => {
   function hay(a){ const c = hayCache.get(a); if (c && c.mod === a.mod) return c.t;
     const p = project(a._p) || {}, ct = contacts().find(x => x.name && x.name === a.f.contractor) || {};
     const parts = r => (r || []).map(it => [it.desc, it.part, it.qty, it.unit, it.notes].join(" ")).join(" ");
-    const t = [actId(a), p.name, p.prefix, stage(a.stage).name, fields().map(f => Fields.text(a, f)).join(" "), a.f.notes, parts(a.mto), parts(a.spares), (a.rfqTo || []).join(" "), a.rfqCat, (a.isol || []).map(it => [it.tag, it.name, it.note].join(" ")).join(" "),
+    const t = [actId(a), a.oldId, (a.owner || {}).n, p.name, p.prefix, stage(a.stage).name, fields().map(f => Fields.text(a, f)).join(" "), a.f.notes, parts(a.mto), parts(a.spares), (a.rfqTo || []).join(" "), a.rfqCat, (a.isol || []).map(it => [it.tag, it.name, it.note].join(" ")).join(" "),
       a.photos.map(x => x.name + " " + (x.cap || "")).join(" "), a.files.map(x => x.name).join(" "), (a.quotes || []).map(x => x.name).join(" "), (a.rfq || []).map(x => x.name).join(" "),
       ct.company, ct.mobile, ct.email].join(" ").toLowerCase();
     hayCache.set(a, { mod: a.mod, t }); return t; }
@@ -84,25 +84,56 @@ const Store = (() => {
   /* ---------- changing ---------- */
   const snap = () => JSON.stringify({ c: S.config, p: S.projects, a: S.acts, us: S.users });
   function mutate(keys, fn, opts){ if (!S.edit && !(opts && opts.force)){ App.viewOnly(); return false; }
-    const pre = snap(); const r = fn(); S.undo.push({ pre, post: snap() }); if (S.undo.length > 150) S.undo.shift(); S.redo = [];
+    const pids = [].concat(keys).filter(k => String(k).startsWith("a:")).map(k => k.slice(2)), was = {};
+    pids.forEach(pid => was[pid] = new Map(((S.acts[pid] || {}).actions || []).map(a => [a.u, JSON.stringify(clean(a))])));
+    const pre = snap(); const r = fn(); pids.forEach(pid => logChanges(pid, was[pid])); S.undo.push({ pre, post: snap() }); if (S.undo.length > 150) S.undo.shift(); S.redo = [];
     [].concat(keys).forEach(k => S.dirty.add(k)); stash(); saveSoon(); App.render(); return r === undefined ? true : r; }
   const me = () => (Profile.get().email || "").toLowerCase();
   const touch = o => { o.mod = now(); o.by = Profile.name() || "Someone"; if (me()) o.byE = me(); else delete o.byE; return o; };
   const mine = o => o && (o.byE ? o.byE === me() : o.by === Profile.name());
   /* everyone who has signed in (data/users.json): name, role, mobile and email, so edits and warnings can name people */
   const users = () => live(S.users.users);
+  /* the action's owner, with their details from the people who've signed in: { n, e, role, mobile } */
+  const owner = a => { const o = a && a.owner || {}, u = (o.e && users().find(x => x.id === o.e)) || (o.n && users().find(x => [x.first, x.last].filter(Boolean).join(" ").toLowerCase() === String(o.n).toLowerCase()));
+    return u ? { n: [u.first, u.last].filter(Boolean).join(" ") || o.n, e: u.email || u.id, role: u.role, mobile: u.mobile } : { n: o.n || "", e: o.e || "" }; };
   const user = email => users().find(u => u.id === String(email || "").toLowerCase());
-  function saveUser(p){ const id = String(p.email || "").toLowerCase(); if (!id) return; const cur = S.users.users.find(u => u.id === id), u = Object.assign({}, cur || { id, created: now() }, { first: p.first, last: p.last, mobile: p.mobile, email: p.email, role: p.role });
-    if (cur && ["first", "last", "mobile", "role"].every(k => (cur[k] || "") === (u[k] || ""))) return; u.mod = now();
+  function saveUser(p, force){ const id = String(p.email || "").toLowerCase(); if (!id) return; const cur = S.users.users.find(u => u.id === id), u = Object.assign({}, cur || { id, created: now() }, { first: p.first, last: p.last, mobile: p.mobile, email: p.email, role: p.role });
+    if (!force && cur && ["first", "last", "mobile", "role"].every(k => (cur[k] || "") === (u[k] || ""))) return; u.mod = now();   // (force: held back until we could save, so save it now)
     if (cur) Object.assign(cur, u); else S.users.users.push(u);
     if (S.edit){ S.dirty.add("users"); stash(); saveSoon(); } else lsSet("adPendUser", p); }
+  /* ---------- change history: who changed what on each action, and when (a.hist, newest last, the last 400) ---------- */
+  const HSKIP = new Set(["mod", "by", "byE", "_p", "hist", "rank", "stageAt", "doneAt", "prevStage", "prevHold", "isolNo", "am", "u", "no", "created"]);
+  const LIST = { isol: ["Isolations", x => x.tag || x.name], mto: ["MTO", x => x.desc || x.part], spares: ["Spares", x => x.desc || x.part], photos: ["Photos", x => x.name], files: ["Attachments", x => x.name],
+    quotes: ["Quotes", x => x.name], rfq: ["RFQ revisions", x => x.name], dwgPick: ["Ticked drawings", x => x], rfqTo: ["Send RFQ to", x => x] };
+  const short = v => { const t = v == null || v === "" ? "–" : typeof v === "boolean" ? (v ? "Yes" : "No") : Array.isArray(v) ? (v.join(", ") || "–") : typeof v === "object" ? (v.n || v.name || JSON.stringify(v)) : String(v); return t.length > 140 ? t.slice(0, 137) + "…" : t; };
+  /* what changed between two copies of an action, as [what, from, to] lines */
+  function diff(o, n){ const out = [];
+    if (!o) return [["Created", "", ""]];
+    if (!!o.del !== !!n.del) out.push([n.del ? "Deleted the action" : "Restored the action", "", ""]);
+    if (o.stage !== n.stage) out.push(["Stage", stage(o.stage).name, stage(n.stage).name]);
+    const of = o.f || {}, nf = n.f || {};
+    new Set(Object.keys(of).concat(Object.keys(nf))).forEach(k => { if (eq(of[k], nf[k])) return; const fd = field(k); out.push([fd ? fd.label : k, short(fd && fd.type === "stage" ? stage(of[k]).name : of[k]), short(fd && fd.type === "stage" ? stage(nf[k]).name : nf[k])]); });
+    new Set(Object.keys(o).concat(Object.keys(n))).forEach(k => { if (HSKIP.has(k) || k === "f" || k === "stage" || k === "del" || eq(o[k], n[k])) return;
+      const L = LIST[k]; if (!L){ out.push([k === "owner" ? "Action owner" : k, short(o[k]), short(n[k])]); return; }
+      const id = x => typeof x === "object" && x ? (x.id || x.h || L[1](x)) : x, om = new Map((o[k] || []).map(x => [id(x), x])), nm = new Map((n[k] || []).map(x => [id(x), x]));
+      const add = [...nm.keys()].filter(x => !om.has(x)).map(x => L[1](nm.get(x)) || "a row"), rem = [...om.keys()].filter(x => !nm.has(x)).map(x => L[1](om.get(x)) || "a row"), chg = [...nm.keys()].filter(x => om.has(x) && !eq(om.get(x), nm.get(x))).map(x => L[1](nm.get(x)) || "a row");
+      if (add.length) out.push([L[0], "", "added " + short(add)]); if (rem.length) out.push([L[0], "removed " + short(rem), ""]); if (chg.length) out.push([L[0], "", "changed " + short(chg)]);
+      if (!add.length && !rem.length && !chg.length) out.push([L[0], "", "reordered"]); });
+    return out; }
+  const entry = (c, note) => ({ i: uid(), t: now(), by: Profile.name() || "Someone", e: me() || undefined, c, note });
+  function logChanges(pid, was){ ((S.acts[pid] || {}).actions || []).forEach(a => { const o = was.get(a.u), cur = JSON.stringify(clean(a)); if (o === cur) return;
+      const c = diff(o && JSON.parse(o), clean(a)); if (!c.length) return; (a.hist = a.hist || []).push(entry(c)); if (a.hist.length > 400) a.hist.splice(0, a.hist.length - 400); }); }
+  /* two copies' histories together (each entry once, in time order) */
+  const histUnion = (x, y) => { const m = new Map(); (x || []).concat(y || []).forEach(h => m.set(h.i, h)); return [...m.values()].sort((a, b) => a.t - b.t).slice(-400); };
+
   /* undo / redo: put back only the items that change touched (its copy from before, or after), each stamped as
      new so it also wins over the online copy; everything else, including other people's work, is left alone */
   function apply(fromS, toS){ const F = JSON.parse(fromS), T = JSON.parse(toS), t = now();
     const put = (cur, from, to, key, mark) => { let changed = false; const fm = new Map((from || []).map(x => [x[key], x])), tm = new Map((to || []).map(x => [x[key], x]));
       new Set([...fm.keys(), ...tm.keys()]).forEach(id => { const f = fm.get(id), n = tm.get(id); if (eq(f, n)) return; changed = true;
         const i = cur.findIndex(x => x[key] === id), nv = n ? Object.assign(clone(n), { mod: t }) : null;
-        if (i >= 0){ const o = cur[i]; if (nv){ Object.keys(o).forEach(k => { if (k !== "_p") delete o[k]; }); Object.assign(o, nv); } else { o.del = true; o.mod = t; } }
+        if (i >= 0){ const o = cur[i], keep = o.hist; if (nv){ Object.keys(o).forEach(k => { if (k !== "_p") delete o[k]; }); Object.assign(o, nv); } else { o.del = true; o.mod = t; }
+          if (key === "u"){ o.hist = histUnion(keep, o.hist); const c = diff(f && clean(f), clean(o)); if (c.length) o.hist.push(entry(c, how)); } }
         else if (nv) cur.push(nv); });
       const fo = (from || []).map(x => x[key]).join("|"), to2 = (to || []).map(x => x[key]).join("|");
       if (fo !== to2 && key === "id"){ const ix = new Map((to || []).map((x, i) => [x.id, i])); cur.sort((a, b) => (ix.has(a.id) ? ix.get(a.id) : 1e9) - (ix.has(b.id) ? ix.get(b.id) : 1e9)); changed = true; }
@@ -113,12 +144,14 @@ const Store = (() => {
     new Set([...Object.keys(F.a), ...Object.keys(T.a)]).forEach(pid => { const pa = S.acts[pid] || (S.acts[pid] = { v: 1, nextNo: 1, actions: [] });
       put(pa.actions, (F.a[pid] || {}).actions, (T.a[pid] || {}).actions, "u", () => S.dirty.add("a:" + pid)); pa.nextNo = Math.max(pa.nextNo || 1, (T.a[pid] || {}).nextNo || 1, (F.a[pid] || {}).nextNo || 1); });
     stash(); saveSoon(); App.render(); }
-  function undo(){ if (!S.edit) return App.viewOnly(); const e = S.undo.pop(); if (!e) return note("Nothing to undo"); apply(e.post, e.pre); S.redo.push(e); note("Undone"); }
-  function redo(){ if (!S.edit) return App.viewOnly(); const e = S.redo.pop(); if (!e) return note("Nothing to redo"); apply(e.pre, e.post); S.undo.push(e); note("Redone"); }
+  let how = "";
+  function undo(){ if (!S.edit) return App.viewOnly(); const e = S.undo.pop(); if (!e) return note("Nothing to undo"); how = "Undo"; apply(e.post, e.pre); how = ""; S.redo.push(e); note("Undone"); }
+  function redo(){ if (!S.edit) return App.viewOnly(); const e = S.redo.pop(); if (!e) return note("Nothing to redo"); how = "Redo"; apply(e.pre, e.post); how = ""; S.undo.push(e); note("Redone"); }
 
   function newAction(pid, vals, stageId){ const pa = S.acts[pid] || (S.acts[pid] = { nextNo: 1, actions: [] });
     const st = stageId || stages()[0].id; const top = ranked(st)[0];
     const a = touch({ u: uid(), no: pa.nextNo++, stage: st, stageAt: { [st]: now() }, rank: top ? (top.rank || 0) - 1 : 0, created: now(), f: Object.assign({}, vals || {}), photos: [], files: [] });
+    if (Profile.name()) a.owner = me() ? { n: Profile.name(), e: me() } : { n: Profile.name() };   // (the owner starts as whoever made it)
     pa.actions.push(a); a._p = pid; return a; }
   /* move an action to a stage, at a position in that column (index among what's on show) */
   function place(a, st, index){ const col = ranked(st).filter(x => x !== a); index = Math.max(0, Math.min(index == null ? col.length : index, col.length));
@@ -156,11 +189,12 @@ const Store = (() => {
   /* both sides changed one action: keep every field each side changed; where both changed the same field, ours
      wins and the other person is named in the warning */
   function merge3(b, l, r, pid){ const o = clean(r), clash = [];
-    new Set(Object.keys(l).concat(Object.keys(r), Object.keys(b))).forEach(k => { if (k === "f" || k === "mod" || k === "by" || k === "byE" || k === "_p") return;
+    new Set(Object.keys(l).concat(Object.keys(r), Object.keys(b))).forEach(k => { if (k === "f" || k === "mod" || k === "by" || k === "byE" || k === "_p" || k === "hist") return;
       if (!eq(l[k], b[k])){ if (!eq(r[k], b[k]) && !eq(r[k], l[k])) clash.push(k); o[k] = clone(l[k]); } });
     const lf = l.f || {}, rf = r.f || {}, bf = b.f || {}; o.f = Object.assign({}, rf);
     new Set(Object.keys(lf).concat(Object.keys(rf), Object.keys(bf))).forEach(k => { if (!eq(lf[k], bf[k])){ if (!eq(rf[k], bf[k]) && !eq(rf[k], lf[k])) clash.push("f." + k); o.f[k] = clone(lf[k]); } });
     Object.assign(o, (l.mod || 0) >= (r.mod || 0) ? { mod: l.mod, by: l.by, byE: l.byE } : { mod: r.mod, by: r.by, byE: r.byE }); if (!o.byE) delete o.byE;
+    o.hist = histUnion(l.hist, r.hist); if (!o.hist.length) delete o.hist;
     S.conflicts.push({ pid, u: l.u, by: r.by, byE: r.byE, at: r.mod, clash }); return o; }
   function mergeActs(loc, rem, pid){ if (!rem) return loc; const base = S.base[pid] || {}, rm = new Map((rem.actions || []).map(a => [a.u, a]));
     const actions = mergeById(loc.actions, rem.actions, "u").map(a => { const l = (loc.actions || []).find(x => x.u === a.u), r = rm.get(a.u), b = base[a.u] && JSON.parse(base[a.u]);
@@ -209,7 +243,7 @@ const Store = (() => {
     S.loaded = true; App.render(); if (S.dirty.size || S.blobs.length) saveSoon(); }
   async function refresh(first){ const held = () => S.edit && S.dirty.size && !first; if (saving || held()) return false;
     const [c, p, us, vd] = await Promise.all([GH.readJson(P_CONFIG), GH.readJson(P_PROJECTS), GH.readJson(P_USERS), GH.readJson(P_VENDORS)]);
-    const acts = {}; const list = (p && p.projects || []); await Promise.all(list.map(async x => { acts[x.id] = await GH.readJson(pActs(x.id)) || { v: 1, nextNo: 1, actions: [] }; }));
+    const acts = {}; const list = live(p && p.projects || []); await Promise.all(list.map(async x => { acts[x.id] = await GH.readJson(pActs(x.id)) || { v: 1, nextNo: 1, actions: [] }; }));
     if (saving || held()) return false;
     const before = snap(), prev = JSON.parse(JSON.stringify(S.acts, (k, v) => k === "_p" ? undefined : v));
     S.users = { v: 1, users: mergeById(S.users.users, us && us.users) }; if (vd && !S.dirty.has("vendors")) S.vendors = vd;
@@ -226,5 +260,5 @@ const Store = (() => {
     const i = c.fields.findIndex(f => f.id === "complete"); if (i >= 0 && i !== c.fields.length - 1) c.fields.push(c.fields.splice(i, 1)[0]); }
 
   return { S, enter, stages, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, find, findRef, actId, ranked, priority,
-    vendors: () => S.vendors, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
+    vendors: () => S.vendors, owner, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();
