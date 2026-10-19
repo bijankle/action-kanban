@@ -1,0 +1,249 @@
+{
+ "v": 1,
+ "mod": 1792413292212,
+ "stages": [
+  {
+   "id": "st0",
+   "name": "Issue Identified",
+   "color": "#3B8FE0",
+   "kind": "open",
+   "print": true,
+   "mod": 1792413292212
+  },
+  {
+   "id": "st1",
+   "name": "Defect Notification Sent",
+   "color": "#7C5CD6",
+   "kind": "open",
+   "print": true,
+   "mod": 1792413292212
+  },
+  {
+   "id": "st2",
+   "name": "Work Order Created",
+   "color": "#0E9AA7",
+   "kind": "open",
+   "print": true,
+   "mod": 1792413292212
+  },
+  {
+   "id": "st3",
+   "name": "Parts Procured",
+   "color": "#C07A12",
+   "kind": "open",
+   "print": true,
+   "mod": 1792413292212
+  },
+  {
+   "id": "st4",
+   "name": "Work Scheduled",
+   "color": "#2F7FD1",
+   "kind": "open",
+   "print": true,
+   "mod": 1792413292212
+  },
+  {
+   "id": "st5",
+   "name": "On Hold",
+   "color": "#F2B03D",
+   "kind": "hold",
+   "print": true,
+   "mod": 1792413292212
+  },
+  {
+   "id": "st6",
+   "name": "Completed",
+   "color": "#2FB463",
+   "kind": "done",
+   "print": false,
+   "mod": 1792413292212
+  }
+ ],
+ "fields": [
+  {
+   "id": "title",
+   "label": "Title",
+   "type": "text",
+   "builtin": true,
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "core": true
+  },
+  {
+   "id": "status",
+   "label": "Status",
+   "type": "stage",
+   "builtin": true,
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "core": true
+  },
+  {
+   "id": "priority",
+   "label": "Priority",
+   "type": "rank",
+   "builtin": true,
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "core": true
+  },
+  {
+   "id": "problem",
+   "label": "Problem",
+   "type": "longtext",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "core": true
+  },
+  {
+   "id": "solution",
+   "label": "Solution",
+   "type": "longtext",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "core": true
+  },
+  {
+   "id": "location",
+   "label": "Location",
+   "type": "text",
+   "builtin": true,
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "suggest": true
+  },
+  {
+   "id": "equipment",
+   "label": "Equipment tags",
+   "type": "multi",
+   "builtin": true,
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "options": []
+  },
+  {
+   "id": "procurement",
+   "label": "Procurement required",
+   "type": "check",
+   "builtin": true,
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212
+  },
+  {
+   "id": "defect",
+   "label": "Defect notice sent",
+   "type": "choice",
+   "builtin": true,
+   "table": false,
+   "tbc": true,
+   "na": true,
+   "mod": 1792413292212,
+   "options": [
+    {
+     "id": "mvf8lfp0utfr0d0",
+     "label": "Yes",
+     "color": ""
+    },
+    {
+     "id": "mvf8lfp0jnrvdn1",
+     "label": "No",
+     "color": ""
+    }
+   ]
+  },
+  {
+   "id": "scope",
+   "label": "Scope document sent",
+   "type": "choice",
+   "builtin": true,
+   "table": false,
+   "tbc": true,
+   "na": true,
+   "mod": 1792413292212,
+   "options": [
+    {
+     "id": "mvf8lfp0xau0ps0",
+     "label": "Yes",
+     "color": ""
+    },
+    {
+     "id": "mvf8lfp015a7fk1",
+     "label": "No",
+     "color": ""
+    }
+   ]
+  },
+  {
+   "id": "contractorAssigned",
+   "label": "Contractor assigned",
+   "type": "choice",
+   "builtin": true,
+   "table": false,
+   "tbc": true,
+   "na": true,
+   "mod": 1792413292212,
+   "options": [
+    {
+     "id": "mvf8lfp0znri4t0",
+     "label": "Yes",
+     "color": ""
+    },
+    {
+     "id": "mvf8lfp0cqnpkk1",
+     "label": "No",
+     "color": ""
+    }
+   ]
+  },
+  {
+   "id": "contractor",
+   "label": "Contractor name",
+   "type": "contact",
+   "builtin": true,
+   "table": false,
+   "tbc": true,
+   "na": true,
+   "mod": 1792413292212
+  },
+  {
+   "id": "contractorPhone",
+   "label": "Contractor number",
+   "type": "phone",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "link": "contractor"
+  },
+  {
+   "id": "eta",
+   "label": "Goods receival ETA",
+   "type": "date",
+   "builtin": true,
+   "table": true,
+   "tbc": true,
+   "na": true,
+   "mod": 1792413292212
+  }
+ ],
+ "contacts": []
+}

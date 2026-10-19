@@ -1,0 +1,270 @@
+{
+ "v": 1,
+ "nextNo": 12,
+ "actions": [
+  {
+   "u": "mvf8ljvd9aa0ug",
+   "no": 11,
+   "am": "mut8drkuvrfzny",
+   "stage": "st0",
+   "rank": 1,
+   "created": 1791082678044,
+   "f": {
+    "title": "Rock breaker work area",
+    "problem": "Rock breaker work area"
+   },
+   "photos": [
+    {
+     "h": "c9797105943a39fdbdc67cb572a35f25a9103c70",
+     "am": "7aa6d8554a22d8f063b82a2e83e2031c3b910e65",
+     "name": "Pasted 2026-10-04 10.56.34.png",
+     "w": 748,
+     "ht": 798,
+     "added": 1792413297666
+    }
+   ],
+   "files": [],
+   "steps": [
+    {
+     "id": "smut8dr8czllcx",
+     "t": "Investigate whether current arrangement is fine or whether controls need to be brought in to address fall risk",
+     "d": false
+    }
+   ],
+   "gps": {
+    "lat": -30.76468676508888,
+    "lng": 121.50592325790566
+   },
+   "mod": 1792413297666,
+   "by": "Bijan"
+  },
+  {
+   "u": "mvf8ljwi6gkgb9",
+   "no": 10,
+   "am": "murzhf5hltc902",
+   "stage": "st5",
+   "rank": 2,
+   "created": 1791007265889,
+   "f": {
+    "title": "Rock Breaker Work Area",
+    "problem": "Rock Breaker Work Area"
+   },
+   "photos": [
+    {
+     "h": "5a722bf9efac583b14eb9250717f2953cfaee71e",
+     "am": "8b82708b5340d5f576907306f360dae618b8386e",
+     "name": "Pasted 2026-10-03 14.02.52.png",
+     "w": 800,
+     "ht": 554,
+     "added": 1792413297692
+    },
+    {
+     "h": "2a8cefd6b285d2366a455e0ab8245f54163420c8",
+     "am": "4d4c44a35311eba020815b81d0f37840d61e1f08",
+     "name": "Pasted 2026-10-03 15.48.11.png",
+     "w": 800,
+     "ht": 447,
+     "added": 1792413297728
+    }
+   ],
+   "files": [],
+   "steps": [
+    {
+     "id": "smus5jl972sfrh",
+     "t": "Being addressed by Operations",
+     "d": false
+    }
+   ],
+   "gps": {
+    "lat": -30.76466601902076,
+    "lng": 121.5058995503034
+   },
+   "mod": 1792413297728,
+   "by": "Bijan"
+  },
+  {
+   "u": "mvf8ljy88h9mvt",
+   "no": 8,
+   "am": "murzeq5suw8l29",
+   "stage": "st0",
+   "rank": 3,
+   "created": 1791007140187,
+   "f": {
+    "title": "Tramp Metal Magnet",
+    "problem": "Tramp Metal Magnet"
+   },
+   "photos": [
+    {
+     "h": "bb966818244e57eb53375f85ff3a65429182a157",
+     "am": "df3b143342469d22b44ffacc9ad60c06595ce8a1",
+     "name": "Damien image.jpg",
+     "w": 600,
+     "ht": 800,
+     "added": 1792413297764
+    }
+   ],
+   "files": [],
+   "steps": [
+    {
+     "id": "smurzfdojkfgdy",
+     "t": "Investigate modification options to avoid entrapped scrap metal",
+     "d": false
+    },
+    {
+     "id": "smurzfi1cdp15o",
+     "t": "Consult Primero",
+     "d": false
+    }
+   ],
+   "gps": {
+    "lat": -30.76385534352928,
+    "lng": 121.50600162369177
+   },
+   "mod": 1792413297764,
+   "by": "Bijan"
+  },
+  {
+   "u": "mvf8ljz8jem7pg",
+   "no": 9,
+   "am": "murzg9h1i37xej",
+   "stage": "st0",
+   "rank": 4,
+   "created": 1791007211873,
+   "f": {
+    "title": "PC2 Dust Suppression Spray Logic",
+    "problem": "PC2 Dust Suppression Spray Logic"
+   },
+   "photos": [
+    {
+     "h": "7e9867560d139c23c7c76aed5c13eff802cde163",
+     "am": "2ab8a196c580f1abf30f48d0662df308f3c88001",
+     "name": "Pasted 2026-10-03 15.49.24.png",
+     "w": 800,
+     "ht": 533,
+     "added": 1792413297796
+    },
+    {
+     "h": "2a8cefd6b285d2366a455e0ab8245f54163420c8",
+     "am": "4d4c44a35311eba020815b81d0f37840d61e1f08",
+     "name": "Pasted 2026-10-03 15.48.11.png",
+     "w": 800,
+     "ht": 447,
+     "added": 1792413297823
+    }
+   ],
+   "files": [],
+   "steps": [
+    {
+     "id": "smurzgg5s53sqv",
+     "t": "Investigate logic",
+     "d": false
+    },
+    {
+     "id": "smurzgn7azj1dz",
+     "t": "Determine solution",
+     "d": false
+    },
+    {
+     "id": "smurzguvm46fn7",
+     "t": "Consult Primero",
+     "d": false
+    }
+   ],
+   "gps": {
+    "lat": -30.76469537124751,
+    "lng": 121.50587679100516
+   },
+   "mod": 1792413297823,
+   "by": "Bijan"
+  },
+  {
+   "u": "mvf8lk0v0cnemu",
+   "no": 5,
+   "am": "murxovrotcb5vh",
+   "stage": "st6",
+   "rank": 5,
+   "created": 1791004254780,
+   "f": {
+    "title": "FIM III Booster Pump Gearbox Pressure Switches",
+    "problem": "FIM III Booster Pump Gearbox Pressure Switches"
+   },
+   "photos": [
+    {
+     "h": "61f45283fc6ff998374094f1afb33e37bd5bff40",
+     "am": "e68cf4e819a49617df80a9b2a3416beedfe32a3c",
+     "name": "shared image.jpg",
+     "w": 600,
+     "ht": 800,
+     "added": 1792413297863
+    }
+   ],
+   "files": [],
+   "steps": [
+    {
+     "id": "smurxp87b7g1cy",
+     "t": "Supervise Parc take oil samples from both gearboxes",
+     "d": true
+    },
+    {
+     "id": "smurxq62f3wvot",
+     "t": "Drain gearbox of PP-651",
+     "d": true
+    },
+    {
+     "id": "smus3ems6m8054",
+     "t": "Take out radiator and clean it",
+     "d": true
+    },
+    {
+     "id": "smuumqbee3xqbx",
+     "t": "Weir to inspect",
+     "d": false
+    }
+   ],
+   "gps": {
+    "lat": -30.738036281790432,
+    "lng": 121.53268325957217
+   },
+   "doneAt": 1791167246941,
+   "mod": 1792413297863,
+   "by": "Bijan"
+  },
+  {
+   "u": "mvf8lk1zs72all",
+   "no": 4,
+   "am": "murirwshsnw052",
+   "stage": "st0",
+   "rank": 6,
+   "created": 1790979201839,
+   "f": {
+    "title": "FIM III Valve Pit Drainage Issue",
+    "problem": "FIM III Valve Pit Drainage Issue"
+   },
+   "photos": [
+    {
+     "h": "e392341f0601da3302bc3f98dcff75d23e2bd666",
+     "am": "6609560b86ec9dcfa415a0d74d3e5f6e24693094",
+     "name": "shared image (16).jpg",
+     "w": 800,
+     "ht": 600,
+     "added": 1792413297898
+    }
+   ],
+   "files": [],
+   "steps": [
+    {
+     "id": "smurit4xavf1q5",
+     "t": "Investigate feasibility of draining into neighbouring toe drain.",
+     "d": false
+    },
+    {
+     "id": "smurit96l30125",
+     "t": "Identify NPSHr for toe drain pump",
+     "d": false
+    }
+   ],
+   "mod": 1792413297898,
+   "by": "Bijan"
+  }
+ ]
+}

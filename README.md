@@ -1,0 +1,27 @@
+# Action Database
+
+The new and improved action tracker, following on from ActionMap. It runs from GitHub Pages, so anyone with the link can view the actions and photos, and anyone with a GitHub key that can write to this repo can edit them.
+
+## What it does
+
+The Actions tab is a simple table of every action in the ticked projects, with search and stage pills. Click a row to open it in the side panel, which shows the problem, the solution and the photos, followed by the attachments, steps and all other details. Drag the panel's edge to resize it.
+
+The Kanban tab shows one column per stage. Drag cards between columns and up or down inside a column, where higher means higher priority. You can add, rename, recolour, reorder and delete stages at any time, and mark a stage as on hold or completed.
+
+The Data validation tab sets the type of every field (text, long text, number, date, tick box, choice, tags, contact, phone), its allowed values and colours, whether it offers TBC and N/A, and whether it shows as a table column. It also holds the stages and the contacts list. Picking a contact fills in their number, and a new name typed on an action is added to the contacts.
+
+For photos and files, open an action and paste a screenshot, or drop photos, PDFs or Excel files onto the action. The full quality original is saved in the local folder chosen at setup, and a compressed copy (Low 1024 px or Medium 1600 px) goes online. Double click a photo for full screen, and press Esc to leave.
+
+To make an action from text, use New action, then Paste text. Google Gemini splits an email into the fields. Anything it can't find is left empty, and any field set to TBC shows in red.
+
+To print, choose which stages to print (Completed starts unticked). The board prints first on A4 landscape, then each action with its details, photos and attachment links. Export to Excel exports the table as filtered, with a Photos link that opens the app on that action's photos.
+
+Undo and redo work with Ctrl+Z and Ctrl+Y. View settings cover the theme colour (the presets or a custom colour), dark mode and text size. On a phone the app is view only, with stage filter pills, search and full screen photos.
+
+## Where the data lives
+
+All data lives under `data/` in this repo. `config.json` holds the fields, stages and contacts, `projects.json` holds the project list, and each project has `p/<project>/actions.json` with its `img/` and `thumb/` photos and its `files/` attachments. Each save is one commit. Before writing, the app re-reads the online copy and merges action by action, so two people editing different actions never overwrite each other.
+
+## Setup
+
+In the repo Settings, under Pages, deploy from the branch that holds this code. Then open the site, enter your name, a fine grained GitHub key with Contents read and write on this repo, the local folder, and optionally a Gemini key from aistudio.google.com.

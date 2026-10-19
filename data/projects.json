@@ -1,0 +1,25 @@
+{
+ "v": 1,
+ "projects": [
+  {
+   "id": "bijan-s-actions-yvvm",
+   "name": "Bijan's Actions",
+   "prefix": "BIJ",
+   "color": "#475569",
+   "created": 1792413296364,
+   "importedFrom": "actionmap:fim2-gqg9",
+   "mod": 1792413296364,
+   "by": "Bijan"
+  },
+  {
+   "id": "jack-s-actions-lk0y",
+   "name": "Jack's Actions",
+   "prefix": "JAC",
+   "color": "#9A3412",
+   "created": 1792413297625,
+   "importedFrom": "actionmap:jack-s-actions-ca5i",
+   "mod": 1792413297625,
+   "by": "Bijan"
+  }
+ ]
+}
