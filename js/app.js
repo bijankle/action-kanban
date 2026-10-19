@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.7.0";
+const APP_VERSION = "1.7.1";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 const THEMES = [["slate", "Slate", "#475569"], ["graphite", "Graphite", "#52525b"], ["navy", "Navy", "#1E3A5F"], ["petrol", "Petrol", "#1F4F5A"], ["olive", "Olive", "#5A5A2E"], ["stone", "Stone", "#7A6A5D"], ["rust", "Rust", "#9A3412"], ["ink", "Ink", "#111827"]];
 
@@ -41,7 +41,7 @@ const App = (() => {
   const viewOnly = () => note(GH.cfg().token ? "This GitHub key can't save to " + GH.cfg().repo + ". View only." : "View only. Add your GitHub key in File, Settings to make changes.", 4500);
   function newAction(stageId){ Intake.open(stageId); }
 
-  /* ---------- project box (Project Library style): tick one or several projects ---------- */
+  /* ---------- project box: tick one or several projects ---------- */
   const TICK = '<svg viewBox="1.4 2 9.2 8.2" width="12" height="12" aria-hidden="true"><path d="M2.4 6.3 5 8.8 9.8 3.4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function projBox(el){ const ps = Store.projects(), sel = Store.selected();
     const label = !ps.length ? "No projects" : sel.length === ps.length && ps.length > 1 ? "All" : sel.length === 1 ? (Store.project(sel[0]) || {}).name : sel.length + " projects";
@@ -65,12 +65,13 @@ const App = (() => {
         $("[data-k=link]", r).onclick = () => { const l = GH.appUrl() + "?p=" + encodeURIComponent(id); navigator.clipboard.writeText(l).then(() => note("Link copied. Anyone with it can view this project."), () => prompt("Copy this link:", l)); };
         const rn = $("[data-k=ren]", r); if (rn) rn.onclick = () => editProject(Store.project(id), draw); }); };
     draw(); $("[data-k=x]", m).onclick = () => m.close(); const nb = $("[data-k=new]", m); if (nb) nb.onclick = () => editProject(null, draw); }
+  const prefixOf = n => (String(n).replace(/[^A-Za-z]/g, "").slice(0, 3) || "ACT").toUpperCase();
   function editProject(p, after){ const isNew = !p; p = p || { name: "", prefix: "", color: ["#475569", "#9A3412", "#1F4F5A", "#5A5A2E", "#1E3A5F", "#7A6A5D"][Store.projects().length % 6] };
     const m = modal('<h3>' + (isNew ? "New project" : "Edit project") + '</h3><label class="fl">Name<input class="in" data-k="name" value="' + esc(p.name) + '"></label><label class="fl">ID prefix <span class="dim">the action IDs read PREFIX-0001</span><input class="in" data-k="prefix" maxlength="6" value="' + esc(p.prefix) + '"></label><label class="fl in-row">Colour <input type="color" data-k="color" value="' + esc(p.color) + '"></label>'
       + '<div class="yn-btns">' + (isNew ? "" : '<button class="yn-no danger-t" type="button" data-k="del">Delete</button><span class="grow"></span>') + '<button class="yn-no" type="button" data-k="x">Cancel</button><button class="yn-yes" type="button" data-k="ok">' + (isNew ? "Create" : "Save") + '</button></div>');
-    const n = $("[data-k=name]", m), px = $("[data-k=prefix]", m); n.focus(); let auto = isNew; n.oninput = () => { if (auto) px.value = ImportAM.prefixOf(n.value); }; px.oninput = () => auto = false;
+    const n = $("[data-k=name]", m), px = $("[data-k=prefix]", m); n.focus(); let auto = isNew; n.oninput = () => { if (auto) px.value = prefixOf(n.value); }; px.oninput = () => auto = false;
     $("[data-k=x]", m).onclick = () => m.close();
-    $("[data-k=ok]", m).onclick = () => { const name = n.value.trim(); if (!name) return n.focus(); const pre = (px.value.trim() || ImportAM.prefixOf(name)).toUpperCase().replace(/[^A-Z0-9]/g, ""), col = $("[data-k=color]", m).value;
+    $("[data-k=ok]", m).onclick = () => { const name = n.value.trim(); if (!name) return n.focus(); const pre = (px.value.trim() || prefixOf(name)).toUpperCase().replace(/[^A-Z0-9]/g, ""), col = $("[data-k=color]", m).value;
       if (isNew){ const id = slug(name) + "-" + uid().slice(-4); Store.mutate("projects", () => { Store.S.projects.projects.push(Store.touch({ id, name, prefix: pre, color: col, created: now() })); Store.S.acts[id] = { v: 1, nextNo: 1, actions: [] }; Store.S.dirty.add("a:" + id); Store.setSelected(Store.selected().concat(id)); }); Store.log("Created project " + name); }
       else Store.mutate("projects", () => { Object.assign(p, { name, prefix: pre, color: col }); Store.touch(p); });
       m.close(); after && after(); };
@@ -86,7 +87,6 @@ const App = (() => {
       + '<div class="fl">Local folder <span class="dim">full quality photos and a backup of the data are saved here</span><div class="in-row"><b class="lfn">' + esc(Local.name() || (lf === "unsupported" ? "Needs Chrome or Edge" : "Not chosen")) + '</b>' + (lf === "locked" ? ' <span class="dim">(click Reconnect)</span>' : "") + '<span class="grow"></span>' + (Local.supported ? '<button type="button" class="btn ghost sm" data-k="pick">' + (lf === "locked" ? "Reconnect" : "Choose folder…") + '</button>' : "") + '</div></div>'
       + '<label class="fl">Google Gemini key <span class="dim">optional, for turning pasted text into an action</span><input class="in secret" data-k="gem" autocomplete="off" spellcheck="false" value="' + esc(lsGet("adGemKey", "")) + '" placeholder="Free from aistudio.google.com"></label>'
       + '<div class="fl">Photo quality online <span class="dim">the original is always kept in the local folder</span><div class="seg" data-k="q">' + [["low", "Low, 1024 px"], ["medium", "Medium, 1600 px"]].map(([k, n]) => '<button type="button" data-v="' + k + '"' + ((Store.S.config && Store.S.config.quality || "medium") === k ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</div></div>'
-      + (first ? "" : '<div class="msep"></div><button type="button" class="btn ghost sm" data-k="am">Import from ActionMap…</button>')
       + '<div class="yn-btns">' + (first ? '<button class="yn-no" type="button" data-k="x">Skip for now</button>' : '<button class="yn-no" type="button" data-k="x">Cancel</button>') + '<button class="yn-yes" type="button" data-k="ok">' + (first ? "Finish" : "Save") + '</button></div>', { cls: "set-win", sticky: first });
     const ks = $(".ks", m); const check = async () => { const k = $("[data-k=key]", m).value.trim(); if (!k){ ks.textContent = ""; return; } ks.textContent = "Checking…";
       const old = lsGet("adGhKey", ""), oldR = lsGet("adRepo2", ""); lsSet("adGhKey", k); lsSet("adRepo2", $("[data-k=repo]", m).value.trim()); GH.reset(); const ok = await GH.canEdit(); lsSet("adGhKey", old); lsSet("adRepo2", oldR); GH.reset();
@@ -94,7 +94,6 @@ const App = (() => {
     $("[data-k=key]", m).onchange = check; if (c.token) check();
     $$("[data-k=q] button", m).forEach(b => b.onclick = () => { $$("[data-k=q] button", m).forEach(x => x.classList.toggle("on", x === b)); });
     const pk = $("[data-k=pick]", m); if (pk) pk.onclick = async () => { if (await (Local.state() === "locked" ? Local.reconnect() : Local.pick())){ $(".lfn", m).textContent = Local.name(); pk.textContent = "Change folder…"; } };
-    const am = $("[data-k=am]", m); if (am) am.onclick = () => { m.close(); ImportAM.open(); };
     $("[data-k=x]", m).onclick = () => { lsSet("adSetup", 1); m.close(); };
     $("[data-k=prof]", m).onclick = () => profile(() => { $(".pfn", m).textContent = Profile.name() || "Not set"; });
     $("[data-k=ok]", m).onclick = async () => { lsSet("adGhKey", $("[data-k=key]", m).value.trim()); lsSet("adRepo2", $("[data-k=repo]", m).value.trim() === GH.DATA_REPO ? "" : $("[data-k=repo]", m).value.trim()); lsSet("adGemKey", $("[data-k=gem]", m).value.trim()); lsSet("adSetup", 1);
@@ -172,7 +171,7 @@ const App = (() => {
 
   /* ---------- menus ---------- */
   const MENUS = {
-    File: [["New action", "N", () => newAction()], ["New action from pasted text…", "", () => Intake.open(null, "")], "-", ["Projects…", "", projectsWin], ["New project…", "", () => editProject(null)], "-", ["Export to PDF or print…", "Ctrl+P", () => Print.dialog()], ["Export to Excel", "", () => Excel.run()], "-", ["Import from ActionMap…", "", () => ImportAM.open()], ["Your profile…", "", () => profile()], ["Settings…", "", () => settings()]],
+    File: [["New action", "N", () => newAction()], ["New action from pasted text…", "", () => Intake.open(null, "")], "-", ["Projects…", "", projectsWin], ["New project…", "", () => editProject(null)], "-", ["Export to PDF or print…", "Ctrl+P", () => Print.dialog()], ["Export to Excel", "", () => Excel.run()], "-", ["Your profile…", "", () => profile()], ["Settings…", "", () => settings()]],
     Edit: [["Undo", "Ctrl+Z", () => Store.undo()], ["Redo", "Ctrl+Y", () => Store.redo()], "-", ["Delete selected action", "", () => { const a = act(A.selRef); if (a) $(".av [data-k=del]") && $(".av [data-k=del]").click(); }]],
     View: null,
     Help: [["How to use", "", guide], ["Keyboard shortcuts", "", keys], "-", ["Update app", "", update], ["About", "", about]] };
@@ -193,7 +192,7 @@ const App = (() => {
       + sec("Photos and files", ["Drop photos and files onto an action's row or tile, or anywhere on the open action, or use Upload photos on its Overview. A pasted photo (Ctrl+V) waits at the bottom left until you drag it onto an action. PDFs, Excel files and anything else are kept as attachments.", "The Photos button opens a big view with thumbnails of the photos before and after. Arrows step through, ⛶ or a double click goes full screen, Esc closes.", "The ☰ and ▦ buttons switch the list between rows and tiles; Size sets the tile size."])
       + sec("Organizer", ["The board is kept simple: drag cards between stages, higher in a column means higher priority, and click a card for its problem, solution and photos. Edit on the Actions tab. Double click a stage name to rename it; drag a stage's header to move it; ⋯ for its colour, type (normal, on hold, completed) and whether it prints. + Add a stage at the end."])
       + sec("MTO and spares", ["Open an action and pick its MTO tab: fill in the rows (an empty MTO is a blank table ready to type in). → Spares moves a row to its Spares tab (and → MTO moves it back), so parts coming from site spares stay off the RFQ. The MTO column in the list says how many items each action has; click it to go straight there.", "Upload quotes at the top of the MTO (several, if they get revised) and download them any time. The PDF button there exports the RFQ: each export takes the next rev letter, A, B, C…, and every rev is kept in RFQ revisions for download. XLSX exports the list to Excel. Paste text lets Gemini fill in the rows from an email or quote; you check them before they're added."])
-      + sec("Isolations", ["Open an action and pick its Isolations tab; its equipment tags show above the list (click one to add it). Type an equipment number or name and pick from the suggestions (the Project Library equipment, valves and instruments, plus the Equipment tags list): picking fills in both. You can still edit them, which doesn't change any list. Add a note on each row. The isolations go in the workpack PDF and the print."])
+      + sec("Isolations", ["Open an action and pick its Isolations tab; its equipment tags show above the list (click one to add it). Type an equipment number or name and pick from the suggestions (the plant equipment, valves and instruments, plus the Equipment tags list): picking fills in both. You can still edit them, which doesn't change any list. Add a note on each row. The isolations go in the workpack PDF and the print."])
       + sec("Data validation", ["Set the type of every field (text, choice, tags, date, tick box, contact…), its allowed values and colours, whether it offers TBC and N/A, and whether it's a table column. Contacts hold names, companies and mobiles; picking a name fills in the number."])
       + sec("Printing and Excel", ["File, Print: tick the stages to print (Completed starts unticked). The board prints first, then each action's details and photos. File, Export to Excel exports the table as filtered, with a Photos link that opens the photos online."])
       + '<div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>', { cls: "guide-win" }); $(".yn-yes", m).onclick = () => m.close(); }

@@ -1,13 +1,13 @@
 /* The Isolations tab of the action view: the action's equipment tags, and its list the isolation points (equipment
-   number, name and a note). Typing a number or a name suggests equipment from the Project Library lists
+   number, name and a note). Typing a number or a name suggests equipment from the plant equipment lists
    (mechanical and electrical equipment, valves, instruments) and the Equipment tags list; picking one fills
    both. The row can still be edited afterwards, and that never changes the lists. */
 "use strict";
 const Equip = (() => {
-  const SRC = "https://raw.githubusercontent.com/bijankle/ProjectLibrary/HEAD/search-data.json";
+  const SRC = "https://raw.githubusercontent.com/bijankle/ProjectLibrary/HEAD/search-data.json";   // where the plant equipment lists live
   const KINDS = { mel: [0, 1, "Mech equipment"], elec: [0, 1, "Elec equipment"], cv: [0, 1, "Control valve"], mv: [0, 1, "Manual valve"], ins: [0, 1, "Instrument"] };
   let list = null, loadP = null, raw = null;
-  /* the Project Library list, kept on this device and refreshed once a day */
+  /* the plant equipment lists, kept on this device and refreshed once a day */
   function load(force){ if (loadP && !force) return loadP;
     loadP = (async () => { const c = await IDB.get("equip"); if (c && c.items){ list = c.items; raw = c.raw || null; if (!force && raw && now() - c.at < 864e5) return list; }
       try { const r = await fetch(lsGet("adEquipSrc", "") || SRC, { cache: "no-store" }); if (!r.ok) throw new Error(r.status); const d = await r.json(), out = [], seen = new Set();
@@ -15,7 +15,7 @@ const Equip = (() => {
         Object.entries(KINDS).forEach(([k, [ti, ni, label]]) => (d.data && d.data[k] || []).forEach(row => { const t = String(row[ti] || "").trim(); if (!t || seen.has(k + t)) return; seen.add(k + t);
           const it = { t, n: String(row[ni] || "").trim(), k: label }; if (k === "mel" && pidCol >= 0 && row[pidCol]) it.p = row[pidCol]; out.push(it); }));
         list = out; raw = d; IDB.set("equip", { at: now(), items: out, raw: d }); }
-      catch (e){ console.warn("Project Library equipment", e); if (!list) list = []; }
+      catch (e){ console.warn("plant equipment lists", e); if (!list) list = []; }
       return list; })();
     return loadP; }
   /* best matches for what's typed, from the tag (field "t") or the name (field "n") */
@@ -36,14 +36,14 @@ const Isol = (() => {
   /* one action's isolations, drawn into its action view tab; keep is where the cursor was before the redraw */
   function renderFor(el, a, keep){ const ro = !Store.S.edit;
     const s = Store.stage(a.stage), items = list(a), tags = Array.isArray(a.f.equipment) ? a.f.equipment : [], blanks = Math.max(ro ? 0 : 1, 5 - items.length);
-    el.innerHTML = '<div class="is-main"><div class="pt-head"><b class="pt-h">Isolations</b><span class="grow"></span><span class="dim is-src">' + (Equip.count ? Equip.count.toLocaleString() + " items from Project Library" : "Loading Project Library equipment…") + ' <button type="button" class="link" data-k="ref">Refresh</button></span></div>'
+    el.innerHTML = '<div class="is-main"><div class="pt-head"><b class="pt-h">Isolations</b><span class="grow"></span><span class="dim is-src">' + (Equip.count ? Equip.count.toLocaleString() + " items in the plant equipment lists" : "Loading the plant equipment lists…") + ' <button type="button" class="link" data-k="ref">Refresh</button></span></div>'
       + '<div class="is-tags"><b>Subject equipment</b>' + (tags.length ? tags.map(t => '<button type="button" class="is-chip" data-tag="' + esc(t) + '" title="' + (ro ? "" : "Add as an isolation row") + '">' + Fields.chip(t) + (ro ? "" : "<i>+</i>") + '</button>').join("") + (ro ? "" : '<span class="dim is-hint">click a tag to add it as a row</span>') : '<span class="dim">No equipment tags on this action. Add them in its side panel on the Actions tab.</span>') + '</div>'
       + sugBox(a, tags, ro)
       + '<table class="tbl pt-tbl is-tbl"><thead><tr><th class="pt-no">No.</th>' + COLS.map(([k, n]) => '<th class="is-' + k + '">' + esc(n) + '</th>').join("") + '<th class="pt-act"></th></tr></thead><tbody>'
       + items.map((it, i) => '<tr data-id="' + it.id + '"><td class="pt-no">' + (i + 1) + '</td>' + COLS.map(([k]) => cell(it.id, k, it[k], ro)).join("") + '<td class="pt-act">' + (ro ? "" : '<button type="button" class="ic-b sm pt-x" title="Remove this row">✕</button>') + '</td></tr>').join("")
       + Array.from({ length: blanks }, (_, k) => '<tr class="pt-blank"><td class="pt-no"></td>' + COLS.map(([c]) => cell("new" + k, c, "", ro)).join("") + '<td></td></tr>').join("") + '</tbody></table>'
       + '<div class="dim pt-foot">' + (items.length ? items.length + " isolation" + (items.length > 1 ? "s" : "") : "Empty, type an equipment number or name to start") + '. Picking a suggestion fills in the number and the name; you can still edit them, and that doesn\'t change the lists.</div></div>';
-    $("[data-k=ref]", el).onclick = () => { note("Refreshing the Project Library equipment…"); Equip.load(true).then(() => { note(Equip.count.toLocaleString() + " equipment items loaded"); App.render(); }); };
+    $("[data-k=ref]", el).onclick = () => { note("Refreshing the plant equipment lists…"); Equip.load(true).then(() => { note(Equip.count.toLocaleString() + " equipment items loaded"); App.render(); }); };
     if (!Equip.count) Equip.load().then(() => { if (App.sub === "isol" && Equip.count) App.render(); });
     wire(el, a, ro);
     wireSug(el, a, ro);
@@ -60,11 +60,11 @@ const Isol = (() => {
       r.forEach(x => { const k = String(x.tag || "").toUpperCase(); if (!k || seen.has(k) || have.has(k) || tags.some(y => y.toUpperCase() === k)) return; seen.add(k); out.push(Object.assign({ for: t }, x)); }); });
     return out; }
   function sugBox(a, tags, ro){ if (!tags.length || typeof IsolSuggest === "undefined") return ""; const all = suggestions(a, tags);
-    if (!all) return '<div class="is-sug"><b>Suggested isolations</b><span class="dim">' + (Equip.raw() ? "Working out the suggestions…" : "Loading the Project Library lists…") + '</span></div>';
+    if (!all) return '<div class="is-sug"><b>Suggested isolations</b><span class="dim">' + (Equip.raw() ? "Working out the suggestions…" : "Loading the plant equipment lists…") + '</span></div>';
     const no = new Set(a.isolNo || []), show = all.filter(x => !no.has(x.tag)), gone = all.length - show.length;
-    if (!all.length) return '<div class="is-sug"><b>Suggested isolations</b><span class="dim">No suggestions found in the Project Library lists for ' + esc(tags.join(", ")) + '.</span></div>';
+    if (!all.length) return '<div class="is-sug"><b>Suggested isolations</b><span class="dim">No suggestions found in the plant equipment lists for ' + esc(tags.join(", ")) + '.</span></div>';
     const groups = {}; show.forEach(x => (groups[x.kind] = groups[x.kind] || []).push(x));
-    return '<div class="is-sug"><div class="is-sh"><b>Suggested isolations</b><span class="dim">from the Project Library lists: check every one, then add it' + (ro ? "" : " with + or dismiss it with ✕") + '</span><span class="grow"></span>'
+    return '<div class="is-sug"><div class="is-sh"><b>Suggested isolations</b><span class="dim">from the plant equipment lists: check every one, then add it' + (ro ? "" : " with + or dismiss it with ✕") + '</span><span class="grow"></span>'
       + (!ro && show.length ? '<button type="button" class="link" data-sk="addall">Add all ' + show.length + '</button>' : "") + (gone ? '<button type="button" class="link" data-sk="back">Show ' + gone + ' dismissed</button>' : "") + '</div>'
       + Object.keys(KIND).filter(k => groups[k]).concat(Object.keys(groups).filter(k => !KIND[k])).map(k => '<div class="is-sg"><span class="is-sk">' + esc(KIND[k] || k) + '</span>' + groups[k].map(x => '<span class="is-pill k-' + esc(k) + '" title="' + esc((x.reason || "") + (tags.length > 1 ? "\nFor " + x.for : "")) + '"><b>' + esc(x.tag) + '</b><span>' + esc(x.name || "") + '</span>'
         + (ro ? "" : '<button type="button" class="ip-add" data-add="' + esc(x.tag) + '" title="Add as an isolation">+</button><button type="button" class="ip-x" data-no="' + esc(x.tag) + '" title="Dismiss">✕</button>') + '</span>').join("") + '</div>').join("")

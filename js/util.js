@@ -28,7 +28,7 @@ const Profile = { get: () => Object.assign({ first: "", last: "", mobile: "", em
 function note(msg, ms){ let n = $("#note"); if (!n){ n = h('<div id="note" role="status"></div>'); document.body.appendChild(n); }
   n.textContent = msg; n.classList.add("show"); clearTimeout(note._t); note._t = setTimeout(() => n.classList.remove("show"), ms || 3200); }
 
-/* modal window in the ActionMap style; returns the window element */
+/* modal window; returns the window element */
 function modal(html, opts){ opts = opts || {};
   const m = h('<div class="ynmodal show"><div class="yn-win ' + (opts.cls || "") + '">' + html + '</div></div>');
   document.body.appendChild(m);

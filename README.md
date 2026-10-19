@@ -1,6 +1,6 @@
 # Action Database
 
-The new and improved action tracker, following on from ActionMap. It runs from GitHub Pages, so anyone with the link can view the actions and photos, and anyone with a GitHub key that can write to this repo can edit them.
+An action tracker for plant maintenance. It runs from GitHub Pages, so anyone with the link can view the actions and photos, and anyone with a GitHub key that can write to this repo can edit them.
 
 ## What it does
 
@@ -16,7 +16,9 @@ The stages start as Issue Identified, Defect Notification Sent, Work Order Creat
 
 The workflow shows as steps under each action's title (Issue Identified, Defect Notification Sent, Work Order Created, RFQ Sent, PO Sent, Parts Received, Completed, with On Hold as a toggle): done steps carry the date reached, and clicking a step moves the action; on the Organizer the same stages are the work in progress columns. The MTO tab of each action lists its's material take off as a simple table (item, description, part or tag number, qty, unit, notes); an action with no MTO shows an empty table ready to fill in. The MTO column on the Actions tab says how many items each action has (for example 3 x items), as a link to that action's MTO. Quotes are uploaded at the top (several, for revised quotes) and can be downloaded any time. Each RFQ export to PDF takes the next rev letter (A, B, C…) and every rev is kept in RFQ revisions for download. The Spares tab works the same way for parts coming from site spares, and each row has a button to move it between the MTO and spares. Both export to Excel and PDF, and Paste text lets Gemini fill in the rows from an email or quote, which you check before adding.
 
-The Isolations tab lists each action's isolation points. Pick the action from the drop down and its equipment tags show above the list (click one to add it as a row). Typing an equipment number or name suggests equipment from the Project Library lists (mechanical and electrical equipment, control and manual valves, instruments, about 17,000 items) and the Equipment tags list; picking one fills in both, and they can still be edited without changing any list. Each row has a note. The isolations go into the workpack PDF and the print.
+The Isolations tab lists each action's isolation points. Pick the action from the drop down and its equipment tags show above the list (click one to add it as a row). Typing an equipment number or name suggests equipment from the plant equipment lists (mechanical and electrical equipment, control and manual valves, instruments, about 17,000 items) and the Equipment tags list; picking one fills in both, and they can still be edited without changing any list. Each row has a note. The isolations go into the workpack PDF and the print.
+
+Each action's Overview and its workpack show a small site map of where its equipment is expected to be. Tags close together share one callout; sub equipment takes the position of the main equipment it belongs to. The location is auto generated, with a note saying how each tag was placed, so check it on site.
 
 To make an action from text, use New action, then Paste text. Google Gemini splits an email into the fields. Anything it can't find is left empty, and any field set to TBC shows in red.
 

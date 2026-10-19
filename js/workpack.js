@@ -29,12 +29,10 @@ const Workpack = (() => {
       doc.setFontSize(8); doc.setTextColor(110); doc.setFont("helvetica", "bold"); doc.text("CONTACT FOR QUERIES", M + 4, y + 4.5); doc.setFontSize(10); doc.setTextColor(30);
       cl.forEach((l, i) => { doc.setFont("helvetica", i ? "normal" : "bold"); doc.text(l, M + 52, y + 4.6 + i * 5); });
       if (pf.email){ doc.link(M + 52, y + 1 + (cl.length - 1) * 5, CW - 52, 5, { url: "mailto:" + pf.email }); } y += bh + 4; }
-    /* where the equipment is expected to be, from the Project Library layout (with a note to check it) */
-    try { const tags = [].concat(Array.isArray(a.f.equipment) ? a.f.equipment : [], (a.isol || []).map(x => x.tag), String((a.f.title || "") + " " + (a.f.problem || "")).match(/\b[A-Z]\d{2,3}-[A-Z]{2,3}-\d{2,4}[A-Z]?\b/g) || []);
-      const loc = await SiteMap.locate(tags);
-      if (loc){ const mw = 120, mh = mw * 9 / 16; head("Expected location"); need(mh + 14); doc.addImage(await SiteMap.render(loc, 1200), "JPEG", M, y, mw, mh, undefined, "FAST");
-        doc.setFontSize(8.5); doc.setTextColor(110); doc.setFont("helvetica", "italic");
-        doc.text(doc.splitTextToSize("Auto generated: " + loc.tag + " is placed from " + loc.how + ". This location may be wrong or out of date; double check it on site before relying on it.", CW - mw - 6), M + mw + 6, y + 4);
+    /* where the equipment is expected to be (auto generated, with a note to check it) */
+    try { const sm = await SiteMap.forAction(a);
+      if (sm){ const mw = 120, mh = mw * 9 / 16; head("Expected location"); need(mh + 14); doc.addImage(sm.url, "JPEG", M, y, mw, mh, undefined, "FAST");
+        doc.setFontSize(8.5); doc.setTextColor(110); doc.setFont("helvetica", "italic"); doc.text(doc.splitTextToSize(sm.note, CW - mw - 6), M + mw + 6, y + 4);
         doc.setFont("helvetica", "normal"); y += mh + 6; } }
     catch (e){ console.warn("site map", e); }
     /* details */

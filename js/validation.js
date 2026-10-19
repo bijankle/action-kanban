@@ -68,12 +68,12 @@ const Valid = (() => {
     sortable($(".stl", body), () => Store.S.config.stages, ".str");
     $("[data-k=new]", body).onkeydown = e => { const v = e.target.value.trim(); if (e.key !== "Enter" || !v) return; Store.mutate("config", () => { const A = Store.S.config.stages, at = A.findIndex(x => !x.del && x.kind !== "open"), s = Store.touch({ id: "st" + uid(), name: v, color: "#64748b", kind: "open", print: true }); at < 0 ? A.push(s) : A.splice(at, 0, s); Store.S.config.mod = now(); }); }; }
 
-  /* the equipment the app suggests: the Equipment tags list, plus everything in the Project Library lists */
+  /* the equipment the app suggests: the Equipment tags list, plus everything in the plant equipment lists */
   function equip(body, ro){ const f = Store.field("equipment"), tags = f ? Fields.optLabels(f) : [], q = (App.q || "").toLowerCase().split(/\s+/).filter(Boolean);
     const list = Equip.count ? Equip.find(q.join(" ") || "-", "t") : [];
     body.innerHTML = '<div class="dv-h">Equipment <span class="dim">suggested when typing equipment tags and isolations; anything can still be typed</span></div>'
       + '<div class="dv-h" style="margin-top:14px">Equipment tags list <span class="dim">' + tags.length + ' tags</span>' + (ro ? "" : '<button type="button" class="link" data-k="edtags">Edit the list</button>') + '</div><div class="eq-tags">' + (tags.length ? tags.map(t => Fields.chip(t)).join(" ") : '<span class="dim">None yet. Tags typed on actions are added here.</span>') + '</div>'
-      + '<div class="dv-h" style="margin-top:18px">From Project Library <span class="dim">' + (Equip.count ? Equip.count.toLocaleString() + " items: mechanical and electrical equipment, valves, instruments" : "loading…") + '</span><button type="button" class="link" data-k="ref">Refresh</button></div>'
+      + '<div class="dv-h" style="margin-top:18px">Plant equipment lists <span class="dim">' + (Equip.count ? Equip.count.toLocaleString() + " items: mechanical and electrical equipment, valves, instruments" : "loading…") + '</span><button type="button" class="link" data-k="ref">Refresh</button></div>'
       + (q.length ? '<table class="tbl ct vd-tbl"><thead><tr><th>Tag</th><th>Name</th><th>List</th></tr></thead><tbody>' + list.map(x => '<tr><td><b>' + esc(x.t) + '</b></td><td>' + esc(x.n) + '</td><td>' + esc(x.k) + '</td></tr>').join("") + '</tbody></table>' + (list.length ? "" : '<div class="dim">Nothing matches.</div>') : '<div class="dim">Type in the search box above to look up equipment.</div>');
     const e = $("[data-k=edtags]", body); if (e) e.onclick = () => { sec = "fields"; cur = "equipment"; App.render(); };
     $("[data-k=ref]", body).onclick = () => Equip.load(true).then(() => App.render());
