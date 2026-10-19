@@ -1,9 +1,9 @@
 /* The side panel: the selected action's title, problem, solution and its Photos button (a big gallery
-   pops up), then its attachments, steps and the rest of its details. Drag its left edge to resize it. */
+   pops up), then its attachments, notes and the rest of its details. Drag its left edge to resize it. */
 "use strict";
 const Panel = (() => {
   let last = null;
-  const CORE = new Set(["title", "status", "priority", "problem", "solution"]);
+  const CORE = new Set(["title", "status", "priority", "problem", "solution", "notes"]);
   function render(el){ const a = App.act(App.selRef); el.classList.toggle("open", !!a); document.body.classList.toggle("side-open", !!a);
     if (!a){ el.innerHTML = ""; return; }
     const ro = !Store.S.edit, p = Store.project(a._p) || {};
@@ -17,13 +17,13 @@ const Panel = (() => {
       + '<h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span></h4><div class="ph-block">' + (a.photos.length ? '<button type="button" class="ph-cover" data-k="viewall" title="Open the photos"><img alt=""><span class="ph-badge">📷 ' + a.photos.length + '</span></button>' : "")
       + '<div class="ph-btns"><button type="button" class="btn sm" data-k="viewall"' + (a.photos.length ? "" : " disabled") + '>Photos' + (a.photos.length ? " (" + a.photos.length + ")" : "") + '</button>' + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="addph">Upload photos</button><button type="button" class="btn ghost sm" data-k="addf">Attach file</button><span class="dim">or drop them on the action</span>') + '</div></div>'
       + '<h4>Attachments <span class="cnt">' + (a.files.length || "") + '</span></h4><div class="att-l"></div>'
-      + '<h4>Steps <span class="cnt">' + (a.steps.length ? a.steps.filter(s => s.d).length + " of " + a.steps.length : "") + '</span></h4><div class="steps"></div>'
+      + '<h4>Notes</h4><div data-f="notes"></div>'
       + '<h4>Details</h4><div class="det"></div><div class="sd-foot">Created ' + esc(fmtDate(a.created)) + (a.by ? ", last edited by " + esc(a.by) + " " + esc(fmtDate(a.mod)) : "") + (a.gps ? ' · <a target="_blank" rel="noopener" href="https://maps.google.com/?q=' + a.gps.lat + "," + a.gps.lng + '">Map pin</a>' : "") + '</div></div>';
     $$("[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     const ti = $(".sd-title .in", el); if (ti) ti.placeholder = "Title";
-    $$("[data-f=problem] textarea,[data-f=solution] textarea", el).forEach(t => t.rows = 4);
+    $$("[data-f=problem] textarea,[data-f=solution] textarea,[data-f=notes] textarea", el).forEach(t => t.rows = 4);
     const cv = $(".ph-cover img", el); if (cv){ cv.src = Media.src(a, a.photos[0], true); cv.onerror = () => { if (!cv.dataset.r){ cv.dataset.r = 1; cv.src = Media.src(a, a.photos[0]); } }; }
-    files(a, $(".att-l", el), ro); steps(a, $(".steps", el), ro);
+    files(a, $(".att-l", el), ro);
     const det = $(".det", el); Store.fields().filter(f => !CORE.has(f.id)).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); det.appendChild(r); });
     $(".sd-body", el).scrollTop = sc;
     if (keep){ const t = $('[data-f="' + keep.f + '"] input, [data-f="' + keep.f + '"] textarea, [data-f="' + keep.f + '"] select', el); if (t){ if (t.tagName === keep.tag && t.tagName !== "SELECT" && t.value !== keep.v) t.value = keep.v; t.focus(); try { if (keep.s != null) t.setSelectionRange(keep.s, keep.e); } catch (e) {} } }
@@ -44,13 +44,5 @@ const Panel = (() => {
       $(".att-n", r).onclick = () => Media.openFile(a, f);
       const x = $(".ic-b", r); if (x) x.onclick = () => Store.mutate("a:" + a._p, () => { a.files.splice(i, 1); Store.touch(a); });
       l.appendChild(r); }); }
-  function steps(a, l, ro){ a.steps.forEach((s, i) => { const r = h('<div class="step' + (s.d ? " done" : "") + '"><label class="ck"><input type="checkbox"' + (s.d ? " checked" : "") + (ro ? " disabled" : "") + '><span></span></label><input class="in st-t" type="text"' + (ro ? " readonly" : "") + '>' + (ro ? "" : '<button type="button" class="ic-b sm" title="Remove step">✕</button>') + '</div>');
-      const t = $(".st-t", r); t.value = s.t;
-      $("input[type=checkbox]", r).onchange = e => Store.mutate("a:" + a._p, () => { s.d = e.target.checked; Store.touch(a); });
-      t.onchange = () => Store.mutate("a:" + a._p, () => { s.t = t.value; Store.touch(a); });
-      const x = $(".ic-b", r); if (x) x.onclick = () => Store.mutate("a:" + a._p, () => { a.steps.splice(i, 1); Store.touch(a); });
-      l.appendChild(r); });
-    if (!ro){ const n = h('<input class="in st-new" type="text" placeholder="+ Add a step, then Enter">'); n.onkeydown = e => { if (e.key === "Enter" && n.value.trim()){ const v = n.value.trim(); Store.mutate("a:" + a._p, () => { a.steps.push({ id: uid(), t: v, d: false }); Store.touch(a); }); setTimeout(() => { const m = $(".st-new"); m && m.focus(); }, 0); } }; l.appendChild(n); }
-    else if (!a.steps.length) l.innerHTML = '<div class="dim">None</div>'; }
   return { render };
 })();

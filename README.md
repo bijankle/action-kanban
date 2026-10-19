@@ -4,7 +4,7 @@ The new and improved action tracker, following on from ActionMap. It runs from G
 
 ## What it does
 
-The Actions tab shows every action in the ticked projects, with search and stage pills, as a list or as tiles (the main photo fills the tile, with arrows to step through its photos and a Size callout for the tile size). Click an action to open it in the side panel, which shows the problem, the solution and a Photos button, followed by the attachments, steps and all other details. Drag the panel's edge to resize it.
+The Actions tab shows every action in the ticked projects, with search and stage pills, as a list or as tiles (the main photo fills the tile, with arrows to step through its photos and a Size callout for the tile size). Click an action to open it in the side panel, which shows the problem, the solution and a Photos button, followed by the attachments, notes and all other details. Drag the panel's edge to resize it.
 
 The Kanban tab is kept minimal, with one column per stage. Click a card for a callout with its problem, solution and photos; editing is done on the Actions tab. Drag cards between columns and up or down inside a column, where higher means higher priority. You can add, rename, recolour, reorder and delete stages at any time, and mark a stage as on hold or completed.
 

@@ -40,7 +40,6 @@
     }
    ],
    "files": [],
-   "steps": [],
    "mod": 1792413296449,
    "by": "Bijan"
   },
@@ -66,7 +65,6 @@
     }
    ],
    "files": [],
-   "steps": [],
    "mod": 1792413296477,
    "by": "Bijan"
   },
@@ -79,7 +77,8 @@
    "created": 1791083735067,
    "f": {
     "title": "CV402 underpan sprays are running when conveyor is off",
-    "problem": "CV402 underpan sprays are running when conveyor is off"
+    "problem": "CV402 underpan sprays are running when conveyor is off",
+    "notes": "To do: fill out PCCR"
    },
    "photos": [
     {
@@ -124,18 +123,11 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smutcx66kfun9x",
-     "t": "fill out PCCR",
-     "d": false
-    }
-   ],
    "gps": {
     "lat": -30.7632003597517,
     "lng": 121.50714907407152
    },
-   "mod": 1792413296611,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -147,7 +139,8 @@
    "created": 1791019628320,
    "f": {
     "title": "cameras are too high to provide depth perception",
-    "problem": "cameras are too high to provide depth perception"
+    "problem": "cameras are too high to provide depth perception",
+    "notes": "To do: was told this is a defect, Jason from Primero didnt seem aware of this"
    },
    "photos": [
     {
@@ -160,14 +153,7 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smuv2aqcrdh39o",
-     "t": "was told this is a defect, Jason from Primero didnt seem aware of this",
-     "d": false
-    }
-   ],
-   "mod": 1792413296645,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -192,7 +178,6 @@
     }
    ],
    "files": [],
-   "steps": [],
    "doneAt": 1790816731376,
    "mod": 1792413296677,
    "by": "Bijan"
@@ -206,7 +191,8 @@
    "created": 1790809737499,
    "f": {
     "title": "guard design too low to clear tramp metal under conveyor",
-    "problem": "guard design too low to clear tramp metal under conveyor"
+    "problem": "guard design too low to clear tramp metal under conveyor",
+    "notes": "To do: speak to jason"
    },
    "photos": [
     {
@@ -251,15 +237,8 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smuopxikmh8zbq",
-     "t": "speak to jason",
-     "d": false
-    }
-   ],
    "doneAt": 1790819683464,
-   "mod": 1792413296812,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -271,7 +250,8 @@
    "created": 1790756524651,
    "f": {
     "title": "level sensor reading falling rock instead of static bin material",
-    "problem": "level sensor reading falling rock instead of static bin material"
+    "problem": "level sensor reading falling rock instead of static bin material",
+    "notes": "To do: 3 sec interlock delay on high alarm - all good"
    },
    "photos": [
     {
@@ -284,15 +264,8 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smunvyyta0hzyb",
-     "t": "3 sec interlock delay on high alarm - all good",
-     "d": false
-    }
-   ],
    "doneAt": 1790759833339,
-   "mod": 1792413296840,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -304,7 +277,8 @@
    "created": 1790130926216,
    "f": {
     "title": "reclaim ball jamming on brow beam and sensor missing ball counts",
-    "problem": "reclaim ball jamming on brow beam and sensor missing ball counts"
+    "problem": "reclaim ball jamming on brow beam and sensor missing ball counts",
+    "notes": "To do: waiting for Josh.W to hear from mod squad\nDone: put up signage to stop ball loading\nDone: send details through to mod squad to start"
    },
    "photos": [
     {
@@ -349,24 +323,7 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smukw329nc1cdn",
-     "t": "waiting for Josh.W to hear from mod squad",
-     "d": false
-    },
-    {
-     "id": "smug3fx4m7en0q",
-     "t": "put up signage to stop ball loading",
-     "d": true
-    },
-    {
-     "id": "smuj7m77pat2ym",
-     "t": "send details through to mod squad to start",
-     "d": true
-    }
-   ],
-   "mod": 1792413296959,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -378,7 +335,8 @@
    "created": 1790578561814,
    "f": {
     "title": "magnet tramp getting stuck on steel plate that protects pull wire",
-    "problem": "magnet tramp getting stuck on steel plate that protects pull wire"
+    "problem": "magnet tramp getting stuck on steel plate that protects pull wire",
+    "notes": "To do: waiting for primero 30-sep"
    },
    "photos": [
     {
@@ -399,14 +357,7 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smunt7m6aee808",
-     "t": "waiting for primero 30-sep",
-     "d": false
-    }
-   ],
-   "mod": 1792413297026,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -418,7 +369,8 @@
    "created": 1790476399755,
    "f": {
     "title": "crusher sump has no mesh gate",
-    "problem": "crusher sump has no mesh gate"
+    "problem": "crusher sump has no mesh gate",
+    "notes": "To do: waiting for specialized 1-oct"
    },
    "photos": [
     {
@@ -455,14 +407,7 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smunt90pcyzkul",
-     "t": "waiting for specialized 1-oct",
-     "d": false
-    }
-   ],
-   "mod": 1792413297131,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -474,7 +419,8 @@
    "created": 1790304552084,
    "f": {
     "title": "cyclone feed pump drain spillage overwhelming the path to sump",
-    "problem": "cyclone feed pump drain spillage overwhelming the path to sump"
+    "problem": "cyclone feed pump drain spillage overwhelming the path to sump",
+    "notes": "To do: speak to jason"
    },
    "photos": [
     {
@@ -487,15 +433,8 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smugd41cvlnqg6",
-     "t": "speak to jason",
-     "d": false
-    }
-   ],
    "doneAt": 1790819674386,
-   "mod": 1792413297165,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -507,7 +446,8 @@
    "created": 1790129981033,
    "f": {
     "title": "crusher vault sensor gets dirty",
-    "problem": "crusher vault sensor gets dirty"
+    "problem": "crusher vault sensor gets dirty",
+    "notes": "To do: need to check sensing range value"
    },
    "photos": [
     {
@@ -554,14 +494,7 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smus3wz4bzx4b4",
-     "t": "need to check sensing range value",
-     "d": false
-    }
-   ],
-   "mod": 1792413297277,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -573,7 +506,8 @@
    "created": 1790131987402,
    "f": {
     "title": "ball mill discharge scats chute mod",
-    "problem": "ball mill discharge scats chute mod"
+    "problem": "ball mill discharge scats chute mod",
+    "notes": "Done: scope has been taken on by others\nTo do: follow up on effectiveness of the solution"
    },
    "photos": [
     {
@@ -586,20 +520,8 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smug3fx4mbk4h4",
-     "t": "scope has been taken on by others",
-     "d": true
-    },
-    {
-     "id": "smukw74plm1ehi",
-     "t": "follow up on effectiveness of the solution",
-     "d": false
-    }
-   ],
    "doneAt": 1790328278346,
-   "mod": 1792413297312,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -611,34 +533,13 @@
    "created": 1790132319320,
    "f": {
     "title": "ball mill ring gear lube level sensor issue",
-    "problem": "ball mill ring gear lube level sensor issue"
+    "problem": "ball mill ring gear lube level sensor issue",
+    "notes": "Done: pass on the below items to ops readiness - they should handle it\nDone: is there enough time to change the bulky?\nDone: do we want to change the bulky at 20%? 10% better?\nDone: how much time do we have to between bulky removal and pump trip? and pump trip to mill trip?"
    },
    "photos": [],
    "files": [],
-   "steps": [
-    {
-     "id": "smug3fx4mgao5f",
-     "t": "pass on the below items to ops readiness - they should handle it",
-     "d": true
-    },
-    {
-     "id": "smug3fx4me36yi",
-     "t": "is there enough time to change the bulky?",
-     "d": true
-    },
-    {
-     "id": "smug3fx4m87n0s",
-     "t": "do we want to change the bulky at 20%? 10% better?",
-     "d": true
-    },
-    {
-     "id": "smug3fx4mkh9uj",
-     "t": "how much time do we have to between bulky removal and pump trip? and pump trip to mill trip?",
-     "d": true
-    }
-   ],
    "doneAt": 1790578303335,
-   "mod": 1792413297312,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -663,7 +564,6 @@
     }
    ],
    "files": [],
-   "steps": [],
    "doneAt": 1790819680494,
    "mod": 1792413297345,
    "by": "Bijan"
@@ -677,19 +577,13 @@
    "created": 1790132147278,
    "f": {
     "title": "reclaim apron feeder motor overheating",
-    "problem": "reclaim apron feeder motor overheating"
+    "problem": "reclaim apron feeder motor overheating",
+    "notes": "To do: closed - not supposed to run below 30% speed as per IOM"
    },
    "photos": [],
    "files": [],
-   "steps": [
-    {
-     "id": "smug3fx4mmgmm6",
-     "t": "closed - not supposed to run below 30% speed as per IOM",
-     "d": false
-    }
-   ],
    "doneAt": 1790755731320,
-   "mod": 1792413297346,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -701,7 +595,8 @@
    "created": 1790132365079,
    "f": {
     "title": "rock breaker general issues",
-    "problem": "rock breaker general issues"
+    "problem": "rock breaker general issues",
+    "notes": "To do: Single point lessons **waiting for TRS 02-oct\nTo do: Finish report for all issues\nDone: Lock on safety relay panel\nDone: Add signage to ensure HPU is kept on\nDone: Replace hammer grease cartridge\nDone: Move frame bump stops to correct position\nDone: Change signage at rock breaker gate to cover isolation requirements\nDone: Wrap hammer solenoid plugs with denso tape\nDone: Find local controller charger **battery swap out procedure comunicated\nDone: Grease pressure sensor low limit update waiting for TRS 02-oct"
    },
    "photos": [
     {
@@ -770,59 +665,7 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smurlfr8ejfqgf",
-     "t": "Single point lessons **waiting for TRS 02-oct",
-     "d": false
-    },
-    {
-     "id": "smurlh4huz31c5",
-     "t": "Finish report for all issues",
-     "d": false
-    },
-    {
-     "id": "smurlaibra2fil",
-     "t": "Lock on safety relay panel",
-     "d": true
-    },
-    {
-     "id": "smurlb8kqjnq7o",
-     "t": "Add signage to ensure HPU is kept on",
-     "d": true
-    },
-    {
-     "id": "smurlc19jhm40r",
-     "t": "Replace hammer grease cartridge",
-     "d": true
-    },
-    {
-     "id": "smurlcwuskf00v",
-     "t": "Move frame bump stops to correct position",
-     "d": true
-    },
-    {
-     "id": "smurldnedsg4xk",
-     "t": "Change signage at rock breaker gate to cover isolation requirements",
-     "d": true
-    },
-    {
-     "id": "smurleclwqhi0x",
-     "t": "Wrap hammer solenoid plugs with denso tape",
-     "d": true
-    },
-    {
-     "id": "smurlf7jbp3kse",
-     "t": "Find local controller charger **battery swap out procedure comunicated",
-     "d": true
-    },
-    {
-     "id": "smurlbro953fuw",
-     "t": "Grease pressure sensor low limit update waiting for TRS 02-oct",
-     "d": true
-    }
-   ],
-   "mod": 1792413297580,
+   "mod": 1792415292693,
    "by": "Bijan"
   }
  ]

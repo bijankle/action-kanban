@@ -19,7 +19,7 @@ const Kanban = (() => {
     return '<article class="kc' + (ref === App.selRef ? " on" : "") + '" draggable="' + Store.S.edit + '" data-ref="' + ref + '">' + (a.photos.length ? '<img alt="" loading="lazy">' : "")
       + '<div class="kc-top"><span class="aid">' + esc(Store.actId(a)) + '</span>' + (multi ? '<span class="ptag sm" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "") + '</div>'
       + '<div class="kc-t">' + (esc(a.f.title) || '<span class="dim">No title</span>') + '</div><div class="kc-m">'
-      + (a.photos.length ? '<span>📷 ' + a.photos.length + '</span>' : "") + (a.files.length ? '<span>📎 ' + a.files.length + '</span>' : "") + (a.steps.length ? '<span>☑ ' + a.steps.filter(s => s.d).length + "/" + a.steps.length + '</span>' : "")
+      + (a.photos.length ? '<span>📷 ' + a.photos.length + '</span>' : "") + (a.files.length ? '<span>📎 ' + a.files.length + '</span>' : "")
       + (eta ? '<span class="' + (eta === "TBC" ? "tbc" : "") + '">ETA ' + esc(fmtDate(eta)) + '</span>' : "") + (a.f.spares ? '<span class="good">Spares ✓</span>' : "") + (n ? '<span class="tbc">' + n + ' TBC</span>' : "") + '</div></article>'; }
   function wire(el, ro){ const kb = $(".kb", el);
     kb.onclick = e => { const c = e.target.closest(".kc"); if (c) callout(c); };
@@ -53,7 +53,7 @@ const Kanban = (() => {
       + '<div class="kca-t">' + (esc(a.f.title) || '<span class="dim">No title</span>') + '</div>' + (Store.selected().length > 1 ? '<div class="dim">' + esc(p.name) + '</div>' : "")
       + '<h5>Problem</h5><div class="kca-x">' + (esc(a.f.problem) || '<span class="dim">–</span>') + '</div><h5>Solution</h5><div class="kca-x">' + (esc(a.f.solution) || '<span class="dim">–</span>') + '</div>'
       + (a.photos.length ? '<h5>Photos ' + a.photos.length + '</h5><div class="kca-ph">' + a.photos.slice(0, 8).map((ph, i) => '<img alt="" data-i="' + i + '" src="' + esc(Media.src(a, ph, true)) + '">').join("") + '</div>' : "")
-      + (a.steps.length ? '<h5>Steps ' + a.steps.filter(x => x.d).length + ' of ' + a.steps.length + '</h5>' + a.steps.map(x => '<div class="pa-step">' + (x.d ? "☑" : "☐") + " " + esc(x.t) + '</div>').join("") : "")
+      + (a.f.notes ? '<h5>Notes</h5><div class="kca-x">' + esc(a.f.notes) + '</div>' : "")
       + (keys.length ? '<dl>' + keys.map(f => '<dt>' + esc(f.label) + '</dt><dd>' + Fields.show(a, f) + '</dd>').join("") + '</dl>' : "")
       + '<div class="kca-b">' + (a.photos.length ? '<button type="button" class="btn ghost sm" data-k="ph">Photos</button>' : "")
       + '<button type="button" class="btn sm" data-k="open">Open in Actions</button></div></div>');

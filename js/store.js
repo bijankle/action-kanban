@@ -21,6 +21,7 @@ function defaultConfig(){ const t = now(); const opt = (labels, colors) => label
       F("priority", "Priority", "rank", { table: true, core: true }),
       F("problem", "Problem", "longtext", { core: true }),
       F("solution", "Solution", "longtext", { core: true }),
+      F("notes", "Notes", "longtext", { core: true }),
       F("location", "Location", "text", { table: true, suggest: true }),
       F("equipment", "Equipment tags", "multi", { table: true, options: [] }),
       F("procurement", "Procurement required", "check", { table: true }),
@@ -80,7 +81,7 @@ const Store = (() => {
 
   function newAction(pid, vals, stageId){ const pa = S.acts[pid] || (S.acts[pid] = { nextNo: 1, actions: [] });
     const st = stageId || stages()[0].id; const top = ranked(st)[0];
-    const a = touch({ u: uid(), no: pa.nextNo++, stage: st, rank: top ? (top.rank || 0) - 1 : 0, created: now(), f: Object.assign({}, vals || {}), photos: [], files: [], steps: [] });
+    const a = touch({ u: uid(), no: pa.nextNo++, stage: st, rank: top ? (top.rank || 0) - 1 : 0, created: now(), f: Object.assign({}, vals || {}), photos: [], files: [] });
     pa.actions.push(a); a._p = pid; return a; }
   /* move an action to a stage, at a position in that column (index among what's on show) */
   function place(a, st, index){ const col = ranked(st).filter(x => x !== a); index = Math.max(0, Math.min(index == null ? col.length : index, col.length));

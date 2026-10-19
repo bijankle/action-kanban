@@ -1,6 +1,6 @@
 /* Import from ActionMap (the bijankle/Action-Map data repo). Each ActionMap project becomes a project here;
    the action text becomes the title and problem, Done and On hold map to those stages, the sub actions
-   become steps and the photos come across in their order. ActionMap keeps 1280 px previews online, so those
+   become lines in the notes and the photos come across in their order. ActionMap keeps 1280 px previews online, so those
    come across; the originals can be copied from the ActionMap photo folder into the local folder. */
 "use strict";
 const ImportAM = (() => {
@@ -34,7 +34,7 @@ const ImportAM = (() => {
     const acts = [], blobs = [], list = pk.actions || []; let k = 0, copied = 0;
     for (const x of list){ k++; say(src.name + ": action " + k + " of " + list.length);
       const sx = byNo.get(x.id) || {}, stage = x.done ? fin : x.hold ? hold : stages[0];
-      const a = { u: uid(), no: x.id, am: sx.u || String(x.id), stage: (stage || stages[0]).id, rank: k, created: x.created || now(), f: { title: x.text, problem: x.text }, photos: [], files: [], steps: (x.steps || []).map(s => ({ id: s.id || uid(), t: s.t, d: !!s.d })), _p: pid };
+      const a = { u: uid(), no: x.id, am: sx.u || String(x.id), stage: (stage || stages[0]).id, rank: k, created: x.created || now(), f: Object.assign({ title: x.text, problem: x.text }, (x.steps || []).length ? { notes: x.steps.map(s => (s.d ? "Done: " : "To do: ") + s.t).join("\n") } : {}), photos: [], files: [], _p: pid };
       if (x.loc) a.gps = { lat: x.loc.lat, lng: x.loc.lng }; if (x.doneAt) a.doneAt = x.doneAt;
       for (const ph of x.photos || []){ if (!ph.h) continue; const b = await getImg(ph.h); const buf = await b.arrayBuffer(), hh = await sha1(buf); const th = await Media.compress(b, 420, 0.7);
         if (await copyOrig(srcIdx, a, ph.name)) copied++;

@@ -18,11 +18,11 @@ const Mobile = (() => {
     const qi = $(".m-q", root); qi.oninput = debounce(() => { App.q = qi.value; render(root); const n = $(".m-q", root); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250);
     $$(".pill", root).forEach(b => b.onclick = () => { const s = b.dataset.s; if (!s) pills.clear(); else if (pills.has(s)) pills.delete(s); else { pills.clear(); pills.add(s); } render(root); });
     $$(".m-card", root).forEach(c => c.onclick = () => { open = c.dataset.ref; history.pushState({ m: 1 }, ""); render(root); }); }
-  function detail(root, a){ const s = Store.stage(a.stage), p = Store.project(a._p) || {}, skip = new Set(["title", "problem", "solution"]);
+  function detail(root, a){ const s = Store.stage(a.stage), p = Store.project(a._p) || {}, skip = new Set(["title", "problem", "solution", "notes"]);
     root.innerHTML = '<div class="m-top"><button type="button" class="ic-b m-back" aria-label="Back">‹</button><span class="aid big">' + esc(Store.actId(a)) + '</span><span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span></div>'
       + '<div class="m-det"><h2>' + esc(a.f.title || "") + '</h2><div class="dim">' + esc(p.name || "") + '</div><h4>Problem</h4><p>' + (esc(a.f.problem) || '<span class="dim">–</span>') + '</p><h4>Solution</h4><p>' + (esc(a.f.solution) || '<span class="dim">–</span>') + '</p>'
       + '<h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span></h4><div class="m-ph">' + (a.photos.map((ph, i) => '<img alt="" loading="lazy" data-i="' + i + '" src="' + esc(Media.src(a, ph, true)) + '">').join("") || '<span class="dim">None</span>') + '</div>'
-      + (a.steps.length ? '<h4>Steps</h4>' + a.steps.map(x => '<div class="pa-step">' + (x.d ? "☑" : "☐") + " " + esc(x.t) + '</div>').join("") : "")
+      + (a.f.notes ? '<h4>Notes</h4><p>' + esc(a.f.notes) + '</p>' : "")
       + (a.files.length ? '<h4>Attachments</h4>' + a.files.map((f, i) => '<button type="button" class="link m-f" data-i="' + i + '">📎 ' + esc(f.name) + '</button>').join("") : "")
       + '<h4>Details</h4><dl>' + Store.fields().filter(f => !skip.has(f.id)).map(f => '<dt>' + esc(f.label) + '</dt><dd>' + (Fields.show(a, f) || '<span class="dim">–</span>') + '</dd>').join("") + '</dl></div>';
     $(".m-back", root).onclick = () => history.back();

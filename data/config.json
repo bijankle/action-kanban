@@ -1,6 +1,6 @@
 {
  "v": 1,
- "mod": 1792414922474,
+ "mod": 1792415292693,
  "stages": [
   {
    "id": "st0",
@@ -123,6 +123,17 @@
    "na": false,
    "mod": 1792413292212,
    "core": true
+  },
+  {
+   "id": "notes",
+   "label": "Notes",
+   "type": "longtext",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "core": true,
+   "mod": 1792415292693
   },
   {
    "id": "location",

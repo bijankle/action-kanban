@@ -11,7 +11,8 @@
    "created": 1791082678044,
    "f": {
     "title": "Rock breaker work area",
-    "problem": "Rock breaker work area"
+    "problem": "Rock breaker work area",
+    "notes": "To do: Investigate whether current arrangement is fine or whether controls need to be brought in to address fall risk"
    },
    "photos": [
     {
@@ -24,18 +25,11 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smut8dr8czllcx",
-     "t": "Investigate whether current arrangement is fine or whether controls need to be brought in to address fall risk",
-     "d": false
-    }
-   ],
    "gps": {
     "lat": -30.76468676508888,
     "lng": 121.50592325790566
    },
-   "mod": 1792413297666,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -47,7 +41,8 @@
    "created": 1791007265889,
    "f": {
     "title": "Rock Breaker Work Area",
-    "problem": "Rock Breaker Work Area"
+    "problem": "Rock Breaker Work Area",
+    "notes": "To do: Being addressed by Operations"
    },
    "photos": [
     {
@@ -68,18 +63,11 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smus5jl972sfrh",
-     "t": "Being addressed by Operations",
-     "d": false
-    }
-   ],
    "gps": {
     "lat": -30.76466601902076,
     "lng": 121.5058995503034
    },
-   "mod": 1792413297728,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -91,7 +79,8 @@
    "created": 1791007140187,
    "f": {
     "title": "Tramp Metal Magnet",
-    "problem": "Tramp Metal Magnet"
+    "problem": "Tramp Metal Magnet",
+    "notes": "To do: Investigate modification options to avoid entrapped scrap metal\nTo do: Consult Primero"
    },
    "photos": [
     {
@@ -104,23 +93,11 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smurzfdojkfgdy",
-     "t": "Investigate modification options to avoid entrapped scrap metal",
-     "d": false
-    },
-    {
-     "id": "smurzfi1cdp15o",
-     "t": "Consult Primero",
-     "d": false
-    }
-   ],
    "gps": {
     "lat": -30.76385534352928,
     "lng": 121.50600162369177
    },
-   "mod": 1792413297764,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -132,7 +109,8 @@
    "created": 1791007211873,
    "f": {
     "title": "PC2 Dust Suppression Spray Logic",
-    "problem": "PC2 Dust Suppression Spray Logic"
+    "problem": "PC2 Dust Suppression Spray Logic",
+    "notes": "To do: Investigate logic\nTo do: Determine solution\nTo do: Consult Primero"
    },
    "photos": [
     {
@@ -153,28 +131,11 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smurzgg5s53sqv",
-     "t": "Investigate logic",
-     "d": false
-    },
-    {
-     "id": "smurzgn7azj1dz",
-     "t": "Determine solution",
-     "d": false
-    },
-    {
-     "id": "smurzguvm46fn7",
-     "t": "Consult Primero",
-     "d": false
-    }
-   ],
    "gps": {
     "lat": -30.76469537124751,
     "lng": 121.50587679100516
    },
-   "mod": 1792413297823,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -186,7 +147,8 @@
    "created": 1791004254780,
    "f": {
     "title": "FIM III Booster Pump Gearbox Pressure Switches",
-    "problem": "FIM III Booster Pump Gearbox Pressure Switches"
+    "problem": "FIM III Booster Pump Gearbox Pressure Switches",
+    "notes": "Done: Supervise Parc take oil samples from both gearboxes\nDone: Drain gearbox of PP-651\nDone: Take out radiator and clean it\nTo do: Weir to inspect"
    },
    "photos": [
     {
@@ -199,34 +161,12 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smurxp87b7g1cy",
-     "t": "Supervise Parc take oil samples from both gearboxes",
-     "d": true
-    },
-    {
-     "id": "smurxq62f3wvot",
-     "t": "Drain gearbox of PP-651",
-     "d": true
-    },
-    {
-     "id": "smus3ems6m8054",
-     "t": "Take out radiator and clean it",
-     "d": true
-    },
-    {
-     "id": "smuumqbee3xqbx",
-     "t": "Weir to inspect",
-     "d": false
-    }
-   ],
    "gps": {
     "lat": -30.738036281790432,
     "lng": 121.53268325957217
    },
    "doneAt": 1791167246941,
-   "mod": 1792413297863,
+   "mod": 1792415292693,
    "by": "Bijan"
   },
   {
@@ -238,7 +178,8 @@
    "created": 1790979201839,
    "f": {
     "title": "FIM III Valve Pit Drainage Issue",
-    "problem": "FIM III Valve Pit Drainage Issue"
+    "problem": "FIM III Valve Pit Drainage Issue",
+    "notes": "To do: Investigate feasibility of draining into neighbouring toe drain.\nTo do: Identify NPSHr for toe drain pump"
    },
    "photos": [
     {
@@ -251,19 +192,7 @@
     }
    ],
    "files": [],
-   "steps": [
-    {
-     "id": "smurit4xavf1q5",
-     "t": "Investigate feasibility of draining into neighbouring toe drain.",
-     "d": false
-    },
-    {
-     "id": "smurit96l30125",
-     "t": "Identify NPSHr for toe drain pump",
-     "d": false
-    }
-   ],
-   "mod": 1792413297898,
+   "mod": 1792415292693,
    "by": "Bijan"
   }
  ]
