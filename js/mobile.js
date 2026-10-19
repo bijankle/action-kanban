@@ -33,11 +33,22 @@ const Mobile = (() => {
     wireTop(pg, root); scrollTo(0, sy);
     $$(".pill", pg).forEach(b => b.onclick = () => { const s = b.dataset.s; if (!s) pills.clear(); else if (pills.has(s)) pills.delete(s); else { pills.clear(); pills.add(s); } render(root); });
     wireCards(pg, root); }
-  /* Organizer: one column per stage, most of the screen wide, snapping as you swipe across; each in priority order */
-  function board(pg, root){ const q = (App.q || "").trim().toLowerCase(), old = $(".m-kb", pg), sx = old ? old.scrollLeft : +lsGet("adMKbX", 0) || 0;
-    pg.innerHTML = top() + '<div class="m-kb">' + Store.stages().map(s => { const cs = Store.ranked(s.id).filter(a => Store.matches(a, q));
-      return '<section class="m-col" style="--c:' + esc(s.color) + '"><div class="m-ch"><i class="dot"></i><b>' + esc(s.name) + '</b><span>' + cs.length + '</span></div><div class="m-cc">' + (cs.map(card).join("") || '<div class="empty">None</div>') + '</div></section>'; }).join("") + '</div>';
-    wireTop(pg, root); const kb = $(".m-kb", pg); kb.scrollLeft = sx; kb.onscroll = debounce(() => lsSet("adMKbX", kb.scrollLeft), 200); wireCards(pg, root); }
+  /* Organizer: one column per stage, most of the screen wide, snapping as you swipe across; each in priority order.
+     A strip of the stages under the search shows which one you're on (tap one to go to it); each column's header
+     gives its step in the flow and how many actions it holds. */
+  function board(pg, root){ const q = (App.q || "").trim().toLowerCase(), old = $(".m-kb", pg), sx = old ? old.scrollLeft : +lsGet("adMKbX", 0) || 0, st = Store.stages(), flow = st.filter(s => s.kind !== "hold");
+    const lists = st.map(s => Store.ranked(s.id).filter(a => Store.matches(a, q)));
+    pg.innerHTML = top() + '<div class="m-ss">' + st.map((s, i) => '<button type="button" class="m-sc" data-i="' + i + '" style="--c:' + esc(s.color) + '"><i class="dot"></i>' + esc(s.name) + ' <b>' + lists[i].length + '</b></button>').join("") + '</div>'
+      + '<div class="m-kb">' + st.map((s, i) => { const cs = lists[i], n = flow.indexOf(s), hold = s.kind === "hold";
+      return '<section class="m-col" style="--c:' + esc(s.color) + '"><div class="m-ch"><span class="m-cn">' + (hold ? "‖" : n + 1) + '</span><span class="m-ct"><b>' + esc(s.name) + '</b><small>' + (hold ? "Paused, off the flow" : "Step " + (n + 1) + " of " + flow.length) + '</small></span><span class="m-cq">' + cs.length + '</span></div>'
+        + '<div class="m-cc">' + (cs.map(card).join("") || '<div class="m-c0">No actions at this stage' + (q ? " match the search" : "") + '</div>') + '</div></section>'; }).join("") + '</div>';
+    wireTop(pg, root); const kb = $(".m-kb", pg), ss = $(".m-ss", pg), cols = $$(".m-col", kb), chips = $$(".m-sc", ss);
+    /* which column is in view: its chip is filled in and kept in sight */
+    const mark = () => { const x = kb.scrollLeft + 20, i = Math.max(0, cols.findIndex(c => c.offsetLeft + c.offsetWidth > x)); chips.forEach((c, j) => c.classList.toggle("on", j === i));
+      const c = chips[i]; if (c) ss.scrollTo({ left: c.offsetLeft - (ss.clientWidth - c.offsetWidth) / 2, behavior: "smooth" }); };
+    kb.scrollLeft = sx; mark(); kb.onscroll = debounce(() => { lsSet("adMKbX", kb.scrollLeft); mark(); }, 80);
+    chips.forEach(c => c.onclick = () => kb.scrollTo({ left: cols[+c.dataset.i].offsetLeft - 12, behavior: "smooth" }));
+    wireCards(pg, root); }
   /* Settings: View (dark mode, theme, text size, font), How to use, About */
   const STEPS = Array.from({ length: 15 }, (_, i) => +(0.8 + i * 0.05).toFixed(2));   // text and button sizes: 80% to 150% in 15 steps
   const near = x => STEPS.reduce((b, y, i) => Math.abs(y - x) < Math.abs(STEPS[b] - x) ? i : b, 0);
