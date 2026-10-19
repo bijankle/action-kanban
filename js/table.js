@@ -16,7 +16,7 @@ const Table = (() => {
       list.sort((x, y) => { const kx = key(x), ky = key(y); const r = kx < ky ? -1 : kx > ky ? 1 : 0; return (r * so.dir) || base(x, y); }); }
     else list.sort(base);
     return list; }
-  function render(el){ if (App.view === "tiles") return tiles(el); const cs = cols(), ws = widths(), list = rows(), sel = App.selRef;
+  function render(el){ if (App.view === "tiles") return tiles(el); const cs = cols(), ws = widths(), list = rows(), sel = App.last;
     const th = cs.map(c => '<th data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + (ws[c.id] || (c.type === "id" ? 96 : c.type === "proj" ? 140 : W[c.type] || 140)) + 'px">'
       + '<span class="th-l">' + esc(c.label) + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><i class="th-r"></i></th>').join("");
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
@@ -24,19 +24,19 @@ const Table = (() => {
     const tb = $("tbody", el), frag = document.createDocumentFragment();
     list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on";
       cs.forEach(c => { const td = document.createElement("td");
-        if (c.type === "id"){ td.className = "idc"; td.innerHTML = '<span class="aid">' + esc(Store.actId(a)) + '</span>' + (a.photos.length ? '<button type="button" class="pc" data-ph title="Open the ' + a.photos.length + ' photos">📷 ' + a.photos.length + '</button>' : "") + (Store.S.edit ? '<button type="button" class="pc up" data-up title="Upload photos">⇪</button>' : "") + '<button type="button" class="pc wp" data-wp title="Download the workpack PDF">PDF</button>'; }
+        if (c.type === "id"){ td.className = "idc"; td.innerHTML = '<span class="aid">' + esc(Store.actId(a)) + '</span>' + (a.photos.length ? '<span class="pc" title="' + a.photos.length + ' photos">📷 ' + a.photos.length + '</span>' : ""); }
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
         else if (Store.S.edit && ["stage", "rank", "choice", "check", "complete"].includes(c.type)){ td.className = "ed"; td.appendChild(Fields.editor(a, c)); }
         else { td.innerHTML = Fields.show(a, c); if (c.id === "title") td.className = "ttl"; }
         tr.appendChild(td); });
       frag.appendChild(tr); });
     tb.appendChild(frag);
-    tb.onclick = e => { const tr0 = e.target.closest("tr"); const pl = e.target.closest("[data-parts]"); if (pl){ e.preventDefault(); return App.openParts(pl.dataset.ref, pl.dataset.parts); } if (e.target.closest("[data-ph]")) return Media.view(App.act(tr0.dataset.ref), 0); if (e.target.closest("[data-up]")) return Media.pickFiles(App.act(tr0.dataset.ref), "image/*"); if (e.target.closest("[data-wp]")) return Workpack.run(App.act(tr0.dataset.ref));
+    tb.onclick = e => { const tr0 = e.target.closest("tr"); const pl = e.target.closest("[data-parts]"); if (pl){ e.preventDefault(); return App.openParts(pl.dataset.ref, pl.dataset.parts); } 
       if (e.target.closest("select,input,label,button,a")) return; const tr = e.target.closest("tr"); if (tr) App.select(tr.dataset.ref); };
     /* files dropped on a row go to that action */
     tb.ondragover = e => { if (!Media.hasDrop(e)) return; e.preventDefault(); const tr = e.target.closest("tr"); $$("tr.drop", tb).forEach(x => x !== tr && x.classList.remove("drop")); tr && tr.classList.add("drop"); };
     tb.ondragleave = e => { if (!tb.contains(e.relatedTarget)) $$("tr.drop", tb).forEach(x => x.classList.remove("drop")); };
-    tb.ondrop = e => { const tr = e.target.closest("tr"); $$("tr.drop", tb).forEach(x => x.classList.remove("drop")); if (!tr || !Media.hasDrop(e)) return; e.preventDefault(); e.stopPropagation(); const a = App.act(tr.dataset.ref); App.select(tr.dataset.ref); Media.dropOn(a, e); };
+    tb.ondrop = e => { const tr = e.target.closest("tr"); $$("tr.drop", tb).forEach(x => x.classList.remove("drop")); if (!tr || !Media.hasDrop(e)) return; e.preventDefault(); e.stopPropagation(); const a = App.act(tr.dataset.ref); Media.dropOn(a, e); };
     wireHead(el, cs); }
   function wireHead(el, cs){ $$("th", el).forEach(th => { const id = th.dataset.c;
       $(".th-l", th).onclick = () => { App.sort = App.sort && App.sort.id === id ? (App.sort.dir > 0 ? { id, dir: -1 } : null) : { id, dir: 1 }; App.render(); };
@@ -55,25 +55,23 @@ const Table = (() => {
   /* tiles view (like SharePoint or Google Drive): the main photo fills the tile, the title over it; the
      arrows on a tile step through its photos. The tile size is set from the Size callout. */
   const tileIx = new Map();
-  function tiles(el){ const list = rows(), sel = App.selRef, ed = Store.S.edit, multi = Store.selected().length > 1;
+  function tiles(el){ const list = rows(), sel = App.last, ed = Store.S.edit, multi = Store.selected().length > 1;
     el.innerHTML = '<div class="tiles" style="--tw:' + (lsGet("adTileW", 240)) + 'px">' + list.map(a => { const ref = a._p + ":" + a.u, s = Store.stage(a.stage), p = Store.project(a._p) || {};
         return '<div class="tile' + (ref === sel ? " on" : "") + (a.photos.length ? "" : " nophoto") + '" data-ref="' + ref + '"><div class="tl-img"></div>'
           + '<div class="tl-top"><span class="tl-id">' + esc(Store.actId(a)) + '</span><span class="tl-st" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span></div>'
           + (a.photos.length > 1 ? '<button type="button" class="tl-arr tl-prev" aria-label="Previous photo">‹</button><button type="button" class="tl-arr tl-next" aria-label="Next photo">›</button>' : "")
           + '<div class="tl-bot"><div class="tl-t">' + (esc(a.f.title) || "No title") + '</div><div class="tl-m">' + (multi ? esc(p.name) + " · " : "") + '<span class="tl-n"></span></div>'
-          + '<div class="tl-btns">' + (a.photos.length ? '<button type="button" class="tl-b" data-ph>Photos</button>' : "") + (ed ? '<button type="button" class="tl-b" data-up title="Upload photos">⇪ Upload</button>' : "") + '<button type="button" class="tl-b tl-pdf" data-wp title="Download the workpack PDF">PDF</button></div></div></div>'; }).join("")
+          + '</div></div>'; }).join("")
       + '</div>' + (list.length ? "" : '<div class="empty">' + (Store.visible().length ? "No actions match the filter." : "No actions yet.") + '</div>');
     $$(".tile", el).forEach(t => { const a = App.act(t.dataset.ref), n = a.photos.length;
       const show = i => { if (!n) return; i = (i + n) % n; tileIx.set(t.dataset.ref, i); $(".tl-img", t).style.backgroundImage = 'url("' + Media.src(a, a.photos[i], lsGet("adTileW", 240) < 300) + '")'; $(".tl-n", t).textContent = "📷 " + (n > 1 ? (i + 1) + "/" : "") + n; };
       show(tileIx.get(t.dataset.ref) || 0);
       t.onclick = e => { const i = tileIx.get(t.dataset.ref) || 0;
         if (e.target.closest(".tl-prev")) return show(i - 1); if (e.target.closest(".tl-next")) return show(i + 1);
-        if (e.target.closest("[data-ph]")) return Media.view(a, i); if (e.target.closest("[data-up]")) return Media.pickFiles(a, "image/*"); if (e.target.closest("[data-wp]")) return Workpack.run(a);
         App.select(t.dataset.ref); };
-      t.ondblclick = e => { if (!e.target.closest("button") && n) Media.view(a, tileIx.get(t.dataset.ref) || 0); };
       t.ondragover = e => { if (Media.hasDrop(e) && ed){ e.preventDefault(); t.classList.add("drop"); } };
       t.ondragleave = e => { if (!t.contains(e.relatedTarget)) t.classList.remove("drop"); };
-      t.ondrop = e => { t.classList.remove("drop"); if (!Media.hasDrop(e)) return; e.preventDefault(); e.stopPropagation(); App.select(t.dataset.ref); Media.dropOn(a, e); }; }); }
+      t.ondrop = e => { t.classList.remove("drop"); if (!Media.hasDrop(e)) return; e.preventDefault(); e.stopPropagation(); Media.dropOn(a, e); }; }); }
   /* the compact Size callout beside the view toggle */
   function sizePop(anchor){ Fields.closePop(); const p = h('<div class="pop sizepop"><div class="pop-h">Tile size</div><input type="range" min="150" max="520" step="10" value="' + lsGet("adTileW", 240) + '"></div>');
     document.body.appendChild(p); Fields.place(p, anchor); const r = $("input", p); r.focus();

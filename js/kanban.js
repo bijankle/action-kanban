@@ -1,6 +1,6 @@
 /* The Organizer tab: one column per stage, like Trello, kept minimal. Drag cards between and within columns
    (higher in a column = higher priority). Click a card for a callout with its problem, solution and photos;
-   editing is done on the Actions tab. Double click a column name to rename it, drag its header to move it. */
+   editing is done in the action itself. Double click a column name to rename it, drag its header to move it. */
 "use strict";
 const Kanban = (() => {
   function render(el){ const ro = !Store.S.edit, q = (App.q || "").trim().toLowerCase(), fs = Store.fields(), multi = Store.selected().length > 1;
@@ -56,13 +56,13 @@ const Kanban = (() => {
       + (a.f.notes ? '<h5>Notes</h5><div class="kca-x">' + esc(a.f.notes) + '</div>' : "")
       + (keys.length ? '<dl>' + keys.map(f => '<dt>' + esc(f.label) + '</dt><dd>' + Fields.show(a, f) + '</dd>').join("") + '</dl>' : "")
       + '<div class="kca-b">' + (a.photos.length ? '<button type="button" class="btn ghost sm" data-k="ph">Photos</button>' : "")
-      + '<button type="button" class="btn sm" data-k="open">Open in Actions</button></div></div>');
+      + '<button type="button" class="btn sm" data-k="open">Open action</button></div></div>');
     document.body.appendChild(c); const r = card.getBoundingClientRect(), w = c.offsetWidth || 360;
     c.style.left = (r.right + 10 + w < innerWidth ? r.right + 10 : Math.max(8, r.left - w - 10)) + "px"; c.style.top = Math.max(8, Math.min(r.top, innerHeight - c.offsetHeight - 8)) + "px";
     c.ondragover = e => { if (ed && Media.hasDrop(e)) e.preventDefault(); }; c.ondrop = e => { if (!ed || !Media.hasDrop(e)) return; e.preventDefault(); e.stopPropagation(); Fields.closePop(); Media.dropOn(a, e); };
     $$(".kca-ph img", c).forEach(im => im.onclick = () => { Fields.closePop(); Media.view(a, +im.dataset.i); });
     $$("[data-k]", c).forEach(b => b.onclick = () => { const k = b.dataset.k; Fields.closePop();
-      if (k === "ph") Media.view(a, 0); else if (k === "open"){ App.tab = "actions"; lsSet("adTab", "actions"); App.select(card.dataset.ref); } }); }
+      if (k === "ph") Media.view(a, 0); else if (k === "open") App.select(card.dataset.ref); }); }
   async function rename(st){ const s = Store.stage(st); const n = await promptBox("Rename the stage", s.name); if (!n || !n.trim() || n.trim() === s.name) return; Store.mutate("config", () => { s.name = n.trim(); Store.touch(s); }); }
   const COLORS = ["#3B8FE0", "#2F7FD1", "#7C5CD6", "#0E9AA7", "#2FB463", "#F2B03D", "#C07A12", "#E0453A", "#D6488A", "#64748b"];
   function menu(anchor, st){ Fields.closePop(); const s = Store.stage(st);

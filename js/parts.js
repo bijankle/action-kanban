@@ -1,5 +1,4 @@
-/* The MTO and Spares tabs. Pick an action on the left; its list of parts is a simple table on the
-   right, ready to fill in. Each row can move across (MTO to spares, spares to MTO). The MTO also holds the
+/* The MTO and Spares tabs of the action view: the action's list of parts as a simple table, ready to fill in. Each row can move across (MTO to spares, spares to MTO). The MTO also holds the
    quotes and the RFQ revisions: every RFQ PDF export takes the next rev letter and is kept for download. */
 "use strict";
 const Parts = (() => {
@@ -11,30 +10,20 @@ const Parts = (() => {
   const pRfq = (pid, name) => "data/p/" + pid + "/rfq/" + safeName(name);
   const created = new Map();   // a blank row that became an item: keep the cursor in it
 
-  function render(el, kind){ const ro = !Store.S.edit, acts = Store.visible().sort((x, y) => Store.actId(x).localeCompare(Store.actId(y)));
-    const hits = App.q ? acts.filter(x => Store.matches(x, App.q)) : acts, cur = App.act(App.partsRef);
-    if (!cur || (App.q && hits.length && !hits.includes(cur))) App.partsRef = (hits[0] || acts[0]) ? (hits[0] || acts[0])._p + ":" + (hits[0] || acts[0]).u : null;
-    const a = App.act(App.partsRef);
-    const ae = document.activeElement, keep = ae && el.contains(ae) && ae.dataset.c ? { r: ae.dataset.r, c: ae.dataset.c, s: ae.selectionStart, v: ae.value } : null;
-    const ls = $(".pt-acts", el) ? $(".pt-acts", el).scrollTop : 0, bs = $(".pt-main", el) ? $(".pt-main", el).scrollTop : 0;
-    const shown = acts.filter(x => Store.matches(x, App.q) || x._p + ":" + x.u === App.partsRef);
-    el.innerHTML = '<div class="pt"><aside class="pt-side"><div class="pt-acts">'
-      + shown.map(x => { const ref = x._p + ":" + x.u, n = list(x, kind).length; return '<button type="button" class="pt-a' + (ref === App.partsRef ? " on" : "") + '" data-ref="' + ref + '"><span class="aid">' + esc(Store.actId(x)) + '</span><span class="pt-at">' + esc(x.f.title || "") + '</span>' + (n ? '<span class="pt-n">' + n + '</span>' : "") + '</button>'; }).join("")
-      + (shown.length ? "" : '<div class="dim" style="padding:10px">No actions.</div>') + '</div></aside><section class="pt-main">' + (a ? pane(a, kind, ro) : '<div class="empty">No actions yet.</div>') + '</section></div>';
-    $(".pt-acts", el).scrollTop = ls; $(".pt-main", el).scrollTop = bs;
-    $$(".pt-a", el).forEach(b => b.onclick = () => { App.partsRef = b.dataset.ref; render(el, kind); });
-    if (!a) return; wire(el, a, kind, ro);
-    if (keep){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v && !created.size) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
+  /* one action's list, drawn into its action view tab; keep is where the cursor was before the redraw */
+  function renderFor(el, a, kind, keep){ const ro = !Store.S.edit;
+    el.innerHTML = '<div class="pt-main">' + pane(a, kind, ro) + '</div>'; wire(el, a, kind, ro);
+    if (keep && keep.c){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
 
   function pane(a, kind, ro){ const s = Store.stage(a.stage), items = list(a, kind), cols = COLS[kind];
     const blanks = Math.max(ro ? 0 : 1, 5 - items.length);
     const row = (it, i) => '<tr data-id="' + it.id + '"><td class="pt-no">' + (i + 1) + '</td>' + cols.map(([k]) => '<td><input class="in pt-in' + (it[k] === "TBC" ? " tbc" : "") + '" data-r="' + it.id + '" data-c="' + k + '"' + (k === "qty" ? ' inputmode="decimal"' : "") + (ro ? " readonly" : "") + ' value="' + esc(it[k] == null ? "" : it[k]) + '"></td>').join("")
       + '<td class="pt-act">' + (ro ? "" : '<button type="button" class="btn ghost sm pt-mv" title="Move this row to ' + NAME[OTHER[kind]] + '">→ ' + (kind === "mto" ? "Spares" : "MTO") + '</button><button type="button" class="ic-b sm pt-x" title="Remove this row">✕</button>') + '</td></tr>';
     const blank = k => '<tr class="pt-blank"><td class="pt-no"></td>' + cols.map(([c]) => '<td><input class="in pt-in" data-r="new' + k + '" data-c="' + c + '"' + (ro ? " readonly" : "") + '></td>').join("") + '<td></td></tr>';
-    return '<div class="pt-head"><div><div class="pt-id"><span class="aid big">' + esc(Store.actId(a)) + '</span><span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span></div><div class="pt-title">' + (esc(a.f.title) || '<span class="dim">No title</span>') + '</div></div><span class="grow"></span>'
+    return '<div class="pt-head"><b class="pt-h">' + NAME[kind] + '</b><span class="grow"></span>'
       + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="gem" title="Paste a list of parts and Gemini fills in the rows">Paste text</button>')
       + '<button type="button" class="dl dl-xl" data-k="xls" title="Export this ' + NAME[kind] + ' to Excel">' + DLI + '<b>XLSX</b></button>'
-      + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF. Each export is the next rev (A, B, C…) and is kept below." : "Export the spares list as a PDF") + '">' + DLI + '<b>PDF</b></button></div>'
+      + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF. Each export is the next rev (A, B, C…) and is kept below." : "Export the spares list as a PDF") + '">' + DLI + '<b>' + (kind === "mto" ? "RFQ" : "PDF") + '</b></button></div>'
       + (kind === "mto" ? '<div class="pt-docs"><div class="pt-box pt-quotes"><div class="pt-bh"><b>Quotes</b><span class="dim">' + (a.quotes || []).length + '</span><span class="grow"></span>' + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="quote">Upload quotes</button>') + '</div>'
           + ((a.quotes || []).length ? (a.quotes || []).slice().reverse().map(f => '<div class="pt-file"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : "FILE") + '</span><button type="button" class="link" data-q="' + f.h + '">' + esc(f.name) + '</button><span class="dim">' + esc(fmtDate(f.added)) + ' · ' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" data-qx="' + f.h + '" title="Remove">✕</button>') + '</div>').join("") : '<div class="dim pt-drop">No quotes yet.' + (ro ? "" : " Upload them, or drop them here.") + '</div>') + '</div>'
         + '<div class="pt-box"><div class="pt-bh"><b>RFQ revisions</b><span class="dim">' + (a.rfq || []).length + '</span><span class="grow"></span><span class="dim">next export: Rev ' + rev((a.rfq || []).length) + '</span></div>'
@@ -125,5 +114,5 @@ const Parts = (() => {
     $(".yn-no", m).onclick = () => m.close();
     add.onclick = () => { const take = rows.filter(r => r._on).map(r => { const o = { id: uid() }; cols.forEach(([k]) => { if (r[k]) o[k] = r[k]; }); return o; }); if (!take.length) return;
       Store.mutate("a:" + a._p, () => { list(a, kind).push(...take); Store.touch(a); }); Store.log("Added " + take.length + " parts to the " + NAME[kind] + " of " + Store.actId(a)); m.close(); }; }
-  return { render, rev, NAME, loadPdf };
+  return { renderFor, rev, NAME, loadPdf };
 })();

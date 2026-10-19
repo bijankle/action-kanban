@@ -1,4 +1,4 @@
-/* The Isolations tab: pick an action, see its equipment tags, and list the isolation points (equipment
+/* The Isolations tab of the action view: the action's equipment tags, and its list the isolation points (equipment
    number, name and a note). Typing a number or a name suggests equipment from the Project Library lists
    (mechanical and electrical equipment, valves, instruments) and the Equipment tags list; picking one fills
    both. The row can still be edited afterwards, and that never changes the lists. */
@@ -30,30 +30,21 @@ const Isol = (() => {
   const COLS = [["tag", "Equipment number"], ["name", "Equipment name"], ["note", "Note"]];
   const list = a => a.isol || (a.isol = []);
   const created = new Map();
-  function render(el){ const ro = !Store.S.edit, acts = Store.visible().sort((x, y) => Store.actId(x).localeCompare(Store.actId(y)));
-    const hits = App.q ? acts.filter(x => Store.matches(x, App.q)) : acts, cur = App.act(App.partsRef);
-    if (!cur || (App.q && hits.length && !hits.includes(cur))) App.partsRef = (hits[0] || acts[0]) ? (hits[0] || acts[0])._p + ":" + (hits[0] || acts[0]).u : null;
-    const a = App.act(App.partsRef), opts = hits.includes(a) || !a ? hits : [a].concat(hits);
-    const ae = document.activeElement, keep = ae && el.contains(ae) && ae.dataset.c ? { r: ae.dataset.r, c: ae.dataset.c, s: ae.selectionStart, v: ae.value } : null;
-    const sc = $(".is-main", el) ? $(".is-main", el).scrollTop : 0;
-    if (!a){ el.innerHTML = '<div class="empty">No actions yet.</div>'; return; }
+  /* one action's isolations, drawn into its action view tab; keep is where the cursor was before the redraw */
+  function renderFor(el, a, keep){ const ro = !Store.S.edit;
     const s = Store.stage(a.stage), items = list(a), tags = Array.isArray(a.f.equipment) ? a.f.equipment : [], blanks = Math.max(ro ? 0 : 1, 5 - items.length);
-    el.innerHTML = '<div class="is-main"><div class="is-top"><label class="fl is-pick">Action<select class="in">' + opts.map(x => '<option value="' + x._p + ":" + x.u + '"' + (x === a ? " selected" : "") + '>' + esc(Store.actId(x) + "  " + (x.f.title || "")) + '</option>').join("") + '</select></label>'
-      + '<span class="dim is-src">' + (Equip.count ? Equip.count.toLocaleString() + " items from Project Library" : "Loading Project Library equipment…") + ' <button type="button" class="link" data-k="ref">Refresh</button></span></div>'
-      + '<div class="pt-head"><div><div class="pt-id"><span class="aid big">' + esc(Store.actId(a)) + '</span><span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span></div><div class="pt-title">' + (esc(a.f.title) || '<span class="dim">No title</span>') + '</div></div></div>'
+    el.innerHTML = '<div class="is-main"><div class="pt-head"><b class="pt-h">Isolations</b><span class="grow"></span><span class="dim is-src">' + (Equip.count ? Equip.count.toLocaleString() + " items from Project Library" : "Loading Project Library equipment…") + ' <button type="button" class="link" data-k="ref">Refresh</button></span></div>'
       + '<div class="is-tags"><b>Subject equipment</b>' + (tags.length ? tags.map(t => '<button type="button" class="is-chip" data-tag="' + esc(t) + '" title="' + (ro ? "" : "Add as an isolation row") + '">' + Fields.chip(t) + (ro ? "" : "<i>+</i>") + '</button>').join("") + (ro ? "" : '<span class="dim is-hint">click a tag to add it as a row</span>') : '<span class="dim">No equipment tags on this action. Add them in its side panel on the Actions tab.</span>') + '</div>'
       + '<table class="tbl pt-tbl is-tbl"><thead><tr><th class="pt-no">No.</th>' + COLS.map(([k, n]) => '<th class="is-' + k + '">' + esc(n) + '</th>').join("") + '<th class="pt-act"></th></tr></thead><tbody>'
       + items.map((it, i) => '<tr data-id="' + it.id + '"><td class="pt-no">' + (i + 1) + '</td>' + COLS.map(([k]) => cell(it.id, k, it[k], ro)).join("") + '<td class="pt-act">' + (ro ? "" : '<button type="button" class="ic-b sm pt-x" title="Remove this row">✕</button>') + '</td></tr>').join("")
       + Array.from({ length: blanks }, (_, k) => '<tr class="pt-blank"><td class="pt-no"></td>' + COLS.map(([c]) => cell("new" + k, c, "", ro)).join("") + '<td></td></tr>').join("") + '</tbody></table>'
       + '<div class="dim pt-foot">' + (items.length ? items.length + " isolation" + (items.length > 1 ? "s" : "") : "Empty, type an equipment number or name to start") + '. Picking a suggestion fills in the number and the name; you can still edit them, and that doesn\'t change the lists.</div></div>';
-    $(".is-main", el).scrollTop = sc;
-    $(".is-pick select", el).onchange = e => { App.partsRef = e.target.value; render(el); };
-    $("[data-k=ref]", el).onclick = () => { note("Refreshing the Project Library equipment…"); Equip.load(true).then(() => { note(Equip.count.toLocaleString() + " equipment items loaded"); render(el); }); };
-    if (!Equip.count) Equip.load().then(() => { if (App.tab === "isol" && Equip.count) render(el); });
+    $("[data-k=ref]", el).onclick = () => { note("Refreshing the Project Library equipment…"); Equip.load(true).then(() => { note(Equip.count.toLocaleString() + " equipment items loaded"); App.render(); }); };
+    if (!Equip.count) Equip.load().then(() => { if (App.sub === "isol" && Equip.count) App.render(); });
     wire(el, a, ro);
     if (!ro) $$(".is-chip", el).forEach(b => b.onclick = () => { const t = b.dataset.tag, x = Equip.find(t, "t").find(y => y.t.toLowerCase() === t.toLowerCase() && y.n);
       put(a, "new-chip", { tag: t, name: x ? x.n : "" }); created.delete("new-chip"); });
-    if (keep){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
+    if (keep && keep.c){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
   const cell = (r, c, v, ro) => '<td' + (c !== "note" ? ' class="is-cb"' : "") + '><input class="in pt-in" autocomplete="off" data-r="' + r + '" data-c="' + c + '" value="' + esc(v || "") + '"' + (ro ? " readonly" : "") + '></td>';
   /* write one or both of a row's values; a blank row becomes a new isolation */
   function put(a, r, vals){ const key = "a:" + a._p, items = list(a);
@@ -79,5 +70,5 @@ const Isol = (() => {
       i.onkeydown = e => { if (dd && (e.key === "ArrowDown" || e.key === "ArrowUp")){ e.preventDefault(); hi = (hi + (e.key === "ArrowDown" ? 1 : -1) + res.length) % res.length; $$(".is-o", dd).forEach((b, k) => b.classList.toggle("on", k === hi)); const o = $$(".is-o", dd)[hi]; o && o.scrollIntoView({ block: "nearest" }); }
         else if (e.key === "Enter"){ e.preventDefault(); if (dd && res[hi]) pick(res[hi]); else i.blur(); }
         else if (e.key === "Escape" && dd){ e.stopPropagation(); close(); } }; }); }
-  return { render };
+  return { renderFor };
 })();
