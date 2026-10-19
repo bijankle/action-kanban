@@ -78,7 +78,7 @@ const Store = (() => {
   function mutate(keys, fn, opts){ if (!S.edit && !(opts && opts.force)){ App.viewOnly(); return false; }
     S.undo.push(snap()); if (S.undo.length > 150) S.undo.shift(); S.redo = [];
     const r = fn(); [].concat(keys).forEach(k => S.dirty.add(k)); stash(); saveSoon(); App.render(); return r === undefined ? true : r; }
-  const touch = o => { o.mod = now(); o.by = lsGet("adName", "") || "Someone"; return o; };
+  const touch = o => { o.mod = now(); o.by = Profile.name() || "Someone"; return o; };
   /* undo / redo: put the old copy back and stamp what changed as new, so it also wins over the online copy */
   function restore(from, to){ const old = JSON.parse(from), cur = JSON.parse(snap());
     const relive = (oa, ca, key) => { const om = new Map((oa || []).map(x => [x[key], x])); (ca || []).forEach(x => { if (!om.has(x[key])) oa.push(Object.assign({}, x, { del: true })); });
@@ -138,7 +138,7 @@ const Store = (() => {
     catch (e){ console.error(e); setStatus("error", e.status === 401 || e.status === 403 ? "The GitHub key was refused" : navigator.onLine ? (e.detail || e.message) : "Offline"); retryT = setTimeout(save, 20000); }
     finally { saving = false; if (again){ again = false; saveSoon(); } } }
   let lastMsgs = []; const log = m => { if (lastMsgs[lastMsgs.length - 1] === m) return; lastMsgs.push(m); if (lastMsgs.length > 8) lastMsgs.shift(); };
-  const commitMsg = () => (lastMsgs.length ? lastMsgs.join("; ") : "Update actions") + " (" + (lsGet("adName", "") || "Action Database") + ")";
+  const commitMsg = () => (lastMsgs.length ? lastMsgs.join("; ") : "Update actions") + " (" + (Profile.name() || "Action Database") + ")";
   /* unsaved work is kept on this device until it's online, so closing the tab never loses it */
   const stash = debounce(() => IDB.set("state", { c: S.config, p: S.projects, a: clean(S.acts), dirty: [...S.dirty], blobs: S.blobs, at: now() }), 300);
   async function addBlob(path, b64){ const sha = await GH.blob(b64); S.blobs.push({ path, sha }); stash(); saveSoon(); }

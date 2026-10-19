@@ -67,7 +67,7 @@ const Parts = (() => {
     for (const f of Array.from(files)){ try { const buf = await f.arrayBuffer(), hh = (await sha1(buf)).slice(0, 12);
         if ((a.quotes || []).some(x => x.h === hh)){ note(f.name + " is already there"); continue; }
         Local.saveOriginal(a, "Quote " + f.name, f); await Store.addBlob(pFile(a._p, hh, f.name), bufToB64(buf)); Media.mem.set("f" + hh, URL.createObjectURL(f));
-        Store.mutate("a:" + a._p, () => { (a.quotes = a.quotes || []).push({ h: hh, name: f.name, size: f.size, type: f.type, added: now(), by: lsGet("adName", "") }); Store.touch(a); }); Store.log("Added quote " + f.name + " to " + Store.actId(a));
+        Store.mutate("a:" + a._p, () => { (a.quotes = a.quotes || []).push({ h: hh, name: f.name, size: f.size, type: f.type, added: now(), by: Profile.name() }); Store.touch(a); }); Store.log("Added quote " + f.name + " to " + Store.actId(a));
       } catch (e){ alert("Couldn't add " + f.name + ": " + e.message); } } }
 
   /* ---------- exports ---------- */
@@ -85,8 +85,8 @@ const Parts = (() => {
     if (r){ doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("Rev " + r, 196, 14, { align: "right" }); }
     doc.setTextColor(30); doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text(doc.splitTextToSize(a.f.title || "", 182), 14, 36);
     doc.setFont("helvetica", "normal"); doc.setTextColor(90);
-    const meta = ["Date: " + fmtDate(now()), lsGet("adName", "") ? "Issued by: " + lsGet("adName", "") : "", a.f.location ? "Location: " + a.f.location : "", Array.isArray(a.f.equipment) && a.f.equipment.length ? "Equipment: " + a.f.equipment.join(", ") : ""].filter(Boolean);
-    doc.text(meta.join("     "), 14, 44);
+    const pf = Profile.get(), meta = ["Date: " + fmtDate(now()), Profile.name() ? "Issued by: " + Profile.name() + (pf.role ? ", " + pf.role : "") : "", pf.mobile ? "Mobile: " + pf.mobile : "", pf.email ? "Email: " + pf.email : "", a.f.location ? "Location: " + a.f.location : "", Array.isArray(a.f.equipment) && a.f.equipment.length ? "Equipment: " + a.f.equipment.join(", ") : ""].filter(Boolean);
+    doc.text(doc.splitTextToSize(meta.join("     "), 182), 14, 44);
     doc.autoTable({ startY: 50, head: [["Item"].concat(COLS[kind].map(c => c[1]))], body: items.map((it, i) => [i + 1].concat(COLS[kind].map(([k]) => it[k] || ""))),
       styles: { font: "helvetica", fontSize: 9.5, cellPadding: 2.2, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" }, headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 62 }, 3: { cellWidth: 14, halign: "right" }, 4: { cellWidth: 16 } }, margin: { left: 14, right: 14 } });
@@ -102,7 +102,7 @@ const Parts = (() => {
       const blob = await build(a, kind, r), name = fname(a, kind, r), path = pRfq(a._p, Store.actId(a) + "-rev-" + r + ".pdf");
       Media.mem.set("rfq:" + path, URL.createObjectURL(blob)); Excel.save(blob, name); Local.saveOriginal(a, name, blob);
       await Store.addBlob(path, bufToB64(await blob.arrayBuffer()));
-      Store.mutate("a:" + a._p, () => { (a.rfq = a.rfq || []).push({ rev: r, at: now(), by: lsGet("adName", ""), n: items.length, name, path, items: clone(items) }); Store.touch(a); });
+      Store.mutate("a:" + a._p, () => { (a.rfq = a.rfq || []).push({ rev: r, at: now(), by: Profile.name(), n: items.length, name, path, items: clone(items) }); Store.touch(a); });
       Store.log("Exported " + name); note("Exported " + name + ", saved in the RFQ revisions"); }
     catch (e){ console.error(e); alert("Couldn't make the PDF: " + e.message); } }
   async function openRfq(a, r){ const loc = Local.ok && await Local.original(a, r.name); const url = loc ? URL.createObjectURL(loc) : Media.mem.get("rfq:" + r.path) || GH.fileUrl(r.path);

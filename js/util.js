@@ -16,6 +16,14 @@ function fmtSize(n){ return n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Mat
 function slug(s){ return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "x"; }
 function safeName(s){ return String(s || "file").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 120); }
 
+/* the user's profile (kept on this device): it signs edits, prints, workpacks and RFQs */
+const Profile = { get: () => Object.assign({ first: "", last: "", mobile: "", email: "", role: "" }, lsGet("adProfile", {})),
+  name(){ const p = Profile.get(); return [p.first, p.last].filter(Boolean).join(" ") || lsGet("adName", ""); },
+  initials(){ const p = Profile.get(), n = Profile.name(); return ((p.first[0] || "") + (p.last[0] || "")).toUpperCase() || (n ? n.split(/\s+/).map(x => x[0]).join("").slice(0, 2).toUpperCase() : ""); },
+  set(p){ lsSet("adProfile", p); lsSet("adName", [p.first, p.last].filter(Boolean).join(" ")); },
+  /* the contact lines for a PDF: name and role, then mobile and email */
+  lines(){ const p = Profile.get(), n = Profile.name(); return [n + (p.role ? ", " + p.role : ""), [p.mobile && "Mobile " + p.mobile, p.email].filter(Boolean).join("   ")].filter(Boolean); } };
+
 /* toast note at the bottom of the screen */
 function note(msg, ms){ let n = $("#note"); if (!n){ n = h('<div id="note" role="status"></div>'); document.body.appendChild(n); }
   n.textContent = msg; n.classList.add("show"); clearTimeout(note._t); note._t = setTimeout(() => n.classList.remove("show"), ms || 3200); }

@@ -21,9 +21,14 @@ const Workpack = (() => {
     /* title band */
     doc.setFillColor(...rgb); doc.rect(0, 0, W, 30, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("WORKPACK", M, 9);
     doc.setFontSize(17); doc.text(Store.actId(a), M, 18); doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.text(p.name || "", M, 25);
-    doc.setFontSize(9); doc.text("Printed " + new Date().toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) + (lsGet("adName", "") ? " by " + lsGet("adName", "") : ""), W - M, 9, { align: "right" });
+    doc.setFontSize(9); doc.text("Printed " + new Date().toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) + (Profile.name() ? " by " + Profile.name() : ""), W - M, 9, { align: "right" });
     const sc = hex(s.color); doc.setFillColor(255); doc.roundedRect(W - M - 52, 14, 52, 9, 2, 2, "F"); doc.setFillColor(...sc); doc.circle(W - M - 47, 18.5, 1.6, "F"); doc.setTextColor(30); doc.setFont("helvetica", "bold"); doc.text(s.name, W - M - 43, 19.8);
     y = 40; doc.setTextColor(30); doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.splitTextToSize(a.f.title || "No title", CW).forEach(l => { doc.text(l, M, y); y += 6.5; }); y += 2;
+    /* who to contact with any queries */
+    const pf = Profile.get(), cl = Profile.lines(); if (Profile.name()){ const bh = 6 + cl.length * 5; doc.setFillColor(243, 244, 246); doc.setDrawColor(...rgb); doc.setLineWidth(0.6); doc.roundedRect(M, y, CW, bh, 2, 2, "F"); doc.line(M, y, M, y + bh);
+      doc.setFontSize(8); doc.setTextColor(110); doc.setFont("helvetica", "bold"); doc.text("CONTACT FOR QUERIES", M + 4, y + 4.5); doc.setFontSize(10); doc.setTextColor(30);
+      cl.forEach((l, i) => { doc.setFont("helvetica", i ? "normal" : "bold"); doc.text(l, M + 52, y + 4.6 + i * 5); });
+      if (pf.email){ doc.link(M + 52, y + 1 + (cl.length - 1) * 5, CW - 52, 5, { url: "mailto:" + pf.email }); } y += bh + 4; }
     /* details */
     const skip = new Set(["title", "problem", "solution", "notes", "status"]);
     const det = Store.fields().filter(f => !skip.has(f.id)).map(f => [f.label, Fields.text(a, f) || "–"]);
@@ -50,7 +55,7 @@ const Workpack = (() => {
             doc.addImage(d, /png/i.test(d.slice(0, 30)) ? "PNG" : "JPEG", x, y, w, hh, undefined, "FAST"); rowH = Math.max(rowH, hh);
             doc.setFontSize(7.5); doc.setTextColor(130); doc.text(doc.splitTextToSize(ph.name || "", gw)[0] || "", M + k * (gw + 6), y + hh + 3.5); } catch (e){ console.warn("photo", e); } }
         y += rowH + 8; } }
-    const n = doc.getNumberOfPages(); for (let i = 1; i <= n; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(Store.actId(a) + " Workpack   Page " + i + " of " + n, W / 2, 291, { align: "center" }); }
+    const n = doc.getNumberOfPages(); for (let i = 1; i <= n; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(Store.actId(a) + " Workpack" + (Profile.name() ? "   Queries: " + [Profile.name(), Profile.get().mobile, Profile.get().email].filter(Boolean).join(", ") : "") + "   Page " + i + " of " + n, W / 2, 291, { align: "center" }); }
     return doc.output("blob"); }
   return { run, build };
 })();

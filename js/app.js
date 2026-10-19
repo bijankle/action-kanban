@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.3.1";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 const THEMES = [["slate", "Slate", "#475569"], ["graphite", "Graphite", "#52525b"], ["navy", "Navy", "#1E3A5F"], ["petrol", "Petrol", "#1F4F5A"], ["olive", "Olive", "#5A5A2E"], ["stone", "Stone", "#7A6A5D"], ["rust", "Rust", "#9A3412"], ["ink", "Ink", "#111827"]];
 
@@ -31,7 +31,7 @@ const App = (() => {
     else if (S.dirty.size || S.blobs.length){ cls = "busy"; t = "Unsaved changes"; }
     else { cls = "ok"; t = "Saved"; }
     s.className = "status " + cls; s.innerHTML = '<i></i><span>' + esc(t) + '</span>';
-    const lf = Local.state(); $("#folderB").hidden = !(S.edit && (lf === "locked" || lf === "none")); $("#folderB").textContent = lf === "locked" ? "Reconnect folder" : "Choose local folder"; }
+    const lf = Local.state(); $("#folderB").hidden = !(S.edit && (lf === "locked" || lf === "none")); $("#folderB").textContent = lf === "locked" ? "Reconnect folder" : "Local folder"; }
   const select = ref => { A.selRef = ref; if (ref) history.replaceState(null, "", "?a=" + encodeURIComponent(ref.split(":")[0] + ":" + (act(ref) || {}).no)); else history.replaceState(null, "", location.pathname); render(); };
   /* the MTO link in the table (or the side panel): that action on the MTO or Spare parts tab */
   const openParts = (ref, kind) => { A.partsRef = ref; setTab(kind); };
@@ -78,7 +78,7 @@ const App = (() => {
   /* ---------- settings and first time setup ---------- */
   function settings(first){ const c = GH.cfg(), lf = Local.state();
     const m = modal('<h3>' + (first ? "Welcome to Action Database" : "Settings") + '</h3>' + (first ? '<p class="dim">Set this computer up once. You can change any of it later in File, Settings.</p>' : "")
-      + '<label class="fl">Your name <span class="dim">shown on your edits and prints</span><input class="in" data-k="name" value="' + esc(lsGet("adName", "")) + '"></label>'
+      + '<div class="fl">Your profile <span class="dim">signs your edits, prints, workpacks and RFQs</span><div class="in-row"><b class="pfn">' + esc(Profile.name() || "Not set") + '</b><span class="dim">' + esc(Profile.get().role) + '</span><span class="grow"></span><button type="button" class="btn ghost sm" data-k="prof">Edit profile…</button></div></div>'
       + '<label class="fl">GitHub key <span class="dim">needed to edit. Without it the app is view only.</span><input class="in secret" data-k="key" autocomplete="off" spellcheck="false" value="' + esc(c.token) + '" placeholder="github_pat_…"></label><div class="dim sm-t">Make one at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com, Settings, Developer settings, Fine grained tokens</a>: Repository access “Only select repositories”, pick <b>' + esc(c.repo) + '</b>, then Permissions, Contents, Read and write. It stays on this computer only. <span class="ks"></span></div>'
       + '<label class="fl">Data repository<input class="in" data-k="repo" value="' + esc(c.repo) + '"></label>'
       + '<div class="fl">Local folder <span class="dim">full quality photos and a backup of the data are saved here</span><div class="in-row"><b class="lfn">' + esc(Local.name() || (lf === "unsupported" ? "Needs Chrome or Edge" : "Not chosen")) + '</b>' + (lf === "locked" ? ' <span class="dim">(click Reconnect)</span>' : "") + '<span class="grow"></span>' + (Local.supported ? '<button type="button" class="btn ghost sm" data-k="pick">' + (lf === "locked" ? "Reconnect" : "Choose folder…") + '</button>' : "") + '</div></div>'
@@ -94,10 +94,20 @@ const App = (() => {
     const pk = $("[data-k=pick]", m); if (pk) pk.onclick = async () => { if (await (Local.state() === "locked" ? Local.reconnect() : Local.pick())){ $(".lfn", m).textContent = Local.name(); pk.textContent = "Change folder…"; } };
     const am = $("[data-k=am]", m); if (am) am.onclick = () => { m.close(); ImportAM.open(); };
     $("[data-k=x]", m).onclick = () => { lsSet("adSetup", 1); m.close(); };
-    $("[data-k=ok]", m).onclick = async () => { lsSet("adName", $("[data-k=name]", m).value.trim()); lsSet("adGhKey", $("[data-k=key]", m).value.trim()); lsSet("adRepo", $("[data-k=repo]", m).value.trim() === GH.pagesRepo() ? "" : $("[data-k=repo]", m).value.trim()); lsSet("adGemKey", $("[data-k=gem]", m).value.trim()); lsSet("adSetup", 1);
+    $("[data-k=prof]", m).onclick = () => profile(() => { $(".pfn", m).textContent = Profile.name() || "Not set"; });
+    $("[data-k=ok]", m).onclick = async () => { lsSet("adGhKey", $("[data-k=key]", m).value.trim()); lsSet("adRepo", $("[data-k=repo]", m).value.trim() === GH.pagesRepo() ? "" : $("[data-k=repo]", m).value.trim()); lsSet("adGemKey", $("[data-k=gem]", m).value.trim()); lsSet("adSetup", 1);
       const q = ($("[data-k=q] .on", m) || {}).dataset; m.close(); GH.reset(); await checkEdit();
       if (q && Store.S.config && q.v !== (Store.S.config.quality || "medium") && Store.S.edit) Store.mutate("config", () => { Store.S.config.quality = q.v; Store.S.config.mod = now(); });
       reload(); }; }
+  /* the profile window, from the round button top right */
+  function profile(after){ const p = Profile.get(), F = (k, l, t, ph) => '<label class="fl">' + l + '<input class="in" data-k="' + k + '" type="' + (t || "text") + '" value="' + esc(p[k]) + '"' + (ph ? ' placeholder="' + ph + '"' : "") + '></label>';
+    const m = modal('<h3>Your profile</h3><p class="dim">Goes on the workpacks and RFQs you export, so people know who to contact with any queries. Kept on this computer.</p><div class="pf-g">' + F("first", "First name") + F("last", "Last name") + '</div>'
+      + F("role", "Role", "text", "e.g. Maintenance Engineer") + '<div class="pf-g">' + F("mobile", "Mobile", "tel") + F("email", "Email", "email") + '</div><div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Save</button></div>', { cls: "pf-win" });
+    $("[data-k=first]", m).focus(); $(".yn-no", m).onclick = () => m.close();
+    $(".yn-yes", m).onclick = () => { const o = {}; $$("[data-k]", m).forEach(i => o[i.dataset.k] = i.value.trim()); Profile.set(o); m.close(); drawProf(); note("Profile saved"); after && after(); };
+    $$("input", m).forEach(i => i.onkeydown = e => { if (e.key === "Enter") $(".yn-yes", m).click(); }); }
+  function drawProf(){ const b = $("#profB"); if (!b) return; const ini = Profile.initials(); b.innerHTML = ini ? '<span>' + esc(ini) + '</span>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>';
+    b.title = Profile.name() ? Profile.name() + (Profile.get().role ? ", " + Profile.get().role : "") + " (edit your profile)" : "Set up your profile"; b.classList.toggle("set", !!ini); }
   async function checkEdit(){ const r = await GH.canEdit(); Store.S.edit = !A.mobile && (r === true || (r === null && !!GH.cfg().token)); render(); }
   async function reload(){ try { if (await Store.refresh(true)) render(); } catch (e){ note("Couldn't load: " + e.message); } render(); }
 
@@ -123,7 +133,7 @@ const App = (() => {
 
   /* ---------- menus ---------- */
   const MENUS = {
-    File: [["New action", "N", () => newAction()], ["New action from pasted text…", "", () => Intake.open(null, "")], "-", ["Projects…", "", projectsWin], ["New project…", "", () => editProject(null)], "-", ["Export to PDF or print…", "Ctrl+P", () => Print.dialog()], ["Export to Excel", "", () => Excel.run()], "-", ["Import from ActionMap…", "", () => ImportAM.open()], ["Settings…", "", () => settings()]],
+    File: [["New action", "N", () => newAction()], ["New action from pasted text…", "", () => Intake.open(null, "")], "-", ["Projects…", "", projectsWin], ["New project…", "", () => editProject(null)], "-", ["Export to PDF or print…", "Ctrl+P", () => Print.dialog()], ["Export to Excel", "", () => Excel.run()], "-", ["Import from ActionMap…", "", () => ImportAM.open()], ["Your profile…", "", () => profile()], ["Settings…", "", () => settings()]],
     Edit: [["Undo", "Ctrl+Z", () => Store.undo()], ["Redo", "Ctrl+Y", () => Store.redo()], "-", ["Delete selected action", "", () => { const a = act(A.selRef); if (a) $("#side [data-k=del]") && $("#side [data-k=del]").click(); }]],
     View: null,
     Help: [["How to use", "", guide], ["Keyboard shortcuts", "", keys], "-", ["Update app", "", update], ["About", "", about]] };
@@ -190,6 +200,7 @@ const App = (() => {
       $("#printB").onclick = () => Print.dialog(); $("#xlsB").onclick = () => Excel.run();
       $("#undoB").onclick = () => Store.undo(); $("#redoB").onclick = () => Store.redo(); $("#updB").onclick = update;
       $("#status").onclick = () => { if (!Store.S.edit) settings(); else if (Store.S.status === "error") Store.save(); };
+      $("#profB").onclick = () => profile(); drawProf();
       $("#folderB").onclick = () => Local.state() === "locked" ? Local.reconnect() : Local.pick(); }
     await Local.init();
     const qs = new URLSearchParams(location.search);
@@ -198,7 +209,7 @@ const App = (() => {
     const ar = qs.get("a"); if (ar){ const a = Store.findRef(ar); if (a){ if (!Store.selected().includes(a._p)) Store.setSelected(Store.selected().concat(a._p)); A.selRef = a._p + ":" + a.u;
         if (A.mobile) Mobile.show(A.selRef); const ph = +qs.get("photo"); if (ph && a.photos.length) setTimeout(() => Media.view(a, ph - 1), 300); } }
     $("#boot").remove(); draw();
-    if (!A.mobile && !lsGet("adSetup", 0)) settings(true);
+    if (!A.mobile && !lsGet("adSetup", 0)){ if (!Profile.name()) profile(() => settings(true)); else settings(true); }
     setInterval(async () => { if (document.hidden || $(".pop") || typing()) return; try { if (await Store.refresh()) render(); } catch (e) {} }, 45000);
     document.addEventListener("visibilitychange", async () => { if (!document.hidden) try { if (await Store.refresh()) render(); } catch (e) {} });
     addEventListener("beforeunload", e => { if (Store.S.dirty.size || Store.S.blobs.length){ Store.save(); e.preventDefault(); e.returnValue = ""; } });

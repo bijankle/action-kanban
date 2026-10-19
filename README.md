@@ -30,4 +30,4 @@ All data lives under `data/` in this repo. `config.json` holds the fields, stage
 
 ## Setup
 
-In the repo Settings, under Pages, deploy from the branch that holds this code. Then open the site, enter your name, a fine grained GitHub key with Contents read and write on this repo, the local folder, and optionally a Gemini key from aistudio.google.com.
+In the repo Settings, under Pages, deploy from the branch that holds this code. Then open the site, fill in your profile (name, role, mobile and email, which go on the workpacks and RFQs), a fine grained GitHub key with Contents read and write on this repo, the local folder, and optionally a Gemini key from aistudio.google.com.
