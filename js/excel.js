@@ -44,5 +44,27 @@ const Excel = (() => {
   function run(){ const list = Table.rows(); if (!list.length) return alert("No actions to export.");
     const b = exportRows(list), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "Actions " + new Date().toISOString().slice(0, 10) + ".xlsx"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     note("Exported " + list.length + " actions, as filtered in the table"); }
-  return { run, exportRows, book, save };
+  /* ---------- reading an .xlsx (for importing the approved vendor list): every sheet as rows of cell values ---------- */
+  async function read(file){ const buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer), files = {};
+    let e = buf.length - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--; if (e < 0) throw new Error("That isn't an Excel (.xlsx) file.");
+    let p = dv.getUint32(e + 16, true); const n = dv.getUint16(e + 10, true), dec = new TextDecoder();
+    for (let i = 0; i < n; i++){ const method = dv.getUint16(p + 10, true), size = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
+      const name = dec.decode(buf.subarray(p + 46, p + 46 + nl)); const start = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true), data = buf.subarray(start, start + size);
+      files[name] = { method, data }; p += 46 + nl + xl + cl; }
+    const text = async name => { const f = files[name]; if (!f) return ""; if (f.method === 0) return dec.decode(f.data);
+      const ds = new Blob([f.data]).stream().pipeThrough(new DecompressionStream("deflate-raw")); return await new Response(ds).text(); };
+    const X = s => new DOMParser().parseFromString(s, "application/xml");
+    const ss = [...X(await text("xl/sharedStrings.xml")).getElementsByTagName("si")].map(si => [...si.getElementsByTagName("t")].map(t => t.textContent).join(""));
+    const rels = {}; [...X(await text("xl/_rels/workbook.xml.rels")).getElementsByTagName("Relationship")].forEach(r => rels[r.getAttribute("Id")] = r.getAttribute("Target").replace(/^\/?(xl\/)?/, ""));
+    const out = {}, colN = ref => { let c = 0; for (const ch of ref.replace(/\d+/g, "")) c = c * 26 + ch.charCodeAt(0) - 64; return c - 1; };
+    for (const sh of X(await text("xl/workbook.xml")).getElementsByTagName("sheet")){ const rid = sh.getAttribute("r:id") || sh.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+      const doc = X(await text("xl/" + rels[rid])), rows = [];
+      for (const row of doc.getElementsByTagName("row")){ const r = []; for (const c of row.getElementsByTagName("c")){ const t = c.getAttribute("t"), v = (c.getElementsByTagName("v")[0] || {}).textContent;
+          r[colN(c.getAttribute("r"))] = t === "s" ? ss[+v] : t === "inlineStr" ? [...c.getElementsByTagName("t")].map(x => x.textContent).join("") : t === "str" || t === "b" ? v : v != null && v !== "" ? +v : ""; }
+        rows[(+row.getAttribute("r") || rows.length + 1) - 1] = r; }
+      out[sh.getAttribute("name")] = rows; }
+    return out; }
+  /* an Excel date (days since 1900) as YYYY-MM-DD */
+  const xlDate = v => typeof v === "number" && v > 20000 ? new Date(Date.UTC(1899, 11, 30) + v * 864e5).toISOString().slice(0, 10) : String(v || "");
+  return { run, exportRows, book, save, read, xlDate };
 })();

@@ -3,7 +3,7 @@
    saves a few seconds later. Saving re-reads the online copy first and merges item by item (the
    newer edit of each action wins), so two people editing different actions never overwrite each other. */
 "use strict";
-const P_CONFIG = "data/config.json", P_PROJECTS = "data/projects.json", P_USERS = "data/users.json";
+const P_CONFIG = "data/config.json", P_PROJECTS = "data/projects.json", P_USERS = "data/users.json", P_VENDORS = "data/vendors.json";
 const pActs = pid => "data/p/" + pid + "/actions.json";
 const pImg = (pid, h) => "data/p/" + pid + "/img/" + h + ".jpg";
 const pThumb = (pid, h) => "data/p/" + pid + "/thumb/" + h + ".jpg";
@@ -13,7 +13,7 @@ const YN = ["Yes", "No"];
 function defaultConfig(){ const t = now(); const opt = (labels, colors) => labels.map((l, i) => ({ id: uid() + i, label: l, color: (colors || [])[i] || "" }));
   const F = (id, label, type, x) => Object.assign({ id, label, type, builtin: true, table: false, tbc: false, na: false, mod: t }, x || {});
   return { v: 1, mod: t,
-    stages: [["Issue Identified", "#3B8FE0"], ["Defect Notification Sent", "#7C5CD6"], ["Work Order Created", "#0E9AA7"], ["RFQ Sent", "#C07A12"], ["Parts Ordered", "#D6488A"], ["Parts Received", "#2F7FD1"], ["On Hold", "#F2B03D", "hold"], ["Completed", "#2FB463", "done"]]
+    stages: [["Issue Identified", "#3B8FE0"], ["Defect Notification Sent", "#7C5CD6"], ["Work Order Created", "#0E9AA7"], ["RFQ Sent", "#C07A12"], ["PO Sent", "#D6488A"], ["Parts Received", "#2F7FD1"], ["On Hold", "#F2B03D", "hold"], ["Completed", "#2FB463", "done"]]
       .map(([n, c, k], i) => ({ id: "st" + i, name: n, color: c, kind: k || "open", print: k !== "done", mod: t })),
     fields: [
       F("title", "Title", "text", { table: true, core: true }),
@@ -43,7 +43,7 @@ function defaultConfig(){ const t = now(); const opt = (labels, colors) => label
     contacts: [] }; }
 
 const Store = (() => {
-  const S = { config: null, projects: { v: 1, projects: [] }, acts: {}, users: { v: 1, users: [] }, base: {}, conflicts: [], dirty: new Set(), blobs: [], undo: [], redo: [], loaded: false, status: "", edit: false };
+  const S = { config: null, projects: { v: 1, projects: [] }, acts: {}, users: { v: 1, users: [] }, vendors: { v: 1, categories: [], vendors: [] }, base: {}, conflicts: [], dirty: new Set(), blobs: [], undo: [], redo: [], loaded: false, status: "", edit: false };
   const live = a => (a || []).filter(x => !x.del);
 
   /* ---------- reading ---------- */
@@ -71,7 +71,7 @@ const Store = (() => {
   function hay(a){ const c = hayCache.get(a); if (c && c.mod === a.mod) return c.t;
     const p = project(a._p) || {}, ct = contacts().find(x => x.name && x.name === a.f.contractor) || {};
     const parts = r => (r || []).map(it => [it.desc, it.part, it.qty, it.unit, it.notes].join(" ")).join(" ");
-    const t = [actId(a), p.name, p.prefix, stage(a.stage).name, fields().map(f => Fields.text(a, f)).join(" "), a.f.notes, parts(a.mto), parts(a.spares), (a.isol || []).map(it => [it.tag, it.name, it.note].join(" ")).join(" "),
+    const t = [actId(a), p.name, p.prefix, stage(a.stage).name, fields().map(f => Fields.text(a, f)).join(" "), a.f.notes, parts(a.mto), parts(a.spares), (a.rfqTo || []).join(" "), a.rfqCat, (a.isol || []).map(it => [it.tag, it.name, it.note].join(" ")).join(" "),
       a.photos.map(x => x.name + " " + (x.cap || "")).join(" "), a.files.map(x => x.name).join(" "), (a.quotes || []).map(x => x.name).join(" "), (a.rfq || []).map(x => x.name).join(" "),
       ct.company, ct.mobile, ct.email].join(" ").toLowerCase();
     hayCache.set(a, { mod: a.mod, t }); return t; }
@@ -178,6 +178,7 @@ const Store = (() => {
         for (const k of keys){
           if (k === "config"){ adoptConfig(mergeConfig(S.config, await GH.readJson(P_CONFIG, at))); wrote[k] = ser(k); entries.push({ path: P_CONFIG, content: wrote[k] }); }
           else if (k === "projects"){ const r = await GH.readJson(P_PROJECTS, at); S.projects.projects = adoptList(S.projects.projects, mergeById(S.projects.projects, r && r.projects), "id"); wrote[k] = ser(k); entries.push({ path: P_PROJECTS, content: wrote[k] }); }
+          else if (k === "vendors"){ wrote[k] = ser(k); entries.push({ path: P_VENDORS, content: wrote[k] }); }
           else if (k === "users"){ const r = await GH.readJson(P_USERS, at); S.users = { v: 1, users: mergeById(S.users.users, r && r.users) }; wrote[k] = ser(k); entries.push({ path: P_USERS, content: wrote[k] }); }
           else { const pid = k.slice(2); adopt(pid, mergeActs(S.acts[pid], await GH.readJson(pActs(pid), at), pid)); wrote[k] = ser(k); entries.push({ path: pActs(pid), content: wrote[k] }); } }
         blobs.forEach(b => entries.push(b));
@@ -189,25 +190,25 @@ const Store = (() => {
     catch (e){ console.error(e); setStatus("error", e.status === 401 || e.status === 403 ? "The GitHub key was refused" : navigator.onLine ? (e.detail || e.message) : "Offline"); retryT = setTimeout(save, 20000); }
     finally { saving = false; if (again){ again = false; saveSoon(); } } }
   /* a file's content as it's written to GitHub */
-  const ser = k => k === "config" ? JSON.stringify(clean(S.config), null, 1) : k === "projects" ? JSON.stringify(S.projects, null, 1) : k === "users" ? JSON.stringify(S.users, null, 1) : JSON.stringify(clean(S.acts[k.slice(2)]), null, 1);
+  const ser = k => k === "vendors" ? JSON.stringify(S.vendors, null, 1) : k === "config" ? JSON.stringify(clean(S.config), null, 1) : k === "projects" ? JSON.stringify(S.projects, null, 1) : k === "users" ? JSON.stringify(S.users, null, 1) : JSON.stringify(clean(S.acts[k.slice(2)]), null, 1);
   let lastMsgs = []; const log = m => { if (lastMsgs[lastMsgs.length - 1] === m) return; lastMsgs.push(m); if (lastMsgs.length > 8) lastMsgs.shift(); };
   const commitMsg = () => (lastMsgs.length ? lastMsgs.join("; ") : "Update actions") + " (" + (Profile.name() || "Action Database") + ")";
   /* unsaved work is kept on this device until it's online, so closing the tab never loses it */
-  const stash = debounce(() => IDB.set("state", { c: S.config, p: S.projects, a: clean(S.acts), us: S.users, base: S.base, dirty: [...S.dirty], blobs: S.blobs, at: now() }), 300);
+  const stash = debounce(() => IDB.set("state", { c: S.config, p: S.projects, a: clean(S.acts), us: S.users, vd: S.vendors, base: S.base, dirty: [...S.dirty], blobs: S.blobs, at: now() }), 300);
   async function addBlob(path, b64){ const sha = await GH.blob(b64); S.blobs.push({ path, sha }); stash(); saveSoon(); }
 
   /* ---------- loading ---------- */
   async function load(){ const cached = await IDB.get("state");
-    if (cached && cached.c){ S.config = cached.c; S.projects = cached.p; S.acts = cached.a || {}; S.users = cached.us || S.users; S.base = cached.base || {}; (cached.dirty || []).forEach(k => S.dirty.add(k)); S.blobs = cached.blobs || []; S.loaded = true; App.render(); }
+    if (cached && cached.c){ S.config = cached.c; S.projects = cached.p; S.acts = cached.a || {}; S.users = cached.us || S.users; S.vendors = cached.vd || S.vendors; S.base = cached.base || {}; (cached.dirty || []).forEach(k => S.dirty.add(k)); S.blobs = cached.blobs || []; S.loaded = true; App.render(); }
     try { await refresh(true); } catch (e){ console.error(e); if (!S.loaded) throw e; note("Couldn't reach GitHub, showing the copy saved on this device"); }
     if (!S.config){ S.config = defaultConfig(); S.dirty.add("config"); }
     S.loaded = true; App.render(); if (S.dirty.size || S.blobs.length) saveSoon(); }
   async function refresh(first){ const held = () => S.edit && S.dirty.size && !first; if (saving || held()) return false;
-    const [c, p, us] = await Promise.all([GH.readJson(P_CONFIG), GH.readJson(P_PROJECTS), GH.readJson(P_USERS)]);
+    const [c, p, us, vd] = await Promise.all([GH.readJson(P_CONFIG), GH.readJson(P_PROJECTS), GH.readJson(P_USERS), GH.readJson(P_VENDORS)]);
     const acts = {}; const list = (p && p.projects || []); await Promise.all(list.map(async x => { acts[x.id] = await GH.readJson(pActs(x.id)) || { v: 1, nextNo: 1, actions: [] }; }));
     if (saving || held()) return false;
     const before = snap(), prev = JSON.parse(JSON.stringify(S.acts, (k, v) => k === "_p" ? undefined : v));
-    S.users = { v: 1, users: mergeById(S.users.users, us && us.users) };
+    S.users = { v: 1, users: mergeById(S.users.users, us && us.users) }; if (vd && !S.dirty.has("vendors")) S.vendors = vd;
     if (S.dirty.size){ if (c) adoptConfig(mergeConfig(S.config || c, c)); S.projects.projects = adoptList(S.projects.projects, mergeById(S.projects.projects, list), "id"); list.forEach(x => { const r = clone(acts[x.id]); adopt(x.id, mergeActs(S.acts[x.id] || acts[x.id], acts[x.id], x.id)); setBase(x.id, r); }); }
     else { if (c) adoptConfig(c); S.projects.projects = adoptList(S.projects.projects, list, "id"); list.forEach(x => { setBase(x.id, acts[x.id]); adopt(x.id, acts[x.id]); }); Object.keys(S.acts).forEach(pid => { if (!acts[pid]) delete S.acts[pid]; }); }
     /* someone else changed actions while we looked: tell the app which (it warns if one is open) */
@@ -221,5 +222,5 @@ const Store = (() => {
     const i = c.fields.findIndex(f => f.id === "complete"); if (i >= 0 && i !== c.fields.length - 1) c.fields.push(c.fields.splice(i, 1)[0]); }
 
   return { S, enter, stages, fields, field, stage, contacts, projects, project, selected, setSelected, actsOf, all, visible, find, findRef, actId, ranked, priority,
-    matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
+    vendors: () => S.vendors, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();

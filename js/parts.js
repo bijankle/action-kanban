@@ -24,6 +24,7 @@ const Parts = (() => {
       + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="gem" title="Paste a list of parts and Gemini fills in the rows">Paste text</button>')
       + '<button type="button" class="dl dl-xl" data-k="xls" title="Export this ' + NAME[kind] + ' to Excel">' + DLI + '<b>XLSX</b></button>'
       + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF. Each export is the next rev (A, B, C…) and is kept below." : "Export the spares list as a PDF") + '">' + DLI + '<b>' + (kind === "mto" ? "RFQ" : "PDF") + '</b></button></div>'
+      + (kind === "mto" ? Vendors.box(a, ro) : "")
       + (kind === "mto" ? '<div class="pt-docs"><div class="pt-box pt-quotes"><div class="pt-bh"><b>Quotes</b><span class="dim">' + (a.quotes || []).length + '</span><span class="grow"></span>' + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="quote">Upload quotes</button>') + '</div>'
           + ((a.quotes || []).length ? (a.quotes || []).slice().reverse().map(f => '<div class="pt-file"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : "FILE") + '</span><button type="button" class="link" data-q="' + f.h + '">' + esc(f.name) + '</button><span class="dim">' + esc(fmtDate(f.added)) + ' · ' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" data-qx="' + f.h + '" title="Remove">✕</button>') + '</div>').join("") : '<div class="dim pt-drop">No quotes yet.' + (ro ? "" : " Upload them, or drop them here.") + '</div>') + '</div>'
         + '<div class="pt-box"><div class="pt-bh"><b>RFQ revisions</b><span class="dim">' + (a.rfq || []).length + '</span><span class="grow"></span><span class="dim">next export: Rev ' + rev((a.rfq || []).length) + '</span></div>'
@@ -33,7 +34,7 @@ const Parts = (() => {
       + '<div class="dim pt-foot">' + (items.length ? items.length + " item" + (items.length > 1 ? "s" : "") : "Empty, type in the rows to fill it in") + (kind === "mto" && (a.spares || []).length ? " · " + a.spares.length + " more from spares, not on the RFQ" : "") + '</div>'; }
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
 
-  function wire(el, a, kind, ro){ const key = "a:" + a._p, items = list(a, kind);
+  function wire(el, a, kind, ro){ const key = "a:" + a._p, items = list(a, kind); if (kind === "mto") Vendors.wire(el, a, ro);
     $$(".pt-in", el).forEach(i => { i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); const c = i.dataset.c, k = $$('.pt-in[data-c="' + c + '"]').indexOf(i); i.blur();
         setTimeout(() => { const ins = $$('.pt-in[data-c="' + c + '"]'), n = ins[k + 1] || $('.pt-in[data-r^="new"][data-c="' + c + '"]'); n && n.focus(); }, 40); } };
       if (ro) return;
@@ -77,7 +78,8 @@ const Parts = (() => {
     doc.setFont("helvetica", "normal"); doc.setTextColor(90);
     const pf = Profile.get(), meta = ["Date: " + fmtDate(now()), Profile.name() ? "Issued by: " + Profile.name() + (pf.role ? ", " + pf.role : "") : "", pf.mobile ? "Mobile: " + pf.mobile : "", pf.email ? "Email: " + pf.email : "", a.f.location ? "Location: " + a.f.location : "", Array.isArray(a.f.equipment) && a.f.equipment.length ? "Equipment: " + a.f.equipment.join(", ") : ""].filter(Boolean);
     doc.text(doc.splitTextToSize(meta.join("     "), 182), 14, 44);
-    doc.autoTable({ startY: 50, head: [["Item"].concat(COLS[kind].map(c => c[1]))], body: items.map((it, i) => [i + 1].concat(COLS[kind].map(([k]) => it[k] || ""))),
+    if (kind === "mto" && (a.rfqTo || []).length){ doc.setFont("helvetica", "bold"); doc.setTextColor(30); doc.text(doc.splitTextToSize("To: " + a.rfqTo.join(", ") + (a.rfqCat ? "   (" + a.rfqCat + ")" : ""), 182), 14, 49.5); doc.setFont("helvetica", "normal"); }
+    doc.autoTable({ startY: kind === "mto" && (a.rfqTo || []).length ? 55 : 50, head: [["Item"].concat(COLS[kind].map(c => c[1]))], body: items.map((it, i) => [i + 1].concat(COLS[kind].map(([k]) => it[k] || ""))),
       styles: { font: "helvetica", fontSize: 9.5, cellPadding: 2.2, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" }, headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 62 }, 3: { cellWidth: 14, halign: "right" }, 4: { cellWidth: 16 } }, margin: { left: 14, right: 14 } });
     let y = doc.lastAutoTable.finalY + 8; doc.setFontSize(9); doc.setTextColor(110);

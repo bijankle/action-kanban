@@ -19,7 +19,7 @@ const ActionView = (() => {
       + '<span class="aid big">' + esc(Store.actId(a)) + '</span><span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'
       + '<div class="av-st" data-f="status"></div><label class="sd-pr">Priority <span data-f="priority"></span></label><span class="grow"></span>'
       + (ro ? "" : '<button class="ic-b" type="button" data-k="del" title="Delete this action">🗑</button>') + '<button class="dl dl-pdf" type="button" data-k="wp" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares">' + DLI + '<b>PDF</b></button></div>'
-      + '<div class="av-title" data-f="title"></div>'
+      + '<div class="av-title" data-f="title"></div>' + steps(a, ro)
       + '<div class="av-tabs">' + TABS.map(([k, t]) => { const c = k === "mto" ? n("mto") : k === "spares" ? n("spares") : k === "isol" ? n("isol") : 0; return '<button type="button" class="av-tab' + (k === sub ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'
       + '<div class="av-body' + (sub === "overview" ? " ov" : "") + '"></div></div>';
     $$(".av-head [data-f], .av-title[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
@@ -30,10 +30,22 @@ const ActionView = (() => {
     if (keep){ const t = $('[data-f="' + keep.f + '"] input, [data-f="' + keep.f + '"] textarea, [data-f="' + keep.f + '"] select', el); if (t){ if (t.tagName === keep.tag && t.tagName !== "SELECT" && t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { if (keep.s != null) t.setSelectionRange(keep.s, keep.e); } catch (e) {} } }
     $$(".av-head [data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a, list, i));
     $$(".av-tab", el).forEach(b => b.onclick = () => { App.sub = b.dataset.sub; App.render(); });
+    if (!ro){ $$(".stp", el).forEach(b => b.onclick = () => go(a, b.dataset.st)); const hb = $(".stp-hold", el); if (hb) hb.onclick = () => hold(a); }
     const av = $(".av", el); av.ondragover = e => { if (Media.hasDrop(e) && sub === "overview"){ e.preventDefault(); av.classList.add("drop"); } };
     av.ondragleave = e => { if (!av.contains(e.relatedTarget)) av.classList.remove("drop"); };
     av.ondrop = e => { av.classList.remove("drop"); if (sub === "overview" && Media.hasDrop(e)){ e.preventDefault(); e.stopPropagation(); Media.dropOn(a, e); } }; }
 
+  /* the workflow as steps (RFQ Sent, PO Sent and so on): done, current and to come, with the date each was
+     reached; click one to move the action there. On hold sits apart, as a toggle. */
+  function steps(a, ro){ const ss = Store.stages(), flow = ss.filter(s => s.kind !== "hold"), hs = ss.find(s => s.kind === "hold"), cur = Store.stage(a.stage), onHold = cur.kind === "hold";
+    const at = onHold ? flow.findIndex(s => s.id === a.prevHold) : flow.findIndex(s => s.id === cur.id);
+    return '<div class="av-steps' + (onHold ? " held" : "") + '">' + flow.map((s, i) => { const st = i < at ? "done" : i === at ? "on" : "todo", d = (a.stageAt || {})[s.id];
+        return '<button type="button" class="stp ' + st + '" data-st="' + s.id + '" style="--c:' + esc(s.color) + '"' + (ro ? " disabled" : "") + ' title="' + (ro ? "" : "Move to " + esc(s.name)) + '"><i>' + (st === "done" || (st === "on" && s.kind === "done") ? "✓" : i + 1) + '</i><span>' + esc(s.name) + '</span>' + (d && st !== "todo" ? '<small>' + esc(fmtDate(d)) + '</small>' : "") + '</button>'; }).join('<b class="stp-l"></b>')
+      + (hs ? '<button type="button" class="stp-hold' + (onHold ? " on" : "") + '"' + (ro ? " disabled" : "") + ' style="--c:' + esc(hs.color) + '">⏸ ' + esc(hs.name) + (onHold && (a.stageAt || {})[hs.id] ? " since " + esc(fmtDate(a.stageAt[hs.id])) : "") + '</button>' : "") + '</div>'; }
+  function go(a, st){ if (a.stage === st) return; Fields.set(a, Store.field("status"), st); }
+  function hold(a){ const ss = Store.stages(), hs = ss.find(s => s.kind === "hold"), cur = Store.stage(a.stage);
+    if (cur.kind === "hold"){ const back = ss.find(s => s.id === a.prevHold && s.kind !== "hold") || ss.find(s => s.kind === "open"); Store.mutate("a:" + a._p, () => { Store.place(a, back.id); }); Store.log("Took " + Store.actId(a) + " off hold"); }
+    else Store.mutate("a:" + a._p, () => { a.prevHold = a.stage; Store.place(a, hs.id); Store.log("Put " + Store.actId(a) + " on hold"); }); }
   function overview(el, a, ro){
     el.innerHTML = (!Store.mine(a) && a.mod && now() - a.mod < 15 * 60000 ? '<div class="sd-warn">⚠ <b>' + esc(App.who(a)) + '</b> edited this action ' + esc(App.ago(a.mod)) + ' and may still be working on it. Changes to different fields are both kept; if you both change the same field you\'ll both be warned.</div>' : "")
       + '<div class="ov-g"><div class="ov-l"><h4>Problem</h4><div data-f="problem"></div><h4>Solution</h4><div data-f="solution"></div><h4>Notes</h4><div data-f="notes"></div>'
