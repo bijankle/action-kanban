@@ -42,40 +42,61 @@ const Media = (() => {
     if (f.local){ alert(f.name + " is only in the local folder of the computer that added it."); return; } window.open(fileSrc(a, f), "_blank"); }
 
   /* ---------- photo gallery: a big popup over the page, the photo large with a strip of thumbnails below
-     (the ones before and after). Arrows or the strip step through, ⛶ or a double click for full screen, Esc closes. ---------- */
+     (the ones before and after). Arrows or the strip step through, ⛶ or a double click for full screen, Esc closes.
+     On a touch screen the photo follows the finger with the ones either side peeking in, and glides on or back
+     when let go; a drag down closes it. ---------- */
   let V = null;
   function view(a, i){ close(); if (!a) return; i = Math.max(0, Math.min(i || 0, a.photos.length - 1)); const ro = !Store.S.edit;
     V = h('<div class="gal" tabindex="-1"><div class="gal-win"><div class="gal-top"><span class="aid">' + esc(Store.actId(a)) + '</span><span class="gal-t">' + esc(a.f.title || "") + '</span><span class="gal-n"></span><span class="grow"></span>'
       + (ro ? "" : '<button class="btn ghost sm" type="button" data-k="add">+ Upload photos</button><button class="ic-b" type="button" data-k="del" title="Remove this photo">🗑</button>')
       + '<button class="ic-b" type="button" data-k="fs" title="Full screen (or double click the photo)">⛶</button><button class="ic-b" type="button" data-k="x" title="Close (Esc)">✕</button></div>'
-      + '<div class="gal-stage"><button class="gal-arr gal-prev" type="button" aria-label="Previous">‹</button><img alt=""><div class="gal-none">No photos yet.' + (ro ? "" : " Upload some, or drop them here.") + '</div><button class="gal-arr gal-next" type="button" aria-label="Next">›</button></div>'
+      + '<div class="gal-stage"><button class="gal-arr gal-prev" type="button" aria-label="Previous">‹</button><div class="gal-vp"><div class="gal-track"><div class="gal-sl" style="--j:-1"><img alt=""></div><div class="gal-sl" style="--j:0"><img alt=""></div><div class="gal-sl" style="--j:1"><img alt=""></div></div></div><div class="gal-none">No photos yet.' + (ro ? "" : " Upload some, or drop them here.") + '</div><button class="gal-arr gal-next" type="button" aria-label="Next">›</button></div>'
       + '<div class="gal-cap"></div><div class="gal-strip"></div></div></div>');
     document.body.appendChild(V); V.focus(); let cur = i;
-    const img = $("img", V), strip = $(".gal-strip", V);
+    const vp = $(".gal-vp", V), track = $(".gal-track", V), [imP, img, imN] = $$(".gal-sl img", V), strip = $(".gal-strip", V), GAP = 24;
+    const step = () => vp.clientWidth + GAP, move = (x, ms) => { track.style.transition = ms ? "transform " + ms + "ms cubic-bezier(.2,.8,.2,1)" : "none"; track.style.transform = "translateX(" + x + "px)"; };
     const drawStrip = () => { strip.innerHTML = a.photos.map((p, k) => '<button type="button" class="gal-th' + (k === cur ? " on" : "") + '" data-i="' + k + '"><img alt="" loading="lazy" src="' + esc(src(a, p, true)) + '"></button>').join("");
       $$(".gal-th", strip).forEach(b => b.onclick = () => show(+b.dataset.i)); };
-    const show = async k => { const n = a.photos.length; $(".gal-none", V).hidden = !!n; img.hidden = !n; $(".gal-n", V).textContent = n ? (cur + 1 > n ? n : cur + 1) + " of " + n : "";
+    const show = async k => { const n = a.photos.length; $(".gal-none", V).hidden = !!n; vp.hidden = !n; move(0); $(".gal-n", V).textContent = n ? (cur + 1 > n ? n : cur + 1) + " of " + n : "";
       $$(".gal-arr", V).forEach(b => b.hidden = n < 2); if (!n){ strip.innerHTML = ""; $(".gal-cap", V).textContent = ""; return; }
       cur = (k + n) % n; const p = a.photos[cur]; $(".gal-n", V).textContent = (cur + 1) + " of " + n;
       $(".gal-cap", V).textContent = (p.name || "") + (p.cap ? "  ·  " + p.cap : "");
       if (strip.children.length !== n) drawStrip(); $$(".gal-th", strip).forEach((b, j) => b.classList.toggle("on", j === cur));
       const on = strip.children[cur]; on && on.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+      const side = (im, j) => { const q = a.photos[cur + j]; im.hidden = !q; if (q) im.src = src(a, q); }; side(imP, -1); side(imN, 1);   // the ones either side, for a swipe to peek at
       img.src = src(a, p); const m = mem.get(p.h); const loc = m && m.orig ? m.orig : Local.ok ? await Local.original(a, p.name) : null; if (loc && a.photos[cur] === p) img.src = URL.createObjectURL(loc); };
+    /* slide to the next or previous photo (k one either side), or jump straight there */
+    const go = k => { const n = a.photos.length; if (n < 2 || k === cur) return show(k); const d = k - cur; if (Math.abs(d) !== 1 || k < 0 || k >= n) return show(k);
+      move(-d * step(), 260); setTimeout(() => show(k), 260); };
     show(cur); V._a = a; V._show = () => { drawStrip(); show(a.photos.length - 1); };
     const fs = () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else $(".gal-win", V).requestFullscreen().catch(() => {}); };
     V.querySelectorAll("[data-k]").forEach(b => b.onclick = async () => { const k = b.dataset.k;
-      if (k === "x") close(); else if (k === "fs") fs();
+      if (k === "x") closeUi(); else if (k === "fs") fs();
       else if (k === "add") pickFiles(a);
       else if (k === "del" && a.photos.length && await confirmBox("Remove this photo from " + Store.actId(a) + "? You can undo with Ctrl+Z.", "Remove", true)){
         const i0 = cur; Store.mutate("a:" + a._p, () => { a.photos.splice(i0, 1); Store.touch(a); }); Store.log("Removed a photo from " + Store.actId(a)); V && (V.focus(), drawStrip(), show(Math.min(i0, a.photos.length - 1))); } });
     img.ondblclick = fs;
-    $(".gal-prev", V).onclick = () => show(cur - 1); $(".gal-next", V).onclick = () => show(cur + 1);
+    $(".gal-prev", V).onclick = () => go(cur - 1); $(".gal-next", V).onclick = () => go(cur + 1);
     V.addEventListener("mousedown", e => { if (e.target === V) close(); });
-    V.addEventListener("keydown", e => { if (e.key === "Escape"){ e.stopPropagation(); if (!document.fullscreenElement) close(); } else if (e.key === "ArrowLeft") show(cur - 1); else if (e.key === "ArrowRight") show(cur + 1); });
+    V.addEventListener("keydown", e => { if (e.key === "Escape"){ e.stopPropagation(); if (!document.fullscreenElement) close(); } else if (e.key === "ArrowLeft") go(cur - 1); else if (e.key === "ArrowRight") go(cur + 1); });
     V.addEventListener("dragover", e => { if (!ro && hasDrop(e)) e.preventDefault(); });
     V.addEventListener("drop", e => { if (ro) return; e.preventDefault(); e.stopPropagation(); dropOn(a, e); });
-    let x0 = null; V.addEventListener("touchstart", e => x0 = e.touches[0].clientX, { passive: true });
-    V.addEventListener("touchend", e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); x0 = null; }); }
+    /* touch: the first few pixels decide sideways (swipe between photos) or down (close); a quick flick counts as much as a long drag */
+    let t = null; const bg = V.style;
+    vp.addEventListener("touchstart", e => { if (e.touches.length !== 1){ t = null; return; } const c = e.touches[0]; t = { x: c.clientX, y: c.clientY, ax: null, pts: [[c.clientX, c.clientY, e.timeStamp]] }; }, { passive: true });
+    vp.addEventListener("touchmove", e => { if (!t || e.touches.length !== 1) return; const c = e.touches[0], dx = c.clientX - t.x, dy = c.clientY - t.y;
+      if (!t.ax){ if (Math.hypot(dx, dy) < 8) return; t.ax = Math.abs(dx) > Math.abs(dy) ? "x" : dy > 0 ? "y" : "-"; }
+      e.preventDefault(); t.pts.push([c.clientX, c.clientY, e.timeStamp]); if (t.pts.length > 5) t.pts.shift();
+      if (t.ax === "x"){ const n = a.photos.length, edge = (dx > 0 && cur === 0) || (dx < 0 && cur === n - 1); move(edge ? dx / 3 : dx); }   // at the first or last photo it gives a little, then springs back
+      else if (t.ax === "y"){ const y = Math.max(0, dy); track.style.transition = "none"; track.style.transform = "translateY(" + y + "px) scale(" + Math.max(0.85, 1 - y / 1500) + ")"; bg.background = "rgba(11,12,14," + Math.max(0.2, 0.8 - y / 500) + ")"; } }, { passive: false });
+    const end = () => { if (!t || !t.ax) { t = null; return; } const f = t.pts[0], l = t.pts[t.pts.length - 1], dt = Math.max(1, l[2] - f[2]), vx = (l[0] - f[0]) / dt, vy = (l[1] - f[1]) / dt, dx = l[0] - t.x, dy = l[1] - t.y, ax = t.ax; t = null;
+      if (ax === "x"){ const n = a.photos.length, w = step(), d = dx < -w * 0.25 || vx < -0.45 ? 1 : dx > w * 0.25 || vx > 0.45 ? -1 : 0, k = cur + d;
+        if (d && k >= 0 && k < n){ move(-d * w, 240); setTimeout(() => show(k), 240); } else move(0, 220); }
+      else if (ax === "y"){ if (dy > 110 || vy > 0.6){ track.style.transition = "transform 180ms ease-in, opacity 180ms"; track.style.transform = "translateY(" + (dy + 200) + "px) scale(.85)"; track.style.opacity = "0"; setTimeout(closeUi, 170); }
+        else { bg.background = ""; track.style.transition = "transform 220ms cubic-bezier(.2,.8,.2,1)"; track.style.transform = ""; } } };
+    vp.addEventListener("touchend", end); vp.addEventListener("touchcancel", end); }
+  /* closing from the photo itself: on a phone the photo is a step in the back history, so step back out of it */
+  const closeUi = () => { if (history.state && history.state.m === 2) history.back(); else close(); };
   function close(){ if (!V) return; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); V.remove(); V = null; }
   /* after photos are added to the action the gallery is showing, show the newest */
   const refresh = a => { if (V && V._a === a) V._show(); };
