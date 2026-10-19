@@ -523,3 +523,14 @@ html.dark .av-tab b{color:var(--ink)}
 .vd-sep{font:700 11px var(--font);text-transform:uppercase;letter-spacing:.5px;color:var(--dim);padding:8px 9px 3px;border-top:1px solid var(--line);margin-top:3px}
 .vd-tbl{margin-top:12px}.vd-tbl td{white-space:normal;height:auto;vertical-align:top}
 .eq-tags{display:flex;flex-wrap:wrap;gap:5px;max-height:220px;overflow:auto}
+
+/* suggested isolations */
+.is-sug{border:1px dashed var(--line2);border-radius:10px;padding:10px 12px;margin:0 0 12px;background:var(--panel)}
+.is-sh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}.is-sh .dim{font-size:12.5px}
+.is-sg{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0}
+.is-sk{font:700 11px var(--font);text-transform:uppercase;letter-spacing:.5px;color:var(--dim);width:104px;flex:none}
+.is-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-left:4px solid var(--kc,#94a3b8);border-radius:999px;padding:2px 3px 2px 10px;background:var(--panel2);font-size:12.5px;max-width:440px}
+.is-pill b{white-space:nowrap}.is-pill span{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.is-pill button{border:0;background:var(--panel);border-radius:999px;width:22px;height:22px;cursor:pointer;font-weight:800;color:var(--muted);flex:none}
+.is-pill .ip-add:hover{background:var(--th);color:#fff}.is-pill .ip-x:hover{background:var(--line);color:var(--ink)}
+.k-electrical{--kc:#F2B03D}.k-upstream{--kc:#3B8FE0}.k-valve{--kc:#0E9AA7}.k-associated{--kc:#7C5CD6}.k-utility{--kc:#94a3b8}
