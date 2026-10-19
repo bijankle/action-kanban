@@ -18,7 +18,7 @@ The MTO tab lists each action's material take off as a simple table (item, descr
 
 To make an action from text, use New action, then Paste text. Google Gemini splits an email into the fields. Anything it can't find is left empty, and any field set to TBC shows in red.
 
-To print, choose which stages to print (Completed starts unticked). The board prints first on A4 landscape, then each action with its details, photos and attachment links. Export to Excel exports the table as filtered, with a Photos link that opens the app on that action's photos.
+To print, choose which stages to print (Completed starts unticked). The board prints first on A4 landscape, then each action with its details, photos and attachment links. Every action also has a PDF button (on its row, its tile and in the side panel) that downloads a full workpack: details, problem, solution, notes, the MTO with its RFQ revisions and quotes, spare parts, attachment links and the photos. Export to Excel exports the table as filtered, with a Photos link that opens the app on that action's photos.
 
 Undo and redo work with Ctrl+Z and Ctrl+Y. View settings cover the theme colour (the presets or a custom colour), dark mode and text size. On a phone the app is view only, with stage filter pills, search and full screen photos.
 

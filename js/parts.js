@@ -126,5 +126,5 @@ const Parts = (() => {
     $(".yn-no", m).onclick = () => m.close();
     add.onclick = () => { const take = rows.filter(r => r._on).map(r => { const o = { id: uid() }; cols.forEach(([k]) => { if (r[k]) o[k] = r[k]; }); return o; }); if (!take.length) return;
       Store.mutate("a:" + a._p, () => { list(a, kind).push(...take); Store.touch(a); }); Store.log("Added " + take.length + " parts to the " + NAME[kind] + " of " + Store.actId(a)); m.close(); }; }
-  return { render, rev, NAME };
+  return { render, rev, NAME, loadPdf };
 })();

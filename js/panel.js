@@ -11,7 +11,7 @@ const Panel = (() => {
     const ae = document.activeElement, keep = ae && el.contains(ae) && ae.closest("[data-f]") ? { f: ae.closest("[data-f]").dataset.f, s: ae.selectionStart, e: ae.selectionEnd, v: ae.value, tag: ae.tagName } : null;
     const sc = $(".sd-body", el) && last === App.selRef ? $(".sd-body", el).scrollTop : 0; last = App.selRef;
     el.innerHTML = '<div class="sd-split" title="Drag to resize"></div><div class="sd-head"><span class="aid big">' + esc(Store.actId(a)) + '</span><span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span><span class="grow"></span>'
-      + (ro ? "" : '<button class="ic-b" type="button" data-k="del" title="Delete this action">🗑</button>') + '<button class="ic-b" type="button" data-k="print" title="Print this action">⎙</button><button class="ic-b" type="button" data-k="x" title="Close (Esc)">✕</button></div>'
+      + (ro ? "" : '<button class="ic-b" type="button" data-k="del" title="Delete this action">🗑</button>') + '<button class="dl dl-pdf" type="button" data-k="wp" title="Download the workpack PDF: details, problem, solution, photos, MTO and spare parts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg><b>PDF</b></button><button class="ic-b" type="button" data-k="print" title="Print this action">⎙</button><button class="ic-b" type="button" data-k="x" title="Close (Esc)">✕</button></div>'
       + '<div class="sd-body"><div class="sd-title" data-f="title"></div><div class="sd-row"><div class="sd-st" data-f="status"></div><label class="sd-pr">Priority <span data-f="priority"></span></label></div>'
       + '<h4>Problem</h4><div data-f="problem"></div><h4>Solution</h4><div data-f="solution"></div>'
       + '<h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span></h4><div class="ph-block">' + (a.photos.length ? '<button type="button" class="ph-cover" data-k="viewall" title="Open the photos"><img alt=""><span class="ph-badge">📷 ' + a.photos.length + '</span></button>' : "")
@@ -35,6 +35,7 @@ const Panel = (() => {
   async function act(k, a){
     if (k === "x") App.select(null);
     else if (k === "print") Print.run([a]);
+    else if (k === "wp") Workpack.run(a);
     else if (k === "viewall") Media.view(a, 0);
     else if (k === "addph") Media.pickFiles(a, "image/*");
     else if (k === "addf") Media.pickFiles(a);
