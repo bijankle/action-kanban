@@ -7,6 +7,11 @@
 const Workpack = (() => {
   const toData = async url => { const r = await fetch(url); if (!r.ok) throw new Error(r.status); const b = await r.blob();
     return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); }); };
+  /* a photo cropped to fill a 4:3 tile (the thumbnail, else the full photo) */
+  const thumb = (src, alt) => new Promise((res, rej) => { const i = new Image(); i.crossOrigin = "anonymous";
+    i.onload = () => { const c = document.createElement("canvas"); c.width = 480; c.height = 360; const g = c.getContext("2d"), k = Math.max(480 / i.naturalWidth, 360 / i.naturalHeight), w = i.naturalWidth * k, h = i.naturalHeight * k;
+      g.drawImage(i, (480 - w) / 2, (360 - h) / 2, w, h); try { res(c.toDataURL("image/jpeg", 0.82)); } catch (e){ rej(e); } };
+    i.onerror = () => alt && alt !== src ? thumb(alt).then(res, rej) : rej(new Error("photo")); i.src = src; });
   const size = src => new Promise(res => { const i = new Image(); i.onload = () => res([i.naturalWidth, i.naturalHeight]); i.onerror = () => res([4, 3]); i.src = src; });
   async function run(a){ if (!a) return; note("Making the work pack for " + Store.actId(a) + "…", 30000);
     try { const blob = await build(a); Excel.save(blob, Store.actId(a) + " Work pack.pdf"); note("Work pack downloaded"); }
@@ -50,14 +55,28 @@ const Workpack = (() => {
     /* each part from a new page */
     const start = id => { doc.addPage(); y = 18; if (tocE[id]) tocE[id].page = doc.getNumberOfPages(); };
     const regLinks = [];   // register lines that jump to a drawing's own pages (added once those pages exist)
+    const photoLinks = [];   // the photo panel beside the map: links to the Photos page (added once it exists)
     for (const [id] of S){ start(id);
       if (id === "job"){ head("Job"); const names = tags.map(t => { const e = Equip.get(t); return e && e.n ? t + "  " + e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : t; });
         const job = [["Location", a.f.location], ["Equipment", names.join("\n")], ["Contractor", [a.f.contractor, a.f.contractorPhone].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")]].filter(r => r[1]);
         if (job.length){ doc.autoTable({ startY: y, body: job, margin: { top: 16, left: M, right: M, bottom: 16 }, theme: "plain", styles: { font: "helvetica", fontSize: 10, cellPadding: 1.5 }, columnStyles: { 0: { cellWidth: 34, textColor: [90, 100, 112], fontStyle: "bold" } } }); y = doc.lastAutoTable.finalY + 4; }
-        try { const sm = await SiteMap.forAction(a);
-          if (sm){ const mw = 120, mh = mw * 9 / 16; head("Expected location"); need(mh + 14); doc.addImage(sm.url, "JPEG", M, y, mw, mh, undefined, "FAST");
-            doc.setFontSize(8.5); doc.setTextColor(110); doc.setFont("helvetica", "italic"); doc.text(doc.splitTextToSize(sm.note, CW - mw - 6), M + mw + 6, y + 4); doc.setFont("helvetica", "normal"); y += mh + 6; } }
-        catch (e){ console.warn("site map", e); }
+        /* the expected location, with a few of the photos beside it (a link to the rest above them) */
+        let sm = null; try { sm = await SiteMap.forAction(a); } catch (e){ console.warn("site map", e); }
+        if (sm || a.photos.length){ head(sm ? "Expected location and photos" : "Photos"); const mw = sm ? 112 : 0, mh = sm ? mw * 9 / 16 : 0, gx = sm ? M + mw + 6 : M, gw = sm ? CW - mw - 6 : CW;
+          need(Math.max(mh, 40) + 16); const top = y;
+          if (sm) doc.addImage(sm.url, "JPEG", M, y, mw, mh, undefined, "FAST");
+          if (a.photos.length){ const cols = sm ? 2 : 4, gap = 3, cw = (gw - gap * (cols - 1)) / cols, ch = cw * 3 / 4, max = cols * (sm ? Math.max(1, Math.floor((mh - 7 + gap) / (ch + gap))) : 1), shown = Math.min(a.photos.length, max);
+            doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(31, 95, 191); const lbl = "Photos (" + a.photos.length + ")  ›  see page ";
+            doc.text(lbl, gx, y + 3); photoLinks.push({ page: doc.getNumberOfPages(), x: gx, y: y - 1, w: gw, h: 5.5, tx: gx + doc.getTextWidth(lbl), ty: y + 3 });
+            for (let i = 0; i < shown; i++){ const x = gx + (i % cols) * (cw + gap), yy = y + 6 + Math.floor(i / cols) * (ch + gap);
+              try { doc.addImage(await thumb(Media.src(a, a.photos[i], true), Media.src(a, a.photos[i])), "JPEG", x, yy, cw, ch, undefined, "FAST"); } catch (e){ doc.setFillColor(235); doc.rect(x, yy, cw, ch, "F"); }
+              if (i === shown - 1 && a.photos.length > shown){ doc.setFillColor(20, 24, 30); doc.setGState(new doc.GState({ opacity: 0.6 })); doc.rect(x, yy, cw, ch, "F"); doc.setGState(new doc.GState({ opacity: 1 }));
+                doc.setTextColor(255); doc.setFontSize(12); doc.text("+" + (a.photos.length - shown) + " more", x + cw / 2, yy + ch / 2 + 1.5, { align: "center" }); }
+              photoLinks.push({ page: doc.getNumberOfPages(), x, y: yy, w: cw, h: ch }); }
+            doc.setFont("helvetica", "normal"); y = Math.max(y, y + 6 + Math.ceil(shown / cols) * (ch + gap)); }
+          y = Math.max(y, top + mh) + 2;
+          if (sm){ doc.setFontSize(8); doc.setTextColor(110); doc.setFont("helvetica", "italic"); doc.splitTextToSize(sm.note, CW).forEach(l => { doc.text(l, M, y + 2.5); y += 3.6; }); doc.setFont("helvetica", "normal"); }
+          y += 5; }
         head("Problem"); para(a.f.problem); head("Work required"); para(a.f.solution); if (a.f.notes){ head("Notes"); para(a.f.notes); } }
       if (id === "isol"){ head("Isolations"); table(["No.", "Equipment number", "Equipment name", "Note"], a.isol.map((it, i) => [i + 1, it.tag || "", it.name || "", it.note || ""]), { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 40 }, 2: { cellWidth: 62 } }); }
       if (id === "parts"){ head("Parts"); table(["Item", "Description", "Part / tag no.", "Qty", "Unit", "Supplied from", "Notes"], parts.map((it, i) => [i + 1, it.desc || "", it.part || "", it.qty || "", it.unit || "", it.src, it.notes || ""]),
@@ -75,6 +94,8 @@ const Workpack = (() => {
         const at = y; doc.setFontSize(9.5); picks.forEach(p => { need(6); p.ly = y; p.lp = doc.getNumberOfPages(); doc.setTextColor(31, 95, 191); doc.setFont("helvetica", "bold"); doc.text(p.d.n, M, y); doc.setFont("helvetica", "normal"); doc.setTextColor(60);
           doc.text(doc.splitTextToSize((p.d.t || p.d.kind) + (p.d.pdfRev || p.d.rev ? "  (rev " + (p.d.pdfRev || p.d.rev) + ")" : ""), CW - 72)[0], M + 48, y); y += 6; });
         if (miss.length){ y += 3; para("Ticked but couldn't be added (no PDF copy, or it wouldn't load): " + miss.join(", ") + "."); } } }
+    /* the photo panel's page number and links, now the Photos page exists */
+    const php = tocE.photos && tocE.photos.page; photoLinks.forEach(l => { doc.setPage(l.page); if (!php) return; if (l.tx != null){ doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(31, 95, 191); doc.text(String(php), l.tx, l.ty); doc.setFont("helvetica", "normal"); } doc.link(l.x, l.y, l.w, l.h, { pageNumber: php }); });
     /* page numbers: the pack's own pages, then each attached drawing's */
     const P = doc.getNumberOfPages(); let at = P; picks.forEach(p => { p.page = at + 1; at += p.n; }); const N = at;
     doc.setPage(1); toc.forEach(e => { const pg = e.page || (picks.find(p => p.toc === e) || {}).page; if (!pg) return; const bl = e.y + (e.sub ? 3.6 : 4.8);
