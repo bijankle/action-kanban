@@ -60,6 +60,17 @@ const Store = (() => {
   /* priority: the action's place in its stage column, counted over the projects on show */
   const ranked = st => visible().filter(a => a.stage === st).sort((x, y) => (x.rank || 0) - (y.rank || 0) || x.no - y.no);
   const priority = a => ranked(a.stage).indexOf(a) + 1;
+  /* the search: every word typed has to appear somewhere in the action (ID, project, every field, notes,
+     MTO and spare parts rows, photo, file and quote names, the contractor's company and mobile) */
+  const hayCache = new WeakMap();
+  function hay(a){ const c = hayCache.get(a); if (c && c.mod === a.mod) return c.t;
+    const p = project(a._p) || {}, ct = contacts().find(x => x.name && x.name === a.f.contractor) || {};
+    const parts = r => (r || []).map(it => [it.desc, it.part, it.qty, it.unit, it.notes].join(" ")).join(" ");
+    const t = [actId(a), p.name, p.prefix, stage(a.stage).name, fields().map(f => Fields.text(a, f)).join(" "), a.f.notes, parts(a.mto), parts(a.spares),
+      a.photos.map(x => x.name + " " + (x.cap || "")).join(" "), a.files.map(x => x.name).join(" "), (a.quotes || []).map(x => x.name).join(" "), (a.rfq || []).map(x => x.name).join(" "),
+      ct.company, ct.mobile, ct.email].join(" ").toLowerCase();
+    hayCache.set(a, { mod: a.mod, t }); return t; }
+  const matches = (a, q) => { const w = String(q || "").toLowerCase().split(/\s+/).filter(Boolean); if (!w.length) return true; const t = hay(a); return w.every(x => t.includes(x)); };
 
   /* ---------- changing ---------- */
   const snap = () => JSON.stringify({ c: S.config, p: S.projects, a: S.acts });
@@ -151,5 +162,5 @@ const Store = (() => {
     d.fields.forEach(f => { if (f.core && !c.fields.some(x => x.id === f.id)) c.fields.push(f); }); }
 
   return { S, stages, fields, field, stage, contacts, projects, project, selected, setSelected, actsOf, all, visible, find, findRef, actId, ranked, priority,
-    mutate, touch, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
+    matches, mutate, touch, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();

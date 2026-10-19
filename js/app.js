@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.2.2";
+const APP_VERSION = "1.2.3";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 const THEMES = [["slate", "Slate", "#475569"], ["graphite", "Graphite", "#52525b"], ["navy", "Navy", "#1E3A5F"], ["petrol", "Petrol", "#1F4F5A"], ["olive", "Olive", "#5A5A2E"], ["stone", "Stone", "#7A6A5D"], ["rust", "Rust", "#9A3412"], ["ink", "Ink", "#111827"]];
 
@@ -12,7 +12,10 @@ const App = (() => {
     if (A.selRef && !act(A.selRef)) A.selRef = null;
     if (A.mobile){ Mobile.render($("#mobile")); return; }
     projBox($("#pjBox")); renderStatus(); $$(".tab").forEach(t => t.classList.toggle("on", t.dataset.t === A.tab));
-    $("#tools").hidden = ["valid", "mto", "spares"].includes(A.tab); pills(); $("#undoB").disabled = !Store.S.undo.length; $("#redoB").disabled = !Store.S.redo.length;
+    /* the search box sits in the same place on every tab; the rest of the bar only where it applies */
+    const acts = A.tab === "actions" || A.tab === "kanban"; $("#pills").hidden = A.tab !== "actions"; $$("#xlsB,#printB,#pasteB,#newB").forEach(b => b.hidden = !acts);
+    $("#q").placeholder = { actions: "Search actions", kanban: "Search, filters every stage", mto: "Search actions and MTO items", spares: "Search actions and spare parts", valid: "Search fields, stages and contacts" }[A.tab] || "Search";
+    if ($("#q").value !== A.q) $("#q").value = A.q; pills(); $("#undoB").disabled = !Store.S.undo.length; $("#redoB").disabled = !Store.S.redo.length;
     const v = $("#view"); v.dataset.tab = A.tab;
     if (A.tab === "kanban") Kanban.render(v); else if (A.tab === "valid") Valid.render(v); else if (A.tab === "mto" || A.tab === "spares") Parts.render(v, A.tab); else Table.render(v);
     $$("#vt button").forEach(b => b.classList.toggle("on", b.dataset.v === A.view)); $("#sizeB").hidden = A.tab !== "actions" || A.view !== "tiles"; $("#vt").hidden = A.tab !== "actions"; $("#colB").hidden = A.tab !== "actions" || A.view !== "list";
@@ -20,8 +23,7 @@ const App = (() => {
     lsSet("adPills", [...A.pills]); }
   function pills(){ const all = Store.visible(), el = $("#pills");
     el.innerHTML = '<button type="button" class="pill' + (!A.pills.size ? " on" : "") + '" data-s="">All <b>' + all.length + '</b></button>' + Store.stages().map(s => '<button type="button" class="pill' + (A.pills.has(s.id) ? " on" : "") + '" data-s="' + s.id + '" style="--c:' + esc(s.color) + '" title="Click to show only this stage, Ctrl+click to add it"><i class="dot"></i>' + esc(s.name) + ' <b>' + all.filter(a => a.stage === s.id).length + '</b></button>').join("");
-    $$(".pill", el).forEach(b => b.onclick = e => { const s = b.dataset.s; if (!s) A.pills.clear(); else if (e.ctrlKey || e.metaKey){ A.pills.has(s) ? A.pills.delete(s) : A.pills.add(s); } else if (A.pills.size === 1 && A.pills.has(s)) A.pills.clear(); else { A.pills.clear(); A.pills.add(s); } render(); });
-    el.classList.toggle("dim-pills", A.tab === "kanban"); }
+    $$(".pill", el).forEach(b => b.onclick = e => { const s = b.dataset.s; if (!s) A.pills.clear(); else if (e.ctrlKey || e.metaKey){ A.pills.has(s) ? A.pills.delete(s) : A.pills.add(s); } else if (A.pills.size === 1 && A.pills.has(s)) A.pills.clear(); else { A.pills.clear(); A.pills.add(s); } render(); }); }
   function renderStatus(){ const s = $("#status"); if (!s) return; const S = Store.S; let cls, t;
     if (!S.edit){ cls = "ro"; t = GH.cfg().token ? "View only (key can't write)" : "View only"; }
     else if (S.status === "saving") { cls = "busy"; t = "Saving…"; }

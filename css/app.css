@@ -123,7 +123,6 @@ kbd{font:600 12px var(--font);border:1px solid var(--line2);border-bottom-width:
 .pill b{font-weight:700;color:var(--dim)}.pill:hover{border-color:var(--c,var(--th))}
 .pill.on{background:color-mix(in srgb,var(--c,var(--th)) 14%,var(--panel));border-color:var(--c,var(--th))}
 .pill .dot,.kb-h .dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
-.pills.dim-pills{opacity:.45;pointer-events:none}
 body.ro .edit-only{display:none}
 
 /* main area and side panel */

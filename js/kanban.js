@@ -4,10 +4,10 @@
 "use strict";
 const Kanban = (() => {
   function render(el){ const ro = !Store.S.edit, q = (App.q || "").trim().toLowerCase(), fs = Store.fields(), multi = Store.selected().length > 1;
-    const match = a => !q || (Store.actId(a) + " " + fs.map(f => Fields.text(a, f)).join(" ")).toLowerCase().includes(q);
+    const match = a => Store.matches(a, q);
     const sx = $(".kb", el) ? $(".kb", el).scrollLeft : 0, sy = {}; $$(".kb-cards", el).forEach(c => sy[c.dataset.s] = c.scrollTop);
     el.innerHTML = '<div class="kb">' + Store.stages().map(s => { const cards = Store.ranked(s.id).filter(match);
-        return '<section class="kb-col" data-s="' + s.id + '" style="--c:' + esc(s.color) + '"><header class="kb-h" draggable="' + !ro + '"><i class="dot"></i><span class="kb-n" title="Double click to rename">' + esc(s.name) + '</span><span class="kb-c">' + cards.length + '</span>'
+        return '<section class="kb-col" data-s="' + s.id + '" style="--c:' + esc(s.color) + '"><header class="kb-h" draggable="' + !ro + '"><i class="dot"></i><span class="kb-n" title="Double click to rename">' + esc(s.name) + '</span><span class="kb-c">' + (q ? cards.length + " of " + Store.ranked(s.id).length : cards.length) + '</span>'
           + (s.kind === "hold" ? '<span class="kb-k">on hold</span>' : s.kind === "done" ? '<span class="kb-k">complete</span>' : "") + '<span class="grow"></span>'
           + (ro ? "" : '<button type="button" class="ic-b sm kb-m" title="Stage options">⋯</button>') + '</header>'
           + '<div class="kb-cards" data-s="' + s.id + '">' + cards.map(a => card(a, multi)).join("") + '</div></section>'; }).join("")

@@ -10,19 +10,18 @@ const Parts = (() => {
   const rev = n => { let s = ""; n++; while (n > 0){ const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };   // 0 → A, 25 → Z, 26 → AA
   const pRfq = (pid, name) => "data/p/" + pid + "/rfq/" + safeName(name);
   const created = new Map();   // a blank row that became an item: keep the cursor in it
-  let q = "";
 
   function render(el, kind){ const ro = !Store.S.edit, acts = Store.visible().sort((x, y) => Store.actId(x).localeCompare(Store.actId(y)));
-    if (!App.partsRef || !App.act(App.partsRef)) App.partsRef = acts[0] ? acts[0]._p + ":" + acts[0].u : null;
+    const hits = App.q ? acts.filter(x => Store.matches(x, App.q)) : acts, cur = App.act(App.partsRef);
+    if (!cur || (App.q && hits.length && !hits.includes(cur))) App.partsRef = (hits[0] || acts[0]) ? (hits[0] || acts[0])._p + ":" + (hits[0] || acts[0]).u : null;
     const a = App.act(App.partsRef);
     const ae = document.activeElement, keep = ae && el.contains(ae) && ae.dataset.c ? { r: ae.dataset.r, c: ae.dataset.c, s: ae.selectionStart, v: ae.value } : null;
     const ls = $(".pt-acts", el) ? $(".pt-acts", el).scrollTop : 0, bs = $(".pt-main", el) ? $(".pt-main", el).scrollTop : 0;
-    const qq = q.toLowerCase(), shown = acts.filter(x => !qq || (Store.actId(x) + " " + (x.f.title || "")).toLowerCase().includes(qq));
-    el.innerHTML = '<div class="pt"><aside class="pt-side"><input class="in pt-q" type="search" placeholder="Find an action" value="' + esc(q) + '"><div class="pt-acts">'
+    const shown = acts.filter(x => Store.matches(x, App.q) || x._p + ":" + x.u === App.partsRef);
+    el.innerHTML = '<div class="pt"><aside class="pt-side"><div class="pt-acts">'
       + shown.map(x => { const ref = x._p + ":" + x.u, n = list(x, kind).length; return '<button type="button" class="pt-a' + (ref === App.partsRef ? " on" : "") + '" data-ref="' + ref + '"><span class="aid">' + esc(Store.actId(x)) + '</span><span class="pt-at">' + esc(x.f.title || "") + '</span>' + (n ? '<span class="pt-n">' + n + '</span>' : "") + '</button>'; }).join("")
       + (shown.length ? "" : '<div class="dim" style="padding:10px">No actions.</div>') + '</div></aside><section class="pt-main">' + (a ? pane(a, kind, ro) : '<div class="empty">No actions yet.</div>') + '</section></div>';
     $(".pt-acts", el).scrollTop = ls; $(".pt-main", el).scrollTop = bs;
-    const qi = $(".pt-q", el); qi.oninput = debounce(() => { q = qi.value; render(el, kind); const n = $(".pt-q", el); n.focus(); n.setSelectionRange(q.length, q.length); }, 150);
     $$(".pt-a", el).forEach(b => b.onclick = () => { App.partsRef = b.dataset.ref; render(el, kind); });
     if (!a) return; wire(el, a, kind, ro);
     if (keep){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v && !created.size) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }

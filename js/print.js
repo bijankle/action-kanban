@@ -16,7 +16,7 @@ const Print = (() => {
     $(".yn-yes", m).onclick = () => { const st = {}; $$("[data-s]", m).forEach(c => st[c.dataset.s] = c.checked); lsSet("adPrintSt", st);
       const o = {}; $$("[data-o]", m).forEach(c => o[c.dataset.o] = c.type === "checkbox" ? c.checked : +c.value); lsSet("adPrint", o); m.close();
       const q = (App.q || "").trim().toLowerCase(), fs = Store.fields();
-      const list = Store.stages().filter(s => st[s.id]).flatMap(s => Store.ranked(s.id)).filter(a => !q || (Store.actId(a) + " " + fs.map(f => Fields.text(a, f)).join(" ")).toLowerCase().includes(q));
+      const list = Store.stages().filter(s => st[s.id]).flatMap(s => Store.ranked(s.id)).filter(a => Store.matches(a, q));
       if (!list.length) return alert("Nothing to print with those stages ticked."); run(list, o); }; }
   async function run(list, o){ o = Object.assign(prefs(), o || {}); if (list.length === 1 && !arguments[1]) o.board = false;
     $$("#printRoot").forEach(x => x.remove());

@@ -17,7 +17,7 @@ const Valid = (() => {
       r.ondrop = e => { r.classList.remove("dover"); const from = e.dataTransfer.getData("text/row"); if (!from || from === r.dataset.id) return; e.preventDefault();
         Store.mutate("config", () => { const A = arr(); const i = A.findIndex(x => x.id === from), m = A.splice(i, 1)[0]; A.splice(A.findIndex(x => x.id === r.dataset.id), 0, m); Store.touch(m); Store.S.config.mod = now(); }); }; }); }
 
-  function fields(body){ const fs = Store.fields(); if (!Store.field(cur)) cur = fs[0].id; const f = Store.field(cur);
+  function fields(body){ const all = Store.fields(), hits = all.filter(f => hit(f.label, TYPES[f.type] || f.type, (f.options || []).filter(o => !o.del).map(o => o.label).join(" "))), fs = hits.length ? hits : all; if (!Store.field(cur)) cur = fs[0].id; const f = Store.field(cur);
     body.innerHTML = '<div class="dv-cols"><div class="dv-list"><div class="dv-h">Fields <span class="dim">drag to reorder</span></div>' + fs.map(x => '<button type="button" class="dv-f' + (x.id === cur ? " on" : "") + '" data-id="' + x.id + '"><span>' + esc(x.label) + '</span><small>' + esc(x.type === "stage" ? "Stage" : x.type === "rank" ? "Kanban order" : x.type === "mto" ? "MTO count" : x.type === "sparelist" ? "Spares count" : TYPES[x.type] || x.type) + '</small></button>').join("")
       + '<button type="button" class="btn ghost sm dv-addf">+ Add field</button></div><div class="dv-ed"></div></div>';
     $$(".dv-f", body).forEach(b => b.onclick = () => { cur = b.dataset.id; fields(body); });
@@ -51,7 +51,7 @@ const Valid = (() => {
         $(".ic-b", r).onclick = () => up(f, () => o.del = true); });
       sortable(ol, () => f.options, ".opt"); } }
 
-  function stages(body){ const ss = Store.stages();
+  function stages(body){ const ss = Store.stages().filter(s => hit(s.name));
     body.innerHTML = '<div class="dv-h">Kanban stages <span class="dim">drag to reorder. These are also the status choices, and you can edit them on the board too.</span></div><div class="stl">' + ss.map(s => '<div class="str" data-id="' + s.id + '"><span class="grip">⋮⋮</span><input type="color" value="' + esc(s.color) + '"><input class="in" value="' + esc(s.name) + '"><select class="in sm">' + [["open", "Normal"], ["hold", "On hold"], ["done", "Completed"]].map(([k, n]) => '<option value="' + k + '"' + (s.kind === k ? " selected" : "") + '>' + n + '</option>').join("") + '</select><label class="tp-o"><input type="checkbox"' + (s.print ? " checked" : "") + '><span>Print</span></label><span class="dim">' + Store.all().filter(a => a.stage === s.id).length + '</span><button type="button" class="ic-b sm" title="Delete">✕</button></div>').join("") + '</div>'
       + '<input class="in" data-k="new" placeholder="+ Add a stage, then Enter">';
     $$(".str", body).forEach(r => { const s = Store.stage(r.dataset.id);
@@ -65,12 +65,11 @@ const Valid = (() => {
     sortable($(".stl", body), () => Store.S.config.stages, ".str");
     $("[data-k=new]", body).onkeydown = e => { const v = e.target.value.trim(); if (e.key !== "Enter" || !v) return; Store.mutate("config", () => { const A = Store.S.config.stages, at = A.findIndex(x => !x.del && x.kind !== "open"), s = Store.touch({ id: "st" + uid(), name: v, color: "#64748b", kind: "open", print: true }); at < 0 ? A.push(s) : A.splice(at, 0, s); Store.S.config.mod = now(); }); }; }
 
-  let cq = "";
-  function contacts(body){ const q = cq.toLowerCase(); const cs = Store.contacts().filter(c => !q || [c.name, c.company, c.mobile, c.email].join(" ").toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
-    body.innerHTML = '<div class="dv-h">Contacts <span class="dim">picking a name on an action fills in its number</span></div><input class="in" data-k="q" placeholder="Search contacts" value="' + esc(cq) + '">'
+  const hit = (...xs) => { const w = (App.q || "").toLowerCase().split(/\s+/).filter(Boolean); const t = xs.join(" ").toLowerCase(); return w.every(x => t.includes(x)); };
+  function contacts(body){ const q = (App.q || "").toLowerCase(); const cs = Store.contacts().filter(c => hit(c.name, c.company, c.mobile, c.email)).sort((a, b) => a.name.localeCompare(b.name));
+    body.innerHTML = '<div class="dv-h">Contacts <span class="dim">picking a name on an action fills in its number</span></div>'
       + '<table class="tbl ct"><thead><tr><th>Name</th><th>Company</th><th>Mobile</th><th>Email</th><th></th></tr></thead><tbody>' + cs.map(c => '<tr data-id="' + c.id + '">' + ["name", "company", "mobile", "email"].map(k => '<td><input class="in" data-k="' + k + '" value="' + esc(c[k] || "") + '"></td>').join("") + '<td><button type="button" class="ic-b sm" title="Delete">✕</button></td></tr>').join("")
       + '<tr class="ct-new"><td><input class="in" data-k="name" placeholder="+ New name"></td><td><input class="in" data-k="company" placeholder="Company"></td><td><input class="in" data-k="mobile" placeholder="Mobile"></td><td><input class="in" data-k="email" placeholder="Email"></td><td><button type="button" class="btn sm">Add</button></td></tr></tbody></table>';
-    const qi = $("[data-k=q]", body); qi.oninput = () => { cq = qi.value; contacts(body); const n = $("[data-k=q]", body); n.focus(); n.setSelectionRange(cq.length, cq.length); };
     $$("tr[data-id]", body).forEach(r => { const c = Store.S.config.contacts.find(x => x.id === r.dataset.id);
       $$("input", r).forEach(i => i.onchange = () => up(c, () => c[i.dataset.k] = i.value.trim()));
       $(".ic-b", r).onclick = () => up(c, () => c.del = true); });

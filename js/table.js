@@ -9,7 +9,7 @@ const Table = (() => {
   /* what's on show: the projects ticked, the stage pills, the search */
   function rows(){ const q = (App.q || "").trim().toLowerCase(), pills = App.pills; let list = Store.visible();
     if (pills.size) list = list.filter(a => pills.has(a.stage));
-    if (q){ const fs = Store.fields(); list = list.filter(a => (Store.actId(a) + " " + fs.map(f => Fields.text(a, f)).join(" ")).toLowerCase().includes(q)); }
+    if (q) list = list.filter(a => Store.matches(a, q));
     const so = App.sort, ord = new Map(Store.stages().map((s, i) => [s.id, i]));
     const base = (x, y) => (ord.get(x.stage) - ord.get(y.stage)) || (x.rank || 0) - (y.rank || 0) || x.no - y.no;
     if (so && so.id){ const f = Store.field(so.id); const key = a => so.id === "_id" ? Store.actId(a) : so.id === "_proj" ? (Store.project(a._p) || {}).name : f ? (f.type === "rank" ? Fields.val(a, f) : f.type === "stage" ? ord.get(a.stage) : Fields.text(a, f).toLowerCase()) : "";
