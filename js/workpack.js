@@ -49,6 +49,8 @@ const Workpack = (() => {
     const parts = (a.mto || []).map(it => Object.assign({ src: "New" }, it)).concat((a.spares || []).map(it => Object.assign({ src: "Site spares" }, it)));
     if (parts.length){ head("Parts"); table(["Item", "Description", "Part / tag no.", "Qty", "Unit", "Supplied from", "Notes"], parts.map((it, i) => [i + 1, it.desc || "", it.part || "", it.qty || "", it.unit || "", it.src, it.notes || ""]),
       { 0: { cellWidth: 11, halign: "center" }, 1: { cellWidth: 50 }, 3: { cellWidth: 12, halign: "right" }, 4: { cellWidth: 13 }, 5: { cellWidth: 22 } }); }
+    /* the equipment's drawings and documents, as clickable numbers (SharePoint) with a PDF badge when a copy can be downloaded */
+    try { await docs(doc, a, { head, need, M, CW, rgb, get y(){ return y; }, set y(v){ y = v; } }); } catch (e){ console.warn("documents", e); }
     if (a.files.length){ head("Attachments"); doc.setFontSize(9.5); a.files.forEach(f => { need(5.5); doc.setTextColor(31, 95, 191); doc.textWithLink(f.name, M, y, { url: Media.fileUrlOnline(a, f) }); doc.setTextColor(120); doc.text(fmtSize(f.size || 0), W - M, y, { align: "right" }); y += 5.5; }); y += 2; }
     /* photos, two to a row */
     if (a.photos.length){ head("Photos (" + a.photos.length + ")"); const gw = (CW - 6) / 2, gh = 66;
@@ -60,5 +62,21 @@ const Workpack = (() => {
         y += rowH + 8; } }
     const n = doc.getNumberOfPages(); for (let i = 1; i <= n; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text("Job " + Store.actId(a) + " work pack" + (Profile.name() ? "   Queries: " + [Profile.name(), Profile.get().mobile, Profile.get().email].filter(Boolean).join(", ") : "") + "   Page " + i + " of " + n, W / 2, 291, { align: "center" }); }
     return doc.output("blob"); }
+  async function docs(doc, a, P){ const tags = Array.isArray(a.f.equipment) ? a.f.equipment.filter(Boolean) : []; if (!tags.length || typeof Docs === "undefined") return;
+    await Docs.load(); const m = Docs.forTags(tags), K = ["process", "electrical", "docs"];
+    const rows = tags.map(t => ({ t, r: m.get(t) || {} })).filter(x => K.some(k => (x.r[k] || []).length)); if (!rows.length) return;
+    P.head("Drawings and documents"); const FS = 7.6, LH = FS * 1.15 * 25.4 / 72, PAD = 1.6;
+    doc.autoTable({ startY: P.y, head: [["Equipment", "Process", "Electrical", "Datasheets & IOMs"]],
+      body: rows.map(x => { const e = Equip.get(x.t) || {}; return [x.t + (e.n ? "\n" + e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "")].concat(K.map(k => (x.r[k] || []).map(d => d.n + (d.pdf ? "        " : "")).join("\n") || "–")); }),
+      margin: { top: 16, left: P.M, right: P.M, bottom: 16 }, styles: { font: "helvetica", fontSize: FS, cellPadding: PAD, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top", overflow: "linebreak" },
+      headStyles: { fillColor: P.rgb, textColor: 255, fontStyle: "bold", fontSize: 8.5 }, alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: { 0: { cellWidth: 36, fontStyle: "bold" }, 1: { textColor: [31, 95, 191] }, 2: { textColor: [31, 95, 191] }, 3: { textColor: [31, 95, 191] } },
+      /* each number becomes a link to SharePoint, and gets a PDF badge linked to the copy */
+      didDrawCell: c => { if (c.section !== "body" || !c.column.index) return; const ds = (rows[c.row.index].r[K[c.column.index - 1]] || []);
+        doc.setFontSize(FS); ds.forEach((d, i) => { const ty = c.y + PAD + i * LH, w = doc.getTextWidth(d.n), x = c.x + PAD; if (ty + LH > c.y + c.height + 0.5) return;
+          if (d.url) doc.link(x, ty, w, LH, { url: d.url });
+          if (d.pdf){ const bx = x + w + 1.5, bw = 6.4, bh = LH - 0.5; doc.setFillColor(200, 40, 30); doc.roundedRect(bx, ty + 0.25, bw, bh, 0.8, 0.8, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(5.6); doc.text("PDF", bx + bw / 2, ty + 0.25 + bh / 2 + 0.7, { align: "center" }); doc.setFont("helvetica", "normal"); doc.setFontSize(FS); doc.link(bx, ty, bw, LH, { url: d.pdf }); } }); } });
+    P.y = doc.lastAutoTable.finalY + 2.5; doc.setFontSize(7.8); doc.setTextColor(110); doc.setFont("helvetica", "italic");
+    doc.splitTextToSize("Numbers open the controlled copy in SharePoint (needs a SharePoint login). The red PDF badge downloads a copy for anyone without SharePoint access: check its revision against SharePoint before use. Print only what the job needs.", P.CW).forEach(l => { P.need(4); doc.text(l, P.M, P.y + 2); P.y += 3.6; });
+    doc.setFont("helvetica", "normal"); P.y += 4; }
   return { run, build };
 })();
