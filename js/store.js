@@ -13,8 +13,8 @@ const YN = ["Yes", "No"];
 function defaultConfig(){ const t = now(); const opt = (labels, colors) => labels.map((l, i) => ({ id: uid() + i, label: l, color: (colors || [])[i] || "" }));
   const F = (id, label, type, x) => Object.assign({ id, label, type, builtin: true, table: false, tbc: false, na: false, mod: t }, x || {});
   return { v: 1, mod: t,
-    stages: [["Issue Identified", "#3B8FE0"], ["Defect Notification Sent", "#7C5CD6"], ["Work Order Created", "#0E9AA7"], ["RFQ Sent", "#C07A12"], ["PO Sent", "#D6488A"], ["Parts Received", "#2F7FD1"], ["On Hold", "#F2B03D", "hold"], ["Completed", "#2FB463", "done"]]
-      .map(([n, c, k], i) => ({ id: "st" + i, name: n, color: c, kind: k || "open", print: k !== "done", mod: t })),
+    stages: [["Identified", "Draft Notice", "#3B8FE0"], ["Notice Sent", "Create WO", "#7C5CD6"], ["WO Created", "Draft RFQ", "#0E9AA7"], ["RFQ Sent", "Raise PO", "#C07A12"], ["PO Sent", "Await Parts", "#D6488A"], ["Received", "Schedule Work", "#2F7FD1"], ["On Hold", "On Hold", "#F2B03D", "hold"], ["Done", "Done", "#2FB463", "done"]]
+      .map(([n, td, c, k], i) => ({ id: "st" + i, name: n, todo: td, color: c, kind: k || "open", print: k !== "done", mod: t })),
     fields: [
       F("title", "Title", "text", { table: true, core: true }),
       F("status", "Status", "stage", { table: true, core: true }),
@@ -53,7 +53,7 @@ const Store = (() => {
   const stage = id => S.config.stages.find(s => s.id === id && !s.del) || stages()[0];
   /* a stage has two names: the milestone an action has reached (its steps row, the pills, exports: "RFQ Sent") and
      the Organizer column, the job that's next for the actions in it ("Raise PO"); s.todo, else these defaults */
-  const TODO = { "Issue Identified": "Draft Defect Notice", "Defect Notification Sent": "Create Work Order", "Work Order Created": "Draft RFQ", "RFQ Sent": "Raise PO", "PO Sent": "Awaiting Parts", "Parts Received": "Schedule Work" };
+  const TODO = { "Identified": "Draft Notice", "Notice Sent": "Create WO", "WO Created": "Draft RFQ", "RFQ Sent": "Raise PO", "PO Sent": "Await Parts", "Received": "Schedule Work" };
   const todo = s => s ? (s.todo || TODO[s.name] || s.name) : "";
   const contacts = () => live(S.config.contacts);
   const projects = () => live(S.projects.projects);

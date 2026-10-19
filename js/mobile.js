@@ -1,16 +1,15 @@
 /* Phone view: look only. A tab bar along the bottom: Actions (filter pills by stage, a search box, a card per
-   action), Organizer (the stages side by side, swipe across) and Settings (theme, dark mode, text size, font,
+   action; the Organizer board is desktop only) and Settings (theme, dark mode, text size, font,
    how to use, about). Tap an action for its problem, solution, photos (tap for full screen, swipe between them)
    and details. */
 "use strict";
 const Mobile = (() => {
-  let open = null, tab = ["actions", "kanban", "settings"].includes(lsGet("adMTab", "actions")) ? lsGet("adMTab", "actions") : "actions", stab = lsGet("adMSt", "view");
+  let open = null, tab = ["actions", "settings"].includes(lsGet("adMTab", "actions")) ? lsGet("adMTab", "actions") : "actions", stab = lsGet("adMSt", "view");
   const svg = d => '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
-  const TABS = [["actions", "Actions", '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>'], ["kanban", "Organizer", '<rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/>'],
-    ["settings", "Settings", '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>']];
+  const TABS = [["actions", "Actions", '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>'], ["settings", "Settings", '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>']];
   /* the bottom bar: the page above it is drawn into .m-pg */
   function shell(root){ if (!$(".m-bn", root)){ root.innerHTML = '<div class="m-pg"></div><nav class="m-bn">' + TABS.map(([k, n, d]) => '<button type="button" class="m-bt" data-mt="' + k + '"><i>' + svg(d) + '</i><span>' + n + '</span></button>').join("") + '</nav>';
-      $$(".m-bt", root).forEach(b => b.onclick = () => { const k = b.dataset.mt; if (open){ open = null; history.back(); if (k === tab) return render(root); } if (k === tab){ scrollTo(0, 0); $$(".m-list,.m-kb", root).forEach(x => x.scrollTop = 0); return; } tab = k; lsSet("adMTab", k); render(root); scrollTo(0, 0); }); }
+      $$(".m-bt", root).forEach(b => b.onclick = () => { const k = b.dataset.mt; if (open){ open = null; history.back(); if (k === tab) return render(root); } if (k === tab){ scrollTo(0, 0); $$(".m-list", root).forEach(x => x.scrollTop = 0); return; } tab = k; lsSet("adMTab", k); render(root); scrollTo(0, 0); }); }
     $$(".m-bt", root).forEach(b => b.classList.toggle("on", b.dataset.mt === tab)); return $(".m-pg", root); }
   const top = () => '<div class="m-top">' + LOGO(34) + '<div class="m-pj"></div><input class="in m-q" type="search" placeholder="Search" value="' + esc(App.q || "") + '"></div>';
   function wireTop(pg, root){ App.projBox($(".m-pj", pg)); const qi = $(".m-q", pg);
@@ -25,29 +24,12 @@ const Mobile = (() => {
     const pg = shell(root); root.classList.toggle("m-in", !!a); requestAnimationFrame(() => { const t = $(".m-top", root); if (t) root.style.setProperty("--mtop", t.offsetHeight + "px"); });   // what sticks under the top row sits just below it, whatever the sizes
     if (a) return detail(pg, a);
     if (tab === "settings") return settings(pg, root);
-    if (tab === "kanban") return board(pg, root);
     const pills = App.pills, all = Store.visible(), list = Table.rows(), sy = scrollY;
     pg.innerHTML = top()
       + '<div class="m-pills"><button type="button" class="pill' + (!pills.size ? " on" : "") + '" data-s="">All <b>' + all.length + '</b></button>' + Store.stages().map(s => '<button type="button" class="pill' + (pills.has(s.id) ? " on" : "") + '" data-s="' + s.id + '" style="--c:' + esc(s.color) + '"><i class="dot"></i>' + esc(s.name) + ' <b>' + all.filter(a => a.stage === s.id).length + '</b></button>').join("") + '</div>'
       + '<div class="m-list">' + (list.length ? list.map(card).join("") : '<div class="empty">No actions match.</div>') + '</div>';
     wireTop(pg, root); scrollTo(0, sy);
     $$(".pill", pg).forEach(b => b.onclick = () => { const s = b.dataset.s; if (!s) pills.clear(); else if (pills.has(s)) pills.delete(s); else { pills.clear(); pills.add(s); } render(root); });
-    wireCards(pg, root); }
-  /* Organizer: one column per stage, most of the screen wide, snapping as you swipe across; each in priority order.
-     A strip of the stages under the search shows which one you're on (tap one to go to it); each column's header
-     gives its step in the flow and how many actions it holds. */
-  function board(pg, root){ const q = (App.q || "").trim().toLowerCase(), old = $(".m-kb", pg), sx = old ? old.scrollLeft : +lsGet("adMKbX", 0) || 0, st = Store.stages(), flow = st.filter(s => s.kind !== "hold");
-    const lists = st.map(s => Store.ranked(s.id).filter(a => Store.matches(a, q)));
-    pg.innerHTML = top() + '<div class="m-ss">' + st.map((s, i) => '<button type="button" class="m-sc" data-i="' + i + '" style="--c:' + esc(s.color) + '"><i class="dot"></i>' + esc(Store.todo(s)) + ' <b>' + lists[i].length + '</b></button>').join("") + '</div>'
-      + '<div class="m-kb">' + st.map((s, i) => { const cs = lists[i], n = flow.indexOf(s), hold = s.kind === "hold";
-      return '<section class="m-col" style="--c:' + esc(s.color) + '"><div class="m-ch"><span class="m-cn">' + (hold ? "‖" : n + 1) + '</span><span class="m-ct"><b>' + esc(Store.todo(s)) + '</b><small>' + (hold ? "Paused, off the flow" : "Step " + (n + 1) + " of " + flow.length) + (Store.todo(s) !== s.name ? " · " + esc(s.name) + " ✓" : "") + '</small></span><span class="m-cq">' + cs.length + '</span></div>'
-        + '<div class="m-cc">' + (cs.map(card).join("") || '<div class="m-c0">No actions at this stage' + (q ? " match the search" : "") + '</div>') + '</div></section>'; }).join("") + '</div>';
-    wireTop(pg, root); const kb = $(".m-kb", pg), ss = $(".m-ss", pg), cols = $$(".m-col", kb), chips = $$(".m-sc", ss);
-    /* which column is in view: its chip is filled in and kept in sight */
-    const mark = () => { const x = kb.scrollLeft + 20, i = Math.max(0, cols.findIndex(c => c.offsetLeft + c.offsetWidth > x)); chips.forEach((c, j) => c.classList.toggle("on", j === i));
-      const c = chips[i]; if (c) ss.scrollTo({ left: c.offsetLeft - (ss.clientWidth - c.offsetWidth) / 2, behavior: "smooth" }); };
-    kb.scrollLeft = sx; mark(); kb.onscroll = debounce(() => { lsSet("adMKbX", kb.scrollLeft); mark(); }, 80);
-    chips.forEach(c => c.onclick = () => kb.scrollTo({ left: cols[+c.dataset.i].offsetLeft - 12, behavior: "smooth" }));
     wireCards(pg, root); }
   /* Settings: View (dark mode, theme, text size, font), How to use, About */
   const STEPS = Array.from({ length: 15 }, (_, i) => +(0.8 + i * 0.05).toFixed(2));   // text and button sizes: 80% to 150% in 15 steps
@@ -71,8 +53,7 @@ const Mobile = (() => {
       $$("[data-sz]", body).forEach(r => { const fill = () => { r.style.setProperty("--p", r.value / r.max * 100 + "%"); r.nextElementSibling.textContent = Math.round(STEPS[+r.value] * 100) + "%"; }; fill();
         r.oninput = fill; r.onchange = () => again({ [r.dataset.sz]: STEPS[+r.value] }); });
       $$("[data-fo]", body).forEach(b => b.onclick = () => again({ font: b.dataset.fo })); }
-    if (stab === "help") body.innerHTML = '<div class="st-l">' + [["Finding an action", "Search finds any word in an action: its ID, title, problem, solution, equipment tags and the rest. The pills under the search show one stage at a time; All shows every stage. The A* logo clears both and goes back to the top."],
-      ["The Organizer", "Every stage side by side, the same as on a computer. Swipe across to move between stages. Higher in a stage means higher priority."],
+    if (stab === "help") body.innerHTML = '<div class="st-l">' + [["Finding an action", "Search finds any word in an action: its ID, title, problem, solution, equipment tags and the rest. The pills under the search show one stage at a time (the milestone each action has reached); All shows every stage. The Organizer board is on a computer. The A* logo clears both and goes back to the top."],
       ["Photos", "Open an action and tap a photo for full screen. Swipe left or right for the next one, drag down to close it."],
       ["Projects", "The box beside the logo picks which projects you see. Tick more than one to see them together."],
       ["Editing", "The phone is for looking only. Add and change actions on a computer; the changes show here the next time you open the app."]].map(([t, h]) => '<details class="st-h"><summary>' + t + '</summary><p>' + h + '</p></details>').join("") + '</div>';
