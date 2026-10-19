@@ -31,7 +31,7 @@ const Table = (() => {
         tr.appendChild(td); });
       frag.appendChild(tr); });
     tb.appendChild(frag);
-    tb.onclick = e => { const tr0 = e.target.closest("tr"); if (e.target.closest("[data-ph]")) return Media.view(App.act(tr0.dataset.ref), 0); if (e.target.closest("[data-up]")) return Media.pickFiles(App.act(tr0.dataset.ref), "image/*");
+    tb.onclick = e => { const tr0 = e.target.closest("tr"); const pl = e.target.closest("[data-parts]"); if (pl){ e.preventDefault(); return App.openParts(pl.dataset.ref, pl.dataset.parts); } if (e.target.closest("[data-ph]")) return Media.view(App.act(tr0.dataset.ref), 0); if (e.target.closest("[data-up]")) return Media.pickFiles(App.act(tr0.dataset.ref), "image/*");
       if (e.target.closest("select,input,label,button,a")) return; const tr = e.target.closest("tr"); if (tr) App.select(tr.dataset.ref); };
     /* files dropped on a row go to that action */
     tb.ondragover = e => { if (!Media.hasDrop(e)) return; e.preventDefault(); const tr = e.target.closest("tr"); $$("tr.drop", tb).forEach(x => x !== tr && x.classList.remove("drop")); tr && tr.classList.add("drop"); };

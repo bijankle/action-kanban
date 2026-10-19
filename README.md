@@ -14,6 +14,8 @@ For photos and files, drop photos, PDFs or Excel files onto an action, or use it
 
 The stages start as Issue Identified, Defect Notification Sent, Work Order Created, RFQ Sent, Parts Ordered, Parts Received, On Hold and Completed. A Spare parts available tick box and a Parts receival ETA sit with the other fields.
 
+The MTO tab lists each action's material take off as a simple table (item, description, part or tag number, qty, unit, notes); an action with no MTO shows an empty table ready to fill in. The MTO column on the Actions tab says how many items each action has (for example 3 x items), as a link to that action's MTO. Quotes are uploaded at the top (several, for revised quotes) and can be downloaded any time. Each RFQ export to PDF takes the next rev letter (A, B, C…) and every rev is kept in RFQ revisions for download. The Spare parts tab works the same way for parts coming from site spares, and each row has a button to move it between the MTO and spares. Both export to Excel and PDF, and Paste text lets Gemini fill in the rows from an email or quote, which you check before adding.
+
 To make an action from text, use New action, then Paste text. Google Gemini splits an email into the fields. Anything it can't find is left empty, and any field set to TBC shows in red.
 
 To print, choose which stages to print (Completed starts unticked). The board prints first on A4 landscape, then each action with its details, photos and attachment links. Export to Excel exports the table as filtered, with a Photos link that opens the app on that action's photos.

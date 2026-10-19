@@ -8,7 +8,7 @@ const Panel = (() => {
     if (!a){ el.innerHTML = ""; return; }
     const ro = !Store.S.edit, p = Store.project(a._p) || {};
     /* keep the cursor where it was when the panel redraws */
-    const ae = document.activeElement, keep = ae && el.contains(ae) && ae.closest("[data-f]") ? { f: ae.closest("[data-f]").dataset.f, s: ae.selectionStart, e: ae.selectionEnd } : null;
+    const ae = document.activeElement, keep = ae && el.contains(ae) && ae.closest("[data-f]") ? { f: ae.closest("[data-f]").dataset.f, s: ae.selectionStart, e: ae.selectionEnd, v: ae.value, tag: ae.tagName } : null;
     const sc = $(".sd-body", el) && last === App.selRef ? $(".sd-body", el).scrollTop : 0; last = App.selRef;
     el.innerHTML = '<div class="sd-split" title="Drag to resize"></div><div class="sd-head"><span class="aid big">' + esc(Store.actId(a)) + '</span><span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span><span class="grow"></span>'
       + (ro ? "" : '<button class="ic-b" type="button" data-k="del" title="Delete this action">🗑</button>') + '<button class="ic-b" type="button" data-k="print" title="Print this action">⎙</button><button class="ic-b" type="button" data-k="x" title="Close (Esc)">✕</button></div>'
@@ -26,7 +26,7 @@ const Panel = (() => {
     files(a, $(".att-l", el), ro); steps(a, $(".steps", el), ro);
     const det = $(".det", el); Store.fields().filter(f => !CORE.has(f.id)).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); det.appendChild(r); });
     $(".sd-body", el).scrollTop = sc;
-    if (keep){ const t = $('[data-f="' + keep.f + '"] input, [data-f="' + keep.f + '"] textarea, [data-f="' + keep.f + '"] select', el); if (t){ t.focus(); try { if (keep.s != null) t.setSelectionRange(keep.s, keep.e); } catch (e) {} } }
+    if (keep){ const t = $('[data-f="' + keep.f + '"] input, [data-f="' + keep.f + '"] textarea, [data-f="' + keep.f + '"] select', el); if (t){ if (t.tagName === keep.tag && t.tagName !== "SELECT" && t.value !== keep.v) t.value = keep.v; t.focus(); try { if (keep.s != null) t.setSelectionRange(keep.s, keep.e); } catch (e) {} } }
     el.querySelectorAll("[data-k]").forEach(b => b.onclick = () => act(b.dataset.k, a));
     dragResize($(".sd-split", el), () => el.offsetWidth, w => { w = Math.max(320, Math.min(innerWidth - 360, w)); document.documentElement.style.setProperty("--side-w", w + "px"); lsSet("adSideW", w); });
     el.ondragover = e => { if (Media.hasDrop(e)){ e.preventDefault(); el.classList.add("drop"); } };

@@ -32,7 +32,7 @@ function modal(html, opts){ opts = opts || {};
 function confirmBox(msg, yes, danger){ return new Promise(res => {
   const m = modal('<h3>' + esc(msg) + '</h3><div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes' + (danger ? " danger" : "") + '" type="button">' + esc(yes || "OK") + '</button></div>', { onClose: () => res(false) });
   $(".yn-no", m).onclick = () => m.close();
-  $(".yn-yes", m).onclick = () => { m.close(); res(true); }; $(".yn-yes", m).focus(); }); }
+  $(".yn-yes", m).onclick = () => { res(true); m.close(); }; $(".yn-yes", m).focus(); }); }
 function promptBox(msg, val){ return new Promise(res => { let done = false;
   const m = modal('<h3>' + esc(msg) + '</h3><input class="in wide" type="text" value="' + esc(val || "") + '"><div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">OK</button></div>', { onClose: () => { if (!done) res(null); } });
   const i = $("input", m); i.focus(); i.select();

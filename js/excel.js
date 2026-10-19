@@ -21,6 +21,9 @@ const Excel = (() => {
     const rows = list.map(a => ["ID", "Project"].map((k, i) => i ? (Store.project(a._p) || {}).name : Store.actId(a))
       .concat(fs.map(f => f.type === "date" && /^\d{4}-/.test(Fields.val(a, f) || "") ? { d: Fields.val(a, f) } : Fields.text(a, f)),
         [a.steps.map(s => (s.d ? "[x] " : "[ ] ") + s.t).join("\n"), a.photos.length ? { link: base + "?a=" + encodeURIComponent(a._p + ":" + a.no) + "&photo=1", text: "Photos (" + a.photos.length + ")" } : "", a.files.map(f => f.name).join("\n"), { d: new Date(a.created).toISOString().slice(0, 10) }]));
+    return book(head, rows, "Actions"); }
+  /* one sheet workbook: head is the header row, rows hold strings, {d: "YYYY-MM-DD"} dates or {link, text} links */
+  function book(head, rows, name){ name = String(name || "Sheet1").replace(/[\\/?*\[\]:]/g, " ").slice(0, 31);
     const cell = (v, r, c) => { const ref = col(c) + (r + 1);
       if (v && typeof v === "object" && v.link) return '<c r="' + ref + '" t="str" s="3"><f>HYPERLINK("' + x(v.link) + '","' + x(v.text) + '")</f><v>' + x(v.text) + '</v></c>';
       if (v && typeof v === "object" && v.d){ const days = (Date.parse(v.d + "T00:00:00Z") - Date.UTC(1899, 11, 30)) / 864e5; return '<c r="' + ref + '" s="4"><v>' + days + '</v></c>'; }
@@ -34,11 +37,12 @@ const Excel = (() => {
       + '<cellXfs count="6"><xf/><xf fontId="1" fillId="2" applyFont="1" applyFill="1"/><xf fontId="2" applyFont="1"/><xf fontId="3" applyFont="1"/><xf numFmtId="164" applyNumberFormat="1"/><xf applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs></styleSheet>';
     return zip([["[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'],
       ["_rels/.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
-      ["xl/workbook.xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Actions" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Actions!$A$1:$' + col(head.length - 1) + '$' + all.length + '</definedName></definedNames></workbook>'],
+      ["xl/workbook.xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="' + x(name) + '" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">\'' + x(name).replace(/'/g, "''") + '\'!$A$1:$' + col(head.length - 1) + '$' + all.length + '</definedName></definedNames></workbook>'],
       ["xl/_rels/workbook.xml.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
       ["xl/worksheets/sheet1.xml", sheet], ["xl/styles.xml", styles]]); }
+  function save(blob, fname){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fname; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
   function run(){ const list = Table.rows(); if (!list.length) return alert("No actions to export.");
     const b = exportRows(list), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "Actions " + new Date().toISOString().slice(0, 10) + ".xlsx"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     note("Exported " + list.length + " actions, as filtered in the table"); }
-  return { run, exportRows };
+  return { run, exportRows, book, save };
 })();

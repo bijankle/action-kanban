@@ -9,7 +9,7 @@ const Intake = (() => {
     const ver = n => { const m = n.match(/^gemini-(\d+(?:\.\d+)?)-/); return m ? parseFloat(m[1]) : 0; };
     const best = names.filter(n => /^gemini-\d+(\.\d+)?-flash$/.test(n)).sort((a, b) => ver(b) - ver(a))[0] || (names.includes("gemini-flash-latest") ? "gemini-flash-latest" : names.find(n => /flash/.test(n))) || names[0];
     if (!best) throw new Error("This Gemini key has no models available."); lsSet("adGemModel", { k: key.slice(-6), m: best, t: now() }); return best; }
-  const SKIP = new Set(["status", "priority"]);
+  const SKIP = new Set(["status", "priority", "mto", "sparelist"]);
   async function split(text){ const key = (lsGet("adGemKey", "") || "").trim(); if (!key) throw new Error("Add your Gemini key in File, Settings first (it's free from aistudio.google.com).");
     const fs = Store.fields().filter(f => !SKIP.has(f.id));
     const desc = fs.map(f => { let d = '"' + f.id + '": ' + f.label + " (" + (TYPES[f.type] || f.type) + ")";
@@ -23,13 +23,15 @@ const Intake = (() => {
       + "\n\nRules: \"title\" is a short summary of the problem and the fix, under 12 words. \"problem\" describes what is wrong. \"solution\" describes what will be done or was proposed."
       + " If the text doesn't give a value, use an empty string (or false, or an empty array). Do not guess. Only use \"TBC\" where the text itself says it is to be confirmed. Keep the writer's technical terms and equipment tag numbers exactly."
       + "\n\nTEXT:\n" + text;
+    return ask(prompt); }
+  /* send a prompt to Gemini, get JSON back */
+  async function ask(prompt){ const key = (lsGet("adGemKey", "") || "").trim(); if (!key) throw new Error("Add your Gemini key in File, Settings first (it's free from aistudio.google.com).");
     const m = await model(key);
     const r = await fetch(BASE + "/models/" + m + ":generateContent?key=" + encodeURIComponent(key), { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.2 } }) });
     if (!r.ok){ let msg = "Gemini error " + r.status; try { msg += ": " + (await r.json()).error.message; } catch (e) {} if (r.status === 404) lsSet("adGemModel", null); throw new Error(msg); }
     const j = await r.json(); const t = (((j.candidates || [])[0] || {}).content || {}).parts; const s = t && t.map(p => p.text || "").join("");
-    let out; try { out = JSON.parse(s.replace(/^```(json)?|```$/g, "").trim()); } catch (e){ throw new Error("Gemini's answer couldn't be read, try again."); }
-    return out; }
+    try { return JSON.parse(String(s).replace(/^```(json)?|```$/g, "").trim()); } catch (e){ throw new Error("Gemini's answer couldn't be read, try again."); } }
   /* tidy what came back: only allowed values, empty where unknown */
   function clean(o){ const v = {}; Store.fields().filter(f => !SKIP.has(f.id)).forEach(f => { let x = o[f.id];
       if (x == null || x === "") return;
@@ -71,5 +73,5 @@ const Intake = (() => {
     $(".yn-yes", m).onclick = () => { read(); const pid = $("[data-k=proj]", m).value; lsSet("adLastProj", pid);
       if (!Store.selected().includes(pid)) Store.setSelected(Store.selected().concat(pid));
       let a; Store.mutate("a:" + pid, () => { a = Store.newAction(pid, vals, stage); }); Store.log("Created " + Store.actId(a)); m.close(); App.select(pid + ":" + a.u); }; }
-  return { open, split, clean };
+  return { open, split, clean, ask };
 })();
