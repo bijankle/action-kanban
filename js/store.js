@@ -13,7 +13,7 @@ const YN = ["Yes", "No"];
 function defaultConfig(){ const t = now(); const opt = (labels, colors) => labels.map((l, i) => ({ id: uid() + i, label: l, color: (colors || [])[i] || "" }));
   const F = (id, label, type, x) => Object.assign({ id, label, type, builtin: true, table: false, tbc: false, na: false, mod: t }, x || {});
   return { v: 1, mod: t,
-    stages: [["Issue Identified", "#3B8FE0"], ["Defect Notification Sent", "#7C5CD6"], ["Work Order Created", "#0E9AA7"], ["Parts Procured", "#C07A12"], ["Work Scheduled", "#2F7FD1"], ["On Hold", "#F2B03D", "hold"], ["Completed", "#2FB463", "done"]]
+    stages: [["Issue Identified", "#3B8FE0"], ["Defect Notification Sent", "#7C5CD6"], ["Work Order Created", "#0E9AA7"], ["RFQ Sent", "#C07A12"], ["Parts Ordered", "#D6488A"], ["Parts Received", "#2F7FD1"], ["On Hold", "#F2B03D", "hold"], ["Completed", "#2FB463", "done"]]
       .map(([n, c, k], i) => ({ id: "st" + i, name: n, color: c, kind: k || "open", print: k !== "done", mod: t })),
     fields: [
       F("title", "Title", "text", { table: true, core: true }),
@@ -24,12 +24,13 @@ function defaultConfig(){ const t = now(); const opt = (labels, colors) => label
       F("location", "Location", "text", { table: true, suggest: true }),
       F("equipment", "Equipment tags", "multi", { table: true, options: [] }),
       F("procurement", "Procurement required", "check", { table: true }),
+      F("spares", "Spare parts available", "check", { table: true }),
       F("defect", "Defect notice sent", "choice", { options: opt(YN), tbc: true, na: true }),
       F("scope", "Scope document sent", "choice", { options: opt(YN), tbc: true, na: true }),
       F("contractorAssigned", "Contractor assigned", "choice", { options: opt(YN), tbc: true, na: true }),
       F("contractor", "Contractor name", "contact", { tbc: true, na: true }),
       F("contractorPhone", "Contractor number", "phone", { link: "contractor" }),
-      F("eta", "Goods receival ETA", "date", { table: true, tbc: true, na: true })
+      F("eta", "Parts receival ETA", "date", { table: true, tbc: true, na: true })
     ],
     contacts: [] }; }
 

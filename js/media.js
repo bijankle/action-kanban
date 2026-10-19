@@ -30,30 +30,66 @@ const Media = (() => {
         mem.set("f" + hh, URL.createObjectURL(f));
         Store.mutate("a:" + a._p, () => { a.files.push({ h: hh, name: f.name, size: f.size, type: f.type, added: now(), local: f.size > 50 * 1048576 }); Store.touch(a); }); Store.log("Attached " + f.name + " to " + Store.actId(a));
       } catch (e){ console.error(e); alert("Couldn't attach " + f.name + ": " + e.message); } }
-    note("Added to " + Store.actId(a) + ", saving online…"); }
+    note("Added to " + Store.actId(a) + ", saving online…"); refresh(a); }
   const src = (a, p, thumb) => { const m = mem.get(p.h); if (m) return thumb ? m.thumb : m.main; return GH.fileUrl(thumb ? pThumb(a._p, p.h) : pImg(a._p, p.h)); };
   const fileSrc = (a, f) => mem.get("f" + f.h) || GH.fileUrl(pFile(a._p, f.h, f.name));
   const fileUrlOnline = (a, f) => GH.fileUrl(pFile(a._p, f.h, f.name));
   async function openFile(a, f){ const loc = Local.ok && await Local.original(a, f.name); if (loc){ window.open(URL.createObjectURL(loc), "_blank"); return; }
     if (f.local){ alert(f.name + " is only in the local folder of the computer that added it."); return; } window.open(fileSrc(a, f), "_blank"); }
 
-  /* ---------- full screen viewer: double click a photo or press its ⛶ button; Esc closes, arrows step ---------- */
+  /* ---------- photo gallery: a big popup over the page, the photo large with a strip of thumbnails below
+     (the ones before and after). Arrows or the strip step through, ⛶ or a double click for full screen, Esc closes. ---------- */
   let V = null;
-  function view(a, i){ close(); if (!a || !a.photos.length) return; i = Math.max(0, Math.min(i || 0, a.photos.length - 1));
-    V = h('<div class="viewer" tabindex="-1"><div class="vw-top"><span class="vw-t"></span><span class="vw-n"></span><button class="vw-b vw-x" type="button" title="Close (Esc)">✕</button></div><div class="vw-stage"><button class="vw-b vw-prev" type="button" aria-label="Previous">‹</button><img alt=""><button class="vw-b vw-next" type="button" aria-label="Next">›</button></div></div>');
+  function view(a, i){ close(); if (!a) return; i = Math.max(0, Math.min(i || 0, a.photos.length - 1)); const ro = !Store.S.edit;
+    V = h('<div class="gal" tabindex="-1"><div class="gal-win"><div class="gal-top"><span class="aid">' + esc(Store.actId(a)) + '</span><span class="gal-t">' + esc(a.f.title || "") + '</span><span class="gal-n"></span><span class="grow"></span>'
+      + (ro ? "" : '<button class="btn ghost sm" type="button" data-k="add">+ Upload photos</button><button class="ic-b" type="button" data-k="del" title="Remove this photo">🗑</button>')
+      + '<button class="ic-b" type="button" data-k="fs" title="Full screen (or double click the photo)">⛶</button><button class="ic-b" type="button" data-k="x" title="Close (Esc)">✕</button></div>'
+      + '<div class="gal-stage"><button class="gal-arr gal-prev" type="button" aria-label="Previous">‹</button><img alt=""><div class="gal-none">No photos yet.' + (ro ? "" : " Upload some, or drop them here.") + '</div><button class="gal-arr gal-next" type="button" aria-label="Next">›</button></div>'
+      + '<div class="gal-cap"></div><div class="gal-strip"></div></div></div>');
     document.body.appendChild(V); V.focus(); let cur = i;
-    const img = $("img", V), show = async k => { cur = (k + a.photos.length) % a.photos.length; const p = a.photos[cur];
-      $(".vw-t", V).textContent = Store.actId(a) + "  " + (a.f.title || ""); $(".vw-n", V).textContent = (cur + 1) + " / " + a.photos.length + "  " + (p.name || "");
+    const img = $("img", V), strip = $(".gal-strip", V);
+    const drawStrip = () => { strip.innerHTML = a.photos.map((p, k) => '<button type="button" class="gal-th' + (k === cur ? " on" : "") + '" data-i="' + k + '"><img alt="" loading="lazy" src="' + esc(src(a, p, true)) + '"></button>').join("");
+      $$(".gal-th", strip).forEach(b => b.onclick = () => show(+b.dataset.i)); };
+    const show = async k => { const n = a.photos.length; $(".gal-none", V).hidden = !!n; img.hidden = !n; $(".gal-n", V).textContent = n ? (cur + 1 > n ? n : cur + 1) + " of " + n : "";
+      $$(".gal-arr", V).forEach(b => b.hidden = n < 2); if (!n){ strip.innerHTML = ""; $(".gal-cap", V).textContent = ""; return; }
+      cur = (k + n) % n; const p = a.photos[cur]; $(".gal-n", V).textContent = (cur + 1) + " of " + n;
+      $(".gal-cap", V).textContent = (p.name || "") + (p.cap ? "  ·  " + p.cap : "");
+      if (strip.children.length !== n) drawStrip(); $$(".gal-th", strip).forEach((b, j) => b.classList.toggle("on", j === cur));
+      const on = strip.children[cur]; on && on.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
       img.src = src(a, p); const m = mem.get(p.h); const loc = m && m.orig ? m.orig : Local.ok ? await Local.original(a, p.name) : null; if (loc && a.photos[cur] === p) img.src = URL.createObjectURL(loc); };
-    show(cur);
-    $(".vw-x", V).onclick = close; $(".vw-prev", V).onclick = () => show(cur - 1); $(".vw-next", V).onclick = () => show(cur + 1);
-    $(".vw-prev", V).hidden = $(".vw-next", V).hidden = a.photos.length < 2;
-    V.addEventListener("click", e => { if (e.target.classList.contains("vw-stage")) close(); });
-    V.addEventListener("keydown", e => { if (e.key === "Escape"){ e.stopPropagation(); close(); } else if (e.key === "ArrowLeft") show(cur - 1); else if (e.key === "ArrowRight") show(cur + 1); });
+    show(cur); V._a = a; V._show = () => { drawStrip(); show(a.photos.length - 1); };
+    const fs = () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else $(".gal-win", V).requestFullscreen().catch(() => {}); };
+    V.querySelectorAll("[data-k]").forEach(b => b.onclick = async () => { const k = b.dataset.k;
+      if (k === "x") close(); else if (k === "fs") fs();
+      else if (k === "add") pickFiles(a);
+      else if (k === "del" && a.photos.length && await confirmBox("Remove this photo from " + Store.actId(a) + "? You can undo with Ctrl+Z.", "Remove", true)){
+        const i0 = cur; Store.mutate("a:" + a._p, () => { a.photos.splice(i0, 1); Store.touch(a); }); Store.log("Removed a photo from " + Store.actId(a)); V && (V.focus(), drawStrip(), show(Math.min(i0, a.photos.length - 1))); } });
+    img.ondblclick = fs;
+    $(".gal-prev", V).onclick = () => show(cur - 1); $(".gal-next", V).onclick = () => show(cur + 1);
+    V.addEventListener("mousedown", e => { if (e.target === V) close(); });
+    V.addEventListener("keydown", e => { if (e.key === "Escape"){ e.stopPropagation(); if (!document.fullscreenElement) close(); } else if (e.key === "ArrowLeft") show(cur - 1); else if (e.key === "ArrowRight") show(cur + 1); });
+    V.addEventListener("dragover", e => { if (!ro && hasDrop(e)) e.preventDefault(); });
+    V.addEventListener("drop", e => { if (ro) return; e.preventDefault(); e.stopPropagation(); dropOn(a, e); });
     let x0 = null; V.addEventListener("touchstart", e => x0 = e.touches[0].clientX, { passive: true });
-    V.addEventListener("touchend", e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); x0 = null; });
-    try { V.requestFullscreen && matchMedia("(pointer: fine)").matches && V.requestFullscreen().catch(() => {}); } catch (e) {} }
+    V.addEventListener("touchend", e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); x0 = null; }); }
   function close(){ if (!V) return; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); V.remove(); V = null; }
-  document.addEventListener("fullscreenchange", () => { if (V && !document.fullscreenElement){ /* Esc in browser full screen leaves full screen first; close the viewer with it */ close(); } });
-  return { addFiles, src, fileSrc, fileUrlOnline, openFile, view, close, isImg, compress, mem, get open(){ return !!V; } };
+  /* after photos are added to the action the gallery is showing, show the newest */
+  const refresh = a => { if (V && V._a === a) V._show(); };
+  function pickFiles(a, accept){ const i = h('<input type="file" multiple' + (accept ? ' accept="' + accept + '"' : "") + '>'); i.onchange = () => addFiles(a, i.files); i.click(); }
+
+  /* ---------- the tray: pasted photos wait here until dragged onto an action ---------- */
+  const tray = [];
+  function toTray(files){ files.forEach(f => tray.push({ id: uid(), f, url: URL.createObjectURL(f) })); drawTray(); note("Pasted photo waiting at the bottom left. Drag it onto an action.", 4000); }
+  function drawTray(){ let t = $("#tray"); if (!tray.length){ t && t.remove(); return; }
+    if (!t){ t = h('<div id="tray"></div>'); document.body.appendChild(t); }
+    t.innerHTML = '<div class="tr-h"><b>Pasted photos</b><span>Drag onto an action to attach</span><button type="button" class="ic-b sm" data-x="all" title="Discard all">✕</button></div><div class="tr-l">'
+      + tray.map(x => '<div class="tr-i" draggable="true" data-id="' + x.id + '"><img alt="" src="' + x.url + '"><button type="button" class="tr-x" data-x="' + x.id + '" title="Discard">✕</button></div>').join("") + '</div>';
+    $$(".tr-i", t).forEach(el => el.ondragstart = e => { e.dataTransfer.setData("text/tray", el.dataset.id); e.dataTransfer.effectAllowed = "copy"; });
+    $$("[data-x]", t).forEach(b => b.onclick = () => { const id = b.dataset.x; tray.splice(0, tray.length, ...(id === "all" ? [] : tray.filter(x => x.id !== id))); drawTray(); }); }
+  const hasDrop = e => { const t = [...e.dataTransfer.types]; return t.includes("Files") || t.includes("text/tray"); };
+  /* a drop onto an action: files from the computer, or a photo from the tray */
+  function dropOn(a, e){ if (!a) return; const id = e.dataTransfer.getData("text/tray");
+    if (id){ const x = tray.find(y => y.id === id); if (!x) return; tray.splice(tray.indexOf(x), 1); drawTray(); return addFiles(a, [x.f]); }
+    if (e.dataTransfer.files.length) addFiles(a, e.dataTransfer.files); }
+  return { addFiles, src, fileSrc, fileUrlOnline, openFile, view, close, refresh, pickFiles, toTray, hasDrop, dropOn, isImg, compress, mem, get open(){ return !!V; } };
 })();

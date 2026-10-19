@@ -4,13 +4,15 @@ The new and improved action tracker, following on from ActionMap. It runs from G
 
 ## What it does
 
-The Actions tab is a simple table of every action in the ticked projects, with search and stage pills. Click a row to open it in the side panel, which shows the problem, the solution and the photos, followed by the attachments, steps and all other details. Drag the panel's edge to resize it.
+The Actions tab shows every action in the ticked projects, with search and stage pills, as a list or as tiles (the main photo fills the tile, with arrows to step through its photos and a Size callout for the tile size). Click an action to open it in the side panel, which shows the problem, the solution and a Photos button, followed by the attachments, steps and all other details. Drag the panel's edge to resize it.
 
-The Kanban tab shows one column per stage. Drag cards between columns and up or down inside a column, where higher means higher priority. You can add, rename, recolour, reorder and delete stages at any time, and mark a stage as on hold or completed.
+The Kanban tab is kept minimal, with one column per stage. Click a card for a callout with its problem, solution and photos; editing is done on the Actions tab. Drag cards between columns and up or down inside a column, where higher means higher priority. You can add, rename, recolour, reorder and delete stages at any time, and mark a stage as on hold or completed.
 
 The Data validation tab sets the type of every field (text, long text, number, date, tick box, choice, tags, contact, phone), its allowed values and colours, whether it offers TBC and N/A, and whether it shows as a table column. It also holds the stages and the contacts list. Picking a contact fills in their number, and a new name typed on an action is added to the contacts.
 
-For photos and files, open an action and paste a screenshot, or drop photos, PDFs or Excel files onto the action. The full quality original is saved in the local folder chosen at setup, and a compressed copy (Low 1024 px or Medium 1600 px) goes online. Double click a photo for full screen, and press Esc to leave.
+For photos and files, drop photos, PDFs or Excel files onto an action, or use its Upload button. A pasted screenshot waits in a tray at the bottom left until you drag it onto an action. The Photos button opens a big view with thumbnails of the photos before and after. The full quality original is saved in the local folder chosen at setup, and a compressed copy (Low 1024 px or Medium 1600 px) goes online. Double click a photo for full screen, and press Esc to leave.
+
+The stages start as Issue Identified, Defect Notification Sent, Work Order Created, RFQ Sent, Parts Ordered, Parts Received, On Hold and Completed. A Spare parts available tick box and a Parts receival ETA sit with the other fields.
 
 To make an action from text, use New action, then Paste text. Google Gemini splits an email into the fields. Anything it can't find is left empty, and any field set to TBC shows in red.
 

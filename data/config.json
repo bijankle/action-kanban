@@ -1,6 +1,6 @@
 {
  "v": 1,
- "mod": 1792413292212,
+ "mod": 1792413606262,
  "stages": [
   {
    "id": "st0",
@@ -28,19 +28,28 @@
   },
   {
    "id": "st3",
-   "name": "Parts Procured",
+   "name": "RFQ Sent",
    "color": "#C07A12",
    "kind": "open",
    "print": true,
-   "mod": 1792413292212
+   "mod": 1792413606262
   },
   {
    "id": "st4",
-   "name": "Work Scheduled",
+   "name": "Parts Ordered",
+   "color": "#D6488A",
+   "kind": "open",
+   "print": true,
+   "mod": 1792413606262
+  },
+  {
+   "id": "st7",
+   "name": "Parts Received",
    "color": "#2F7FD1",
    "kind": "open",
    "print": true,
-   "mod": 1792413292212
+   "mod": 1792413606262,
+   "by": "Action Database"
   },
   {
    "id": "st5",
@@ -148,6 +157,16 @@
    "mod": 1792413292212
   },
   {
+   "id": "spares",
+   "label": "Spare parts available",
+   "type": "check",
+   "builtin": true,
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413606262
+  },
+  {
    "id": "defect",
    "label": "Defect notice sent",
    "type": "choice",
@@ -236,13 +255,13 @@
   },
   {
    "id": "eta",
-   "label": "Goods receival ETA",
+   "label": "Parts receival ETA",
    "type": "date",
    "builtin": true,
    "table": true,
    "tbc": true,
    "na": true,
-   "mod": 1792413292212
+   "mod": 1792413606262
   }
  ],
  "contacts": []
