@@ -7,7 +7,7 @@ const Kanban = (() => {
     const match = a => Store.matches(a, q);
     const sx = $(".kb", el) ? $(".kb", el).scrollLeft : 0, sy = {}; $$(".kb-cards", el).forEach(c => sy[c.dataset.s] = c.scrollTop);
     el.innerHTML = '<div class="kb">' + Store.stages().map(s => { const cards = Store.ranked(s.id).filter(match);
-        return '<section class="kb-col" data-s="' + s.id + '" style="--c:' + esc(s.color) + '"><header class="kb-h" draggable="' + !ro + '"><i class="dot"></i><span class="kb-n" title="' + esc("Actions that have reached " + s.name + ". Double click to rename the column") + '">' + esc(Store.todo(s)) + '</span><span class="kb-c">' + (q ? cards.length + " of " + Store.ranked(s.id).length : cards.length) + '</span>'
+        return '<section class="kb-col" data-s="' + s.id + '" style="--c:' + esc(s.color) + '"><header class="kb-h" draggable="' + !ro + '"><i class="dot"></i><span class="kb-n" title="' + esc("On the action this step reads " + s.name + ". Double click to rename the column") + '">' + esc(Store.todo(s)) + '</span><span class="kb-c">' + (q ? cards.length + " of " + Store.ranked(s.id).length : cards.length) + '</span>'
           + (s.kind === "hold" ? '<span class="kb-k">on hold</span>' : s.kind === "done" ? '<span class="kb-k">complete</span>' : "") + '<span class="grow"></span>'
           + (ro ? "" : '<button type="button" class="ic-b sm kb-m" title="Stage options">⋯</button>') + '</header>'
           + '<div class="kb-cards" data-s="' + s.id + '">' + cards.map(a => card(a, multi)).join("") + '</div></section>'; }).join("")
@@ -63,11 +63,11 @@ const Kanban = (() => {
     $$(".kca-ph img", c).forEach(im => im.onclick = () => { Fields.closePop(); Media.view(a, +im.dataset.i); });
     $$("[data-k]", c).forEach(b => b.onclick = () => { const k = b.dataset.k; Fields.closePop();
       if (k === "ph") Media.view(a, 0); else if (k === "open") App.select(card.dataset.ref); }); }
-  /* the column name is the job that's next ("Raise PO"); the milestone ("RFQ Sent") is renamed in Data validation */
-  async function rename(st){ const s = Store.stage(st), was = Store.todo(s); const n = await promptBox("Rename the column (the job that's next for actions that have reached " + s.name + ")", was); if (!n || !n.trim() || n.trim() === was) return; Store.mutate("config", () => { s.todo = n.trim(); Store.touch(s); }); }
+  /* the column name is the step being done ("Draft RFQ"); its name on the action ("RFQ Sent") is renamed in Data validation */
+  async function rename(st){ const s = Store.stage(st), was = Store.todo(s); const n = await promptBox("Rename the column (on the action this step reads " + s.name + ")", was); if (!n || !n.trim() || n.trim() === was) return; Store.mutate("config", () => { s.todo = n.trim(); Store.touch(s); }); }
   const COLORS = ["#3B8FE0", "#2F7FD1", "#7C5CD6", "#0E9AA7", "#2FB463", "#F2B03D", "#C07A12", "#E0453A", "#D6488A", "#64748b"];
   function menu(anchor, st){ Fields.closePop(); const s = Store.stage(st);
-    const p = h('<div class="pop stpop"><div class="pop-h">' + esc(Store.todo(s)) + '</div><div class="dim stpop-m">After: ' + esc(s.name) + '</div><button type="button" class="mi" data-k="ren">Rename column…</button>'
+    const p = h('<div class="pop stpop"><div class="pop-h">' + esc(Store.todo(s)) + '</div><div class="dim stpop-m">On the action: ' + esc(s.name) + '</div><button type="button" class="mi" data-k="ren">Rename column…</button>'
       + '<div class="sw">' + COLORS.map(c => '<button type="button" style="--c:' + c + '" data-c="' + c + '"' + (c === s.color ? ' class="on"' : "") + '></button>').join("") + '<input type="color" value="' + esc(s.color) + '" title="Any colour"></div>'
       + '<div class="pop-h">Stage type</div>' + [["open", "Normal"], ["hold", "On hold"], ["done", "Completed"]].map(([k, n]) => '<label class="tp-o"><input type="radio" name="sk" value="' + k + '"' + (s.kind === k ? " checked" : "") + '><span>' + n + '</span></label>').join("")
       + '<label class="tp-o"><input type="checkbox" data-k="pr"' + (s.print ? " checked" : "") + '><span>Include when printing</span></label><div class="msep"></div><button type="button" class="mi danger" data-k="del">Delete stage…</button></div>');
