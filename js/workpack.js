@@ -1,4 +1,5 @@
-/* The work pack: one job as a PDF for whoever does the work. Only what they need, each part on its own page, in
+/* The work pack: one job as a PDF for whoever does the work. Only what they need, each part following on (a new page
+   only when the page is already more than half full), in
    the order a job is read: a cover with who to contact and a contents list (each line jumps to its page), the job
    and scope (equipment, expected location, problem, work required), isolations, parts, the drawing and document
    register (SharePoint links and PDF copies), photos, attachments, then the drawings ticked on the Drawings tab,
@@ -22,7 +23,7 @@ const Workpack = (() => {
     const W = 210, H = 297, M = 14, CW = W - 2 * M, BOT = 282;
     const thb = (getComputedStyle(document.documentElement).getPropertyValue("--thb") || "#475569").trim(), rgb = /^#[0-9a-f]{6}$/i.test(thb) ? [1, 3, 5].map(i => parseInt(thb.substr(i, 2), 16)) : [71, 85, 105];
     let y = 0; const need = n => { if (y + n > BOT){ doc.addPage(); y = 18; } };
-    const head = t => { need(14); y += 4; doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.setTextColor(...rgb); doc.text(t.toUpperCase(), M, y); doc.setDrawColor(...rgb); doc.setLineWidth(0.4); doc.line(M, y + 1.5, W - M, y + 1.5); y += 7; doc.setTextColor(30); };
+    const head = t => { need(24); y += 4;   /* (a heading keeps a couple of lines of what follows with it) */  doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.setTextColor(...rgb); doc.text(t.toUpperCase(), M, y); doc.setDrawColor(...rgb); doc.setLineWidth(0.4); doc.line(M, y + 1.5, W - M, y + 1.5); y += 7; doc.setTextColor(30); };
     const para = t => { doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(30); doc.splitTextToSize(t || "–", CW).forEach(l => { need(5.2); doc.text(l, M, y); y += 5; }); y += 2; };
     const table = (hd, body, cols) => { doc.autoTable({ startY: y, head: [hd], body, margin: { top: 16, left: M, right: M, bottom: 16 }, styles: { font: "helvetica", fontSize: 9, cellPadding: 1.8, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" },
       headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" }, alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: cols || {} }); y = doc.lastAutoTable.finalY + 6; };
@@ -52,8 +53,8 @@ const Workpack = (() => {
     head("Contents"); const toc = [];   // { label, y, page, sub } — page filled in once known
     const tocLine = (label, sub) => { const h = sub ? 5.4 : 7.4; if (y + h > BOT) return null; const e = { label, y, sub, h }; toc.push(e); y += h; return e; };
     const tocE = {}; S.forEach(([id, t]) => { tocE[id] = tocLine(t); if (id === "dwg") picks.forEach(p => { p.toc = tocLine(p.d.n + "   " + (p.d.t || p.d.kind), true); }); });
-    /* each part from a new page */
-    const start = id => { doc.addPage(); y = 18; if (tocE[id]) tocE[id].page = doc.getNumberOfPages(); };
+    /* each part follows on, after a gap; a new page only once the current one is more than half full */
+    const start = id => { if (y > 18 + (BOT - 18) / 2){ doc.addPage(); y = 18; } else y += 8; if (tocE[id]) tocE[id].page = doc.getNumberOfPages(); };
     const regLinks = [];   // register lines that jump to a drawing's own pages (added once those pages exist)
     const photoLinks = [];   // the photo panel beside the map: links to the Photos page (added once it exists)
     for (const [id] of S){ start(id);
