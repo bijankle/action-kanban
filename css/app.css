@@ -522,3 +522,4 @@ html.dark .av-tab b{color:var(--ink)}
 .vd-o span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}.vd-o small{color:var(--dim);white-space:nowrap}.vd-o:hover,.vd-o.on{background:var(--th-t)}
 .vd-sep{font:700 11px var(--font);text-transform:uppercase;letter-spacing:.5px;color:var(--dim);padding:8px 9px 3px;border-top:1px solid var(--line);margin-top:3px}
 .vd-tbl{margin-top:12px}.vd-tbl td{white-space:normal;height:auto;vertical-align:top}
+.eq-tags{display:flex;flex-wrap:wrap;gap:5px;max-height:220px;overflow:auto}

@@ -6,13 +6,15 @@
 const Equip = (() => {
   const SRC = "https://raw.githubusercontent.com/bijankle/ProjectLibrary/HEAD/search-data.json";
   const KINDS = { mel: [0, 1, "Mech equipment"], elec: [0, 1, "Elec equipment"], cv: [0, 1, "Control valve"], mv: [0, 1, "Manual valve"], ins: [0, 1, "Instrument"] };
-  let list = null, loadP = null;
+  let list = null, loadP = null, raw = null;
   /* the Project Library list, kept on this device and refreshed once a day */
   function load(force){ if (loadP && !force) return loadP;
-    loadP = (async () => { const c = await IDB.get("equip"); if (c && c.items){ list = c.items; if (!force && now() - c.at < 864e5) return list; }
+    loadP = (async () => { const c = await IDB.get("equip"); if (c && c.items){ list = c.items; raw = c.raw || null; if (!force && raw && now() - c.at < 864e5) return list; }
       try { const r = await fetch(lsGet("adEquipSrc", "") || SRC, { cache: "no-store" }); if (!r.ok) throw new Error(r.status); const d = await r.json(), out = [], seen = new Set();
-        Object.entries(KINDS).forEach(([k, [ti, ni, label]]) => (d.data && d.data[k] || []).forEach(row => { const t = String(row[ti] || "").trim(); if (!t || seen.has(k + t)) return; seen.add(k + t); out.push({ t, n: String(row[ni] || "").trim(), k: label }); }));
-        list = out; IDB.set("equip", { at: now(), items: out }); }
+        const pidCol = ((d.types || {}).mel || { f: [] }).f.indexOf("P&ID");
+        Object.entries(KINDS).forEach(([k, [ti, ni, label]]) => (d.data && d.data[k] || []).forEach(row => { const t = String(row[ti] || "").trim(); if (!t || seen.has(k + t)) return; seen.add(k + t);
+          const it = { t, n: String(row[ni] || "").trim(), k: label }; if (k === "mel" && pidCol >= 0 && row[pidCol]) it.p = row[pidCol]; out.push(it); }));
+        list = out; raw = d; IDB.set("equip", { at: now(), items: out, raw: d }); }
       catch (e){ console.warn("Project Library equipment", e); if (!list) list = []; }
       return list; })();
     return loadP; }
@@ -23,7 +25,8 @@ const Equip = (() => {
     for (const it of all){ const t = it.t.toLowerCase(), n = it.n.toLowerCase(), hay = t + " " + n; if (!w.every(x => hay.includes(x))) continue;
       const f = by === "n" ? n : t; out.push([f.startsWith(first) ? 0 : f.includes(first) ? 1 : 2, it]); if (out.length > 4000) break; }
     out.sort((a, b) => a[0] - b[0] || a[1].t.localeCompare(b[1].t)); return out.slice(0, 40).map(x => x[1]); }
-  return { load, find, get count(){ return (list || []).length; } };
+  const get = t => (list || []).find(x => x.t === t);
+  return { load, find, get, raw: () => raw, get count(){ return (list || []).length; } };
 })();
 
 const Isol = (() => {

@@ -5,9 +5,9 @@ const Valid = (() => {
   let sec = "fields", cur = "title";
   function render(el){ const ro = !Store.S.edit;
     const ae = document.activeElement, row = ae && el.contains(ae) && ae.closest("[data-id], .ct-new, .dv-ed"), keep = row ? { id: row.dataset.id || (row.classList.contains("ct-new") ? "_new" : "_ed"), i: $$("input,select", row).indexOf(ae), s: ae.selectionStart, v: ae.value } : null;
-    el.innerHTML = '<div class="dv"><nav class="dv-nav">' + [["fields", "Fields and choices"], ["stages", "Stages"], ["contacts", "Contacts"], ["vendors", "Vendors"]].map(([k, n]) => '<button type="button" data-s="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</nav><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
+    el.innerHTML = '<div class="dv"><nav class="dv-nav">' + [["fields", "Fields and choices"], ["stages", "Stages"], ["contacts", "Contacts"], ["equip", "Equipment"], ["vendors", "Vendors"]].map(([k, n]) => '<button type="button" data-s="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</nav><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
     $$(".dv-nav button", el).forEach(b => b.onclick = () => { sec = b.dataset.s; render(el); });
-    const body = $(".dv-body", el); ({ fields, stages, contacts, vendors: Vendors.page })[sec](body, ro);
+    const body = $(".dv-body", el); ({ fields, stages, contacts, equip, vendors: Vendors.page })[sec](body, ro);
     if (ro) $$("input,select,button:not(.dv-f)", body).forEach(x => x.disabled = true);
     if (keep){ const r = keep.id === "_new" ? $(".ct-new", el) : keep.id === "_ed" ? $(".dv-ed", el) : $('[data-id="' + keep.id + '"]', el), t = r && $$("input,select", r)[keep.i];
       if (t){ if (t.tagName === "INPUT" && t.type !== "checkbox" && t.type !== "color" && t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
@@ -68,6 +68,16 @@ const Valid = (() => {
     sortable($(".stl", body), () => Store.S.config.stages, ".str");
     $("[data-k=new]", body).onkeydown = e => { const v = e.target.value.trim(); if (e.key !== "Enter" || !v) return; Store.mutate("config", () => { const A = Store.S.config.stages, at = A.findIndex(x => !x.del && x.kind !== "open"), s = Store.touch({ id: "st" + uid(), name: v, color: "#64748b", kind: "open", print: true }); at < 0 ? A.push(s) : A.splice(at, 0, s); Store.S.config.mod = now(); }); }; }
 
+  /* the equipment the app suggests: the Equipment tags list, plus everything in the Project Library lists */
+  function equip(body, ro){ const f = Store.field("equipment"), tags = f ? Fields.optLabels(f) : [], q = (App.q || "").toLowerCase().split(/\s+/).filter(Boolean);
+    const list = Equip.count ? Equip.find(q.join(" ") || "-", "t") : [];
+    body.innerHTML = '<div class="dv-h">Equipment <span class="dim">suggested when typing equipment tags and isolations; anything can still be typed</span></div>'
+      + '<div class="dv-h" style="margin-top:14px">Equipment tags list <span class="dim">' + tags.length + ' tags</span>' + (ro ? "" : '<button type="button" class="link" data-k="edtags">Edit the list</button>') + '</div><div class="eq-tags">' + (tags.length ? tags.map(t => Fields.chip(t)).join(" ") : '<span class="dim">None yet. Tags typed on actions are added here.</span>') + '</div>'
+      + '<div class="dv-h" style="margin-top:18px">From Project Library <span class="dim">' + (Equip.count ? Equip.count.toLocaleString() + " items: mechanical and electrical equipment, valves, instruments" : "loading…") + '</span><button type="button" class="link" data-k="ref">Refresh</button></div>'
+      + (q.length ? '<table class="tbl ct vd-tbl"><thead><tr><th>Tag</th><th>Name</th><th>List</th></tr></thead><tbody>' + list.map(x => '<tr><td><b>' + esc(x.t) + '</b></td><td>' + esc(x.n) + '</td><td>' + esc(x.k) + '</td></tr>').join("") + '</tbody></table>' + (list.length ? "" : '<div class="dim">Nothing matches.</div>') : '<div class="dim">Type in the search box above to look up equipment.</div>');
+    const e = $("[data-k=edtags]", body); if (e) e.onclick = () => { sec = "fields"; cur = "equipment"; App.render(); };
+    $("[data-k=ref]", body).onclick = () => Equip.load(true).then(() => App.render());
+    if (!Equip.count) Equip.load().then(() => App.render()); }
   const hit = (...xs) => { const w = (App.q || "").toLowerCase().split(/\s+/).filter(Boolean); const t = xs.join(" ").toLowerCase(); return w.every(x => t.includes(x)); };
   function contacts(body){ const q = (App.q || "").toLowerCase(); const cs = Store.contacts().filter(c => hit(c.name, c.company, c.mobile, c.email)).sort((a, b) => a.name.localeCompare(b.name));
     body.innerHTML = '<div class="dv-h">Contacts <span class="dim">picking a name on an action fills in its number</span></div>'

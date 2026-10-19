@@ -13,7 +13,7 @@ const Intake = (() => {
   async function split(text){ const key = (lsGet("adGemKey", "") || "").trim(); if (!key) throw new Error("Add your Gemini key in File, Settings first (it's free from aistudio.google.com).");
     const fs = Store.fields().filter(f => !SKIP.has(f.id));
     const desc = fs.map(f => { let d = '"' + f.id + '": ' + f.label + " (" + (TYPES[f.type] || f.type) + ")";
-      if (f.type === "choice") d += ", one of: " + Fields.optLabels(f).concat(f.tbc ? ["TBC"] : [], f.na ? ["N/A"] : []).join(" | ");
+      if (f.type === "choice") d += ", preferably one of: " + Fields.optLabels(f).concat(f.tbc ? ["TBC"] : [], f.na ? ["N/A"] : []).join(" | ");
       if (f.type === "multi") d += ", a JSON array of strings" + (Fields.optLabels(f).length ? "; reuse these existing values where they match: " + Fields.optLabels(f).slice(0, 300).join(" | ") : "");
       if (f.type === "check") d += ", true or false"; if (f.type === "date") d += ", as YYYY-MM-DD";
       if (f.type === "contact") d += Store.contacts().length ? "; if it's one of these known people use the name exactly: " + Store.contacts().map(c => c.name + (c.company ? " (" + c.company + ")" : "")).slice(0, 300).join(" | ") : "";
@@ -39,7 +39,7 @@ const Intake = (() => {
       if (f.type === "multi"){ x = Array.isArray(x) ? x : String(x).split(/[,;]\s*/); x = x.map(s => String(s).trim()).filter(Boolean); if (!x.length) return;
         const ex = Fields.optLabels(f); v[f.id] = x.map(s => ex.find(e => e.toLowerCase() === s.toLowerCase()) || s); return; }
       x = String(x).trim(); if (!x) return;
-      if (f.type === "choice"){ const ok = Fields.optLabels(f).concat(f.tbc ? ["TBC"] : [], f.na ? ["N/A"] : []); const m = ok.find(e => e.toLowerCase() === x.toLowerCase()); if (m) v[f.id] = m; return; }
+      if (f.type === "choice"){ const ok = Fields.optLabels(f).concat(f.tbc ? ["TBC"] : [], f.na ? ["N/A"] : []); v[f.id] = ok.find(e => e.toLowerCase() === x.toLowerCase()) || x; return; }
       if (f.type === "date" && !/^\d{4}-\d\d-\d\d$/.test(x) && x !== "TBC" && x !== "N/A") return;
       v[f.id] = x; });
     const st = Store.stages().find(s => s.name.toLowerCase() === String(o.stage || "").toLowerCase()); return { vals: v, stage: st && st.id }; }
@@ -55,7 +55,7 @@ const Intake = (() => {
       form.innerHTML = '<label class="fl">Stage <select class="in" data-k="stage">' + Store.stages().map(s => '<option value="' + s.id + '"' + (s.id === stage ? " selected" : "") + '>' + esc(s.name) + '</option>').join("") + '</select></label>'
         + fs.map(f => { const v = vals[f.id]; let i;
           if (f.type === "longtext") i = '<textarea class="in ta" rows="3" data-f="' + f.id + '">' + esc(v || "") + '</textarea>';
-          else if (f.type === "choice") i = '<select class="in' + (v === "TBC" ? " tbc" : "") + '" data-f="' + f.id + '"><option></option>' + Fields.optLabels(f).concat(f.tbc ? ["TBC"] : [], f.na ? ["N/A"] : []).map(o => '<option' + (o === v ? " selected" : "") + '>' + esc(o) + '</option>').join("") + '</select>';
+          else if (f.type === "choice") i = '<input class="in' + (v === "TBC" ? " tbc" : "") + '" data-f="' + f.id + '" list="nl_' + f.id + '" value="' + esc(v || "") + '"><datalist id="nl_' + f.id + '">' + Fields.optLabels(f).concat(f.tbc ? ["TBC"] : [], f.na ? ["N/A"] : []).map(o => '<option value="' + esc(o) + '">').join("") + '</datalist>';
           else if (f.type === "check") i = '<input type="checkbox" data-f="' + f.id + '"' + (v ? " checked" : "") + '>';
           else i = '<input class="in' + (v === "TBC" ? " tbc" : "") + '" data-f="' + f.id + '" type="' + (f.type === "date" && (!v || /^\d{4}-/.test(v)) ? "date" : "text") + '" value="' + esc(Array.isArray(v) ? v.join(", ") : v || "") + '"' + (f.type === "multi" ? ' placeholder="Separate with commas"' : "") + '>';
           return '<label class="fl' + (f.type === "check" ? " in-row" : "") + '">' + esc(f.label) + i + '</label>'; }).join("") + (full ? "" : '<button type="button" class="link" data-k="more">Show all fields</button>');

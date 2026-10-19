@@ -56,9 +56,8 @@ const Fields = (() => {
       case "rank": { const n = Store.ranked(a.stage).length; const s = h('<select class="in">' + Array.from({ length: n }, (_, i) => '<option' + (i + 1 === v ? " selected" : "") + '>' + (i + 1) + '</option>').join("") + '</select>');
         s.onchange = () => set(a, f, +s.value); return s; }
       case "check": { const c = h('<label class="ck"><input type="checkbox"' + (v ? " checked" : "") + '><span></span></label>'); $("input", c).onchange = e => set(a, f, e.target.checked); return c; }
-      case "choice": { const opts = optLabels(f).concat(extra(f)); if (v && !opts.includes(v)) opts.push(v);
-        const s = h('<select class="in' + (tbc(v) ? " tbc" : "") + '"><option value=""></option>' + opts.map(o => '<option' + (o === v ? " selected" : "") + (tbc(o) ? ' class="tbc"' : "") + '>' + esc(o) + '</option>').join("") + '</select>');
-        s.onchange = () => set(a, f, s.value); return s; }
+      /* choices suggest, they don't restrict: pick one of the list or type your own (which isn't added to the list) */
+      case "choice": return combo(a, f, optLabels(f).map(o => ({ v: o, c: optColor(f, o) })).concat(extra(f).map(x => ({ v: x }))), true);
       case "multi": return tagBox(a, f);
       case "contact": return combo(a, f, Store.contacts().map(c => ({ v: c.name, sub: [c.company, c.mobile].filter(Boolean).join("  ") })).concat(extra(f).map(x => ({ v: x }))));
       case "longtext": { const t = h('<textarea class="in ta' + (tbc(v) ? " tbc" : "") + '" rows="3"></textarea>'); t.value = v || ""; grow(t); t.oninput = () => grow(t); t.onchange = () => set(a, f, t.value); return t; }
@@ -73,10 +72,10 @@ const Fields = (() => {
   function grow(t){ requestAnimationFrame(() => { t.style.height = "auto"; t.style.height = Math.min(420, t.scrollHeight + 2) + "px"; }); }
 
   /* combo box: type or pick (contacts) */
-  function combo(a, f, items){ const v = val(a, f) || "";
+  function combo(a, f, items, all){ const v = val(a, f) || "";
     const w = h('<div class="combo"><input class="in' + (tbc(v) ? " tbc" : "") + '" type="text" autocomplete="off"><div class="dd" hidden></div></div>'); const i = $("input", w), dd = $(".dd", w); i.value = v;
-    const draw = () => { const q = i.value.toLowerCase(); const list = items.filter(x => !q || x.v.toLowerCase().includes(q) || (x.sub || "").toLowerCase().includes(q));
-      dd.innerHTML = list.length ? list.map(x => '<button type="button" class="dd-o" data-v="' + esc(x.v) + '"><span class="' + (tbc(x.v) ? "tbc" : "") + '">' + esc(x.v) + '</span>' + (x.sub ? '<small>' + esc(x.sub) + '</small>' : "") + '</button>').join("") : '<div class="dd-n">New name, it will be added to the contacts</div>';
+    const draw = () => { const q = all && i.value === v ? "" : i.value.toLowerCase(); const list = items.filter(x => !q || x.v.toLowerCase().includes(q) || (x.sub || "").toLowerCase().includes(q));
+      dd.innerHTML = list.length ? list.map(x => '<button type="button" class="dd-o" data-v="' + esc(x.v) + '"><span class="' + (tbc(x.v) ? "tbc" : "") + '"' + (x.c ? ' style="box-shadow:inset 3px 0 0 ' + esc(x.c) + ';padding-left:7px"' : "") + '>' + esc(x.v) + '</span>' + (x.sub ? '<small>' + esc(x.sub) + '</small>' : "") + '</button>').join("") : '<div class="dd-n">' + (f.type === "contact" ? "New name, it will be added to the contacts" : "Not in the list; it's kept just for this action") + '</div>';
       $$(".dd-o", dd).forEach(b => b.onmousedown = e => { e.preventDefault(); i.value = b.dataset.v; dd.hidden = true; set(a, f, b.dataset.v); }); };
     i.onfocus = () => { draw(); dd.hidden = false; }; i.oninput = draw;
     i.onblur = () => { dd.hidden = true; if (i.value.trim() !== v) set(a, f, i.value.trim()); };
