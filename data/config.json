@@ -1,6 +1,6 @@
 {
  "v": 1,
- "mod": 1792415292693,
+ "mod": 1792416218674,
  "stages": [
   {
    "id": "st0",
@@ -295,6 +295,17 @@
    "na": false,
    "core": true,
    "mod": 1792414922474
+  },
+  {
+   "id": "isollist",
+   "label": "Isolations",
+   "type": "isollist",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "core": true,
+   "mod": 1792416218674
   }
  ],
  "contacts": []

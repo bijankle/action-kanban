@@ -33,7 +33,8 @@ function defaultConfig(){ const t = now(); const opt = (labels, colors) => label
       F("contractorPhone", "Contractor number", "phone", { link: "contractor" }),
       F("eta", "Parts receival ETA", "date", { table: true, tbc: true, na: true }),
       F("mto", "MTO", "mto", { table: true, core: true }),
-      F("sparelist", "Spare parts list", "sparelist", { core: true })
+      F("sparelist", "Spare parts list", "sparelist", { core: true }),
+      F("isollist", "Isolations", "isollist", { core: true })
     ],
     contacts: [] }; }
 
@@ -66,7 +67,7 @@ const Store = (() => {
   function hay(a){ const c = hayCache.get(a); if (c && c.mod === a.mod) return c.t;
     const p = project(a._p) || {}, ct = contacts().find(x => x.name && x.name === a.f.contractor) || {};
     const parts = r => (r || []).map(it => [it.desc, it.part, it.qty, it.unit, it.notes].join(" ")).join(" ");
-    const t = [actId(a), p.name, p.prefix, stage(a.stage).name, fields().map(f => Fields.text(a, f)).join(" "), a.f.notes, parts(a.mto), parts(a.spares),
+    const t = [actId(a), p.name, p.prefix, stage(a.stage).name, fields().map(f => Fields.text(a, f)).join(" "), a.f.notes, parts(a.mto), parts(a.spares), (a.isol || []).map(it => [it.tag, it.name, it.note].join(" ")).join(" "),
       a.photos.map(x => x.name + " " + (x.cap || "")).join(" "), a.files.map(x => x.name).join(" "), (a.quotes || []).map(x => x.name).join(" "), (a.rfq || []).map(x => x.name).join(" "),
       ct.company, ct.mobile, ct.email].join(" ").toLowerCase();
     hayCache.set(a, { mod: a.mod, t }); return t; }

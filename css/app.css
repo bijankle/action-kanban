@@ -444,3 +444,14 @@ html.dark .dl-xl b{color:#3fbf78}html.dark .dl-pdf b{color:#ff6b5b}
 .pc.wp{font:800 9.5px/1 Arial,sans-serif;color:#c0392b;border:1px solid color-mix(in srgb,#c0392b 35%,transparent);padding:3px 5px;opacity:.75}.tbl tr:hover .pc.wp{opacity:1}.pc.wp:hover{background:#fdecea}
 .tl-b.tl-pdf{color:#c0392b}
 .sd-head .dl{width:32px;height:30px;flex:0 0 32px}
+
+/* Isolations tab */
+.is-main{height:100%;overflow:auto;padding:14px 22px 40px}
+.is-top{display:flex;align-items:flex-end;gap:16px;margin-bottom:12px}.is-pick{flex:0 1 560px;margin:0}.is-src{margin-left:auto;font-size:12.5px;white-space:nowrap}
+.is-tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.is-tags b{margin-right:6px;font-size:13px}
+.is-tbl th.is-tag{width:24%}.is-tbl th.is-name{width:38%}
+.is-dd{position:fixed;z-index:8500;max-height:256px;overflow:auto;background:var(--panel);border:var(--ctl-bd);border-radius:10px;box-shadow:0 12px 32px #1e1f2233;padding:4px}
+.is-o{display:grid;grid-template-columns:150px 1fr auto;gap:10px;align-items:baseline;width:100%;border:0;background:none;text-align:left;padding:6px 9px;border-radius:7px;cursor:pointer;font-size:13.5px}
+.is-o b{font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.is-o span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.is-o small{color:var(--dim);white-space:nowrap}
+.is-o:hover,.is-o.on{background:var(--th-t)}
+.is-chip{border:0;background:none;padding:0;cursor:pointer;display:inline-flex;align-items:center;gap:2px}.is-chip i{font-style:normal;font-weight:800;color:var(--th2);font-size:13px}.is-chip:hover .chip{border-color:var(--th)}.is-hint{font-size:12px;margin-left:6px}

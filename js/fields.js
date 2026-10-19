@@ -8,11 +8,11 @@ const Fields = (() => {
   const extra = f => [].concat(f.tbc ? ["TBC"] : [], f.na ? ["N/A"] : []);
   const optLabels = f => (f.options || []).filter(o => !o.del).map(o => o.label);
   const optColor = (f, v) => { const o = (f.options || []).find(x => x.label === v); return o && o.color; };
-  const val = (a, f) => f.id === "status" ? a.stage : f.id === "priority" ? Store.priority(a) : f.type === "mto" ? (a.mto || []).length : f.type === "sparelist" ? (a.spares || []).length : (a.f || {})[f.id];
+  const val = (a, f) => f.id === "status" ? a.stage : f.id === "priority" ? Store.priority(a) : f.type === "mto" ? (a.mto || []).length : f.type === "sparelist" ? (a.spares || []).length : f.type === "isollist" ? (a.isol || []).length : (a.f || {})[f.id];
   /* the MTO and spare parts counts: a link to that action on the MTO or Spare parts tab */
-  const partsLink = (a, f) => { const n = val(a, f); return '<a href="#" class="mto-l' + (n ? "" : " none") + '" data-parts="' + (f.type === "mto" ? "mto" : "spares") + '" data-ref="' + a._p + ":" + a.u + '">' + (n ? n + " x item" + (n > 1 ? "s" : "") : "None") + '</a>'; };
+  const partsLink = (a, f) => { const n = val(a, f); return '<a href="#" class="mto-l' + (n ? "" : " none") + '" data-parts="' + ({ mto: "mto", sparelist: "spares", isollist: "isol" })[f.type] + '" data-ref="' + a._p + ":" + a.u + '">' + (n ? n + (f.type === "isollist" ? " isolation" : " x item") + (n > 1 ? "s" : "") : "None") + '</a>'; };
   /* plain text for search, export and Gemini */
-  function text(a, f){ const v = val(a, f); if (f.type === "mto" || f.type === "sparelist") return v ? v + " items" : ""; if (f.type === "stage") return Store.stage(v).name; if (f.type === "check") return v ? "Yes" : "No";
+  function text(a, f){ const v = val(a, f); if (f.type === "mto" || f.type === "sparelist" || f.type === "isollist") return v ? v + (f.type === "isollist" ? " isolations" : " items") : ""; if (f.type === "stage") return Store.stage(v).name; if (f.type === "check") return v ? "Yes" : "No";
     if (f.type === "date") return fmtDate(v); if (Array.isArray(v)) return v.join(", "); return v == null ? "" : String(v); }
   function chip(label, color){ return '<span class="chip' + (tbc(label) ? " tbc" : "") + '"' + (color && !tbc(label) ? ' style="--c:' + esc(color) + '"' : "") + '>' + esc(label) + '</span>'; }
   /* read only display (table cells, mobile, print) */
@@ -20,7 +20,7 @@ const Fields = (() => {
     switch (f.type){
       case "stage": { const s = Store.stage(v); return '<span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span>'; }
       case "rank": return '<b>' + v + '</b>';
-      case "mto": case "sparelist": return partsLink(a, f);
+      case "mto": case "sparelist": case "isollist": return partsLink(a, f);
       case "check": return v ? '<span class="tick">✓</span>' : "";
       case "multi": { const arr = Array.isArray(v) ? v : []; return arr.map(x => chip(x, optColor(f, x))).join(" "); }
       case "choice": return v ? chip(v, optColor(f, v)) : "";
@@ -41,7 +41,7 @@ const Fields = (() => {
 
   /* the editor for one field, as an element; ro: show only */
   function editor(a, f, ro){ const v = val(a, f);
-    if (ro || f.type === "mto" || f.type === "sparelist") return h('<div class="fv">' + (show(a, f) || '<span class="dim">–</span>') + '</div>');
+    if (ro || f.type === "mto" || f.type === "sparelist" || f.type === "isollist") return h('<div class="fv">' + (show(a, f) || '<span class="dim">–</span>') + '</div>');
     switch (f.type){
       case "stage": { const s = h('<select class="in sel-stage">' + Store.stages().map(x => '<option value="' + x.id + '"' + (x.id === v ? " selected" : "") + '>' + esc(x.name) + '</option>').join("") + '</select>');
         s.style.setProperty("--c", Store.stage(v).color); s.onchange = () => set(a, f, s.value); return s; }

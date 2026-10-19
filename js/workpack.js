@@ -34,6 +34,7 @@ const Workpack = (() => {
     /* MTO and spares */
     const PCOLS = ["Item", "Description", "Part / tag no.", "Qty", "Unit"], pc = { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 58 }, 3: { cellWidth: 14, halign: "right" }, 4: { cellWidth: 15 } };
     const prow = (it, i) => [i + 1, it.desc || "", it.part || "", it.qty || "", it.unit || "", it.notes || ""];
+    head("Isolations"); if ((a.isol || []).length) table(["No.", "Equipment number", "Equipment name", "Note"], a.isol.map((it, i) => [i + 1, it.tag || "", it.name || "", it.note || ""]), { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 40 }, 2: { cellWidth: 62 } }); else para("No isolations listed.", true);
     head("MTO"); if ((a.mto || []).length) table(PCOLS.concat("Notes"), a.mto.map(prow), pc); else para("No MTO items.", true);
     if ((a.rfq || []).length){ need(10); doc.setFontSize(9); doc.setTextColor(90); doc.setFont("helvetica", "bold"); doc.text("RFQ revisions", M, y); y += 5; doc.setFont("helvetica", "normal");
       a.rfq.slice().reverse().forEach(r => { need(5); doc.setTextColor(30); doc.text("Rev " + r.rev, M, y); doc.setTextColor(31, 95, 191); doc.textWithLink(r.name, M + 16, y, { url: GH.fileUrl(r.path) }); doc.setTextColor(120); doc.text(fmtDate(r.at) + (r.by ? ", " + r.by : "") + ", " + r.n + " items", W - M, y, { align: "right" }); y += 5; }); y += 2; }
