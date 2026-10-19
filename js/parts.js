@@ -13,7 +13,7 @@ const Parts = (() => {
   /* one action's list, drawn into its action view tab; keep is where the cursor was before the redraw */
   function renderFor(el, a, kind, keep){ const ro = !Store.S.edit;
     el.innerHTML = '<div class="pt-main">' + pane(a, kind, ro) + '</div>'; wire(el, a, kind, ro);
-    if (keep && keep.c){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
+    if (keep && keep.c){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
 
   function pane(a, kind, ro){ const s = Store.stage(a.stage), items = list(a, kind), cols = COLS[kind];
     const blanks = Math.max(ro ? 0 : 1, 5 - items.length);
@@ -34,7 +34,8 @@ const Parts = (() => {
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
 
   function wire(el, a, kind, ro){ const key = "a:" + a._p, items = list(a, kind);
-    $$(".pt-in", el).forEach(i => { i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); const ins = $$('.pt-in[data-c="' + i.dataset.c + '"]', el), n = ins[ins.indexOf(i) + 1]; i.blur(); setTimeout(() => { const m = n && $('[data-r="' + (created.get(n.dataset.r) || n.dataset.r) + '"][data-c="' + i.dataset.c + '"]', el); (m || n) && (m || n).focus(); }, 30); } };
+    $$(".pt-in", el).forEach(i => { i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); const c = i.dataset.c, k = $$('.pt-in[data-c="' + c + '"]').indexOf(i); i.blur();
+        setTimeout(() => { const ins = $$('.pt-in[data-c="' + c + '"]'), n = ins[k + 1] || $('.pt-in[data-r^="new"][data-c="' + c + '"]'); n && n.focus(); }, 40); } };
       if (ro) return;
       i.onchange = () => { const v = i.value.trim(), r = i.dataset.r, c = i.dataset.c;
         if (r.startsWith("new")){ if (!v) return; const it = { id: uid() }; it[c] = v; created.set(r, it.id); Store.mutate(key, () => { items.push(it); Store.touch(a); }); Store.log("Added to the " + NAME[kind] + " of " + Store.actId(a)); return; }
@@ -55,8 +56,8 @@ const Parts = (() => {
   async function quotes(a, files){ if (!Store.S.edit) return App.viewOnly();
     for (const f of Array.from(files)){ try { const buf = await f.arrayBuffer(), hh = (await sha1(buf)).slice(0, 12);
         if ((a.quotes || []).some(x => x.h === hh)){ note(f.name + " is already there"); continue; }
-        Local.saveOriginal(a, "Quote " + f.name, f); await Store.addBlob(pFile(a._p, hh, f.name), bufToB64(buf)); Media.mem.set("f" + hh, URL.createObjectURL(f));
-        Store.mutate("a:" + a._p, () => { (a.quotes = a.quotes || []).push({ h: hh, name: f.name, size: f.size, type: f.type, added: now(), by: Profile.name() }); Store.touch(a); }); Store.log("Added quote " + f.name + " to " + Store.actId(a));
+        const lname = Media.uniq(a, "Quote " + f.name, hh); Local.saveOriginal(a, lname, f); await Store.addBlob(pFile(a._p, hh, f.name), bufToB64(buf)); Media.mem.set("f" + hh, URL.createObjectURL(f));
+        Store.mutate("a:" + a._p, () => { (a.quotes = a.quotes || []).push({ h: hh, name: f.name, lname, size: f.size, type: f.type, added: now(), by: Profile.name() }); Store.touch(a); }); Store.log("Added quote " + f.name + " to " + Store.actId(a));
       } catch (e){ alert("Couldn't add " + f.name + ": " + e.message); } } }
 
   /* ---------- exports ---------- */
@@ -84,16 +85,18 @@ const Parts = (() => {
     if (kind === "mto" && (a.rfq || []).length){ doc.text("Previous revisions: " + a.rfq.map(x => "Rev " + x.rev + " (" + fmtDate(x.at) + ")").join(", "), 14, y); }
     const pages = doc.getNumberOfPages(); for (let i = 1; i <= pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(fname(a, kind, r).replace(/\.pdf$/, "") + "   Page " + i + " of " + pages, 105, 290, { align: "center" }); }
     return doc.output("blob"); }
-  async function pdf(a, kind){ const items = list(a, kind); if (!items.length) return alert("Nothing to export yet.");
+  let exporting = false;
+  async function pdf(a, kind){ const items = list(a, kind); if (!items.length) return alert("Nothing to export yet."); if (exporting) return; exporting = true;
     try { if (kind !== "mto"){ Excel.save(await build(a, kind), fname(a, kind)); return; }
       if (!Store.S.edit) return App.viewOnly();
       const r = rev((a.rfq || []).length); if (!await confirmBox("Export the RFQ as Rev " + r + "? It's kept in the RFQ revisions for traceability.", "Export Rev " + r)) return;
       const blob = await build(a, kind, r), name = fname(a, kind, r), path = pRfq(a._p, Store.actId(a) + "-rev-" + r + ".pdf");
+      /* the rev is recorded first, so its letter is never handed out twice */
+      Store.mutate("a:" + a._p, () => { (a.rfq = a.rfq || []).push({ rev: r, at: now(), by: Profile.name(), n: items.length, name, path, items: clone(items) }); Store.touch(a); }); Store.log("Exported " + name);
       Media.mem.set("rfq:" + path, URL.createObjectURL(blob)); Excel.save(blob, name); Local.saveOriginal(a, name, blob);
-      await Store.addBlob(path, bufToB64(await blob.arrayBuffer()));
-      Store.mutate("a:" + a._p, () => { (a.rfq = a.rfq || []).push({ rev: r, at: now(), by: Profile.name(), n: items.length, name, path, items: clone(items) }); Store.touch(a); });
-      Store.log("Exported " + name); note("Exported " + name + ", saved in the RFQ revisions"); }
-    catch (e){ console.error(e); alert("Couldn't make the PDF: " + e.message); } }
+      try { await Store.addBlob(path, bufToB64(await blob.arrayBuffer())); note("Exported " + name + ", saved in the RFQ revisions"); }
+      catch (e){ alert(name + " is downloaded and recorded as Rev " + r + ", but its copy couldn't be uploaded (" + e.message + "). Keep the downloaded file."); } }
+    catch (e){ console.error(e); alert("Couldn't make the PDF: " + e.message); } finally { exporting = false; } }
   async function openRfq(a, r){ const loc = Local.ok && await Local.original(a, r.name); const url = loc ? URL.createObjectURL(loc) : Media.mem.get("rfq:" + r.path) || GH.fileUrl(r.path);
     const l = document.createElement("a"); l.href = url; l.download = r.name; l.target = "_blank"; l.rel = "noopener"; l.click(); }
 

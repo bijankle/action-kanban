@@ -39,7 +39,7 @@ const Kanban = (() => {
           const shown = $$(".kc:not(.ghost)", list).map(c => App.act(c.dataset.ref)), before = shown[i - 1], full = Store.ranked(st).filter(x => x !== a);
           const at = before ? full.indexOf(before) + 1 : shown[i] ? full.indexOf(shown[i]) : full.length;
           Store.mutate("a:" + a._p, () => { const moved = a.stage !== st; Store.place(a, st, at); Store.log((moved ? "Moved " : "Reordered ") + Store.actId(a) + (moved ? " to " + Store.stage(st).name : "")); }); return; }
-        if (sid && sid !== st){ e.preventDefault(); Store.mutate("config", () => { const ss = Store.S.config.stages, a = ss.findIndex(x => x.id === sid), m = ss.splice(a, 1)[0]; ss.splice(ss.findIndex(x => x.id === st), 0, m); Store.S.config.mod = now(); Store.touch(m); }); } };
+        if (sid && sid !== st){ e.preventDefault(); Store.mutate("config", () => { const ss = Store.S.config.stages, a = ss.findIndex(x => x.id === sid), b0 = ss.findIndex(x => x.id === st), m = ss.splice(a, 1)[0]; ss.splice(ss.findIndex(x => x.id === st) + (a < b0 ? 1 : 0), 0, m); Store.S.config.mod = now(); Store.touch(m); }); } };
       const hd = $(".kb-h", col); hd.ondragstart = e => { if (e.target !== hd) return; e.dataTransfer.setData("text/stage", st); };
       $(".kb-n", col).ondblclick = () => rename(st);
       $(".kb-m", col).onclick = e => menu(e.currentTarget, st); });

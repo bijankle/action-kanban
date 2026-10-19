@@ -4,10 +4,13 @@
 const Valid = (() => {
   let sec = "fields", cur = "title";
   function render(el){ const ro = !Store.S.edit;
+    const ae = document.activeElement, row = ae && el.contains(ae) && ae.closest("[data-id], .ct-new, .dv-ed"), keep = row ? { id: row.dataset.id || (row.classList.contains("ct-new") ? "_new" : "_ed"), i: $$("input,select", row).indexOf(ae), s: ae.selectionStart, v: ae.value } : null;
     el.innerHTML = '<div class="dv"><nav class="dv-nav">' + [["fields", "Fields and choices"], ["stages", "Stages"], ["contacts", "Contacts"]].map(([k, n]) => '<button type="button" data-s="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</nav><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
     $$(".dv-nav button", el).forEach(b => b.onclick = () => { sec = b.dataset.s; render(el); });
     const body = $(".dv-body", el); ({ fields, stages, contacts })[sec](body, ro);
-    if (ro) $$("input,select,button:not(.dv-f)", body).forEach(x => x.disabled = true); }
+    if (ro) $$("input,select,button:not(.dv-f)", body).forEach(x => x.disabled = true);
+    if (keep){ const r = keep.id === "_new" ? $(".ct-new", el) : keep.id === "_ed" ? $(".dv-ed", el) : $('[data-id="' + keep.id + '"]', el), t = r && $$("input,select", r)[keep.i];
+      if (t){ if (t.tagName === "INPUT" && t.type !== "checkbox" && t.type !== "color" && t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
   const up = (o, fn) => Store.mutate("config", () => { fn(); Store.touch(o); });
   /* drag rows in a list to reorder the array behind them */
   function sortable(list, arr, sel){ $$(sel, list).forEach(r => { r.draggable = Store.S.edit;
@@ -15,7 +18,7 @@ const Valid = (() => {
       r.ondragover = e => { if ([...e.dataTransfer.types].includes("text/row")){ e.preventDefault(); r.classList.add("dover"); } };
       r.ondragleave = () => r.classList.remove("dover");
       r.ondrop = e => { r.classList.remove("dover"); const from = e.dataTransfer.getData("text/row"); if (!from || from === r.dataset.id) return; e.preventDefault();
-        Store.mutate("config", () => { const A = arr(); const i = A.findIndex(x => x.id === from), m = A.splice(i, 1)[0]; A.splice(A.findIndex(x => x.id === r.dataset.id), 0, m); Store.touch(m); Store.S.config.mod = now(); }); }; }); }
+        Store.mutate("config", () => { const A = arr(); const i = A.findIndex(x => x.id === from), b0 = A.findIndex(x => x.id === r.dataset.id), m = A.splice(i, 1)[0]; A.splice(A.findIndex(x => x.id === r.dataset.id) + (i < b0 ? 1 : 0), 0, m); Store.touch(m); Store.S.config.mod = now(); }); }; }); }
 
   function fields(body){ const all = Store.fields(), hits = all.filter(f => hit(f.label, TYPES[f.type] || f.type, (f.options || []).filter(o => !o.del).map(o => o.label).join(" "))), fs = hits.length ? hits : all; if (!Store.field(cur)) cur = fs[0].id; const f = Store.field(cur);
     body.innerHTML = '<div class="dv-cols"><div class="dv-list"><div class="dv-h">Fields <span class="dim">drag to reorder</span></div>' + fs.map(x => '<button type="button" class="dv-f' + (x.id === cur ? " on" : "") + '" data-id="' + x.id + '"><span>' + esc(x.label) + '</span><small>' + esc(x.type === "stage" ? "Stage" : x.type === "rank" ? "Organizer order" : x.type === "mto" ? "MTO count" : x.type === "sparelist" ? "Spares count" : x.type === "isollist" ? "Isolations count" : x.type === "meta" ? "Date, automatic" : x.type === "complete" ? "Tick box, moves the card" : TYPES[x.type] || x.type) + '</small></button>').join("")

@@ -44,7 +44,7 @@ const Isol = (() => {
     wire(el, a, ro);
     if (!ro) $$(".is-chip", el).forEach(b => b.onclick = () => { const t = b.dataset.tag, x = Equip.find(t, "t").find(y => y.t.toLowerCase() === t.toLowerCase() && y.n);
       put(a, "new-chip", { tag: t, name: x ? x.n : "" }); created.delete("new-chip"); });
-    if (keep && keep.c){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
+    if (keep && keep.c){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
   const cell = (r, c, v, ro) => '<td' + (c !== "note" ? ' class="is-cb"' : "") + '><input class="in pt-in" autocomplete="off" data-r="' + r + '" data-c="' + c + '" value="' + esc(v || "") + '"' + (ro ? " readonly" : "") + '></td>';
   /* write one or both of a row's values; a blank row becomes a new isolation */
   function put(a, r, vals){ const key = "a:" + a._p, items = list(a);

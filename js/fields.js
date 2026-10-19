@@ -32,7 +32,8 @@ const Fields = (() => {
       case "phone": return v ? '<a href="tel:' + esc(String(v).replace(/\s/g, "")) + '">' + esc(v) + '</a>' : "";
       default: return v == null || v === "" ? "" : '<span class="' + (tbc(v) ? "tbc" : "") + '">' + esc(v) + '</span>'; } }
 
-  function set(a, f, v){ Store.mutate("a:" + a._p, () => {
+  function set(a, f, v){ if (!["stage", "rank", "complete"].includes(f.type) && JSON.stringify(a.f[f.id] == null ? "" : a.f[f.id]) === JSON.stringify(v == null ? "" : v)) return;   // nothing changed
+    Store.mutate("a:" + a._p, () => {
       if (f.id === "status"){ if (a.stage !== v) Store.place(a, v); Store.log("Moved " + Store.actId(a) + " to " + Store.stage(v).name); return; }
       if (f.type === "complete"){ const fin = Store.stages().find(s => s.kind === "done"), ret = Store.stages().find(s => s.id === a.prevStage && s.kind !== "done") || Store.stages().find(s => s.kind !== "done");
         if (v && !done(a) && fin){ Store.place(a, fin.id, 0); Store.log("Completed " + Store.actId(a)); } else if (!v && done(a) && ret){ Store.place(a, ret.id); Store.log("Reopened " + Store.actId(a)); } return; }
@@ -79,7 +80,7 @@ const Fields = (() => {
       $$(".dd-o", dd).forEach(b => b.onmousedown = e => { e.preventDefault(); i.value = b.dataset.v; dd.hidden = true; set(a, f, b.dataset.v); }); };
     i.onfocus = () => { draw(); dd.hidden = false; }; i.oninput = draw;
     i.onblur = () => { dd.hidden = true; if (i.value.trim() !== v) set(a, f, i.value.trim()); };
-    i.onkeydown = e => { if (e.key === "Enter") i.blur(); if (e.key === "Escape"){ i.value = v; i.blur(); } };
+    i.onkeydown = e => { if (e.key === "Enter") i.blur(); if (e.key === "Escape"){ e.stopPropagation(); i.value = v; i.blur(); } };
     return w; }
 
   /* equipment tags: the first tag, then +N; clicking opens the list of all tags with a box to add new ones */
@@ -98,11 +99,11 @@ const Fields = (() => {
     const add = () => { const t = i.value.trim(); if (!t) return; if (!optLabels(f).some(x => x.toLowerCase() === t.toLowerCase())){
         Store.mutate("config", () => { f.options = f.options || []; f.options.push({ id: uid(), label: t, color: "" }); Store.touch(f); }); }
       const ex = optLabels(f).find(x => x.toLowerCase() === t.toLowerCase()) || t; if (!cur.includes(ex)) cur.push(ex); i.value = ""; draw(); i.focus(); };
-    i.oninput = draw; i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); add(); } if (e.key === "Escape") closePop(); };
+    i.oninput = draw; i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); add(); } if (e.key === "Escape"){ e.stopPropagation(); closePop(); } };
     draw(); i.focus(); p._done = commit; }
   function place(p, anchor){ const r = anchor.getBoundingClientRect(); p.style.left = Math.min(r.left, innerWidth - 290) + "px";
     const below = innerHeight - r.bottom > 300; p.style.top = (below ? r.bottom + 4 : Math.max(8, r.top - 304)) + "px"; }
   function closePop(){ $$(".pop").forEach(p => { p._done && p._done(); p.remove(); }); }
-  document.addEventListener("mousedown", e => { if (!e.target.closest(".pop")) closePop(); });
+  document.addEventListener("mousedown", e => { if (!e.target.closest(".pop, .pj-b, #profB")) closePop(); });
   return { show, text, editor, set, val, closePop, place, chip, optLabels, grow };
 })();

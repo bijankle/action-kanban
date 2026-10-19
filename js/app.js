@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.5.0";
+const APP_VERSION = "1.5.1";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 const THEMES = [["slate", "Slate", "#475569"], ["graphite", "Graphite", "#52525b"], ["navy", "Navy", "#1E3A5F"], ["petrol", "Petrol", "#1F4F5A"], ["olive", "Olive", "#5A5A2E"], ["stone", "Stone", "#7A6A5D"], ["rust", "Rust", "#9A3412"], ["ink", "Ink", "#111827"]];
 
@@ -146,7 +146,8 @@ const App = (() => {
     if (!rows) return; const m = modal('<h3>⚠ Someone else was editing at the same time</h3>' + rows + '<div class="yn-btns"><button class="yn-yes" type="button">OK</button></div>', { cls: "cl-win" }); $(".yn-yes", m).onclick = () => m.close(); }
   function drawProf(){ const b = $("#profB"); if (!b) return; const ini = Profile.initials(); b.innerHTML = ini ? '<span>' + esc(ini) + '</span>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>';
     b.title = Profile.name() ? Profile.name() + (Profile.get().role ? ", " + Profile.get().role : "") + " (edit your profile)" : "Set up your profile"; b.classList.toggle("set", !!ini); }
-  async function checkEdit(){ const r = await GH.canEdit(); Store.S.edit = !A.mobile && (r === true || (r === null && !!GH.cfg().token)); render(); }
+  async function checkEdit(){ const r = await GH.canEdit(); Store.S.edit = !A.mobile && (r === true || (r === null && !!GH.cfg().token));
+    const pu = lsGet("adPendUser", null); if (Store.S.edit && pu){ lsSet("adPendUser", null); Store.saveUser(pu); } render(); }
   async function reload(){ try { if (await Store.refresh(true)) render(); } catch (e){ note("Couldn't load: " + e.message); } render(); }
 
   /* ---------- view settings: theme colour (presets or any colour), dark mode, text size ---------- */
@@ -207,8 +208,9 @@ const App = (() => {
   const typing = () => { const e = document.activeElement; return e && (e.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName)) && !(e.type === "checkbox" || e.type === "radio"); };
   document.addEventListener("keydown", e => { if (A.mobile) return; const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
     if ($(".ynmodal") && k !== "escape") return;
-    if (mod && k === "z" && !typing()){ e.preventDefault(); e.shiftKey ? Store.redo() : Store.undo(); return; }
-    if (mod && k === "y" && !typing()){ e.preventDefault(); Store.redo(); return; }
+    const typingText = () => typing() && document.activeElement.tagName !== "SELECT";
+    if (mod && k === "z" && !typingText()){ e.preventDefault(); e.shiftKey ? Store.redo() : Store.undo(); return; }
+    if (mod && k === "y" && !typingText()){ e.preventDefault(); Store.redo(); return; }
     if (mod && k === "p"){ e.preventDefault(); Print.dialog(); return; }
     if ((mod && k === "f") || (k === "/" && !typing())){ e.preventDefault(); $("#q").focus(); $("#q").select(); return; }
     if (k === "escape"){ if (Media.open || $(".pop") || $(".mb.open")){ Fields.closePop(); closeMenus(); return; } if (typing()){ document.activeElement.blur(); return; } if (A.selRef) select(null); return; }

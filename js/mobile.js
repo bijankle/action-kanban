@@ -26,7 +26,7 @@ const Mobile = (() => {
       + (a.files.length ? '<h4>Attachments</h4>' + a.files.map((f, i) => '<button type="button" class="link m-f" data-i="' + i + '">📎 ' + esc(f.name) + '</button>').join("") : "")
       + '<h4>Details</h4><dl>' + Store.fields().filter(f => !skip.has(f.id)).map(f => '<dt>' + esc(f.label) + '</dt><dd>' + (Fields.show(a, f) || '<span class="dim">–</span>') + '</dd>').join("") + '</dl></div>';
     $(".m-back", root).onclick = () => history.back();
-    $$(".m-ph img", root).forEach(im => im.onclick = () => Media.view(a, +im.dataset.i));
+    $$(".m-ph img", root).forEach(im => im.onclick = () => { history.pushState({ m: 2 }, ""); Media.view(a, +im.dataset.i); });
     $$(".m-f", root).forEach(b => b.onclick = () => Media.openFile(a, a.files[+b.dataset.i])); root.scrollTop = 0; }
   addEventListener("popstate", () => { if (Media.open){ Media.close(); return; } if (open){ open = null; App.render(); } });
   return { render, show: ref => { open = ref; history.pushState({ m: 1 }, ""); } };

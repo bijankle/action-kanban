@@ -66,7 +66,7 @@ const Intake = (() => {
     draw(false);
     $$(".nw-tabs button", m).forEach(b => b.onclick = () => { $$(".nw-tabs button", m).forEach(x => x.classList.toggle("on", x === b)); $(".nw-paste", m).hidden = b.dataset.t !== "paste"; if (b.dataset.t === "paste") $(".nw-paste textarea", m).focus(); });
     $("[data-k=gem]", m).onclick = async () => { const tx = $(".nw-paste textarea", m).value.trim(), msg = $(".nw-msg", m); if (!tx) return; const b = $("[data-k=gem]", m); b.disabled = true; msg.textContent = "Asking Gemini…";
-      try { const r = clean(await split(tx)); vals = r.vals; if (r.stage) stage = r.stage; draw(true); msg.textContent = "Done. Check the fields below, then Create."; }
+      try { const r = clean(await split(tx)); read(); vals = Object.assign({}, vals, r.vals); if (r.stage) stage = r.stage; draw(true); msg.textContent = "Done. Check the fields below, then Create."; }
       catch (e){ msg.textContent = e.message; } finally { b.disabled = false; } };
     if (startText){ $$(".nw-tabs button", m)[1].click(); $(".nw-paste textarea", m).value = startText; }
     $(".yn-no", m).onclick = () => m.close();

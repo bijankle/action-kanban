@@ -23,8 +23,11 @@ const GH = (() => {
     return editP; }
   function reset(){ branchP = null; editP = null; }
   /* read a JSON file: through the API when there's a key (always the latest), else straight from GitHub */
-  async function readJson(path){ const c = cfg();
-    if (c.token){ try { const b = await branch(); const t = await api("/contents/" + path + "?ref=" + encodeURIComponent(b) + "&t=" + Date.now(), { raw: true, headers: { Accept: "application/vnd.github.raw+json" } }); return JSON.parse(t); }
+  /* the latest commit on the data branch: a save reads every file at this commit and commits on top of it, so
+     anyone else's commit in between makes the save fail and merge again instead of overwriting them */
+  async function head(){ const b = await branch(); return (await api("/git/ref/heads/" + encodeURIComponent(b) + "?t=" + Date.now())).object.sha; }
+  async function readJson(path, at){ const c = cfg();
+    if (c.token){ try { const b = at || await branch(); const t = await api("/contents/" + path + "?ref=" + encodeURIComponent(b) + "&t=" + Date.now(), { raw: true, headers: { Accept: "application/vnd.github.raw+json" } }); return JSON.parse(t); }
       catch (e){ if (e.status === 404) return null; if (e.status !== 401 && e.status !== 403) throw e; } }
     const r = await fetch(fileUrl(path) + (fileUrl(path).includes("?") ? "&" : "?") + "t=" + Date.now(), { cache: "no-store" });
     if (r.status === 404) return null; if (!r.ok) throw new Error("Couldn't read " + path + " (" + r.status + ")"); return r.json(); }
@@ -38,13 +41,13 @@ const GH = (() => {
   async function isPublic(){ try { const r = await fetch("https://api.github.com/repos/" + cfg().repo, { cache: "no-store" }); return r.ok ? !(await r.json()).private : r.status === 404 ? false : null; } catch (e){ return null; } }
   async function blob(b64){ const j = await api("/git/blobs", { method: "POST", body: { content: b64, encoding: "base64" } }); return j.sha; }
   /* one commit holding every changed file; entries are {path, sha} (an uploaded blob) or {path, content} (text) or {path, del:true} */
-  async function commit(entries, message){ const b = await branch();
-    const ref = await api("/git/ref/heads/" + encodeURIComponent(b)); const head = ref.object.sha;
+  async function commit(entries, message, parent){ const b = await branch();
+    const head = parent || (await api("/git/ref/heads/" + encodeURIComponent(b))).object.sha;
     const hc = await api("/git/commits/" + head);
     const tree = await api("/git/trees", { method: "POST", body: { base_tree: hc.tree.sha, tree: entries.map(e => e.del ? { path: e.path, mode: "100644", type: "blob", sha: null } : e.sha ? { path: e.path, mode: "100644", type: "blob", sha: e.sha } : { path: e.path, mode: "100644", type: "blob", content: e.content }) } });
     const c = await api("/git/commits", { method: "POST", body: { message, tree: tree.sha, parents: [head] } });
     try { await api("/git/refs/heads/" + encodeURIComponent(b), { method: "PATCH", body: { sha: c.sha, force: false } }); }
     catch (e){ if (e.status === 422 || e.status === 409){ e.conflict = true; } throw e; }
     return c.sha; }
-  return { cfg, canEdit, reset, readJson, fileUrl, appUrl, blob, commit, branch, onPages, pagesRepo, isPublic, DATA_REPO };
+  return { cfg, head, canEdit, reset, readJson, fileUrl, appUrl, blob, commit, branch, onPages, pagesRepo, isPublic, DATA_REPO };
 })();
