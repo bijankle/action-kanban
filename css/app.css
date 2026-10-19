@@ -584,6 +584,9 @@ html.dark .av-tab b{color:var(--ink)}
 .dw{padding:14px 18px 30px}
 .dw-p{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.dw-p2{padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:10px}.dw-p2 .pill{font-size:calc(12px*var(--mt,1))}
 .dw-l{display:flex;flex-direction:column;gap:6px}
+.dw-s{margin:0 0 10px;font-size:var(--fl)}.dw-s b{color:var(--ink)}
+.dw-ck,.dw-ck0{flex:none;width:18px;display:grid;place-items:center}.dw-ck input{width:17px;height:17px;margin:0;accent-color:var(--th);cursor:pointer}
+.dw-b.pk{border-color:color-mix(in srgb,var(--good) 55%,var(--line));background:color-mix(in srgb,var(--good) 6%,var(--panel))}
 .dw-b{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}.dw-b.on{border-color:color-mix(in srgb,var(--th) 45%,var(--line))}
 .dw-h{display:flex;align-items:center;gap:10px;padding:7px 10px;min-height:40px}
 .dw-tg{flex:none;width:26px;height:26px;border:var(--ctl-bd);border-radius:7px;background:var(--panel2);color:var(--ink);cursor:pointer;font-size:12px;transition:transform .15s}.dw-b.on .dw-tg{transform:rotate(90deg)}.dw-tg0{flex:none;width:26px}

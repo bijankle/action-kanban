@@ -2,7 +2,8 @@
    ball mill's lube units, motors and fans). Two rows of pills narrow the list: the equipment (All or one tag), then the
    kind (All, P&ID, PFD, SLD, Schematic, Datasheet, IOM…). Each document is a bar: its number opens the controlled
    copy in SharePoint, ⓘ shows its title, PDF downloads a copy, and when there is a copy the arrow opens it in place
-   with the essentials (pages, zoom, fit, drag to pan). Bars start closed. The work pack uses the same lists. */
+   with the essentials (pages, zoom, fit, drag to pan). Bars start closed. A tick on a document with a copy adds its
+   pages to the back of the work pack (a.dwgPick, the ticked numbers). The work pack uses the same lists. */
 "use strict";
 const Drawings = (() => {
   const KORD = ["P&ID", "PFD", "SLD", "TLD", "Schematic", "Block diagram", "Datasheet", "IOM"];
@@ -39,16 +40,22 @@ const Drawings = (() => {
     const pill = (k, v, label, n, on) => '<button type="button" class="pill' + (on ? " on" : "") + '" data-' + k + '="' + esc(v) + '">' + esc(label) + ' <b>' + n + '</b></button>';
     el.innerHTML = '<div class="dw"><div class="dw-p">' + pill("eq", "all", "All equipment", total.size, s.eq === "all") + tags.map(t => pill("eq", t, t, m.get(t).length, s.eq === t)).join("") + '</div>'
       + '<div class="dw-p dw-p2">' + pill("kind", "all", "All kinds", new Set(rows.map(([, d]) => d.n)).size, s.kind === "all") + kinds.map(k => pill("kind", k, k, new Set(rows.filter(([, d]) => d.kind === k).map(([, d]) => d.n)).size, s.kind === k)).join("") + '</div>'
-      + (list.length ? '<div class="dw-l">' + list.map(([t, d]) => bar(t, d)).join("") + '</div>' : '<p class="dim">No drawings or documents found' + (s.eq !== "all" ? " for " + esc(s.eq) : "") + '.</p>')
+      + '<div class="dw-s">' + ((a.dwgPick || []).length ? '<b>' + a.dwgPick.length + '</b> ticked to add to the work pack' + (Store.S.edit ? ' <button type="button" class="link" data-k="clr">Clear ticks</button>' : "") : '<span class="dim">Tick the drawings to print with the work pack: their pages are added at the back.</span>') + '</div>'
+      + (list.length ? '<div class="dw-l">' + list.map(([t, d]) => bar(t, d, a)).join("") + '</div>' : '<p class="dim">No drawings or documents found' + (s.eq !== "all" ? " for " + esc(s.eq) : "") + '.</p>')
       + '<p class="dim dw-n">Numbers open the controlled copy in SharePoint. PDF downloads a copy for anyone without SharePoint access: check its revision before use. Sub equipment (lube units, motors, fans) is included with its main equipment.</p></div>';
     $$("[data-eq]", el).forEach(b => b.onclick = () => { s.eq = b.dataset.eq; draw(el, a); });
     $$("[data-kind]", el).forEach(b => b.onclick = () => { s.kind = b.dataset.kind; draw(el, a); });
+    const pick = (n, on) => Store.mutate("a:" + a._p, () => { const set = new Set(a.dwgPick || []); on ? set.add(n) : set.delete(n); a.dwgPick = [...set]; Store.touch(a); });
+    $$(".dw-ck input", el).forEach(c => c.onchange = () => pick(c.dataset.n, c.checked));
+    const clr = $("[data-k=clr]", el); if (clr) clr.onclick = () => Store.mutate("a:" + a._p, () => { a.dwgPick = []; Store.touch(a); });
     $$(".dw-b", el).forEach(r => { const k = r.dataset.key, [t, d] = list.find(([t, d]) => key(t, d) === k) || [];
       const tg = $(".dw-tg", r); if (tg) tg.onclick = () => { if (open.has(k)) open.delete(k); else open.add(k); r.classList.toggle("on", open.has(k)); show(r, d, k); };
       $(".dw-i", r).onclick = e => { e.stopPropagation(); info(e.currentTarget, t, d); };
       if (open.has(k)) show(r, d, k); }); }
-  function bar(t, d){ const k = key(t, d), e = Equip.get(d.of) || {};
-    return '<div class="dw-b' + (open.has(k) ? " on" : "") + '" data-key="' + esc(k) + '"><div class="dw-h">' + (d.pdf ? '<button type="button" class="dw-tg" title="Show the drawing here" aria-label="Show the drawing">▸</button>' : '<span class="dw-tg0"></span>')
+  function bar(t, d, a){ const k = key(t, d), e = Equip.get(d.of) || {}, on = (a.dwgPick || []).includes(d.n);
+    return '<div class="dw-b' + (open.has(k) ? " on" : "") + (on ? " pk" : "") + '" data-key="' + esc(k) + '"><div class="dw-h">'
+      + (d.pdf ? '<label class="dw-ck" title="Add to the work pack"><input type="checkbox" data-n="' + esc(d.n) + '"' + (on ? " checked" : "") + (Store.S.edit ? "" : " disabled") + '></label>' : '<span class="dw-ck0" title="No PDF copy to add"></span>')
+      + (d.pdf ? '<button type="button" class="dw-tg" title="Show the drawing here" aria-label="Show the drawing">▸</button>' : '<span class="dw-tg0"></span>')
       + '<span class="dw-k">' + esc(d.kind) + '</span>' + (d.url ? '<a class="dw-a" href="' + esc(d.url) + '" target="_blank" rel="noopener" title="Open in SharePoint">' + esc(d.n) + '</a>' : '<span class="dw-a">' + esc(d.n) + '</span>')
       + (d.rev ? '<span class="dw-r">Rev ' + esc(d.rev) + '</span>' : "") + '<button type="button" class="dw-i" title="What is this?" aria-label="Document title">i</button>'
       + (!d.own ? '<span class="dw-of" title="' + esc(e.n || "") + '">' + esc(d.of) + '</span>' : "") + '<span class="grow"></span>'
