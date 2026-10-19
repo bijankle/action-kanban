@@ -19,7 +19,7 @@ const Excel = (() => {
   function exportRows(list){ const fs = Store.fields(), base = GH.appUrl();
     const head = ["ID", "Project"].concat(fs.map(f => f.label), ["Photos", "Attachments", "Created"]);
     const rows = list.map(a => ["ID", "Project"].map((k, i) => i ? (Store.project(a._p) || {}).name : Store.actId(a))
-      .concat(fs.map(f => f.type === "date" && /^\d{4}-/.test(Fields.val(a, f) || "") ? { d: Fields.val(a, f) } : Fields.text(a, f)),
+      .concat(fs.map(f => f.type === "date" && /^\d{4}-/.test(Fields.val(a, f) || "") ? { d: Fields.val(a, f) } : f.type === "meta" && Fields.val(a, f) ? { d: new Date(Fields.val(a, f)).toISOString().slice(0, 10) } : Fields.text(a, f)),
         [a.photos.length ? { link: base + "?a=" + encodeURIComponent(a._p + ":" + a.no) + "&photo=1", text: "Photos (" + a.photos.length + ")" } : "", a.files.map(f => f.name).join("\n"), { d: new Date(a.created).toISOString().slice(0, 10) }]));
     return book(head, rows, "Actions"); }
   /* one sheet workbook: head is the header row, rows hold strings, {d: "YYYY-MM-DD"} dates or {link, text} links */

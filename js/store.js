@@ -3,7 +3,7 @@
    saves a few seconds later. Saving re-reads the online copy first and merges item by item (the
    newer edit of each action wins), so two people editing different actions never overwrite each other. */
 "use strict";
-const P_CONFIG = "data/config.json", P_PROJECTS = "data/projects.json";
+const P_CONFIG = "data/config.json", P_PROJECTS = "data/projects.json", P_USERS = "data/users.json";
 const pActs = pid => "data/p/" + pid + "/actions.json";
 const pImg = (pid, h) => "data/p/" + pid + "/img/" + h + ".jpg";
 const pThumb = (pid, h) => "data/p/" + pid + "/thumb/" + h + ".jpg";
@@ -34,12 +34,16 @@ function defaultConfig(){ const t = now(); const opt = (labels, colors) => label
       F("eta", "Parts receival ETA", "date", { table: true, tbc: true, na: true }),
       F("mto", "MTO", "mto", { table: true, core: true }),
       F("sparelist", "Spares list", "sparelist", { core: true }),
-      F("isollist", "Isolations", "isollist", { core: true })
+      F("isollist", "Isolations", "isollist", { core: true }),
+      F("created", "Date created", "meta", { core: true }),
+      F("modified", "Last modified", "meta", { core: true }),
+      F("completed", "Date completed", "meta", { core: true }),
+      F("complete", "Action complete", "complete", { table: true, core: true })
     ],
     contacts: [] }; }
 
 const Store = (() => {
-  const S = { config: null, projects: { v: 1, projects: [] }, acts: {}, dirty: new Set(), blobs: [], undo: [], redo: [], loaded: false, status: "", edit: false };
+  const S = { config: null, projects: { v: 1, projects: [] }, acts: {}, users: { v: 1, users: [] }, base: {}, conflicts: [], dirty: new Set(), blobs: [], undo: [], redo: [], loaded: false, status: "", edit: false };
   const live = a => (a || []).filter(x => !x.del);
 
   /* ---------- reading ---------- */
@@ -74,11 +78,19 @@ const Store = (() => {
   const matches = (a, q) => { const w = String(q || "").toLowerCase().split(/\s+/).filter(Boolean); if (!w.length) return true; const t = hay(a); return w.every(x => t.includes(x)); };
 
   /* ---------- changing ---------- */
-  const snap = () => JSON.stringify({ c: S.config, p: S.projects, a: S.acts });
+  const snap = () => JSON.stringify({ c: S.config, p: S.projects, a: S.acts, us: S.users });
   function mutate(keys, fn, opts){ if (!S.edit && !(opts && opts.force)){ App.viewOnly(); return false; }
     S.undo.push(snap()); if (S.undo.length > 150) S.undo.shift(); S.redo = [];
     const r = fn(); [].concat(keys).forEach(k => S.dirty.add(k)); stash(); saveSoon(); App.render(); return r === undefined ? true : r; }
-  const touch = o => { o.mod = now(); o.by = Profile.name() || "Someone"; return o; };
+  const me = () => (Profile.get().email || "").toLowerCase();
+  const touch = o => { o.mod = now(); o.by = Profile.name() || "Someone"; if (me()) o.byE = me(); else delete o.byE; return o; };
+  const mine = o => o && (o.byE ? o.byE === me() : o.by === Profile.name());
+  /* everyone who has signed in (data/users.json): name, role, mobile and email, so edits and warnings can name people */
+  const users = () => live(S.users.users);
+  const user = email => users().find(u => u.id === String(email || "").toLowerCase());
+  function saveUser(p){ const id = String(p.email || "").toLowerCase(); if (!id) return; const cur = S.users.users.find(u => u.id === id), u = Object.assign({}, cur || { id, created: now() }, { first: p.first, last: p.last, mobile: p.mobile, email: p.email, role: p.role });
+    if (cur && ["first", "last", "mobile", "role"].every(k => (cur[k] || "") === (u[k] || ""))) return; u.mod = now();
+    if (cur) Object.assign(cur, u); else S.users.users.push(u); S.dirty.add("users"); stash(); if (S.edit) saveSoon(); }
   /* undo / redo: put the old copy back and stamp what changed as new, so it also wins over the online copy */
   function restore(from, to){ const old = JSON.parse(from), cur = JSON.parse(snap());
     const relive = (oa, ca, key) => { const om = new Map((oa || []).map(x => [x[key], x])); (ca || []).forEach(x => { if (!om.has(x[key])) oa.push(Object.assign({}, x, { del: true })); });
@@ -93,14 +105,17 @@ const Store = (() => {
 
   function newAction(pid, vals, stageId){ const pa = S.acts[pid] || (S.acts[pid] = { nextNo: 1, actions: [] });
     const st = stageId || stages()[0].id; const top = ranked(st)[0];
-    const a = touch({ u: uid(), no: pa.nextNo++, stage: st, rank: top ? (top.rank || 0) - 1 : 0, created: now(), f: Object.assign({}, vals || {}), photos: [], files: [] });
+    const a = touch({ u: uid(), no: pa.nextNo++, stage: st, stageAt: { [st]: now() }, rank: top ? (top.rank || 0) - 1 : 0, created: now(), f: Object.assign({}, vals || {}), photos: [], files: [] });
     pa.actions.push(a); a._p = pid; return a; }
   /* move an action to a stage, at a position in that column (index among what's on show) */
   function place(a, st, index){ const col = ranked(st).filter(x => x !== a); index = Math.max(0, Math.min(index == null ? col.length : index, col.length));
     const before = col[index - 1], after = col[index];
     a.rank = before && after ? ((before.rank || 0) + (after.rank || 0)) / 2 : before ? (before.rank || 0) + 1 : after ? (after.rank || 0) - 1 : 0;
     if (before && after && before.rank === after.rank){ col.forEach((x, i) => { x.rank = i * 2; touch(x); S.dirty.add("a:" + x._p); }); a.rank = index * 2 - 1; }
-    a.stage = st; touch(a); }
+    if (a.stage !== st) enter(a, st); a.stage = st; touch(a); }
+  /* the dates an action entered each stage, and when it was completed */
+  function enter(a, st){ const was = stage(a.stage), to = stage(st); (a.stageAt = a.stageAt || {})[st] = now();
+    if (to.kind === "done" && was.kind !== "done"){ a.doneAt = now(); a.prevStage = a.stage; } else if (to.kind !== "done" && was.kind === "done") a.doneAt = null; }
   /* rename a choice option everywhere it's used */
   function renameOption(f, oldL, newL){ all().forEach(a => { const v = a.f[f.id]; if (v === oldL){ a.f[f.id] = newL; touch(a); S.dirty.add("a:" + a._p); }
     else if (Array.isArray(v) && v.includes(oldL)){ a.f[f.id] = v.map(x => x === oldL ? newL : x); touch(a); S.dirty.add("a:" + a._p); } }); }
@@ -113,7 +128,27 @@ const Store = (() => {
     ["stages", "fields", "contacts"].forEach(k => { o[k] = mergeById(loc[k], rem[k]); if ((rem.mod || 0) > (loc.mod || 0)) o[k] = orderLike(o[k], rem[k]); });
     o.mod = Math.max(loc.mod || 0, rem.mod || 0); return o; }
   const orderLike = (arr, ref) => { const ix = new Map(ref.map((x, i) => [x.id, i])); return arr.slice().sort((a, b) => (ix.has(a.id) ? ix.get(a.id) : 1e9) - (ix.has(b.id) ? ix.get(b.id) : 1e9)); };
-  function mergeActs(loc, rem){ if (!rem) return loc; const actions = mergeById(loc.actions, rem.actions, "u");
+  /* take in a newer copy of a project's actions while keeping each action the same object, so an open side
+     panel or Organizer callout keeps editing the live action rather than a stale copy */
+  function adopt(pid, pa){ const old = new Map(((S.acts[pid] || {}).actions || []).map(a => [a.u, a]));
+    pa.actions = (pa.actions || []).map(n => { const o = old.get(n.u); if (!o || o === n) return n; Object.keys(o).forEach(k => { if (k !== "_p") delete o[k]; }); Object.assign(o, n); return o; });
+    S.acts[pid] = pa; }
+  /* the copy of each action as last read from (or written to) GitHub: the common starting point for a merge */
+  function setBase(pid, pa){ S.base[pid] = {}; ((pa || {}).actions || []).forEach(a => S.base[pid][a.u] = JSON.stringify(clean(a))); }
+  const eq = (x, y) => JSON.stringify(x === undefined ? null : x) === JSON.stringify(y === undefined ? null : y);
+  /* both sides changed one action: keep every field each side changed; where both changed the same field, ours
+     wins and the other person is named in the warning */
+  function merge3(b, l, r, pid){ const o = clean(r), clash = [];
+    new Set(Object.keys(l).concat(Object.keys(r), Object.keys(b))).forEach(k => { if (k === "f" || k === "mod" || k === "by" || k === "byE" || k === "_p") return;
+      if (!eq(l[k], b[k])){ if (!eq(r[k], b[k]) && !eq(r[k], l[k])) clash.push(k); o[k] = clone(l[k]); } });
+    const lf = l.f || {}, rf = r.f || {}, bf = b.f || {}; o.f = Object.assign({}, rf);
+    new Set(Object.keys(lf).concat(Object.keys(rf), Object.keys(bf))).forEach(k => { if (!eq(lf[k], bf[k])){ if (!eq(rf[k], bf[k]) && !eq(rf[k], lf[k])) clash.push("f." + k); o.f[k] = clone(lf[k]); } });
+    Object.assign(o, (l.mod || 0) >= (r.mod || 0) ? { mod: l.mod, by: l.by, byE: l.byE } : { mod: r.mod, by: r.by, byE: r.byE }); if (!o.byE) delete o.byE;
+    S.conflicts.push({ pid, u: l.u, by: r.by, byE: r.byE, at: r.mod, clash }); return o; }
+  function mergeActs(loc, rem, pid){ if (!rem) return loc; const base = S.base[pid] || {}, rm = new Map((rem.actions || []).map(a => [a.u, a]));
+    const actions = mergeById(loc.actions, rem.actions, "u").map(a => { const l = (loc.actions || []).find(x => x.u === a.u), r = rm.get(a.u), b = base[a.u] && JSON.parse(base[a.u]);
+      if (!l || !r || !b) return a; const lc = !eq(clean(l), b), rc = !eq(clean(r), b);
+      if (lc && rc && !eq(clean(l), clean(r))) return merge3(b, clean(l), r, pid); return lc ? l : r; });
     let next = Math.max(loc.nextNo || 1, rem.nextNo || 1); const remU = new Set((rem.actions || []).map(a => a.u)), used = new Map();
     actions.filter(a => remU.has(a.u)).forEach(a => used.set(a.no, a.u));
     actions.filter(a => !remU.has(a.u)).forEach(a => { if (used.has(a.no) && used.get(a.no) !== a.u){ a.no = next++; touch(a); } used.set(a.no, a.u); next = Math.max(next, a.no + 1); });
@@ -130,38 +165,45 @@ const Store = (() => {
         for (const k of keys){
           if (k === "config"){ S.config = mergeConfig(S.config, await GH.readJson(P_CONFIG)); entries.push({ path: P_CONFIG, content: JSON.stringify(clean(S.config), null, 1) }); }
           else if (k === "projects"){ const r = await GH.readJson(P_PROJECTS); S.projects = { v: 1, projects: mergeById(S.projects.projects, r && r.projects) }; entries.push({ path: P_PROJECTS, content: JSON.stringify(S.projects, null, 1) }); }
-          else { const pid = k.slice(2); S.acts[pid] = mergeActs(S.acts[pid], await GH.readJson(pActs(pid))); entries.push({ path: pActs(pid), content: JSON.stringify(clean(S.acts[pid]), null, 1) }); } }
+          else if (k === "users"){ const r = await GH.readJson(P_USERS); S.users = { v: 1, users: mergeById(S.users.users, r && r.users) }; entries.push({ path: P_USERS, content: JSON.stringify(S.users, null, 1) }); }
+          else { const pid = k.slice(2); adopt(pid, mergeActs(S.acts[pid], await GH.readJson(pActs(pid)), pid)); entries.push({ path: pActs(pid), content: JSON.stringify(clean(S.acts[pid]), null, 1) }); } }
         blobs.forEach(b => entries.push(b));
-        try { await GH.commit(entries, commitMsg()); keys.forEach(k => S.dirty.delete(k)); S.blobs = S.blobs.filter(b => !blobs.includes(b)); break; }
+        try { await GH.commit(entries, commitMsg()); keys.forEach(k => { S.dirty.delete(k); if (k.startsWith("a:")) setBase(k.slice(2), S.acts[k.slice(2)]); }); S.blobs = S.blobs.filter(b => !blobs.includes(b)); break; }
         catch (e){ if (!e.conflict || tries > 3) throw e; } }
-      lastMsgs = []; stash(); setStatus("saved"); Local.backup(S); App.render(); }
+      lastMsgs = []; stash(); setStatus("saved"); Local.backup(S); App.render();
+      if (S.conflicts.length){ const c = S.conflicts.splice(0); App.clashes && App.clashes(c); } }
     catch (e){ console.error(e); setStatus("error", e.status === 401 || e.status === 403 ? "The GitHub key was refused" : navigator.onLine ? (e.detail || e.message) : "Offline"); retryT = setTimeout(save, 20000); }
     finally { saving = false; if (again){ again = false; saveSoon(); } } }
   let lastMsgs = []; const log = m => { if (lastMsgs[lastMsgs.length - 1] === m) return; lastMsgs.push(m); if (lastMsgs.length > 8) lastMsgs.shift(); };
   const commitMsg = () => (lastMsgs.length ? lastMsgs.join("; ") : "Update actions") + " (" + (Profile.name() || "Action Database") + ")";
   /* unsaved work is kept on this device until it's online, so closing the tab never loses it */
-  const stash = debounce(() => IDB.set("state", { c: S.config, p: S.projects, a: clean(S.acts), dirty: [...S.dirty], blobs: S.blobs, at: now() }), 300);
+  const stash = debounce(() => IDB.set("state", { c: S.config, p: S.projects, a: clean(S.acts), us: S.users, base: S.base, dirty: [...S.dirty], blobs: S.blobs, at: now() }), 300);
   async function addBlob(path, b64){ const sha = await GH.blob(b64); S.blobs.push({ path, sha }); stash(); saveSoon(); }
 
   /* ---------- loading ---------- */
   async function load(){ const cached = await IDB.get("state");
-    if (cached && cached.c){ S.config = cached.c; S.projects = cached.p; S.acts = cached.a || {}; (cached.dirty || []).forEach(k => S.dirty.add(k)); S.blobs = cached.blobs || []; S.loaded = true; App.render(); }
+    if (cached && cached.c){ S.config = cached.c; S.projects = cached.p; S.acts = cached.a || {}; S.users = cached.us || S.users; S.base = cached.base || {}; (cached.dirty || []).forEach(k => S.dirty.add(k)); S.blobs = cached.blobs || []; S.loaded = true; App.render(); }
     try { await refresh(true); } catch (e){ console.error(e); if (!S.loaded) throw e; note("Couldn't reach GitHub, showing the copy saved on this device"); }
     if (!S.config){ S.config = defaultConfig(); S.dirty.add("config"); }
     S.loaded = true; App.render(); if (S.dirty.size || S.blobs.length) saveSoon(); }
   async function refresh(first){ if (saving || S.dirty.size && !first) return false;
-    const [c, p] = await Promise.all([GH.readJson(P_CONFIG), GH.readJson(P_PROJECTS)]);
+    const [c, p, us] = await Promise.all([GH.readJson(P_CONFIG), GH.readJson(P_PROJECTS), GH.readJson(P_USERS)]);
     const acts = {}; const list = (p && p.projects || []); await Promise.all(list.map(async x => { acts[x.id] = await GH.readJson(pActs(x.id)) || { v: 1, nextNo: 1, actions: [] }; }));
     if (saving || S.dirty.size && !first) return false;
-    const before = snap();
-    if (S.dirty.size){ S.config = c ? mergeConfig(S.config || c, c) : S.config; S.projects = { v: 1, projects: mergeById(S.projects.projects, list) }; list.forEach(x => S.acts[x.id] = mergeActs(S.acts[x.id] || acts[x.id], acts[x.id])); }
-    else { S.config = c || S.config; S.projects = { v: 1, projects: list }; S.acts = acts; }
+    const before = snap(), prev = JSON.parse(JSON.stringify(S.acts, (k, v) => k === "_p" ? undefined : v));
+    S.users = { v: 1, users: mergeById(S.users.users, us && us.users) };
+    if (S.dirty.size){ S.config = c ? mergeConfig(S.config || c, c) : S.config; S.projects = { v: 1, projects: mergeById(S.projects.projects, list) }; list.forEach(x => { const r = clone(acts[x.id]); adopt(x.id, mergeActs(S.acts[x.id] || acts[x.id], acts[x.id], x.id)); setBase(x.id, r); }); }
+    else { S.config = c || S.config; S.projects = { v: 1, projects: list }; list.forEach(x => { setBase(x.id, acts[x.id]); adopt(x.id, acts[x.id]); }); Object.keys(S.acts).forEach(pid => { if (!acts[pid]) delete S.acts[pid]; }); }
+    /* someone else changed actions while we looked: tell the app which (it warns if one is open) */
+    if (!first){ const ch = []; list.forEach(x => (S.acts[x.id].actions || []).forEach(a => { const o = ((prev[x.id] || {}).actions || []).find(y => y.u === a.u); if (o && (o.mod || 0) < (a.mod || 0) && !mine(a)) ch.push(x.id + ":" + a.u); })); if (ch.length && App.othersChanged) App.othersChanged(ch); }
     if (S.config) fixConfig(S.config);
     if (snap() !== before){ stash(); return true; } return false; }
   /* older files may be missing settings added later */
   function fixConfig(c){ const d = defaultConfig(); ["stages", "fields", "contacts"].forEach(k => c[k] = c[k] || d[k]);
-    d.fields.forEach(f => { if (f.core && !c.fields.some(x => x.id === f.id)) c.fields.push(f); }); }
+    d.fields.forEach(f => { if (f.core && !c.fields.some(x => x.id === f.id)) c.fields.push(f); });
+    /* Action complete stays the very last field */
+    const i = c.fields.findIndex(f => f.id === "complete"); if (i >= 0 && i !== c.fields.length - 1) c.fields.push(c.fields.splice(i, 1)[0]); }
 
-  return { S, stages, fields, field, stage, contacts, projects, project, selected, setSelected, actsOf, all, visible, find, findRef, actId, ranked, priority,
-    matches, mutate, touch, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
+  return { S, enter, stages, fields, field, stage, contacts, projects, project, selected, setSelected, actsOf, all, visible, find, findRef, actId, ranked, priority,
+    matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();

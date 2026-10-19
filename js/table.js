@@ -26,7 +26,7 @@ const Table = (() => {
       cs.forEach(c => { const td = document.createElement("td");
         if (c.type === "id"){ td.className = "idc"; td.innerHTML = '<span class="aid">' + esc(Store.actId(a)) + '</span>' + (a.photos.length ? '<button type="button" class="pc" data-ph title="Open the ' + a.photos.length + ' photos">📷 ' + a.photos.length + '</button>' : "") + (Store.S.edit ? '<button type="button" class="pc up" data-up title="Upload photos">⇪</button>' : "") + '<button type="button" class="pc wp" data-wp title="Download the workpack PDF">PDF</button>'; }
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
-        else if (Store.S.edit && ["stage", "rank", "choice", "check"].includes(c.type)){ td.className = "ed"; td.appendChild(Fields.editor(a, c)); }
+        else if (Store.S.edit && ["stage", "rank", "choice", "check", "complete"].includes(c.type)){ td.className = "ed"; td.appendChild(Fields.editor(a, c)); }
         else { td.innerHTML = Fields.show(a, c); if (c.id === "title") td.className = "ttl"; }
         tr.appendChild(td); });
       frag.appendChild(tr); });

@@ -26,8 +26,10 @@ Undo and redo work with Ctrl+Z and Ctrl+Y. View settings cover the theme colour 
 
 ## Where the data lives
 
-All data lives under `data/` in this repo. `config.json` holds the fields, stages and contacts, `projects.json` holds the project list, and each project has `p/<project>/actions.json` with its `img/` and `thumb/` photos and its `files/` attachments. Each save is one commit. Before writing, the app re-reads the online copy and merges action by action, so two people editing different actions never overwrite each other.
+The data lives in its own repo, bijankle/action-kanban-data, so saving never rebuilds this website. `data/config.json` holds the fields, stages and contacts, `data/projects.json` the project list, `data/users.json` everyone who has signed in, and each project has `p/<project>/actions.json` with its `img/` and `thumb/` photos, `files/` attachments and quotes, and `rfq/` RFQ revisions. Each save is one commit. Before writing, the app re-reads the online copy and merges field by field, so two people editing different fields of one action both keep their changes; if they change the same field, the one who saves second is warned and told who else was editing. Actions record when they were created, last modified and completed, and when they entered each stage.
+
+Everyone signs in with their email. A new email asks for first and last name, role and mobile, and the details go on edits, warnings, workpacks and RFQs. Signing in names people; saving still needs a GitHub key with write access to the data repo.
 
 ## Setup
 
-In the repo Settings, under Pages, deploy from the branch that holds this code. Then open the site, fill in your profile (name, role, mobile and email, which go on the workpacks and RFQs), a fine grained GitHub key with Contents read and write on this repo, the local folder, and optionally a Gemini key from aistudio.google.com.
+In the repo Settings, under Pages, deploy from the branch that holds this code. Then open the site, sign in with your email (new people add their name, role and mobile), and enter a fine grained GitHub key with Contents read and write on bijankle/action-kanban-data, the local folder, and optionally a Gemini key from aistudio.google.com.

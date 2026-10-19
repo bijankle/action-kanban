@@ -9,7 +9,7 @@ const Intake = (() => {
     const ver = n => { const m = n.match(/^gemini-(\d+(?:\.\d+)?)-/); return m ? parseFloat(m[1]) : 0; };
     const best = names.filter(n => /^gemini-\d+(\.\d+)?-flash$/.test(n)).sort((a, b) => ver(b) - ver(a))[0] || (names.includes("gemini-flash-latest") ? "gemini-flash-latest" : names.find(n => /flash/.test(n))) || names[0];
     if (!best) throw new Error("This Gemini key has no models available."); lsSet("adGemModel", { k: key.slice(-6), m: best, t: now() }); return best; }
-  const SKIP = new Set(["status", "priority", "mto", "sparelist", "isollist"]);
+  const SKIP = new Set(["status", "priority", "mto", "sparelist", "isollist", "created", "modified", "completed", "complete"]);
   async function split(text){ const key = (lsGet("adGemKey", "") || "").trim(); if (!key) throw new Error("Add your Gemini key in File, Settings first (it's free from aistudio.google.com).");
     const fs = Store.fields().filter(f => !SKIP.has(f.id));
     const desc = fs.map(f => { let d = '"' + f.id + '": ' + f.label + " (" + (TYPES[f.type] || f.type) + ")";
