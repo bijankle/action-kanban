@@ -24,7 +24,7 @@ const Print = (() => {
     const stamp = new Date().toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
     const head = '<div class="pr-head"><span class="pr-logo">' + LOGO(28) + '</span><div><b>Action Database</b><span>' + esc(projs) + '</span></div><span class="grow"></span><div class="pr-meta">' + list.length + ' action' + (list.length > 1 ? "s" : "") + '<br>Printed ' + esc(stamp) + (Profile.name() ? " by " + esc(Profile.name()) : "") + '</div></div>';
     if (o.board){ const ss = Store.stages().filter(s => list.some(a => a.stage === s.id));
-      root.appendChild(h('<section class="pr-board">' + head + '<div class="pb-cols" style="--n:' + ss.length + '">' + ss.map(s => '<div class="pb-col" style="--c:' + esc(s.color) + '"><div class="pb-h">' + esc(s.name) + ' <span>' + list.filter(a => a.stage === s.id).length + '</span></div>'
+      root.appendChild(h('<section class="pr-board">' + head + '<div class="pb-cols" style="--n:' + ss.length + '">' + ss.map(s => '<div class="pb-col" style="--c:' + esc(s.color) + '"><div class="pb-h">' + esc(Store.todo(s)) + ' <span>' + list.filter(a => a.stage === s.id).length + '</span></div>'
         + list.filter(a => a.stage === s.id).map(a => '<div class="pb-card"><b>' + esc(Store.actId(a)) + '</b> ' + esc(a.f.title || "") + (a.f.eta ? '<i class="' + (a.f.eta === "TBC" ? "tbc" : "") + '">ETA ' + esc(fmtDate(a.f.eta)) + '</i>' : "") + '</div>').join("") + '</div>').join("") + '</div></section>')); }
     const skip = new Set(["title", "problem", "solution", "notes"]);
     list.forEach((a, i) => { const s = Store.stage(a.stage), p = Store.project(a._p) || {};

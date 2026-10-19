@@ -54,18 +54,19 @@ const Valid = (() => {
         $(".ic-b", r).onclick = () => up(f, () => o.del = true); });
       sortable(ol, () => f.options, ".opt"); } }
 
-  function stages(body){ const ss = Store.stages().filter(s => hit(s.name));
-    body.innerHTML = '<div class="dv-h">Organizer stages <span class="dim">drag to reorder. These are also the status choices, and you can edit them on the board too.</span></div><div class="stl">' + ss.map(s => '<div class="str" data-id="' + s.id + '"><span class="grip">⋮⋮</span><input type="color" value="' + esc(s.color) + '"><input class="in" value="' + esc(s.name) + '"><select class="in sm">' + [["open", "Normal"], ["hold", "On hold"], ["done", "Completed"]].map(([k, n]) => '<option value="' + k + '"' + (s.kind === k ? " selected" : "") + '>' + n + '</option>').join("") + '</select><label class="tp-o"><input type="checkbox"' + (s.print ? " checked" : "") + '><span>Print</span></label><span class="dim">' + Store.all().filter(a => a.stage === s.id).length + '</span><button type="button" class="ic-b sm" title="Delete">✕</button></div>').join("") + '</div>'
+  function stages(body){ const ss = Store.stages().filter(s => hit(s.name, Store.todo(s)));
+    body.innerHTML = '<div class="dv-h">Organizer stages <span class="dim">Drag to reorder. Each stage has two names: the milestone an action has reached (its steps, the status choices and exports, such as RFQ Sent) and its Organizer column, the job that is next (such as Raise PO).</span></div><div class="stl"><div class="str str-h"><span class="grip"></span><span class="swh"></span><span>Milestone reached</span><span>Organizer column (next job)</span></div>' + ss.map(s => '<div class="str" data-id="' + s.id + '"><span class="grip">⋮⋮</span><input type="color" value="' + esc(s.color) + '"><input class="in" data-n="name" value="' + esc(s.name) + '"><input class="in" data-n="todo" value="' + esc(Store.todo(s)) + '"><select class="in sm">' + [["open", "Normal"], ["hold", "On hold"], ["done", "Completed"]].map(([k, n]) => '<option value="' + k + '"' + (s.kind === k ? " selected" : "") + '>' + n + '</option>').join("") + '</select><label class="tp-o"><input type="checkbox"' + (s.print ? " checked" : "") + '><span>Print</span></label><span class="dim">' + Store.all().filter(a => a.stage === s.id).length + '</span><button type="button" class="ic-b sm" title="Delete">✕</button></div>').join("") + '</div>'
       + '<input class="in" data-k="new" placeholder="+ Add a stage, then Enter">';
-    $$(".str", body).forEach(r => { const s = Store.stage(r.dataset.id);
+    $$(".str[data-id]", body).forEach(r => { const s = Store.stage(r.dataset.id);
       $("input[type=color]", r).onchange = e => up(s, () => s.color = e.target.value);
-      $("input.in", r).onchange = e => e.target.value.trim() && up(s, () => s.name = e.target.value.trim());
+      $("[data-n=name]", r).onchange = e => e.target.value.trim() && up(s, () => s.name = e.target.value.trim());
+      $("[data-n=todo]", r).onchange = e => e.target.value.trim() && up(s, () => s.todo = e.target.value.trim());
       $("select", r).onchange = e => up(s, () => s.kind = e.target.value);
       $("input[type=checkbox]", r).onchange = e => up(s, () => s.print = e.target.checked);
       $(".ic-b", r).onclick = async () => { const others = Store.stages().filter(x => x.id !== s.id); if (!others.length) return; const n = Store.all().filter(a => a.stage === s.id).length;
         if (!await confirmBox("Delete “" + s.name + "”?" + (n ? " Its " + n + " action(s) move to “" + others[0].name + "”." : ""), "Delete", true)) return;
         Store.mutate(["config"].concat(Store.projects().map(p => "a:" + p.id)), () => { Store.all().filter(a => a.stage === s.id).forEach(a => { a.stage = others[0].id; Store.touch(a); }); s.del = true; Store.touch(s); }); }; });
-    sortable($(".stl", body), () => Store.S.config.stages, ".str");
+    sortable($(".stl", body), () => Store.S.config.stages, ".str[data-id]");
     $("[data-k=new]", body).onkeydown = e => { const v = e.target.value.trim(); if (e.key !== "Enter" || !v) return; Store.mutate("config", () => { const A = Store.S.config.stages, at = A.findIndex(x => !x.del && x.kind !== "open"), s = Store.touch({ id: "st" + uid(), name: v, color: "#64748b", kind: "open", print: true }); at < 0 ? A.push(s) : A.splice(at, 0, s); Store.S.config.mod = now(); }); }; }
 
   /* the equipment the app suggests: the Equipment tags list, plus everything in the plant equipment lists */

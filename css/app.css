@@ -220,6 +220,8 @@ body:has(#tools[hidden]) main{height:calc(100% - var(--header-h))}
 .dv-ed{flex:1;max-width:560px;border:1px solid var(--line);border-radius:12px;padding:6px 18px 16px;background:var(--panel)}
 .opts{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
 .opt,.str{display:flex;align-items:center;gap:8px}.opt .in,.str .in{flex:1}.str .in.sm{flex:none}
+.stl .str{display:grid;grid-template-columns:14px 30px minmax(0,1fr) minmax(0,1fr) 130px 70px 26px 28px}.stl .str .in.sm{width:100%}
+.str-h{font-size:var(--fl);font-weight:700;color:var(--dim);padding:0 0 2px}.str-h span:nth-child(3),.str-h span:nth-child(4){padding-left:10px}.stpop-m{padding:0 4px 6px;font-size:var(--fl)}
 .opt input[type=color],.str input[type=color]{width:30px;height:30px;border:var(--ctl-bd);border-radius:7px;padding:2px;background:var(--panel);cursor:pointer;flex:none}
 .grip{color:var(--faint);cursor:grab;letter-spacing:-2px;font-size:13px}
 .stl{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;max-width:760px}

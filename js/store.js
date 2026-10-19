@@ -51,6 +51,10 @@ const Store = (() => {
   const fields = () => live(S.config.fields);
   const field = id => S.config.fields.find(f => f.id === id && !f.del);
   const stage = id => S.config.stages.find(s => s.id === id && !s.del) || stages()[0];
+  /* a stage has two names: the milestone an action has reached (its steps row, the pills, exports: "RFQ Sent") and
+     the Organizer column, the job that's next for the actions in it ("Raise PO"); s.todo, else these defaults */
+  const TODO = { "Issue Identified": "Draft Defect Notice", "Defect Notification Sent": "Create Work Order", "Work Order Created": "Draft RFQ", "RFQ Sent": "Raise PO", "PO Sent": "Awaiting Parts", "Parts Received": "Schedule Work" };
+  const todo = s => s ? (s.todo || TODO[s.name] || s.name) : "";
   const contacts = () => live(S.config.contacts);
   const projects = () => live(S.projects.projects);
   const project = pid => S.projects.projects.find(p => p.id === pid);
@@ -221,6 +225,6 @@ const Store = (() => {
     /* Action complete stays the very last field */
     const i = c.fields.findIndex(f => f.id === "complete"); if (i >= 0 && i !== c.fields.length - 1) c.fields.push(c.fields.splice(i, 1)[0]); }
 
-  return { S, enter, stages, fields, field, stage, contacts, projects, project, selected, setSelected, actsOf, all, visible, find, findRef, actId, ranked, priority,
+  return { S, enter, stages, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, find, findRef, actId, ranked, priority,
     vendors: () => S.vendors, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();

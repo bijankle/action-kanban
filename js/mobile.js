@@ -38,9 +38,9 @@ const Mobile = (() => {
      gives its step in the flow and how many actions it holds. */
   function board(pg, root){ const q = (App.q || "").trim().toLowerCase(), old = $(".m-kb", pg), sx = old ? old.scrollLeft : +lsGet("adMKbX", 0) || 0, st = Store.stages(), flow = st.filter(s => s.kind !== "hold");
     const lists = st.map(s => Store.ranked(s.id).filter(a => Store.matches(a, q)));
-    pg.innerHTML = top() + '<div class="m-ss">' + st.map((s, i) => '<button type="button" class="m-sc" data-i="' + i + '" style="--c:' + esc(s.color) + '"><i class="dot"></i>' + esc(s.name) + ' <b>' + lists[i].length + '</b></button>').join("") + '</div>'
+    pg.innerHTML = top() + '<div class="m-ss">' + st.map((s, i) => '<button type="button" class="m-sc" data-i="' + i + '" style="--c:' + esc(s.color) + '"><i class="dot"></i>' + esc(Store.todo(s)) + ' <b>' + lists[i].length + '</b></button>').join("") + '</div>'
       + '<div class="m-kb">' + st.map((s, i) => { const cs = lists[i], n = flow.indexOf(s), hold = s.kind === "hold";
-      return '<section class="m-col" style="--c:' + esc(s.color) + '"><div class="m-ch"><span class="m-cn">' + (hold ? "‖" : n + 1) + '</span><span class="m-ct"><b>' + esc(s.name) + '</b><small>' + (hold ? "Paused, off the flow" : "Step " + (n + 1) + " of " + flow.length) + '</small></span><span class="m-cq">' + cs.length + '</span></div>'
+      return '<section class="m-col" style="--c:' + esc(s.color) + '"><div class="m-ch"><span class="m-cn">' + (hold ? "‖" : n + 1) + '</span><span class="m-ct"><b>' + esc(Store.todo(s)) + '</b><small>' + (hold ? "Paused, off the flow" : "Step " + (n + 1) + " of " + flow.length) + (Store.todo(s) !== s.name ? " · " + esc(s.name) + " ✓" : "") + '</small></span><span class="m-cq">' + cs.length + '</span></div>'
         + '<div class="m-cc">' + (cs.map(card).join("") || '<div class="m-c0">No actions at this stage' + (q ? " match the search" : "") + '</div>') + '</div></section>'; }).join("") + '</div>';
     wireTop(pg, root); const kb = $(".m-kb", pg), ss = $(".m-ss", pg), cols = $$(".m-col", kb), chips = $$(".m-sc", ss);
     /* which column is in view: its chip is filled in and kept in sight */
