@@ -1,5 +1,5 @@
 /* Phone view: look only. A tab bar along the bottom: Actions (filter pills by stage, a search box, a card per
-   action), Organizer (the stages side by side, swipe across) and Settings (theme, dark mode, text size, font,
+   action), Organizer (the stages as a flow chart, left to right, row by row) and Settings (theme, dark mode, text size, font,
    how to use, about). Tap an action for its problem, solution, photos (tap for full screen, swipe between them)
    and details. */
 "use strict";
@@ -10,7 +10,7 @@ const Mobile = (() => {
     ["settings", "Settings", '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>']];
   /* the bottom bar: the page above it is drawn into .m-pg */
   function shell(root){ if (!$(".m-bn", root)){ root.innerHTML = '<div class="m-pg"></div><nav class="m-bn">' + TABS.map(([k, n, d]) => '<button type="button" class="m-bt" data-mt="' + k + '"><i>' + svg(d) + '</i><span>' + n + '</span></button>').join("") + '</nav>';
-      $$(".m-bt", root).forEach(b => b.onclick = () => { const k = b.dataset.mt; if (open){ open = null; history.back(); if (k === tab) return render(root); } if (k === tab){ scrollTo(0, 0); $$(".m-list,.m-kb", root).forEach(x => x.scrollTop = 0); return; } tab = k; lsSet("adMTab", k); render(root); scrollTo(0, 0); }); }
+      $$(".m-bt", root).forEach(b => b.onclick = () => { const k = b.dataset.mt; if (open){ open = null; history.back(); if (k === tab) return render(root); } if (k === tab){ scrollTo(0, 0); $$(".m-list", root).forEach(x => x.scrollTop = 0); return; } tab = k; lsSet("adMTab", k); render(root); scrollTo(0, 0); }); }
     $$(".m-bt", root).forEach(b => b.classList.toggle("on", b.dataset.mt === tab)); return $(".m-pg", root); }
   const top = () => '<div class="m-top">' + LOGO(34) + '<div class="m-pj"></div><input class="in m-q" type="search" placeholder="Search" value="' + esc(App.q || "") + '"></div>';
   function wireTop(pg, root){ App.projBox($(".m-pj", pg)); const qi = $(".m-q", pg);
@@ -33,11 +33,26 @@ const Mobile = (() => {
     wireTop(pg, root); scrollTo(0, sy);
     $$(".pill", pg).forEach(b => b.onclick = () => { const s = b.dataset.s; if (!s) pills.clear(); else if (pills.has(s)) pills.delete(s); else { pills.clear(); pills.add(s); } render(root); });
     wireCards(pg, root); }
-  /* Organizer: one column per stage, most of the screen wide, snapping as you swipe across; each in priority order */
-  function board(pg, root){ const q = (App.q || "").trim().toLowerCase(), old = $(".m-kb", pg), sx = old ? old.scrollLeft : +lsGet("adMKbX", 0) || 0;
-    pg.innerHTML = top() + '<div class="m-kb">' + Store.stages().map(s => { const cs = Store.ranked(s.id).filter(a => Store.matches(a, q));
-      return '<section class="m-col" style="--c:' + esc(s.color) + '"><div class="m-ch"><i class="dot"></i><b>' + esc(s.name) + '</b><span>' + cs.length + '</span></div><div class="m-cc">' + (cs.map(card).join("") || '<div class="empty">None</div>') + '</div></section>'; }).join("") + '</div>';
-    wireTop(pg, root); const kb = $(".m-kb", pg); kb.scrollLeft = sx; kb.onscroll = debounce(() => lsSet("adMKbX", kb.scrollLeft), 200); wireCards(pg, root); }
+  /* Organizer: the stages as a flow chart that reads like a page, two to a row: left to right, then a Z down to the
+     start of the next row. On Hold sits off the flow (dashed, no arrows). Each box lists its actions in priority
+     order, a few at a time; tap the stage name for all of them on the Actions tab, tap an action to open it. */
+  const SHOW = 4;
+  function board(pg, root){ const q = (App.q || "").trim().toLowerCase(), all = Store.stages(), flow = all.filter(s => s.kind !== "hold"), hold = all.filter(s => s.kind === "hold"), sy = scrollY;
+    const box = (s, off) => { const cs = Store.ranked(s.id).filter(a => Store.matches(a, q)), more = cs.length - SHOW;
+      return '<div class="m-st' + (off ? " off" : "") + '" style="--c:' + esc(s.color) + '"><button type="button" class="m-sh" data-s="' + s.id + '"><i class="dot"></i><b>' + esc(s.name) + '</b><span>' + cs.length + '</span></button>'
+        + cs.slice(0, SHOW).map(a => '<button type="button" class="m-sa" data-ref="' + a._p + ":" + a.u + '"><b>' + esc(Store.actId(a)) + '</b><span>' + esc(a.f.title || "") + '</span></button>').join("")
+        + (more > 0 ? '<button type="button" class="m-sm" data-s="' + s.id + '">+' + more + ' more</button>' : !cs.length ? '<div class="m-s0">None</div>' : "") + '</div>'; };
+    /* rows of two; a row left with one gets On Hold beside it, any other On Hold stages come after */
+    const rows = []; for (let i = 0; i < flow.length; i += 2) rows.push(flow.slice(i, i + 2)); const offs = hold.slice();
+    const last = rows[rows.length - 1]; if (last && last.length === 1 && offs.length) last.push(Object.assign({ off: true }, offs.shift()));
+    for (let i = 0; i < offs.length; i += 2) rows.push(offs.slice(i, i + 2).map(x => Object.assign({ off: true }, x)));
+    const arrow = '<svg class="m-ar" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M13 6l6 6-6 6"/></svg>';
+    const z = '<svg class="m-z" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"><path d="M100 0V12H0V30" vector-effect="non-scaling-stroke"/></svg><svg class="m-zh" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12l6 6 6-6"/></svg>';
+    pg.innerHTML = top() + '<div class="m-flow">' + rows.map((r, i) => { const next = rows[i + 1], joined = next && !next[0].off && r.length === 2 && !r[1].off;
+      return '<div class="m-fr">' + box(r[0], r[0].off) + (r[1] ? (r[1].off ? '<span class="m-gap"></span>' : arrow) + box(r[1], r[1].off) : "") + '</div>' + (joined ? '<div class="m-zr">' + z + '</div>' : next ? '<div class="m-zr m-zn"></div>' : ""); }).join("") + '</div>';
+    wireTop(pg, root); scrollTo(0, sy);
+    $$(".m-sh,.m-sm", pg).forEach(b => b.onclick = () => { App.pills.clear(); App.pills.add(b.dataset.s); tab = "actions"; lsSet("adMTab", tab); render(root); scrollTo(0, 0); });
+    $$(".m-sa", pg).forEach(c => c.onclick = () => { open = c.dataset.ref; history.pushState({ m: 1 }, ""); render(root); }); }
   /* Settings: View (dark mode, theme, text size, font), How to use, About */
   const TX = [0.8, 0.87, 1, 1.13, 1.27];
   function settings(pg, root){ const v = App.viewGet();
@@ -59,7 +74,7 @@ const Mobile = (() => {
       const r = $("input[type=range]", body), fill = () => r.style.setProperty("--p", r.value / r.max * 100 + "%"); fill(); r.oninput = fill; r.onchange = () => again({ text: TX[+r.value] });
       $$("[data-fo]", body).forEach(b => b.onclick = () => again({ font: b.dataset.fo })); }
     if (stab === "help") body.innerHTML = '<div class="st-l">' + [["Finding an action", "Search finds any word in an action: its ID, title, problem, solution, equipment tags and the rest. The pills under the search show one stage at a time; All shows every stage. The A* logo clears both and goes back to the top."],
-      ["The Organizer", "Every stage side by side, the same as on a computer. Swipe across to move between stages. Higher in a stage means higher priority."],
+      ["The Organizer", "The stages as a flow chart: read it left to right, then follow the arrow down to the next row. Each box shows its first few actions, highest priority first. Tap a stage name to see all its actions. On Hold sits outside the flow, with a dashed edge."],
       ["Photos", "Open an action and tap a photo for full screen. Swipe left or right for the next one, drag down to close it."],
       ["Projects", "The box beside the logo picks which projects you see. Tick more than one to see them together."],
       ["Editing", "The phone is for looking only. Add and change actions on a computer; the changes show here the next time you open the app."]].map(([t, h]) => '<details class="st-h"><summary>' + t + '</summary><p>' + h + '</p></details>').join("") + '</div>';
