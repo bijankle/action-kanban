@@ -302,23 +302,11 @@ body.mobile :is(.m-bt,.pill,.m-q,.m-top .logo,.m-pj,.m-back,.m-top .btn,.m-stt b
 .m-bt i{display:grid;place-items:center;width:58px;height:30px;border-radius:15px;transition:background .15s}
 .m-bt.on{color:var(--th);font-weight:800}.m-bt.on i{background:var(--th-t)}html.dark .m-bt.on{color:var(--accent)}
 .m-bt.on:before{content:"";position:absolute;top:-7px;left:26%;right:26%;height:3px;border-radius:0 0 3px 3px;background:var(--th)}html.dark .m-bt.on:before{background:var(--accent)}
-/* phone Organizer: the stages as a flow chart, two to a row, a Z arrow down to the next row */
-.m-flow{padding:12px}
-.m-fr{display:grid;grid-template-columns:minmax(0,1fr) 26px minmax(0,1fr);align-items:start}.m-fr .m-ar{margin-top:14px}
-.m-st{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:10px;padding:2px 0 6px;min-width:0;display:flex;flex-direction:column}
-.m-st.off{border-style:dashed;border-top-style:solid;background:var(--panel2)}
-.m-fr>.m-st:only-child{grid-column:1}
-.m-sh{display:flex;align-items:center;gap:6px;border:0;background:none;text-align:left;padding:8px 9px 6px;font-size:var(--fl);line-height:1.2;cursor:pointer;color:var(--ink)}
-.m-sh b{flex:1;min-width:0}.m-sh span{font-weight:800;color:var(--dim)}.m-sh .dot{flex:none}
-.m-sa{display:block;width:100%;border:0;border-top:1px solid var(--line);background:none;text-align:left;padding:6px 9px;font-size:calc(12.5px*var(--mt,1));line-height:1.3;cursor:pointer;color:var(--ink)}
-.m-sa b{display:block;font-size:calc(11.5px*var(--mt,1));color:var(--th2)}html.dark .m-sa b{color:var(--accent)}
-.m-sa span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.m-sm{border:0;border-top:1px solid var(--line);background:none;color:var(--accent);font-weight:700;font-size:var(--fl);padding:7px 9px 2px;text-align:left;cursor:pointer}
-.m-s0{color:var(--faint);font-size:var(--fl);padding:4px 9px}
-.m-ar{width:26px;height:26px;fill:none;stroke:var(--muted);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.m-zr{position:relative;height:34px}.m-zn{height:14px}
-.m-z{position:absolute;left:calc((100% - 26px) / 4);width:calc(50% + 13px);top:0;height:calc(100% - 3px);overflow:visible;fill:none;stroke:var(--muted);stroke-width:2.4;stroke-linejoin:round}
-.m-zh{position:absolute;left:calc((100% - 26px) / 4 - 12px);bottom:-9px;width:24px;height:24px;fill:none;stroke:var(--muted);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+/* phone Organizer: stages side by side, swipe across */
+.m-kb{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:10px 12px 4px;scroll-padding:0 12px;scrollbar-width:none;align-items:flex-start}
+.m-col{flex:0 0 86%;scroll-snap-align:start;background:var(--panel2);border-radius:12px;border-top:4px solid var(--c);padding:0 8px 8px;min-height:50vh}
+.m-ch{display:flex;align-items:center;gap:8px;padding:10px 4px;font-size:var(--fb)}.m-ch span{margin-left:auto;color:var(--dim);font-weight:700}
+.m-cc{display:flex;flex-direction:column;gap:8px}.m-cc .m-card .stg{display:none}
 /* phone Settings */
 .m-sth b{font-size:calc(18px*var(--mt,1));font-weight:800}
 .m-stt{position:sticky;top:var(--mtop,57px);z-index:4;display:flex;background:var(--panel);border-bottom:1px solid var(--line)}
