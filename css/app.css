@@ -404,3 +404,4 @@ body.mobile #mobile{display:block;min-height:100%;padding-bottom:30px}
 .kcall dl{display:grid;grid-template-columns:44% 1fr;gap:5px 8px;margin:12px 0 0;font-size:13.5px}.kcall dt{color:var(--muted);font-weight:600}.kcall dd{margin:0}
 .kca-b{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 @media (max-width:760px){ .gal{padding:0} .gal-win{border-radius:0} .gal-stage{padding:6px} .gal-arr{display:none} .gal-t{max-width:40%} }
+.kcall .kca-b{position:sticky;bottom:-12px;background:var(--panel);margin:10px -14px -12px;padding:10px 14px 12px;border-top:1px solid var(--line)}

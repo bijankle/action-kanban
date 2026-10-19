@@ -16,7 +16,7 @@ const Table = (() => {
       list.sort((x, y) => { const kx = key(x), ky = key(y); const r = kx < ky ? -1 : kx > ky ? 1 : 0; return (r * so.dir) || base(x, y); }); }
     else list.sort(base);
     return list; }
-  function render(el){ if (App.view === "tiles") return tiles(el); const cs = cols(), ws = widths(), list = rows(), sel = App.selRef;
+  function render(el){ if (App.view === "tiles") return tiles(el); const cs = cols(), ws = widths(), list = rows(), sel = App.selRef || App.hiRef;
     const th = cs.map(c => '<th data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + (ws[c.id] || (c.type === "id" ? 96 : c.type === "proj" ? 140 : W[c.type] || 140)) + 'px">'
       + '<span class="th-l">' + esc(c.label) + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><i class="th-r"></i></th>').join("");
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
@@ -32,7 +32,7 @@ const Table = (() => {
       frag.appendChild(tr); });
     tb.appendChild(frag);
     tb.onclick = e => { const tr0 = e.target.closest("tr"); if (e.target.closest("[data-ph]")) return Media.view(App.act(tr0.dataset.ref), 0); if (e.target.closest("[data-up]")) return Media.pickFiles(App.act(tr0.dataset.ref), "image/*");
-      if (e.target.closest("select,input,label,button,a")) return; const tr = e.target.closest("tr"); if (tr) App.select(tr.dataset.ref); };
+      if (e.target.closest("select,input,label,button,a")) return; const tr = e.target.closest("tr"); if (tr) App.pick(tr, e); };
     /* files dropped on a row go to that action */
     tb.ondragover = e => { if (!Media.hasDrop(e)) return; e.preventDefault(); const tr = e.target.closest("tr"); $$("tr.drop", tb).forEach(x => x !== tr && x.classList.remove("drop")); tr && tr.classList.add("drop"); };
     tb.ondragleave = e => { if (!tb.contains(e.relatedTarget)) $$("tr.drop", tb).forEach(x => x.classList.remove("drop")); };
@@ -55,7 +55,7 @@ const Table = (() => {
   /* tiles view (like SharePoint or Google Drive): the main photo fills the tile, the title over it; the
      arrows on a tile step through its photos. The tile size is set from the Size callout. */
   const tileIx = new Map();
-  function tiles(el){ const list = rows(), sel = App.selRef, ed = Store.S.edit, multi = Store.selected().length > 1;
+  function tiles(el){ const list = rows(), sel = App.selRef || App.hiRef, ed = Store.S.edit, multi = Store.selected().length > 1;
     el.innerHTML = '<div class="tiles" style="--tw:' + (lsGet("adTileW", 240)) + 'px">' + list.map(a => { const ref = a._p + ":" + a.u, s = Store.stage(a.stage), p = Store.project(a._p) || {};
         return '<div class="tile' + (ref === sel ? " on" : "") + (a.photos.length ? "" : " nophoto") + '" data-ref="' + ref + '"><div class="tl-img"></div>'
           + '<div class="tl-top"><span class="tl-id">' + esc(Store.actId(a)) + '</span><span class="tl-st" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span></div>'
@@ -69,7 +69,7 @@ const Table = (() => {
       t.onclick = e => { const i = tileIx.get(t.dataset.ref) || 0;
         if (e.target.closest(".tl-prev")) return show(i - 1); if (e.target.closest(".tl-next")) return show(i + 1);
         if (e.target.closest("[data-ph]")) return Media.view(a, i); if (e.target.closest("[data-up]")) return Media.pickFiles(a, "image/*");
-        App.select(t.dataset.ref); };
+        App.pick(t, e); };
       t.ondblclick = e => { if (!e.target.closest("button") && n) Media.view(a, tileIx.get(t.dataset.ref) || 0); };
       t.ondragover = e => { if (Media.hasDrop(e) && ed){ e.preventDefault(); t.classList.add("drop"); } };
       t.ondragleave = e => { if (!t.contains(e.relatedTarget)) t.classList.remove("drop"); };
