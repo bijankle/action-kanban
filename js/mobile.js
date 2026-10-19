@@ -14,6 +14,7 @@ const Mobile = (() => {
         return '<button type="button" class="m-card" data-ref="' + a._p + ":" + a.u + '" style="--c:' + esc(s.color) + '">' + (a.photos[0] ? '<img alt="" loading="lazy" src="' + esc(Media.src(a, a.photos[0], true)) + '">' : "")
           + '<span class="m-c1"><span class="aid">' + esc(Store.actId(a)) + '</span><span class="stg">' + esc(s.name) + '</span></span><span class="m-t">' + esc(a.f.title || "") + '</span><span class="m-c2">' + (Store.selected().length > 1 ? esc(p.name) + " · " : "") + (a.photos.length ? "📷 " + a.photos.length : "") + (a.f.eta ? '  <span class="' + (a.f.eta === "TBC" ? "tbc" : "") + '">ETA ' + esc(fmtDate(a.f.eta)) + '</span>' : "") + '</span></button>'; }).join("") : '<div class="empty">No actions match.</div>') + '</div>';
     $(".m-list", root).scrollTop = sy;
+    $(".m-top .logo", root).onclick = () => { App.q = ""; pills.clear(); render(root); $(".m-list", root).scrollTop = 0; };   // the logo goes home: every action, from the top
     App.projBox($(".m-pj", root));
     const qi = $(".m-q", root); qi.oninput = debounce(() => { App.q = qi.value; render(root); const n = $(".m-q", root); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250);
     $$(".pill", root).forEach(b => b.onclick = () => { const s = b.dataset.s; if (!s) pills.clear(); else if (pills.has(s)) pills.delete(s); else { pills.clear(); pills.add(s); } render(root); });

@@ -41,7 +41,7 @@ a{color:var(--accent)}
 
 /* header */
 header{height:var(--header-h);display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line);position:relative;z-index:1200}
-.brand{display:flex;align-items:center;gap:9px;flex:none}.brand .logo{display:block}
+.brand{display:flex;align-items:center;gap:9px;flex:none;cursor:pointer}.brand .logo{display:block}
 .bn{font-size:17px;font-weight:600;letter-spacing:-.2px;white-space:nowrap}.bn b{font-weight:800;color:var(--th)}
 html.dark .bn b{color:var(--accent)}
 .menubar{display:flex;align-items:center;gap:2px;margin-left:4px;height:100%}
@@ -283,7 +283,7 @@ body.mobile header,body.mobile #tools,body.mobile main{display:none}
 body.mobile{overflow:auto}
 body.mobile #mobile{display:block;min-height:100%;padding-bottom:30px}
 .m-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
-.m-top .logo{flex:none}.m-pj{flex:none}.m-pj .pj-b{max-width:150px}.m-q{flex:1;height:36px}
+.m-top .logo{flex:none;cursor:pointer}.m-pj{flex:none}.m-pj .pj-b{max-width:150px}.m-q{flex:1;height:36px}
 .m-back{font-size:30px;width:38px}
 .m-pills{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;scrollbar-width:none;position:sticky;top:57px;background:var(--bg);z-index:4}
 .m-list{display:flex;flex-direction:column;gap:8px;padding:0 12px}
