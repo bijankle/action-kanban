@@ -6,12 +6,12 @@ const Print = (() => {
   const prefs = () => Object.assign({ photos: true, per: 2, board: true, newPage: true }, lsGet("adPrint", {}));
   function dialog(){ const ss = Store.stages(), pick = lsGet("adPrintSt", null), pf = prefs();
     const on = s => pick && s.id in pick ? pick[s.id] : s.print;
-    const m = modal('<h3>Print</h3><div class="pr-st">' + ss.map(s => { const n = Store.visible().filter(a => a.stage === s.id).length;
+    const m = modal('<h3>Export to PDF or print</h3><p class="dim">Pick “Save as PDF” as the printer for a PDF.</p><div class="pr-st">' + ss.map(s => { const n = Store.visible().filter(a => a.stage === s.id).length;
         return '<label class="tp-o"><input type="checkbox" data-s="' + s.id + '"' + (on(s) ? " checked" : "") + '><span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span><span class="dim">' + n + '</span></label>'; }).join("") + '</div>'
       + '<div class="msep"></div><label class="tp-o"><input type="checkbox" data-o="board"' + (pf.board ? " checked" : "") + '><span>Kanban overview first</span></label>'
       + '<label class="tp-o"><input type="checkbox" data-o="photos"' + (pf.photos ? " checked" : "") + '><span>Photos</span></label><label class="fl in-row">Photos per row <select class="in sm" data-o="per">' + [1, 2, 3, 4].map(n => '<option' + (n === pf.per ? " selected" : "") + '>' + n + '</option>').join("") + '</select></label>'
       + '<label class="tp-o"><input type="checkbox" data-o="newPage"' + (pf.newPage ? " checked" : "") + '><span>Each action on a new page</span></label>'
-      + '<p class="dim">Only the projects ticked in the project box, and only what the search shows.</p><div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Print</button></div>', { cls: "pr-win" });
+      + '<p class="dim">Only the projects ticked in the project box, and only what the search shows.</p><div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Export</button></div>', { cls: "pr-win" });
     $(".yn-no", m).onclick = () => m.close();
     $(".yn-yes", m).onclick = () => { const st = {}; $$("[data-s]", m).forEach(c => st[c.dataset.s] = c.checked); lsSet("adPrintSt", st);
       const o = {}; $$("[data-o]", m).forEach(c => o[c.dataset.o] = c.type === "checkbox" ? c.checked : +c.value); lsSet("adPrint", o); m.close();

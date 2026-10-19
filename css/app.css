@@ -405,3 +405,9 @@ body.mobile #mobile{display:block;min-height:100%;padding-bottom:30px}
 .kca-b{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 @media (max-width:760px){ .gal{padding:0} .gal-win{border-radius:0} .gal-stage{padding:6px} .gal-arr{display:none} .gal-t{max-width:40%} }
 .kcall .kca-b{position:sticky;bottom:-12px;background:var(--panel);margin:10px -14px -12px;padding:10px 14px 12px;border-top:1px solid var(--line)}
+
+/* export buttons, as in ActionMap: a download arrow over XLSX (Excel green) or PDF (red) */
+.dl{width:36px;height:34px;flex:0 0 36px;padding:0;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:var(--panel);color:var(--ink);border:var(--ctl-bd);border-radius:var(--ctl-r);cursor:pointer}
+.dl:hover{border-color:var(--th)}.dl svg{width:14px;height:14px}
+.dl b{font:800 calc(8.5px*var(--mt,1))/1 Arial,sans-serif;letter-spacing:.3px;color:#1d6f42}.dl-pdf b{color:#c0392b}
+html.dark .dl-xl b{color:#3fbf78}html.dark .dl-pdf b{color:#ff6b5b}
