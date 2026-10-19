@@ -54,7 +54,7 @@ const Workpack = (() => {
     if (a.photos.length){ head("Photos (" + a.photos.length + ")"); const gw = (CW - 6) / 2, gh = 66;
       for (let i = 0; i < a.photos.length; i += 2){ need(gh + 8); let rowH = 0;
         for (let k = 0; k < 2 && i + k < a.photos.length; k++){ const ph = a.photos[i + k]; try { const d = await toData(Media.src(a, ph)), [iw, ih] = await size(d);
-            const sc2 = Math.min(gw / iw, gh / ih), w = iw * sc2, hh = ih * sc2, x = M + k * (gw + 6) + (gw - w) / 2;
+            const sc2 = Math.min(gw / iw, gh / ih), w = iw * sc2, hh = ih * sc2, x = M + k * (gw + 6);
             doc.addImage(d, /png/i.test(d.slice(0, 30)) ? "PNG" : "JPEG", x, y, w, hh, undefined, "FAST"); rowH = Math.max(rowH, hh);
             if (ph.cap){ doc.setFontSize(7.5); doc.setTextColor(110); doc.text(doc.splitTextToSize(ph.cap, gw)[0] || "", M + k * (gw + 6), y + hh + 3.5); } } catch (e){ console.warn("photo", e); } }
         y += rowH + 8; } }
