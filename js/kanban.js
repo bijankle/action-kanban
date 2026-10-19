@@ -46,9 +46,8 @@ const Kanban = (() => {
     $(".kb-new", el).onclick = async () => { const n = await promptBox("Name of the new stage", ""); if (!n || !n.trim()) return;
       Store.mutate("config", () => { const ss = Store.S.config.stages; const at = ss.findIndex(s => !s.del && s.kind !== "open"); const s = Store.touch({ id: "st" + uid(), name: n.trim(), color: "#64748b", kind: "open", print: true });
         if (at < 0) ss.push(s); else ss.splice(at, 0, s); Store.S.config.mod = now(); }); }; }
-  /* the action callout: its problem, solution and photos, beside the card (Kanban) or where the action was
-     clicked (Actions tab, where it also has Upload and Edit, which opens the side panel) */
-  function callout(card, at){ Fields.closePop(); const a = App.act(card.dataset.ref); if (!a) return; const onActs = App.tab === "actions", ed = Store.S.edit; const s = Store.stage(a.stage), p = Store.project(a._p) || {};
+  /* the card callout: read only, beside the card */
+  function callout(card){ Fields.closePop(); const a = App.act(card.dataset.ref); if (!a) return; const ed = Store.S.edit; const s = Store.stage(a.stage), p = Store.project(a._p) || {};
     const keys = ["eta", "spares", "contractor", "contractorPhone", "equipment", "location"].map(id => Store.field(id)).filter(f => f && Fields.text(a, f) && !(f.type === "check" && !Fields.val(a, f)));
     const c = h('<div class="pop kcall"><div class="kca-h"><span class="aid">' + esc(Store.actId(a)) + '</span><span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span><span class="grow"></span><button type="button" class="ic-b sm" data-k="x" title="Close">✕</button></div>'
       + '<div class="kca-t">' + (esc(a.f.title) || '<span class="dim">No title</span>') + '</div>' + (Store.selected().length > 1 ? '<div class="dim">' + esc(p.name) + '</div>' : "")
@@ -56,16 +55,14 @@ const Kanban = (() => {
       + (a.photos.length ? '<h5>Photos ' + a.photos.length + '</h5><div class="kca-ph">' + a.photos.slice(0, 8).map((ph, i) => '<img alt="" data-i="' + i + '" src="' + esc(Media.src(a, ph, true)) + '">').join("") + '</div>' : "")
       + (a.steps.length ? '<h5>Steps ' + a.steps.filter(x => x.d).length + ' of ' + a.steps.length + '</h5>' + a.steps.map(x => '<div class="pa-step">' + (x.d ? "☑" : "☐") + " " + esc(x.t) + '</div>').join("") : "")
       + (keys.length ? '<dl>' + keys.map(f => '<dt>' + esc(f.label) + '</dt><dd>' + Fields.show(a, f) + '</dd>').join("") + '</dl>' : "")
-      + '<div class="kca-b">' + (a.photos.length ? '<button type="button" class="btn ghost sm" data-k="ph">Photos</button>' : "") + (onActs && ed ? '<button type="button" class="btn ghost sm" data-k="up">Upload</button>' : "")
-      + '<button type="button" class="btn sm" data-k="open">' + (onActs ? (ed ? "Edit" : "All details") : "Open in Actions") + '</button></div></div>');
+      + '<div class="kca-b">' + (a.photos.length ? '<button type="button" class="btn ghost sm" data-k="ph">Photos</button>' : "")
+      + '<button type="button" class="btn sm" data-k="open">Open in Actions</button></div></div>');
     document.body.appendChild(c); const r = card.getBoundingClientRect(), w = c.offsetWidth || 360;
-    if (at){ c.style.left = Math.max(8, Math.min(at.x + 14, innerWidth - w - 8)) + "px"; c.style.top = Math.max(8, Math.min(at.y + 10, innerHeight - c.offsetHeight - 8)) + "px"; }
-    else { c.style.left = (r.right + 10 + w < innerWidth ? r.right + 10 : Math.max(8, r.left - w - 10)) + "px"; c.style.top = Math.max(8, Math.min(r.top, innerHeight - c.offsetHeight - 8)) + "px"; }
+    c.style.left = (r.right + 10 + w < innerWidth ? r.right + 10 : Math.max(8, r.left - w - 10)) + "px"; c.style.top = Math.max(8, Math.min(r.top, innerHeight - c.offsetHeight - 8)) + "px";
     c.ondragover = e => { if (ed && Media.hasDrop(e)) e.preventDefault(); }; c.ondrop = e => { if (!ed || !Media.hasDrop(e)) return; e.preventDefault(); e.stopPropagation(); Fields.closePop(); Media.dropOn(a, e); };
     $$(".kca-ph img", c).forEach(im => im.onclick = () => { Fields.closePop(); Media.view(a, +im.dataset.i); });
     $$("[data-k]", c).forEach(b => b.onclick = () => { const k = b.dataset.k; Fields.closePop();
-      if (k === "ph") Media.view(a, 0); else if (k === "up") Media.pickFiles(a, "image/*");
-      else if (k === "open"){ App.tab = "actions"; lsSet("adTab", "actions"); App.select(card.dataset.ref); } }); }
+      if (k === "ph") Media.view(a, 0); else if (k === "open"){ App.tab = "actions"; lsSet("adTab", "actions"); App.select(card.dataset.ref); } }); }
   async function rename(st){ const s = Store.stage(st); const n = await promptBox("Rename the stage", s.name); if (!n || !n.trim() || n.trim() === s.name) return; Store.mutate("config", () => { s.name = n.trim(); Store.touch(s); }); }
   const COLORS = ["#3B8FE0", "#2F7FD1", "#7C5CD6", "#0E9AA7", "#2FB463", "#F2B03D", "#C07A12", "#E0453A", "#D6488A", "#64748b"];
   function menu(anchor, st){ Fields.closePop(); const s = Store.stage(st);
@@ -85,5 +82,5 @@ const Kanban = (() => {
       if (!await confirmBox("Delete the stage “" + s.name + "”?" + (n ? " Its " + n + " action" + (n > 1 ? "s move" : " moves") + " to “" + others[0].name + "”." : ""), "Delete", true)) return;
       const keys = ["config"].concat(Store.projects().map(x => "a:" + x.id));
       Store.mutate(keys, () => { Store.all().filter(a => a.stage === st).forEach(a => { a.stage = others[0].id; Store.touch(a); }); s.del = true; Store.touch(s); }); }; }
-  return { render, callout };
+  return { render };
 })();
