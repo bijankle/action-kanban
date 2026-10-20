@@ -455,6 +455,7 @@ html.dark .ap-r input[type=range]{background:linear-gradient(var(--accent),var(-
 .dl:hover{border-color:var(--th)}.dl svg{width:14px;height:14px}
 .dl b{font:800 calc(8.5px*var(--mt,1))/1 Arial,sans-serif;letter-spacing:.3px;color:#1d6f42}.dl-pdf b{color:#c0392b}
 html.dark .dl-xl b{color:#3fbf78}html.dark .dl-pdf b{color:#ff6b5b}
+.dl-done{color:var(--dim)}.dl.dl-done svg{width:19px;height:19px}.dl-done.on{color:#fff;background:var(--good);border-color:var(--good)}.dl-done:disabled{cursor:default}
 .dl-del{color:#c0392b}.dl.dl-del svg{width:19px;height:19px}.dl-del:hover{border-color:#c0392b;background:color-mix(in srgb,#c0392b 8%,var(--panel))}html.dark .dl-del{color:#ff6b5b}
 
 /* MTO and Spare parts tabs */

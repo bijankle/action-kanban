@@ -18,7 +18,8 @@ const ActionView = (() => {
       + '<span class="av-nav"><button type="button" class="ic-b" data-k="prev" title="Previous action"' + (i > 0 ? "" : " disabled") + '>‹</button><span class="dim">' + (i >= 0 ? (i + 1) + " of " + list.length : "") + '</span><button type="button" class="ic-b" data-k="next" title="Next action"' + (i >= 0 && i < list.length - 1 ? "" : " disabled") + '>›</button></span>'
       + '<span class="aid big"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '>' + esc(Store.actId(a)) + '</span>' + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "")
       + '<div class="av-st" data-f="status"></div><label class="sd-own" title="The action owner: their details go on the work pack">Owner <span class="own"></span></label><span class="grow"></span>'
-      + '<button class="dl dl-pdf" type="button" data-k="wp" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares">' + DLI + '<b>PDF</b></button>' + (ro ? "" : '<button class="dl dl-del" type="button" data-k="del" title="Delete this action" aria-label="Delete this action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg></button>') + '</div>'
+      + '<button class="dl dl-pdf" type="button" data-k="wp" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares">' + DLI + '<b>PDF</b></button>' + (() => { const dn = Store.stage(a.stage).kind === "done";
+        return '<button class="dl dl-done' + (dn ? " on" : "") + '" type="button" data-k="done"' + (ro ? " disabled" : "") + ' aria-pressed="' + dn + '" title="' + (dn ? "Complete: click to reopen" : "Mark the action complete") + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 5-5.5"/></svg></button>'; })() + (ro ? "" : '<button class="dl dl-del" type="button" data-k="del" title="Delete this action" aria-label="Delete this action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg></button>') + '</div>'
       + '<div class="av-title" data-f="title"></div>'
       + '<div class="av-tabs">' + TABS.map(([k, t]) => { const c = k === "mto" ? n("mto") : k === "spares" ? n("spares") : k === "isol" ? n("isol") : k === "drawings" ? Drawings.count(a) : 0; return '<button type="button" class="av-tab' + (k === sub ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'
       + '<div class="av-body' + (sub === "overview" ? " ov" : "") + '"></div></div>';
@@ -64,13 +65,14 @@ const ActionView = (() => {
     const cv = $(".ph-cover img", el); if (cv){ cv.src = Media.src(a, a.photos[0], true); cv.onerror = () => { if (!cv.dataset.r){ cv.dataset.r = 1; cv.src = Media.src(a, a.photos[0]); } }; }
     files(a, $(".att-l", el), ro);
     const mp = $(".ov-map", el); SiteMap.forAction(a).then(sm => { if (!sm || !mp.isConnected) return; mp.hidden = false; $("img", mp).src = sm.url; $("p", mp).textContent = sm.note; }).catch(() => {});
-    const det = $(".det", el); Store.fields().filter(f => !CORE.has(f.id) && !["mto", "sparelist", "isollist"].includes(f.type)).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); det.appendChild(r); });
+    const det = $(".det", el); Store.fields().filter(f => !CORE.has(f.id) && !["mto", "sparelist", "isollist", "complete"].includes(f.type)).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); det.appendChild(r); });
     $$("[data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a)); }
   async function act(k, a, list, i){
     if (k === "x") App.select(null);
     else if (k === "prev" || k === "next"){ const b = list[i + (k === "next" ? 1 : -1)]; if (b) App.select(b._p + ":" + b.u); }
     else if (k === "wp") Workpack.run(a);
     else if (k === "hist") history(a);
+    else if (k === "done"){ const f = Store.field("complete"); if (f) Fields.set(a, f, Store.stage(a.stage).kind !== "done"); }
     else if (k === "viewall") Media.view(a, 0);
     else if (k === "addph") Media.pickFiles(a, "image/*");
     else if (k === "addf") Media.pickFiles(a);
