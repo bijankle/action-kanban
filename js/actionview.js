@@ -1,5 +1,5 @@
 /* The action view: clicking an action opens it in place of the list. The header holds everything for that one
-   action (back to the list, previous and next, stage, priority, the workpack PDF, delete); below it the
+   action (back to the list, previous and next, stage, owner, the workpack PDF, delete); below it the
    action's own tabs: Overview (problem, solution, photos, notes, attachments, details), MTO, Spares and
    Isolations. */
 "use strict";
@@ -17,7 +17,7 @@ const ActionView = (() => {
     el.innerHTML = '<div class="av"><div class="av-head"><button type="button" class="btn ghost sm av-back" data-k="x" title="Back to the list (Esc)">‹ Actions</button>'
       + '<span class="av-nav"><button type="button" class="ic-b" data-k="prev" title="Previous action"' + (i > 0 ? "" : " disabled") + '>‹</button><span class="dim">' + (i >= 0 ? (i + 1) + " of " + list.length : "") + '</span><button type="button" class="ic-b" data-k="next" title="Next action"' + (i >= 0 && i < list.length - 1 ? "" : " disabled") + '>›</button></span>'
       + '<span class="aid big"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '>' + esc(Store.actId(a)) + '</span>' + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "")
-      + '<div class="av-st" data-f="status"></div><label class="sd-pr">Priority <span data-f="priority"></span></label><label class="sd-own" title="The action owner: their details go on the work pack">Owner <span class="own"></span></label><span class="grow"></span>'
+      + '<div class="av-st" data-f="status"></div><label class="sd-own" title="The action owner: their details go on the work pack">Owner <span class="own"></span></label><span class="grow"></span>'
       + (ro ? "" : '<button class="ic-b" type="button" data-k="del" title="Delete this action">🗑</button>') + '<button class="dl dl-pdf" type="button" data-k="wp" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares">' + DLI + '<b>PDF</b></button></div>'
       + '<div class="av-title" data-f="title"></div>'
       + '<div class="av-tabs">' + TABS.map(([k, t]) => { const c = k === "mto" ? n("mto") : k === "spares" ? n("spares") : k === "isol" ? n("isol") : k === "drawings" ? Drawings.count(a) : 0; return '<button type="button" class="av-tab' + (k === sub ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'

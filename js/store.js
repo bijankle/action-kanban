@@ -18,7 +18,6 @@ function defaultConfig(){ const t = now(); const opt = (labels, colors) => label
     fields: [
       F("title", "Title", "text", { table: true, core: true }),
       F("status", "Status", "stage", { table: true, core: true }),
-      F("priority", "Priority", "rank", { table: true, core: true }),
       F("problem", "Problem", "longtext", { core: true }),
       F("solution", "Solution", "longtext", { core: true }),
       F("notes", "Notes", "longtext", { core: true }),
@@ -48,7 +47,7 @@ const Store = (() => {
 
   /* ---------- reading ---------- */
   const stages = () => live(S.config.stages);
-  const fields = () => live(S.config.fields);
+  const fields = () => live(S.config.fields).filter(f => f.id !== "priority");   // (no priority: the order in an Organizer column is just the order)
   const field = id => S.config.fields.find(f => f.id === id && !f.del);
   const stage = id => S.config.stages.find(s => s.id === id && !s.del) || stages()[0];
   /* a stage has two names for the same step: done, on the action (its steps row, the pills, exports: "RFQ Sent"), and

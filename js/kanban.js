@@ -1,5 +1,5 @@
 /* The Organizer tab: one column per stage, like Trello, kept minimal. Drag cards between and within columns
-   (higher in a column = higher priority). Click a card for a callout with its problem, solution and photos;
+   (cards keep the order they're dragged into). Click a card for a callout with its problem, solution and photos;
    editing is done in the action itself. Double click a column name to rename it, drag its header to move it. */
 "use strict";
 const Kanban = (() => {
