@@ -14,7 +14,7 @@ const Equip = (() => {
         const pidCol = ((d.types || {}).mel || { f: [] }).f.indexOf("P&ID");
         Object.entries(KINDS).forEach(([k, [ti, ni, label]]) => (d.data && d.data[k] || []).forEach(row => { const t = String(row[ti] || "").trim(); if (!t || seen.has(k + t)) return; seen.add(k + t);
           const it = { t, n: String(row[ni] || "").trim(), k: label }; if (k === "mel" && pidCol >= 0 && row[pidCol]) it.p = row[pidCol]; out.push(it); }));
-        list = out; raw = d; IDB.set("equip", { at: now(), items: out, raw: d }); }
+        list = out; raw = d; areaM = null; IDB.set("equip", { at: now(), items: out, raw: d }); }
       catch (e){ console.warn("plant equipment lists", e); if (!list) list = []; }
       return list; })();
     return loadP; }
@@ -23,10 +23,20 @@ const Equip = (() => {
     const extra = ((Store.field("equipment") || {}).options || []).filter(o => !o.del).map(o => ({ t: o.label, n: "", k: "Equipment tags" }));
     const all = extra.concat(list || []), first = w[0], out = [];
     for (const it of all){ const t = it.t.toLowerCase(), n = it.n.toLowerCase(), hay = t + " " + n; if (!w.every(x => hay.includes(x))) continue;
-      const f = by === "n" ? n : t; out.push([f.startsWith(first) ? 0 : f.includes(first) ? 1 : 2, it]); if (out.length > 4000) break; }
-    out.sort((a, b) => a[0] - b[0] || a[1].t.localeCompare(b[1].t)); return out.slice(0, 40).map(x => x[1]); }
+      const f = by === "n" ? n : t; out.push([f.startsWith(first) ? 0 : f.includes(first) ? 1 : 2, it, KR[it.k] == null ? 3 : KR[it.k], n.length]); if (out.length > 4000) break; }
+    /* (main equipment before its instruments and valves; for a name, the shortest match first: BALL MILL before BALL MILL LUBE UNIT) */
+    out.sort((a, b) => a[0] - b[0] || a[2] - b[2] || (by === "n" ? a[3] - b[3] : 0) || a[1].t.localeCompare(b[1].t)); return out.slice(0, 40).map(x => x[1]); }
+  const KR = { "Equipment tags": 0, "Mech equipment": 1, "Elec equipment": 2 };
   const get = t => (list || []).find(x => x.t === t);
-  return { load, find, get, raw: () => raw, list: () => list || [], get count(){ return (list || []).length; } };
+  /* the plant's WBS areas from the equipment list: area code → its name (the name most of its equipment gives) */
+  let areaM = null;
+  function areas(){ if (areaM) return areaM; const d = raw; if (!d || !d.data || !d.data.mel) return new Map(); const fi = ((d.types || {}).mel || { f: [] }).f.indexOf("Area"), cnt = new Map();
+    d.data.mel.forEach(r => { const code = (String(r[0] || "").match(/^([A-Z]\d{2,3})-/) || [])[1], n = String(r[fi] || "").trim(); if (!code || !n || /^\d+$/.test(n)) return; const k = code + "|" + n; cnt.set(k, (cnt.get(k) || 0) + 1); });
+    const best = new Map(); cnt.forEach((c, k) => { const [code, n] = k.split("|"); if (!best.has(code) || best.get(code)[1] < c) best.set(code, [n, c]); });
+    areaM = new Map([...best.entries()].sort().map(([c, [n]]) => [c, c + " " + n])); return areaM; }
+  /* a tag's WBS area, as "F13 Milling & Classification" */
+  const areaOf = t => { const c = (String(t || "").match(/^([A-Z]\d{2,3})-?/) || [])[1]; return c ? areas().get(c) || "" : ""; };
+  return { load, find, get, areas, areaOf, raw: () => raw, list: () => list || [], get count(){ return (list || []).length; } };
 })();
 
 const Isol = (() => {

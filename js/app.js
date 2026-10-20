@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.8.1";
+const APP_VERSION = "1.8.2";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -276,6 +276,7 @@ const App = (() => {
       $("#folderB").onclick = () => Local.state() === "locked" ? Local.reconnect() : Local.pick(); }
     await Local.init();
     const qs = new URLSearchParams(location.search);
+    if (!A.mobile) Equip.load().then(() => render()).catch(() => {});   // (the plant tags and WBS areas, for picking equipment and locations)
     try { await Promise.all([Store.load(), checkEdit()]); } catch (e){ $("#boot .bt").textContent = "Couldn't load the actions: " + e.message; return; }
     if (qs.get("p") && Store.project(qs.get("p"))) Store.setSelected([qs.get("p")]);
     const ar = qs.get("a"); if (ar){ const a = Store.findRef(ar); if (a){ if (!Store.selected().includes(a._p)) Store.setSelected(Store.selected().concat(a._p)); A.selRef = a._p + ":" + a.u;

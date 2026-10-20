@@ -39,6 +39,9 @@ const Fields = (() => {
         if (v && !done(a) && fin){ Store.place(a, fin.id, 0); Store.log("Completed " + Store.actId(a)); } else if (!v && done(a) && ret){ Store.place(a, ret.id); Store.log("Reopened " + Store.actId(a)); } return; }
       if (f.id === "priority"){ Store.place(a, a.stage, v - 1); Store.log("Reordered " + Store.actId(a)); return; }
       a.f[f.id] = v; Store.touch(a); Store.log("Edited " + Store.actId(a));
+      /* the location follows the equipment's WBS area until someone types their own */
+      if (f.id === "equipment" && (!a.f.location || a.locAuto)){ const ar = (Array.isArray(v) ? v : []).map(t => Equip.areaOf(t)).find(Boolean); if (ar){ a.f.location = ar; a.locAuto = true; } else if (a.locAuto){ a.f.location = ""; delete a.locAuto; } }
+      if (f.id === "location") delete a.locAuto;
       if (f.type === "contact"){ const c = Store.contacts().find(x => x.name.toLowerCase() === String(v || "").toLowerCase());
         Store.fields().filter(p => p.type === "phone" && p.link === f.id).forEach(p => { if (c && c.mobile) a.f[p.id] = c.mobile; else if (!v || v === "TBC" || v === "N/A") a.f[p.id] = ""; }); }
       if (f.type === "phone" && f.link){ const name = a.f[f.link]; if (name && name !== "TBC" && name !== "N/A" && v){ const c = Store.contacts().find(x => x.name.toLowerCase() === name.toLowerCase());
@@ -67,7 +70,7 @@ const Fields = (() => {
       case "number": { const i = h('<input class="in" type="number">'); i.value = v == null ? "" : v; i.onchange = () => set(a, f, i.value === "" ? "" : +i.value); return i; }
       default: { const i = h('<input class="in' + (tbc(v) ? " tbc" : "") + '" type="' + (f.type === "phone" ? "tel" : "text") + '">'); i.value = v == null ? "" : v;
         if (f.suggest){ const id = "dl_" + f.id; let dl = document.getElementById(id); if (!dl){ dl = h('<datalist id="' + id + '"></datalist>'); document.body.appendChild(dl); }
-          dl.innerHTML = [...new Set(Store.all().map(x => x.f[f.id]).filter(Boolean))].sort().map(x => '<option value="' + esc(x) + '">').join(""); i.setAttribute("list", id); }
+          dl.innerHTML = [...new Set(Store.all().map(x => x.f[f.id]).filter(Boolean).concat(f.id === "location" ? [...Equip.areas().values()] : []))].sort().map(x => '<option value="' + esc(x) + '">').join(""); i.setAttribute("list", id); }
         i.onchange = () => set(a, f, i.value.trim()); i.onkeydown = e => { if (e.key === "Enter") i.blur(); }; return i; } } }
   function grow(t){ requestAnimationFrame(() => { t.style.height = "auto"; t.style.height = Math.min(420, t.scrollHeight + 2) + "px"; }); }
 
@@ -90,12 +93,17 @@ const Fields = (() => {
     const p = h('<div class="pop tagpop"><input class="in" type="text" placeholder="Search or add a tag…"><div class="tp-l"></div></div>'); document.body.appendChild(p); place(p, anchor);
     const i = $("input", p), l = $(".tp-l", p);
     const commit = () => { if (JSON.stringify(cur) !== JSON.stringify(a.f[f.id] || [])) set(a, f, cur.slice()); };
-    const draw = () => { const q = i.value.trim().toLowerCase(); const all = [...new Set(cur.concat(optLabels(f)))].filter(x => !q || x.toLowerCase().includes(q));
-      l.innerHTML = all.map(x => '<label class="tp-o"><input type="checkbox"' + (cur.includes(x) ? " checked" : "") + ' data-v="' + esc(x) + '"><span>' + esc(x) + '</span></label>').join("")
-        + (q && !all.some(x => x.toLowerCase() === q) ? '<button type="button" class="tp-add">Add “' + esc(i.value.trim()) + '”</button>' : "") + (!all.length && !q ? '<div class="dd-n">No tags yet, type one above</div>' : "");
+    /* equipment tags: every tag in the plant lists, searched by tag or name (the ones chosen first) */
+    const eq = f.id === "equipment"; if (eq) Equip.load().then(() => p.isConnected && draw()).catch(() => {});
+    const draw = () => { const q = i.value.trim().toLowerCase(); const found = eq && q ? Equip.find(q, /^[a-z]{0,2}\d/i.test(q) ? "t" : "n").map(x => x.t) : [];
+      const all = [...new Set(cur.concat(eq ? found : optLabels(f)))].filter(x => !q || cur.includes(x) || found.includes(x) || x.toLowerCase().includes(q));
+      const nm = x => { const e = eq && Equip.get(x); return e && e.n ? '<small>' + esc(e.n) + '</small>' : ""; };
+      l.innerHTML = (eq && !q && !cur.length ? '<div class="dd-n">Type a tag or a name, e.g. F13-MB-401 or ball mill</div>' : "") + all.map(x => '<label class="tp-o"><input type="checkbox"' + (cur.includes(x) ? " checked" : "") + ' data-v="' + esc(x) + '"><span>' + esc(x) + nm(x) + '</span></label>').join("")
+        + (q && !all.some(x => x.toLowerCase() === q) ? '<button type="button" class="tp-add">Add “' + esc(i.value.trim()) + '”</button>' : "") + (!all.length && !q && !eq ? '<div class="dd-n">No tags yet, type one above</div>' : "");
       $$("input[type=checkbox]", l).forEach(c => c.onchange = () => { const x = c.dataset.v; cur = c.checked ? cur.concat(x) : cur.filter(y => y !== x); });
       const ad = $(".tp-add", l); if (ad) ad.onclick = add; };
-    const add = () => { const t = i.value.trim(); if (!t) return; if (!optLabels(f).some(x => x.toLowerCase() === t.toLowerCase())){
+    const add = () => { const t = i.value.trim(); if (!t) return; if (eq){ const hit = Equip.find(t, "t")[0]; const x = hit && hit.t.toLowerCase() === t.toLowerCase() ? hit.t : t.toUpperCase(); if (!cur.includes(x)) cur.push(x); i.value = ""; draw(); i.focus(); return; }
+      if (!optLabels(f).some(x => x.toLowerCase() === t.toLowerCase())){
         Store.mutate("config", () => { f.options = f.options || []; f.options.push({ id: uid(), label: t, color: "" }); Store.touch(f); }); }
       const ex = optLabels(f).find(x => x.toLowerCase() === t.toLowerCase()) || t; if (!cur.includes(ex)) cur.push(ex); i.value = ""; draw(); i.focus(); };
     i.oninput = draw; i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); add(); } if (e.key === "Escape"){ e.stopPropagation(); closePop(); } };
