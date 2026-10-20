@@ -52,7 +52,7 @@ const Kanban = (() => {
         if (at < 0) ss.push(s); else ss.splice(at, 0, s); Store.S.config.mod = now(); }); }; }
   /* the card callout: read only, beside the card */
   function callout(card){ Fields.closePop(); const a = App.act(card.dataset.ref); if (!a) return; const ed = Store.S.edit; const s = Store.stage(a.stage), p = Store.project(a._p) || {};
-    const keys = ["eta", "spares", "contractor", "contractorPhone", "equipment", "location"].map(id => Store.field(id)).filter(f => f && Fields.text(a, f) && !(f.type === "check" && !Fields.val(a, f)));
+    const keys = ["eta", "spares", "contractor", "equipment", "location"].map(id => Store.field(id)).filter(f => f && Fields.text(a, f) && !(f.type === "check" && !Fields.val(a, f)));
     const c = h('<div class="pop kcall"><div class="kca-h"><span class="aid">' + esc(Store.actId(a)) + '</span><span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span><span class="grow"></span><button type="button" class="ic-b sm" data-k="x" title="Close">✕</button></div>'
       + '<div class="kca-t">' + (esc(a.f.title) || '<span class="dim">No title</span>') + '</div>' + (Store.selected().length > 1 ? '<div class="dim">' + esc(p.name) + '</div>' : "")
       + '<h5>Problem</h5><div class="kca-x">' + (esc(a.f.problem) || '<span class="dim">–</span>') + '</div><h5>Solution</h5><div class="kca-x">' + (esc(a.f.solution) || '<span class="dim">–</span>') + '</div>'

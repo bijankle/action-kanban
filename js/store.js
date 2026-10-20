@@ -29,7 +29,6 @@ function defaultConfig(){ const t = now(); const opt = (labels, colors) => label
       F("scope", "Scope document sent", "choice", { options: opt(YN), tbc: true, na: true }),
       F("contractorAssigned", "Contractor assigned", "choice", { options: opt(YN), tbc: true, na: true }),
       F("contractor", "Contractor name", "contact", { tbc: true, na: true }),
-      F("contractorPhone", "Contractor number", "phone", { link: "contractor" }),
       F("eta", "Parts receival ETA", "date", { table: true, tbc: true, na: true }),
       F("mto", "MTO", "mto", { table: true, core: true }),
       F("sparelist", "Spares list", "sparelist", { core: true }),
