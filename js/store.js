@@ -218,7 +218,7 @@ const Store = (() => {
           else if (k === "projects"){ const r = await GH.readJson(P_PROJECTS, at); S.projects.projects = adoptList(S.projects.projects, mergeById(S.projects.projects, r && r.projects), "id"); wrote[k] = ser(k); entries.push({ path: P_PROJECTS, content: wrote[k] }); }
           else if (k === "vendors"){ wrote[k] = ser(k); entries.push({ path: P_VENDORS, content: wrote[k] }); }
           else if (k === "users"){ const r = await GH.readJson(P_USERS, at); S.users = { v: 1, users: mergeById(S.users.users, r && r.users) }; wrote[k] = ser(k); entries.push({ path: P_USERS, content: wrote[k] }); }
-          else { const pid = k.slice(2); adopt(pid, mergeActs(S.acts[pid], await GH.readJson(pActs(pid), at), pid)); wrote[k] = ser(k); entries.push({ path: pActs(pid), content: wrote[k] }); } }
+          else { const pid = k.slice(2), pr = project(pid); if (!pr || pr.del){ S.dirty.delete(k); continue; } adopt(pid, mergeActs(S.acts[pid], await GH.readJson(pActs(pid), at), pid)); wrote[k] = ser(k); entries.push({ path: pActs(pid), content: wrote[k] }); } }
         blobs.forEach(b => entries.push(b));
         try { await GH.commit(entries, commitMsg(), at);
           keys.forEach(k => { if (ser(k) === wrote[k]) S.dirty.delete(k); if (k.startsWith("a:")) setBase(k.slice(2), JSON.parse(wrote[k])); }); S.blobs = S.blobs.filter(b => !blobs.includes(b)); break; }
@@ -243,16 +243,26 @@ const Store = (() => {
     S.loaded = true; App.render(); if (S.dirty.size || S.blobs.length) saveSoon(); }
   async function refresh(first){ const held = () => S.edit && S.dirty.size && !first; if (saving || held()) return false;
     const [c, p, us, vd] = await Promise.all([GH.readJson(P_CONFIG), GH.readJson(P_PROJECTS), GH.readJson(P_USERS), GH.readJson(P_VENDORS)]);
-    const acts = {}; const list = live(p && p.projects || []); await Promise.all(list.map(async x => { acts[x.id] = await GH.readJson(pActs(x.id)) || { v: 1, nextNo: 1, actions: [] }; }));
+    const allP = p && p.projects || [], acts = {}; const list = live(allP); await Promise.all(list.map(async x => { acts[x.id] = await GH.readJson(pActs(x.id)) || { v: 1, nextNo: 1, actions: [] }; }));
     if (saving || held()) return false;
     const before = snap(), prev = JSON.parse(JSON.stringify(S.acts, (k, v) => k === "_p" ? undefined : v));
     S.users = { v: 1, users: mergeById(S.users.users, us && us.users) }; if (vd && !S.dirty.has("vendors")) S.vendors = vd;
-    if (S.dirty.size){ if (c) adoptConfig(mergeConfig(S.config || c, c)); S.projects.projects = adoptList(S.projects.projects, mergeById(S.projects.projects, list), "id"); list.forEach(x => { const r = clone(acts[x.id]); adopt(x.id, mergeActs(S.acts[x.id] || acts[x.id], acts[x.id], x.id)); setBase(x.id, r); }); }
-    else { if (c) adoptConfig(c); S.projects.projects = adoptList(S.projects.projects, list, "id"); list.forEach(x => { setBase(x.id, acts[x.id]); adopt(x.id, acts[x.id]); }); Object.keys(S.acts).forEach(pid => { if (!acts[pid]) delete S.acts[pid]; }); }
+    const fresh = {}; list.forEach(x => fresh[x.id] = clone(acts[x.id])); carryOver(acts);   // (fresh: what's online, the base for the next merge)
+    if (S.dirty.size){ if (c) adoptConfig(mergeConfig(S.config || c, c)); S.projects.projects = adoptList(S.projects.projects, mergeById(S.projects.projects, allP), "id"); list.forEach(x => { adopt(x.id, mergeActs(S.acts[x.id] || acts[x.id], fresh[x.id], x.id)); setBase(x.id, fresh[x.id]); }); }
+    else { if (c) adoptConfig(c); S.projects.projects = adoptList(S.projects.projects, allP, "id"); list.forEach(x => { setBase(x.id, acts[x.id]); adopt(x.id, acts[x.id]); }); Object.keys(S.acts).forEach(pid => { if (!acts[pid]) delete S.acts[pid]; }); }
     /* someone else changed actions while we looked: tell the app which (it warns if one is open) */
     if (!first){ const ch = []; list.forEach(x => (S.acts[x.id].actions || []).forEach(a => { const o = ((prev[x.id] || {}).actions || []).find(y => y.u === a.u); if (o && (o.mod || 0) < (a.mod || 0) && !mine(a)) ch.push(x.id + ":" + a.u); })); if (ch.length && App.othersChanged) App.othersChanged(ch); }
     if (S.config) fixConfig(S.config);
     if (snap() !== before){ stash(); return true; } return false; }
+  /* unsaved edits to a list that's since been merged away (the actions moved into another project): carry each edited
+     action's changes over to where it now lives, by its id, and stop saving the old list (it would come back) */
+  function carryOver(acts){ [...S.dirty].filter(k => k.startsWith("a:") && !acts[k.slice(2)]).forEach(k => { const pid = k.slice(2), base = S.base[pid] || {};
+      ((S.acts[pid] || {}).actions || []).forEach(l => { const b = base[l.u] && JSON.parse(base[l.u]), lc = clean(l); if (b && eq(lc, b)) return;
+        Object.keys(acts).forEach(np => { const r = (acts[np].actions || []).find(x => x.u === l.u); if (!r) return; const B = b || {};
+          Object.keys(lc).forEach(f => { if (["f", "_p", "no", "mod", "by", "byE", "hist"].includes(f) || eq(lc[f], B[f])) return; r[f] = clone(lc[f]); });
+          r.f = Object.assign({}, r.f); Object.keys(lc.f || {}).forEach(f => { if (!eq(lc.f[f], (B.f || {})[f])) r.f[f] = clone(lc.f[f]); });
+          r.hist = histUnion(r.hist, lc.hist); r.mod = Math.max(r.mod || 0, lc.mod || 0); r.by = lc.by; S.dirty.add("a:" + np); }); });
+      S.dirty.delete(k); delete S.acts[pid]; delete S.base[pid]; }); }
   /* older files may be missing settings added later */
   function fixConfig(c){ const d = defaultConfig(); ["stages", "fields", "contacts"].forEach(k => c[k] = c[k] || d[k]);
     d.fields.forEach(f => { if (f.core && !c.fields.some(x => x.id === f.id)) c.fields.push(f); });
@@ -260,5 +270,5 @@ const Store = (() => {
     const i = c.fields.findIndex(f => f.id === "complete"); if (i >= 0 && i !== c.fields.length - 1) c.fields.push(c.fields.splice(i, 1)[0]); }
 
   return { S, enter, stages, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, find, findRef, actId, ranked, priority,
-    vendors: () => S.vendors, owner, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
+    stashNow: () => stash.flush ? stash.flush() : stash(), vendors: () => S.vendors, owner, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();

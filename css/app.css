@@ -108,7 +108,7 @@ select.in{cursor:pointer;padding-right:4px}
 input.secret{-webkit-text-security:disc;font-family:monospace}
 .mini{border:var(--ctl-bd);background:var(--panel);border-radius:6px;padding:3px 7px;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted)}.mini:hover{border-color:var(--th)}
 .dt{display:flex;gap:5px;align-items:center}
-.ck{display:inline-flex;cursor:pointer}.ck input{width:17px;height:17px;margin:0;accent-color:var(--th);cursor:pointer}.ck span{display:none}
+.ck{display:inline-flex;cursor:pointer;justify-self:start;align-self:center;width:max-content;max-width:max-content}.ck input{width:17px;height:17px;margin:0;accent-color:var(--th);cursor:pointer}.ck span{display:none}
 .fl{display:flex;flex-direction:column;gap:4px;font-size:var(--fl);font-weight:600;color:var(--muted);margin:10px 0}
 .fl .in{color:var(--ink);font-weight:400}.in-row{flex-direction:row;align-items:center;gap:8px;margin:6px 0}
 .tp-o{display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;font-size:var(--fb)}.tp-o input{accent-color:var(--th);width:16px;height:16px;margin:0}
@@ -542,10 +542,15 @@ html.dark .av-tab b{color:var(--ink)}
 .av-body{flex:1;min-height:0;overflow:auto;padding:14px 18px 40px}
 .av-body .pt-main,.av-body .is-main{padding:0;height:auto;overflow:visible}
 .pt-h{font-size:15px}
-.ov-g{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px}
+/* the Overview reads like a page of two columns: it fills the left one, then carries on at the top of the right (a
+   faint line down the middle); a section and its heading stay together */
+.ov-g{columns:2;column-gap:56px;column-rule:1px solid var(--line);column-fill:balance}
+.ov-l,.ov-r{display:contents}.ov-g .ov-r>h4:first-child{margin-top:16px}
+.ov-g>*>*{break-inside:avoid}.ov-g h4{break-after:avoid}
+.ov-g .det{display:block;break-inside:auto}.ov-g .det-r{display:grid;grid-template-columns:minmax(120px,38%) 1fr;gap:12px;align-items:center;margin-bottom:7px;break-inside:avoid}
 .ov-g h4{margin:16px 0 6px;font-size:var(--fl);text-transform:uppercase;letter-spacing:.5px;color:var(--dim);display:flex;align-items:center;gap:8px}
 .ov-g h4:first-child{margin-top:4px}.ov-g h4 .cnt{color:var(--faint)}.ov-g h4 .link{margin-left:auto;text-transform:none;letter-spacing:0;font-size:13px}
-@media (max-width:1100px){ .ov-g{grid-template-columns:1fr} }
+@media (max-width:1100px){ .ov-g{columns:1} }
 
 /* the workflow steps under an action's title */
 .av-steps{display:flex;align-items:center;gap:0;padding:6px 18px 2px;overflow-x:auto;scrollbar-width:none}

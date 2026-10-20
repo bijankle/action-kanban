@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.8.2";
+const APP_VERSION = "1.8.4";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -289,7 +289,9 @@ const App = (() => {
     /* look for other people's changes: every 20 s while an action is open, else every 45 s */
     let lastPoll = now(); setInterval(async () => { if (document.hidden || $(".pop") || typing() || now() - lastPoll < (A.selRef ? 20000 : 45000)) return; lastPoll = now(); try { if (await Store.refresh()) render(); } catch (e) {} }, 5000);
     document.addEventListener("visibilitychange", async () => { if (!document.hidden) try { if (await Store.refresh()) render(); } catch (e) {} });
-    addEventListener("beforeunload", e => { if (Store.S.dirty.size || Store.S.blobs.length){ Store.save(); e.preventDefault(); e.returnValue = ""; } });
+    /* leaving: save now (anything not saved yet is kept on this computer and saves the next time the app opens, so no "Leave site?" question) */
+    const flush = () => { if (Store.S.dirty.size || Store.S.blobs.length){ Store.stashNow(); Store.save(); } };
+    addEventListener("pagehide", flush); document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
     checkUpdate(); setInterval(checkUpdate, 30 * 60000);
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {}); }
   return Object.assign(A, { act, render, renderStatus, select, openParts, othersChanged, clashes, who, ago, viewOnly, newAction, projBox, boot, settings, viewGet, viewSet, update });
