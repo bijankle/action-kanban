@@ -39,18 +39,31 @@ const Fields = (() => {
         if (v && !done(a) && fin){ Store.place(a, fin.id, 0); Store.log("Completed " + Store.actId(a)); } else if (!v && done(a) && ret){ Store.place(a, ret.id); Store.log("Reopened " + Store.actId(a)); } return; }
       if (f.id === "priority"){ Store.place(a, a.stage, v - 1); Store.log("Reordered " + Store.actId(a)); return; }
       a.f[f.id] = v; Store.touch(a); Store.log("Edited " + Store.actId(a));
+      const auto = a.auto = a.auto || {}; delete auto[f.id]; if (f.id === "location") delete a.locAuto;
+      const fill = (id, val) => { if (a.f[id] && !auto[id] && !(id === "location" && a.locAuto)) return; if (val){ a.f[id] = val; auto[id] = true; } else if (auto[id]){ a.f[id] = ""; delete auto[id]; } };
       /* the location follows the equipment's WBS area until someone types their own */
-      if (f.id === "equipment" && (!a.f.location || a.locAuto)){ const ar = (Array.isArray(v) ? v : []).map(t => Equip.areaOf(t)).find(Boolean); if (ar){ a.f.location = ar; a.locAuto = true; } else if (a.locAuto){ a.f.location = ""; delete a.locAuto; } }
-      if (f.id === "location") delete a.locAuto;
-      if (f.type === "contact"){ const c = Store.contacts().find(x => x.name.toLowerCase() === String(v || "").toLowerCase());
+      if (f.id === "equipment"){ fill("location", (Array.isArray(v) ? v : []).map(t => Equip.areaOf(t)).find(Boolean)); if (auto.location) delete a.locAuto; }
+      /* the contractor's company brings its contact and number from the last job with that company */
+      if (f.id === "contractor"){ const prev = Store.all().filter(x => x !== a && x.f.contractor && x.f.contractor.toLowerCase() === String(v || "").toLowerCase() && x.f.contractorContact).sort((x, y) => (y.mod || 0) - (x.mod || 0))[0],
+          ct = !prev && v ? Store.contacts().find(c => (c.company || "").toLowerCase() === String(v).toLowerCase()) : null;
+        fill("contractorContact", prev ? prev.f.contractorContact : ct ? ct.name : ""); fill("contractorPhone", prev ? prev.f.contractorPhone : ct ? ct.mobile : ""); }
+      /* the contact brings their number (from Contacts, else their last job), and their company if it's empty */
+      if (f.id === "contractorContact"){ const n = String(v || "").toLowerCase(), c = Store.contacts().find(x => x.name.toLowerCase() === n), prev = Store.all().filter(x => x !== a && (x.f.contractorContact || "").toLowerCase() === n && x.f.contractorPhone).sort((x, y) => (y.mod || 0) - (x.mod || 0))[0];
+        if (n && n !== "tbc" && n !== "n/a"){ fill("contractorPhone", (c && c.mobile) || (prev && prev.f.contractorPhone) || ""); fill("contractor", (c && c.company) || (prev && prev.f.contractor) || ""); } else fill("contractorPhone", ""); }
+      if (f.type === "contact" && f.id !== "contractorContact"){ const c = Store.contacts().find(x => x.name.toLowerCase() === String(v || "").toLowerCase());
         Store.fields().filter(p => p.type === "phone" && p.link === f.id).forEach(p => { if (c && c.mobile) a.f[p.id] = c.mobile; else if (!v || v === "TBC" || v === "N/A") a.f[p.id] = ""; }); }
       if (f.type === "phone" && f.link){ const name = a.f[f.link]; if (name && name !== "TBC" && name !== "N/A" && v){ const c = Store.contacts().find(x => x.name.toLowerCase() === name.toLowerCase());
-          if (!c){ Store.S.config.contacts.push(Store.touch({ id: uid(), name, company: "", mobile: v, email: "" })); Store.S.dirty.add("config"); }
+          if (!c){ Store.S.config.contacts.push(Store.touch({ id: uid(), name, company: f.link === "contractorContact" ? a.f.contractor || "" : "", mobile: v, email: "" })); Store.S.dirty.add("config"); }
           else if (!c.mobile){ c.mobile = v; Store.touch(c); Store.S.dirty.add("config"); } } }
     }); }
 
   /* the editor for one field, as an element; ro: show only */
-  function editor(a, f, ro){ const v = val(a, f);
+  /* a box filled in from a linked box (the location from the equipment, the contractor's contact from the company,
+     the number from the contact) shows in the theme colour until someone types over it (a.auto) */
+  const isAuto = (a, f) => !!((a.auto || {})[f.id] || (f.id === "location" && a.locAuto));
+  const LINKED = { location: "the equipment's WBS area", contractorContact: "the company's last contact", contractorPhone: "the contact's number" };
+  function editor(a, f, ro){ const el = editor0(a, f, ro); if (!ro && isAuto(a, f) && a.f[f.id]){ el.classList.add("lk"); el.title = "Filled in from " + (LINKED[f.id] || "a linked box") + ". Type over it to change it."; } return el; }
+  function editor0(a, f, ro){ const v = val(a, f);
     if (f.type === "complete" && !ro){ const c = h('<label class="ck ck-done" title="Ticking moves the action to Completed; unticking moves it back"><input type="checkbox"' + (v ? " checked" : "") + '><span></span></label>'); $("input", c).onchange = e => set(a, f, e.target.checked); return c; }
     if (ro || f.type === "meta" || f.type === "mto" || f.type === "sparelist" || f.type === "isollist") return h('<div class="fv">' + (show(a, f) || '<span class="dim">–</span>') + '</div>');
     switch (f.type){
@@ -62,7 +75,10 @@ const Fields = (() => {
       /* choices suggest, they don't restrict: pick one of the list or type your own (which isn't added to the list) */
       case "choice": return combo(a, f, optLabels(f).map(o => ({ v: o, c: optColor(f, o) })).concat(extra(f).map(x => ({ v: x }))), true);
       case "multi": return tagBox(a, f);
-      case "contact": return combo(a, f, Store.contacts().map(c => ({ v: c.name, sub: [c.company, c.mobile].filter(Boolean).join("  ") })).concat(extra(f).map(x => ({ v: x }))));
+      case "contact": { const co = String(a.f.contractor || "").toLowerCase(), seen = new Set(), its = [];
+        Store.contacts().slice().sort((x, y) => ((y.company || "").toLowerCase() === co) - ((x.company || "").toLowerCase() === co)).forEach(c => { seen.add(c.name.toLowerCase()); its.push({ v: c.name, sub: [c.company, c.mobile].filter(Boolean).join("  ") }); });
+        if (f.id === "contractorContact") Store.all().forEach(x => { const n = x.f.contractorContact; if (n && !seen.has(n.toLowerCase()) && !/^(TBC|N\/A)$/.test(n)){ seen.add(n.toLowerCase()); its.push({ v: n, sub: [x.f.contractor, x.f.contractorPhone].filter(Boolean).join("  ") }); } });
+        return combo(a, f, its.concat(extra(f).map(x => ({ v: x })))); }
       case "longtext": { const t = h('<textarea class="in ta' + (tbc(v) ? " tbc" : "") + '" rows="3"></textarea>'); t.value = v || ""; grow(t); t.oninput = () => grow(t); t.onchange = () => set(a, f, t.value); return t; }
       case "date": { const w = h('<div class="dt"><input class="in" type="date"><button type="button" class="mini">TBC</button>' + (f.na ? '<button type="button" class="mini">N/A</button>' : "") + '</div>');
         const i = $("input", w); if (v && /^\d{4}-\d\d-\d\d$/.test(v)) i.value = v; else if (v){ i.type = "text"; i.value = v; i.readOnly = true; i.classList.toggle("tbc", tbc(v)); i.title = "Click to pick a date"; i.onclick = () => { i.type = "date"; i.readOnly = false; i.value = ""; i.classList.remove("tbc"); i.showPicker && i.showPicker(); }; }
@@ -70,7 +86,7 @@ const Fields = (() => {
       case "number": { const i = h('<input class="in" type="number">'); i.value = v == null ? "" : v; i.onchange = () => set(a, f, i.value === "" ? "" : +i.value); return i; }
       default: { const i = h('<input class="in' + (tbc(v) ? " tbc" : "") + '" type="' + (f.type === "phone" ? "tel" : "text") + '">'); i.value = v == null ? "" : v;
         if (f.suggest){ const id = "dl_" + f.id; let dl = document.getElementById(id); if (!dl){ dl = h('<datalist id="' + id + '"></datalist>'); document.body.appendChild(dl); }
-          dl.innerHTML = [...new Set(Store.all().map(x => x.f[f.id]).filter(Boolean).concat(f.id === "location" ? [...Equip.areas().values()] : []))].sort().map(x => '<option value="' + esc(x) + '">').join(""); i.setAttribute("list", id); }
+          dl.innerHTML = [...new Set(Store.all().map(x => x.f[f.id]).filter(Boolean).concat(f.id === "location" ? [...Equip.areas().values()] : f.id === "contractor" ? Store.contacts().map(c => c.company) : []).filter(Boolean))].sort().map(x => '<option value="' + esc(x) + '">').join(""); i.setAttribute("list", id); }
         i.onchange = () => set(a, f, i.value.trim()); i.onkeydown = e => { if (e.key === "Enter") i.blur(); }; return i; } } }
   function grow(t){ requestAnimationFrame(() => { t.style.height = "auto"; t.style.height = Math.min(420, t.scrollHeight + 2) + "px"; }); }
 

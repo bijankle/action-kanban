@@ -621,3 +621,6 @@ html.dark .av-tab b{color:var(--ink)}
 .ch-c{display:flex;gap:10px;font-size:var(--fl);line-height:1.45}.ch-k{flex:0 0 150px;color:var(--muted);font-weight:600}.ch-v{min-width:0;overflow-wrap:anywhere}.ch-v s{color:var(--dim)}
 .tp-o span small{display:block;color:var(--dim);font-size:calc(11.5px*var(--mt,1));font-weight:400}
 .tbl td.ed .in{width:100%}.tbl td.ed .tagbox{min-width:0}
+/* a box filled in from a linked box: the theme tint and a link mark, until someone types over it */
+.in.lk,.lk>.in,.lk .in{background:color-mix(in srgb,var(--th) 13%,var(--panel))!important;border-color:color-mix(in srgb,var(--th) 60%,var(--line))!important;color:var(--ink)}
+.lk.combo,.det-r .lk{position:relative}
