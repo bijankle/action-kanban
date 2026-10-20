@@ -624,3 +624,7 @@ html.dark .av-tab b{color:var(--ink)}
 /* a box filled in from a linked box: the theme tint and a link mark, until someone types over it */
 .in.lk,.lk>.in,.lk .in{background:color-mix(in srgb,var(--th) 13%,var(--panel))!important;border-color:color-mix(in srgb,var(--th) 60%,var(--line))!important;color:var(--ink)}
 .lk.combo,.det-r .lk{position:relative}
+/* Materials: MTO and Spares as tabs inside it */
+.av-sub{display:inline-flex;gap:4px;padding:3px;background:var(--panel2);border-radius:10px;margin:0 0 12px}
+.av-sub button{border:0;background:none;padding:5px 14px;border-radius:8px;font:600 var(--fb) var(--font);color:var(--muted);cursor:pointer}.av-sub button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px #0002}.av-sub b{font-size:11px;color:var(--dim);margin-left:3px}
+.av-body .pt-head .pt-h{visibility:hidden}   /* (the MTO / Spares tab above already names it) */

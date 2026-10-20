@@ -15,7 +15,7 @@ const Kanban = (() => {
     $(".kb", el).scrollLeft = sx; $$(".kb-cards", el).forEach(c => c.scrollTop = sy[c.dataset.s] || 0);
     $$(".kc", el).forEach(c => { const a = App.act(c.dataset.ref); const im = $("img", c); if (im && a && a.photos[0]) im.src = Media.src(a, a.photos[0], true); });
     wire(el, ro); }
-  function card(a, multi){ const p = Store.project(a._p) || {}, ref = a._p + ":" + a.u, n = Object.values(a.f || {}).filter(v => v === "TBC").length, eta = a.f.eta;
+  function card(a, multi){ const p = Store.project(a._p) || {}, ref = a._p + ":" + a.u, n = Object.values(a.f || {}).filter(v => v === "TBC").length, eta = Store.eta(a);
     return '<article class="kc' + (ref === App.selRef ? " on" : "") + '" draggable="' + Store.S.edit + '" data-ref="' + ref + '">' + (a.photos.length ? '<img alt="" loading="lazy">' : "")
       + '<div class="kc-top"><span class="aid">' + esc(Store.actId(a)) + '</span>' + (multi ? '<span class="ptag sm" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "") + '</div>'
       + '<div class="kc-t">' + (esc(a.f.title) || '<span class="dim">No title</span>') + '</div><div class="kc-m">'

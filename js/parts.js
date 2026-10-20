@@ -2,7 +2,7 @@
    quotes and the RFQ revisions: every RFQ PDF export takes the next rev letter and is kept for download. */
 "use strict";
 const Parts = (() => {
-  const COLS = { mto: [["desc", "Description"], ["part", "Part / tag no."], ["qty", "Qty"], ["unit", "Unit"], ["notes", "Notes"]],
+  const COLS = { mto: [["desc", "Description"], ["part", "Part / tag no."], ["qty", "Qty"], ["unit", "Unit"], ["eta", "ETA"], ["notes", "Notes"]],
     spares: [["desc", "Description"], ["part", "Part / tag no."], ["qty", "Qty"], ["unit", "Unit"], ["notes", "Store location / notes"]] };
   const NAME = { mto: "MTO", spares: "Spares" }, OTHER = { mto: "spares", spares: "mto" };
   const list = (a, k) => a[k] || (a[k] = []);
@@ -17,9 +17,9 @@ const Parts = (() => {
 
   function pane(a, kind, ro){ const s = Store.stage(a.stage), items = list(a, kind), cols = COLS[kind];
     const blanks = Math.max(ro ? 0 : 1, 5 - items.length);
-    const row = (it, i) => '<tr data-id="' + it.id + '"><td class="pt-no">' + (i + 1) + '</td>' + cols.map(([k]) => '<td><input class="in pt-in' + (it[k] === "TBC" ? " tbc" : "") + '" data-r="' + it.id + '" data-c="' + k + '"' + (k === "qty" ? ' inputmode="decimal"' : "") + (ro ? " readonly" : "") + ' value="' + esc(it[k] == null ? "" : it[k]) + '"></td>').join("")
+    const row = (it, i) => '<tr data-id="' + it.id + '"><td class="pt-no">' + (i + 1) + '</td>' + cols.map(([k]) => '<td><input class="in pt-in' + (it[k] === "TBC" ? " tbc" : "") + '" data-r="' + it.id + '" data-c="' + k + '"' + (k === "qty" ? ' inputmode="decimal"' : k === "eta" ? ' type="date" title="When this part is expected on site"' : "") + (ro ? " readonly" : "") + ' value="' + esc(it[k] == null ? "" : it[k]) + '"></td>').join("")
       + '<td class="pt-act">' + (ro ? "" : '<button type="button" class="btn ghost sm pt-mv" title="Move this row to ' + NAME[OTHER[kind]] + '">→ ' + (kind === "mto" ? "Spares" : "MTO") + '</button><button type="button" class="ic-b sm pt-x" title="Remove this row">✕</button>') + '</td></tr>';
-    const blank = k => '<tr class="pt-blank"><td class="pt-no"></td>' + cols.map(([c]) => '<td><input class="in pt-in" data-r="new' + k + '" data-c="' + c + '"' + (ro ? " readonly" : "") + '></td>').join("") + '<td></td></tr>';
+    const blank = k => '<tr class="pt-blank"><td class="pt-no"></td>' + cols.map(([c]) => '<td><input class="in pt-in" data-r="new' + k + '" data-c="' + c + '"' + (c === "eta" ? ' type="date"' : "") + (ro ? " readonly" : "") + '></td>').join("") + '<td></td></tr>';
     return '<div class="pt-head"><b class="pt-h">' + NAME[kind] + '</b><span class="grow"></span>'
       + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="gem" title="Paste a list of parts and Gemini fills in the rows">Paste text</button>')
       + '<button type="button" class="dl dl-xl" data-k="xls" title="Export this ' + NAME[kind] + ' to Excel">' + DLI + '<b>XLSX</b></button>'

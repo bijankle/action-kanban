@@ -5,7 +5,7 @@
 "use strict";
 const ActionView = (() => {
   const CORE = new Set(["title", "status", "priority", "problem", "solution", "notes"]);
-  const TABS = [["overview", "Overview"], ["mto", "MTO"], ["spares", "Spares"], ["isol", "Isolations"], ["drawings", "Drawings"]];
+  const TABS = [["overview", "Overview"], ["materials", "Materials"], ["isol", "Isolations"], ["drawings", "Drawings"]];   // (Materials holds the MTO and Spares)
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
   let last = null;
   function render(el){ const a = App.act(App.selRef); if (!a) return; const ro = !Store.S.edit, p = Store.project(a._p) || {}, sub = App.sub || "overview";
@@ -21,17 +21,17 @@ const ActionView = (() => {
       + '<button class="dl dl-pdf" type="button" data-k="wp" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares">' + DLI + '<b>PDF</b></button>' + (() => { const dn = Store.stage(a.stage).kind === "done";
         return '<button class="dl dl-done' + (dn ? " on" : "") + '" type="button" data-k="done"' + (ro ? " disabled" : "") + ' aria-pressed="' + dn + '" title="' + (dn ? "Complete: click to reopen" : "Mark the action complete") + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 5-5.5"/></svg></button>'; })() + (ro ? "" : '<button class="dl dl-del" type="button" data-k="del" title="Delete this action" aria-label="Delete this action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg></button>') + '</div>'
       + '<div class="av-title" data-f="title"></div>'
-      + '<div class="av-tabs">' + TABS.map(([k, t]) => { const c = k === "mto" ? n("mto") : k === "spares" ? n("spares") : k === "isol" ? n("isol") : k === "drawings" ? Drawings.count(a) : 0; return '<button type="button" class="av-tab' + (k === sub ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'
+      + '<div class="av-tabs">' + TABS.map(([k, t]) => { const mat = sub === "mto" || sub === "spares", on = k === sub || (k === "materials" && mat), c = k === "materials" ? n("mto") + n("spares") : k === "isol" ? n("isol") : k === "drawings" ? Drawings.count(a) : 0; return '<button type="button" class="av-tab' + (on ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'
       + '<div class="av-body' + (sub === "overview" ? " ov" : "") + '"></div></div>';
     $$(".av-head [data-f], .av-title[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     const ti = $(".av-title .in", el); if (ti) ti.placeholder = "Title";
     ownerBox($(".own", el), a, ro);
     const body = $(".av-body", el);
-    if (sub === "overview") overview(body, a, ro); else if (sub === "isol") Isol.renderFor(body, a, keepP); else if (sub === "drawings") Drawings.renderFor(body, a); else Parts.renderFor(body, a, sub, keepP);
+    if (sub === "overview") overview(body, a, ro); else if (sub === "isol") Isol.renderFor(body, a, keepP); else if (sub === "drawings") Drawings.renderFor(body, a); else { Parts.renderFor(body, a, sub, keepP); body.insertAdjacentHTML("afterbegin", '<div class="av-sub" role="tablist">' + [["mto", "MTO"], ["spares", "Spares"]].map(([k, t]) => '<button type="button" data-m="' + k + '"' + (k === sub ? ' class="on"' : "") + '>' + t + (n(k) ? ' <b>' + n(k) + '</b>' : "") + '</button>').join("") + '</div>'); $$(".av-sub button", body).forEach(b => b.onclick = () => { App.sub = b.dataset.m; lsSet("adMat", b.dataset.m); App.render(); }); }
     body.scrollTop = sc;
     if (keep){ const t = $('[data-f="' + keep.f + '"] input, [data-f="' + keep.f + '"] textarea, [data-f="' + keep.f + '"] select', el); if (t){ if (t.tagName === keep.tag && t.tagName !== "SELECT" && t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { if (keep.s != null) t.setSelectionRange(keep.s, keep.e); } catch (e) {} } }
     $$(".av-head [data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a, list, i));
-    $$(".av-tab", el).forEach(b => b.onclick = () => { App.sub = b.dataset.sub; App.render(); });
+    $$(".av-tab", el).forEach(b => b.onclick = () => { const k = b.dataset.sub; App.sub = k === "materials" ? (App.sub === "spares" ? "spares" : lsGet("adMat", "mto")) : k; App.render(); });
     const av = $(".av", el); av.ondragover = e => { if (Media.hasDrop(e) && sub === "overview"){ e.preventDefault(); av.classList.add("drop"); } };
     av.ondragleave = e => { if (!av.contains(e.relatedTarget)) av.classList.remove("drop"); };
     av.ondrop = e => { av.classList.remove("drop"); if (sub === "overview" && Media.hasDrop(e)){ e.preventDefault(); e.stopPropagation(); Media.dropOn(a, e); } }; }
@@ -65,7 +65,7 @@ const ActionView = (() => {
     const cv = $(".ph-cover img", el); if (cv){ cv.src = Media.src(a, a.photos[0], true); cv.onerror = () => { if (!cv.dataset.r){ cv.dataset.r = 1; cv.src = Media.src(a, a.photos[0]); } }; }
     files(a, $(".att-l", el), ro);
     const mp = $(".ov-map", el); SiteMap.forAction(a).then(sm => { if (!sm || !mp.isConnected) return; mp.hidden = false; $("img", mp).src = sm.url; $("p", mp).textContent = sm.note; }).catch(() => {});
-    const det = $(".det", el); Store.fields().filter(f => !CORE.has(f.id) && !["mto", "sparelist", "isollist", "complete"].includes(f.type)).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); det.appendChild(r); });
+    const det = $(".det", el); Store.fields().filter(f => !CORE.has(f.id) && !["mto", "sparelist", "isollist", "complete"].includes(f.type) && !Fields.DERIVED[f.id]).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); det.appendChild(r); });
     $$("[data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a)); }
   async function act(k, a, list, i){
     if (k === "x") App.select(null);

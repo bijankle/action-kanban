@@ -26,7 +26,7 @@ const Table = (() => {
       cs.forEach(c => { const td = document.createElement("td");
         if (c.type === "id"){ td.className = "idc"; td.innerHTML = '<span class="aid">' + esc(Store.actId(a)) + '</span>' + (a.photos.length ? '<span class="pc" title="' + a.photos.length + ' photos">📷 ' + a.photos.length + '</span>' : ""); }
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
-        else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi"].includes(c.type) || c.id === "location")){ td.className = "ed"; td.appendChild(Fields.editor(a, c)); }
+        else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.className = "ed"; td.appendChild(Fields.editor(a, c)); }
         else { td.innerHTML = Fields.show(a, c); if (c.id === "title") td.className = "ttl"; }
         tr.appendChild(td); });
       frag.appendChild(tr); });

@@ -92,6 +92,11 @@ const Store = (() => {
   const touch = o => { o.mod = now(); o.by = Profile.name() || "Someone"; if (me()) o.byE = me(); else delete o.byE; return o; };
   const mine = o => o && (o.byE ? o.byE === me() : o.by === Profile.name());
   /* everyone who has signed in (data/users.json): name, role, mobile and email, so edits and warnings can name people */
+  /* what the Materials tab says about an action: procurement needed (MTO rows), spares available (Spares rows), and
+     the parts ETA (the latest ETA on its MTO rows; an older action's own ETA otherwise) */
+  const rowsOf = l => (l || []).filter(it => it && (it.desc || it.part || it.qty));
+  const procurement = a => rowsOf(a.mto).length > 0, sparesAvail = a => rowsOf(a.spares).length > 0;
+  const eta = a => { const ds = rowsOf(a.mto).map(it => it.eta).filter(Boolean), d = ds.filter(x => /^\d{4}-\d\d-\d\d$/.test(x)).sort().pop(); return d || (ds.includes("TBC") ? "TBC" : "") || a.f.eta || ""; };
   const users = () => live(S.users.users);
   /* the action's owner, with their details from the people who've signed in: { n, e, role, mobile } */
   const owner = a => { const o = a && a.owner || {}, u = (o.e && users().find(x => x.id === o.e)) || (o.n && users().find(x => [x.first, x.last].filter(Boolean).join(" ").toLowerCase() === String(o.n).toLowerCase()));
@@ -270,5 +275,5 @@ const Store = (() => {
     const i = c.fields.findIndex(f => f.id === "complete"); if (i >= 0 && i !== c.fields.length - 1) c.fields.push(c.fields.splice(i, 1)[0]); }
 
   return { S, enter, stages, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, find, findRef, actId, ranked, priority,
-    stashNow: () => stash.flush ? stash.flush() : stash(), vendors: () => S.vendors, owner, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
+    stashNow: () => stash.flush ? stash.flush() : stash(), vendors: () => S.vendors, owner, procurement, sparesAvail, eta, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();

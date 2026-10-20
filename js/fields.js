@@ -10,7 +10,8 @@ const Fields = (() => {
   const optColor = (f, v) => { const o = (f.options || []).find(x => x.label === v); return o && o.color; };
   const META = { created: a => a.created, modified: a => a.mod, completed: a => a.doneAt };
   const done = a => Store.stage(a.stage).kind === "done";
-  const val = (a, f) => f.type === "meta" ? (META[f.id] || (() => null))(a) : f.type === "complete" ? done(a) : f.id === "status" ? a.stage : f.id === "priority" ? Store.priority(a) : f.type === "mto" ? (a.mto || []).length : f.type === "sparelist" ? (a.spares || []).length : f.type === "isollist" ? (a.isol || []).length : (a.f || {})[f.id];
+  const DERIVED = { procurement: a => Store.procurement(a), spares: a => Store.sparesAvail(a), eta: a => Store.eta(a) };   // (from the Materials tab, not typed in)
+  const val = (a, f) => DERIVED[f.id] ? DERIVED[f.id](a) : f.type === "meta" ? (META[f.id] || (() => null))(a) : f.type === "complete" ? done(a) : f.id === "status" ? a.stage : f.id === "priority" ? Store.priority(a) : f.type === "mto" ? (a.mto || []).length : f.type === "sparelist" ? (a.spares || []).length : f.type === "isollist" ? (a.isol || []).length : (a.f || {})[f.id];
   /* the MTO and spares counts: a link to that action on the MTO or Spares tab */
   const partsLink = (a, f) => { const n = val(a, f); return '<a href="#" class="mto-l' + (n ? "" : " none") + '" data-parts="' + ({ mto: "mto", sparelist: "spares", isollist: "isol" })[f.type] + '" data-ref="' + a._p + ":" + a.u + '">' + (n ? n + (f.type === "isollist" ? " isolation" : " x item") + (n > 1 ? "s" : "") : "None") + '</a>'; };
   /* plain text for search, export and Gemini */
@@ -65,7 +66,7 @@ const Fields = (() => {
   function editor(a, f, ro){ const el = editor0(a, f, ro); if (!ro && isAuto(a, f) && a.f[f.id]){ el.classList.add("lk"); el.title = "Filled in from " + (LINKED[f.id] || "a linked box") + ". Type over it to change it."; } return el; }
   function editor0(a, f, ro){ const v = val(a, f);
     if (f.type === "complete" && !ro){ const c = h('<label class="ck ck-done" title="Ticking moves the action to Completed; unticking moves it back"><input type="checkbox"' + (v ? " checked" : "") + '><span></span></label>'); $("input", c).onchange = e => set(a, f, e.target.checked); return c; }
-    if (ro || f.type === "meta" || f.type === "mto" || f.type === "sparelist" || f.type === "isollist") return h('<div class="fv">' + (show(a, f) || '<span class="dim">–</span>') + '</div>');
+    if (ro || DERIVED[f.id] || f.type === "meta" || f.type === "mto" || f.type === "sparelist" || f.type === "isollist") return h('<div class="fv">' + (show(a, f) || '<span class="dim">–</span>') + '</div>');
     switch (f.type){
       case "stage": { const s = h('<select class="in sel-stage">' + Store.stages().map(x => '<option value="' + x.id + '"' + (x.id === v ? " selected" : "") + '>' + esc(x.name) + '</option>').join("") + '</select>');
         s.style.setProperty("--c", Store.stage(v).color); s.onchange = () => set(a, f, s.value); return s; }
@@ -128,5 +129,5 @@ const Fields = (() => {
     const below = innerHeight - r.bottom > 300; p.style.top = (below ? r.bottom + 4 : Math.max(8, r.top - 304)) + "px"; }
   function closePop(){ $$(".pop").forEach(p => { p._done && p._done(); p.remove(); }); }
   document.addEventListener("mousedown", e => { if (!e.target.closest(".pop, .pj-b, #profB")) closePop(); });
-  return { show, text, editor, set, val, closePop, place, chip, optLabels, grow };
+  return { DERIVED, show, text, editor, set, val, closePop, place, chip, optLabels, grow };
 })();
