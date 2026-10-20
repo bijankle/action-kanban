@@ -43,6 +43,10 @@ const Kanban = (() => {
       const hd = $(".kb-h", col); hd.ondragstart = e => { if (e.target !== hd) return; e.dataTransfer.setData("text/stage", st); };
       $(".kb-n", col).ondblclick = () => rename(st);
       $(".kb-m", col).onclick = e => menu(e.currentTarget, st); });
+    /* between columns, or past the last card: the nearest column takes it */
+    const near = x => { let best = null, d = 1e9; $$(".kb-col", el).forEach(c => { const r = c.getBoundingClientRect(), dd = x < r.left ? r.left - x : x > r.right ? x - r.right : 0; if (dd < d){ d = dd; best = c; } }); return best; };
+    kb.ondragover = e => { if (e.target.closest(".kb-col")) return; const c = near(e.clientX); if (c) c.ondragover(e); };
+    kb.ondrop = e => { if (e.target.closest(".kb-col")) return; const c = near(e.clientX); if (c) c.ondrop(e); else $$(".kb-ph").forEach(x => x.remove()); };
     $(".kb-new", el).onclick = async () => { const n = await promptBox("Name of the new stage", ""); if (!n || !n.trim()) return;
       Store.mutate("config", () => { const ss = Store.S.config.stages; const at = ss.findIndex(s => !s.del && s.kind !== "open"); const s = Store.touch({ id: "st" + uid(), name: n.trim(), color: "#64748b", kind: "open", print: true });
         if (at < 0) ss.push(s); else ss.splice(at, 0, s); Store.S.config.mod = now(); }); }; }

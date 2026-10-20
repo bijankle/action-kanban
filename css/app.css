@@ -186,7 +186,7 @@ body:has(#tools[hidden]) main{height:calc(100% - var(--header-h))}
 .empty{padding:50px 20px;text-align:center;color:var(--muted)}
 
 /* kanban */
-.kb{display:flex;gap:12px;padding:14px;height:100%;overflow-x:auto;align-items:flex-start}
+.kb{display:flex;gap:12px;padding:14px;height:100%;overflow-x:auto;align-items:stretch}   /* (columns run the full height: anywhere in one is a drop target) */
 .kb-col{flex:0 0 288px;max-height:100%;display:flex;flex-direction:column;background:var(--panel2);border-radius:12px;border-top:4px solid var(--c)}
 .kb-col.dover{box-shadow:inset 3px 0 0 var(--th)}
 .kb-h{flex:none;display:flex;align-items:center;gap:7px;padding:10px 8px 8px 12px;font-weight:700;cursor:grab}
