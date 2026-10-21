@@ -28,7 +28,7 @@ function defaultConfig(){ const t = now(); const opt = (labels, colors) => label
       F("defect", "Defect notice sent", "choice", { options: opt(YN), tbc: true, na: true }),
       F("scope", "Scope document sent", "choice", { options: opt(YN), tbc: true, na: true }),
       F("contractor", "Contractor company", "text", { suggest: true, tbc: true, na: true }),
-      F("contractorDate", "Date confirmed", "date", { tbc: true, na: true }),
+      F("contractorDate", "Date on site", "date", { tbc: true, na: true }),
       F("contractorContact", "Contact name", "contact", { tbc: true, na: true }),
       F("contractorPhone", "Contact number", "phone", { link: "contractorContact" }),
       F("eta", "Parts receival ETA", "date", { table: true, tbc: true, na: true }),
