@@ -536,7 +536,7 @@ html.dark .tabs-x .tab.on{color:var(--ink)}
 /* sign in, profile menu, editing warnings */
 .si-win{width:min(460px,94vw);text-align:left}.si-logo{margin-bottom:8px}
 .si-card{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:6px 0 10px;background:var(--panel2)}
-.si-back{font-size:13px;margin-top:4px}
+.si-back,.si-view{font-size:13px;margin-top:4px;margin-right:18px}
 .profpop{min-width:250px}.pp-h{display:flex;flex-direction:column;gap:1px;padding:6px 8px}
 .sd-warn{background:#fff4e0;border:1px solid #f2b03d;color:#6b4a00;border-radius:9px;padding:8px 11px;font-size:13px;line-height:1.4;margin-bottom:10px}
 html.dark .sd-warn{background:#3a2a08;color:#ffd98a}

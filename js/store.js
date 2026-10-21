@@ -98,11 +98,13 @@ const Store = (() => {
   const procurement = a => rowsOf(a.mto).length > 0, sparesAvail = a => rowsOf(a.spares).length > 0;
   const eta = a => { const ds = rowsOf(a.mto).map(it => it.eta).filter(Boolean), d = ds.filter(x => /^\d{4}-\d\d-\d\d$/.test(x)).sort().pop(); return d || (ds.includes("TBC") ? "TBC" : "") || a.f.eta || ""; };
   const users = () => live(S.users.users);
+  /* one entry per person: the same email (any capitals, spaces) is one account, the most recently changed copy kept */
+  function oneEach(list){ const m = new Map(); (list || []).forEach(u => { const k = String(u.id || u.email || "").trim().toLowerCase(); if (!k) return; u.id = k; const o = m.get(k); if (!o || (u.mod || 0) >= (o.mod || 0)) m.set(k, o ? Object.assign({}, o, u) : u); }); return [...m.values()]; }
   /* the action's owner, with their details from the people who've signed in: { n, e, role, mobile } */
   const owner = a => { const o = a && a.owner || {}, u = (o.e && users().find(x => x.id === o.e)) || (o.n && users().find(x => [x.first, x.last].filter(Boolean).join(" ").toLowerCase() === String(o.n).toLowerCase()));
     return u ? { n: [u.first, u.last].filter(Boolean).join(" ") || o.n, e: u.email || u.id, role: u.role, mobile: u.mobile } : { n: o.n || "", e: o.e || "" }; };
   const user = email => users().find(u => u.id === String(email || "").toLowerCase());
-  function saveUser(p, force){ const id = String(p.email || "").toLowerCase(); if (!id) return; const cur = S.users.users.find(u => u.id === id), u = Object.assign({}, cur || { id, created: now() }, { first: p.first, last: p.last, mobile: p.mobile, email: p.email, role: p.role });
+  function saveUser(p, force){ const id = String(p.email || "").trim().toLowerCase(); if (!id) return; const cur = S.users.users.find(u => u.id === id), u = Object.assign({}, cur || { id, created: now() }, { first: p.first, last: p.last, mobile: p.mobile, email: p.email, role: p.role });
     if (!force && cur && ["first", "last", "mobile", "role"].every(k => (cur[k] || "") === (u[k] || ""))) return; u.mod = now();   // (force: held back until we could save, so save it now)
     if (cur) Object.assign(cur, u); else S.users.users.push(u);
     if (S.edit){ S.dirty.add("users"); stash(); saveSoon(); } else lsSet("adPendUser", p); }
@@ -222,7 +224,7 @@ const Store = (() => {
           if (k === "config"){ adoptConfig(mergeConfig(S.config, await GH.readJson(P_CONFIG, at))); wrote[k] = ser(k); entries.push({ path: P_CONFIG, content: wrote[k] }); }
           else if (k === "projects"){ const r = await GH.readJson(P_PROJECTS, at); S.projects.projects = adoptList(S.projects.projects, mergeById(S.projects.projects, r && r.projects), "id"); wrote[k] = ser(k); entries.push({ path: P_PROJECTS, content: wrote[k] }); }
           else if (k === "vendors"){ wrote[k] = ser(k); entries.push({ path: P_VENDORS, content: wrote[k] }); }
-          else if (k === "users"){ const r = await GH.readJson(P_USERS, at); S.users = { v: 1, users: mergeById(S.users.users, r && r.users) }; wrote[k] = ser(k); entries.push({ path: P_USERS, content: wrote[k] }); }
+          else if (k === "users"){ const r = await GH.readJson(P_USERS, at); S.users = { v: 1, users: oneEach(mergeById(S.users.users, r && r.users)) }; wrote[k] = ser(k); entries.push({ path: P_USERS, content: wrote[k] }); }
           else { const pid = k.slice(2), pr = project(pid); if (!pr || pr.del){ S.dirty.delete(k); continue; } adopt(pid, mergeActs(S.acts[pid], await GH.readJson(pActs(pid), at), pid)); wrote[k] = ser(k); entries.push({ path: pActs(pid), content: wrote[k] }); } }
         blobs.forEach(b => entries.push(b));
         try { await GH.commit(entries, commitMsg(), at);
@@ -251,7 +253,7 @@ const Store = (() => {
     const allP = p && p.projects || [], acts = {}; const list = live(allP); await Promise.all(list.map(async x => { acts[x.id] = await GH.readJson(pActs(x.id)) || { v: 1, nextNo: 1, actions: [] }; }));
     if (saving || held()) return false;
     const before = snap(), prev = JSON.parse(JSON.stringify(S.acts, (k, v) => k === "_p" ? undefined : v));
-    S.users = { v: 1, users: mergeById(S.users.users, us && us.users) }; if (vd && !S.dirty.has("vendors")) S.vendors = vd;
+    S.users = { v: 1, users: oneEach(mergeById(S.users.users, us && us.users)) }; if (vd && !S.dirty.has("vendors")) S.vendors = vd;
     const fresh = {}; list.forEach(x => fresh[x.id] = clone(acts[x.id])); carryOver(acts);   // (fresh: what's online, the base for the next merge)
     if (S.dirty.size){ if (c) adoptConfig(mergeConfig(S.config || c, c)); S.projects.projects = adoptList(S.projects.projects, mergeById(S.projects.projects, allP), "id"); list.forEach(x => { adopt(x.id, mergeActs(S.acts[x.id] || acts[x.id], fresh[x.id], x.id)); setBase(x.id, fresh[x.id]); }); }
     else { if (c) adoptConfig(c); S.projects.projects = adoptList(S.projects.projects, allP, "id"); list.forEach(x => { setBase(x.id, acts[x.id]); adopt(x.id, acts[x.id]); }); Object.keys(S.acts).forEach(pid => { if (!acts[pid]) delete S.acts[pid]; }); }

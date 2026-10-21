@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.9.0";
+const APP_VERSION = "1.9.1";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -133,43 +133,65 @@ const App = (() => {
     $$("input", m).forEach(i => i.onkeydown = e => { if (e.key === "Enter") $(".yn-yes", m).click(); }); }
   /* sign in: your email finds your profile; a new email asks for your details and makes your account.
      (It names people on edits, warnings and exports. Saving still needs a GitHub key.) */
-  /* sign in. With the save server: email, then a password (or making one, with your details, the first time);
-     the account lives on the server, so any computer remembers you. Without it: just email and details. */
-  function signIn(after){ if ($(".si-win")) return; let step = "email", known = null; const R = !!GH.relay();
-    const m = modal('<div class="si-logo">' + LOGO(46) + '</div><h3>Sign in to Action Database</h3><p class="dim si-msg">Enter your email. Your name and contact details then go on your edits, workpacks and RFQs.</p><div class="si-body"></div><p class="bad si-err" hidden></p><div class="yn-btns"><button class="yn-yes" type="button">Continue</button></div>', { cls: "si-win", sticky: true });
-    const body = $(".si-body", m), go = $(".yn-yes", m), err = $(".si-err", m), F = (k, l, t, v, ph) => '<label class="fl">' + l + '<input class="in" data-k="' + k + '" type="' + (t || "text") + '" value="' + esc(v || "") + '"' + (ph ? ' placeholder="' + ph + '"' : "") + (t === "password" ? ' autocomplete="' + (k === "pw" && step === "pass" ? "current-password" : "new-password") + '"' : "") + '></label>';
-    let email = Profile.get().email || lsGet("adUser", "") || "";
+  /* sign in: email, then your password; the first time, your details and a password (and the team code). The account
+     lives with the data (users.json, and keys.json for the passwords, Keys), or on the save server if there is one,
+     so any computer remembers you. Signing in is also what lets this computer save. */
+  function signIn(after){ if ($(".si-win")) return; let step = "email", kind = "", known = null; const R = !!GH.relay();
+    const m = modal('<div class="si-logo">' + LOGO(46) + '</div><h3>Sign in to Action Database</h3><p class="dim si-msg"></p><div class="si-body"></div><p class="bad si-err" hidden></p><div class="yn-btns"><button class="yn-yes" type="button">Next</button></div>', { cls: "si-win", sticky: true });
+    const body = $(".si-body", m), go = $(".yn-yes", m), err = $(".si-err", m), msg = $(".si-msg", m);
+    const F = (k, l, t, v, ph) => '<label class="fl">' + l + '<input class="in" data-k="' + k + '" type="' + (t || "text") + '" value="' + esc(v || "") + '"' + (ph ? ' placeholder="' + ph + '"' : "") + (t === "password" ? ' autocomplete="' + (step === "pass" ? "current-password" : "new-password") + '"' : "") + '></label>';
+    let email = String(Profile.get().email || lsGet("adUser", "") || "").trim().toLowerCase();
     const card = u => '<div class="si-card"><b>' + esc([u.first, u.last].join(" ")) + '</b><span>' + esc(u.role || "") + '</span><span class="dim">' + esc([u.mobile, u.email].filter(Boolean).join("   ")) + '</span></div>';
+    const user = () => '<input type="text" hidden autocomplete="username" value="' + esc(email) + '">';
+    const back = '<button type="button" class="link si-back">Use another email</button>';
+    const details = p => '<div class="pf-g">' + F("first", "First name", "text", p.first) + F("last", "Last name", "text", p.last) + '</div>' + F("role", "Role", "text", p.role, "e.g. Maintenance Engineer") + F("mobile", "Mobile", "tel", p.mobile);
+    const pwBoth = '<div class="pf-g">' + F("pw", "Password", "password", "", "8 characters or more") + F("pw2", "Password again", "password") + '</div>';
     const draw = () => { err.hidden = true; const u = Store.user(email), p = u ? { first: u.first, last: u.last, role: u.role, mobile: u.mobile } : Profile.get();
-      if (step === "email"){ $(".si-msg", m).textContent = "Enter your email." + (R ? " You'll then be asked for your password." : ""); body.innerHTML = F("email", "Email", "email", email, "name@company.com"); go.textContent = "Next"; }
-      else if (step === "pass"){ $(".si-msg", m).innerHTML = "Welcome back" + (u ? "" : ", <b>" + esc(email) + "</b>") + "."; body.innerHTML = (u ? card(u) : "") + '<input type="text" hidden autocomplete="username" value="' + esc(email) + '">' + F("pw", "Password", "password") + '<button type="button" class="link si-back">Use another email</button>'; go.textContent = "Sign in"; }
-      else if (step === "known"){ $(".si-msg", m).innerHTML = "Welcome back."; body.innerHTML = card(u) + '<button type="button" class="link si-back">Not you? Use another email</button>'; go.textContent = "Sign in"; }
-      else if (step === "details"){ $(".si-msg", m).innerHTML = "Add your details: they go on your edits and work packs."; body.innerHTML = '<div class="pf-g">' + F("first", "First name", "text", p.first) + F("last", "Last name", "text", p.last) + '</div>' + F("role", "Role", "text", p.role, "e.g. Maintenance Engineer") + F("mobile", "Mobile", "tel", p.mobile); go.textContent = "Done"; }
-      else { $(".si-msg", m).innerHTML = "<b>" + esc(email) + "</b> " + (u ? "needs a password on this site. Check your details and choose one." : "is new here. Add your details and choose a password to make your account.");
-        body.innerHTML = '<input type="text" hidden autocomplete="username" value="' + esc(email) + '"><div class="pf-g">' + F("first", "First name", "text", p.first) + F("last", "Last name", "text", p.last) + '</div>' + F("role", "Role", "text", p.role, "e.g. Maintenance Engineer") + F("mobile", "Mobile", "tel", p.mobile)
-          + (R ? '<div class="pf-g">' + F("pw", "Password", "password", "", "8 characters or more") + F("pw2", "Password again", "password") + '</div>' + (known && known.teamCode ? F("code", "Team code", "text", "", "From whoever set up the app") : "") : "") + '<button type="button" class="link si-back">Use another email</button>'; go.textContent = "Create account"; }
+      if (step === "email"){ msg.textContent = "Enter your email. You'll then be asked for your password."; body.innerHTML = F("email", "Email", "email", email, "name@company.com"); go.textContent = "Next"; }
+      else if (step === "pass"){ msg.innerHTML = "Welcome back" + (u ? "" : ", <b>" + esc(email) + "</b>") + "."; body.innerHTML = (u ? card(u) : "") + user() + F("pw", "Password", "password") + back; go.textContent = "Sign in"; }
+      else if (step === "details"){ msg.textContent = "Add your details: they go on your edits and work packs."; body.innerHTML = details(p); go.textContent = "Done"; }
+      else { const head = kind === "first" ? "Saving isn't set up yet. You're the first: paste the GitHub key for the data (once only), then choose your password and a team code for everyone else to join with. The key is kept with the data, locked by them, so nobody else needs it."
+          : kind === "setup" ? "Choose your password, and a team code for everyone else to join with. This computer's GitHub key is then kept with the data, locked by them."
+          : u ? "Accounts now have passwords. Check your details and choose one." : "<b>" + esc(email) + "</b> is new here. Add your details and choose a password.";
+        msg.innerHTML = head;
+        body.innerHTML = user() + details(p) + (kind === "first" ? F("key", "GitHub key", "password", "", "github_pat_...") : "") + pwBoth
+          + (kind === "setup" || kind === "first" ? F("code", "Team code (you choose it, and share it with your team)", "text", "", "6 characters or more") : kind === "join" ? F("code", "Team code", "text", "", "From whoever set up the app") : "")
+          + (kind === "first" || kind === "join" ? '<button type="button" class="link si-view">Continue, view only</button>' : "") + back;
+        go.textContent = u ? "Set password" : "Create account"; }
+      const vo = $(".si-view", m); if (vo) vo.onclick = () => { const q = { email, first: val("first"), last: val("last"), role: val("role"), mobile: val("mobile") }; if (!q.first) return fail("Add your first name"); done(q); };
       const b = $(".si-back", m); if (b) b.onclick = () => { step = "email"; draw(); };
       const f = $("input:not([type=hidden]):not([hidden])", body); f && f.focus(); $$("input", body).forEach(i => i.onkeydown = e => { if (e.key === "Enter") go.click(); }); };
-    const val = k => (($("[data-k=" + k + "]", body) || {}).value || "").trim(), fail = msg => { err.textContent = msg; err.hidden = false; go.disabled = false; };
-    const done = p => { Profile.set(p); lsSet("adUser", email); Store.saveUser(p); m.close(); drawProf(); GH.reset(); checkEdit(); note("Signed in as " + Profile.name()); after && after(); };
+    const val = k => (($("[data-k=" + k + "]", body) || {}).value || "").trim(), raw = k => ($("[data-k=" + k + "]", body) || {}).value || "", fail = t => { err.textContent = t; err.hidden = false; go.disabled = false; };
+    const done = async p => { Profile.set(p); lsSet("adUser", email); m.close(); drawProf(); GH.reset(); await checkEdit(); Store.saveUser(p, true);
+      note(Store.S.edit ? "Signed in as " + Profile.name() : "Signed in as " + Profile.name() + ", view only (this computer can't save)", 5000); after && after(); };
     const fromReg = () => { const u = Store.user(email); return u && u.first ? { first: u.first || "", last: u.last || "", mobile: u.mobile || "", email: u.email || email, role: u.role || "" } : null; };
     draw();
     go.onclick = async () => { go.disabled = true;
       try {
         if (step === "email"){ email = val("email").toLowerCase(); if (!/^\S+@\S+\.\S+$/.test(email)) return fail("Enter a valid email");
-          if (R){ known = await GH.auth("check", { email }); step = known.exists ? "pass" : "new"; } else step = Store.user(email) ? "known" : "new"; go.disabled = false; return draw(); }
-        if (step === "pass"){ await GH.auth("login", { email, password: $("[data-k=pw]", body).value }); await Store.refresh(true).catch(() => {}); const p = fromReg(); if (p) return done(p); step = "details"; go.disabled = false; return draw(); }
-        if (step === "known") return done(fromReg());
+          await Store.refresh(true).catch(() => {});
+          if (R){ known = await GH.auth("check", { email }); step = known.exists ? "pass" : "new"; kind = known.teamCode ? "join" : ""; }
+          else { await Keys.load(); const ki = Keys.info(), mine = (lsGet("adGhKey", "") || "").trim() && !lsGet("adKeyPw", null);
+            step = ki.has(email) ? "pass" : "new"; kind = mine ? (ki.ready ? "add" : "setup") : ki.ready ? "join" : "first"; }
+          go.disabled = false; return draw(); }
+        if (step === "pass"){ const pw = raw("pw");
+          if (R) await GH.auth("login", { email, password: pw }); else if (!await Keys.unlock(email, pw)) return fail("That password isn't right.");
+          await Store.refresh(true).catch(() => {}); const p = fromReg(); if (p) return done(p); step = "details"; go.disabled = false; return draw(); }
         const p = { email, first: val("first"), last: val("last"), role: val("role"), mobile: val("mobile") }; if (!p.first) return fail("Add your first name");
-        if (step === "new" && R){ const pw = $("[data-k=pw]", body).value; if (pw.length < 8) return fail("Use at least 8 characters for the password"); if (pw !== $("[data-k=pw2]", body).value) return fail("The two passwords don't match");
-          await GH.auth("register", { email, password: pw, code: val("code") }); }
+        if (step === "new"){ const pw = raw("pw"); if (pw.length < 8) return fail("Use at least 8 characters for the password"); if (pw !== raw("pw2")) return fail("The two passwords don't match");
+          if (R) await GH.auth("register", { email, password: pw, code: val("code") });
+          else if (kind === "setup" || kind === "first"){ if (kind === "first"){ const k = val("key"); if (!k) return fail("Paste the GitHub key");
+              go.textContent = "Checking…"; lsSet("adGhKey", k); lsSet("adKeyPw", null); GH.reset(); if (await GH.canEdit() !== true){ lsSet("adGhKey", ""); GH.reset(); return fail("That GitHub key can't save to the data. It needs Contents read and write on " + GH.DATA_REPO + "."); } }
+            if (val("code").length < 6) return fail("Use at least 6 characters for the team code"); go.textContent = "Saving…"; await Keys.setup(email, pw, val("code")); }
+          else if (kind === "add"){ go.textContent = "Saving…"; await Keys.addMe(email, pw); }
+          else { go.textContent = "Saving…"; await Keys.join(email, pw, val("code")); } }
         done(p); }
-      catch (e){ fail(e.status === 401 ? "That password isn't right." : e.message || "Couldn't sign in"); } }; }
+      catch (e){ go.textContent = step === "pass" ? "Sign in" : "Create account"; fail(e.status === 401 ? "That password isn't right." : e.message || "Couldn't sign in"); } }; }
   function profMenu(btn){ Fields.closePop(); const p = Profile.get();
     const pop = h('<div class="pop profpop"><div class="pp-h"><b>' + esc(Profile.name() || "Not signed in") + '</b><span class="dim">' + esc(p.role || "") + '</span><span class="dim">' + esc(p.email || "") + '</span></div><div class="msep"></div><button type="button" class="mi" data-k="ed">Edit profile…</button><button type="button" class="mi" data-k="out">Sign out</button></div>');
     document.body.appendChild(pop); const r = btn.getBoundingClientRect(); pop.style.top = (r.bottom + 6) + "px"; pop.style.left = Math.max(8, r.right - 260) + "px";
     $("[data-k=ed]", pop).onclick = () => { Fields.closePop(); profile(); };
-    $("[data-k=out]", pop).onclick = async () => { Fields.closePop(); if (!await confirmBox("Sign out of Action Database on this computer?", "Sign out")) return; lsSet("adUser", null); lsSet("adSess", null); Profile.set({}); drawProf(); GH.reset(); Store.S.edit = false; render(); signIn(); }; }
+    $("[data-k=out]", pop).onclick = async () => { Fields.closePop(); if (!await confirmBox("Sign out of Action Database on this computer?", "Sign out")) return; lsSet("adUser", null); lsSet("adSess", null); Keys.forget(); Profile.set({}); drawProf(); GH.reset(); Store.S.edit = false; render(); signIn(); }; }
 
   /* ---------- two people on one action ---------- */
   const who = a => { const u = a.byE && Store.user(a.byE); return u ? [u.first, u.last].filter(Boolean).join(" ") + (u.role ? " (" + u.role + ")" : "") : a.by || "Someone"; };
