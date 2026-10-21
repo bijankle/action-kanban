@@ -1,5 +1,5 @@
-/* The action view: clicking an action opens it in place of the list. The header holds everything for that one
-   action (back to the list, previous and next, stage, owner, the workpack PDF, delete); below it the
+/* The action view: clicking an action opens it in the side panel beside the list (or a pop up). The header holds
+   everything for that one action (close, previous and next, stage, owner, the workpack PDF, complete, delete); below it the
    action's own tabs: Overview (problem, solution, photos, notes, attachments, details), MTO, Spares and
    Isolations. */
 "use strict";
@@ -18,7 +18,7 @@ const ActionView = (() => {
     const keepP = ae && el.contains(ae) && ae.dataset.c ? { r: ae.dataset.r, c: ae.dataset.c, s: ae.selectionStart, v: ae.value } : null;
     const same = last === App.selRef + sub, sc = same && $(".av-body", el) ? $(".av-body", el).scrollTop : 0; last = App.selRef + sub;
     const list = Table.rows(), i = list.indexOf(a), n = k => (a[k] || []).length;
-    el.innerHTML = '<div class="av"><div class="av-head"><button type="button" class="btn ghost sm av-back" data-k="x" title="Back to the list (Esc)">‹ Actions</button>'
+    el.innerHTML = '<div class="av"><div class="av-head"><button type="button" class="ic-b av-close" data-k="x" title="Close (Esc)" aria-label="Close">✕</button>'
       + '<span class="av-nav"><button type="button" class="ic-b" data-k="prev" title="Previous action"' + (i > 0 ? "" : " disabled") + '>‹</button><span class="dim">' + (i >= 0 ? (i + 1) + " of " + list.length : "") + '</span><button type="button" class="ic-b" data-k="next" title="Next action"' + (i >= 0 && i < list.length - 1 ? "" : " disabled") + '>›</button></span>'
       + '<span class="aid big"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '>' + esc(Store.actId(a)) + '</span>' + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "")
       + '<div class="av-st" data-f="status"></div><label class="sd-own" title="The action owner: their details go on the work pack">Owner <span class="own"></span></label><span class="grow"></span>'

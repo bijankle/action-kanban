@@ -14,7 +14,7 @@ html[data-theme="ink"]{--thb:#111827;--thd:#000000;--tht:#e9ebef;--th-btn:#1f293
   --ink:#1d2430;--muted:#5d6875;--dim:#7a8591;--faint:#9aa3ad;
   --accent:var(--th2);--good:#1f8a58;--bad:#c2412f;--tbc:#d42a1e;
   --font:'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --ctl-bd:1.5px solid var(--line);--ctl-r:8px;--header-h:58px;--side-w:440px}
+  --ctl-bd:1.5px solid var(--line);--ctl-r:8px;--header-h:58px}
 html.dark{--bg:#0d0d0d;--panel:#141414;--panel2:#1d1d1f;--line:#2e3136;--line2:#3b3f45;--ink:#e7e9ec;--muted:#a3abb5;--dim:#8b939d;--faint:#6b727b;--tht:color-mix(in srgb,var(--thb) 22%,#141414)!important;--accent:color-mix(in srgb,var(--thb) 55%,#fff);--tbc:#ff5a4d}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -116,7 +116,7 @@ input.secret{-webkit-text-security:disc;font-family:monospace}
 kbd{font:600 12px var(--font);border:1px solid var(--line2);border-bottom-width:2px;border-radius:5px;padding:1px 6px;background:var(--panel2)}
 
 /* toolbar: search, stage pills */
-#tools{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+#tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
 .hsearch{flex:0 1 300px;min-width:160px}.hsearch .in{height:34px}
 .pills{display:flex;flex-wrap:wrap;gap:6px;min-width:0;flex:1 1 auto}
 .pill{display:inline-flex;align-items:center;gap:6px;border:var(--ctl-bd);background:var(--panel);border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;color:var(--ink)}
@@ -130,8 +130,17 @@ main{display:flex;height:calc(100% - var(--header-h) - 51px);position:relative}
 #view{flex:1;min-width:0;overflow:auto;position:relative}
 #view[data-tab="valid"]{overflow:auto}
 body:has(#tools[hidden]) main{height:calc(100% - var(--header-h))}
-#side{width:0;flex:none;background:var(--panel);border-left:1px solid var(--line);position:relative;display:none;flex-direction:column}
-#side.open{display:flex;width:var(--side-w)}
+/* the side panel on the right: the open action; a thin theme coloured line with a grip to drag it wider or narrower */
+#side{width:var(--side-w,45%);flex:0 0 var(--side-w,45%);max-width:calc(100% - 320px);min-width:360px;background:var(--panel);display:flex;flex-direction:column;container-type:inline-size;min-height:0}
+#side[hidden],.splitter[hidden]{display:none}
+.splitter{width:3px;flex:0 0 3px;cursor:col-resize;background:var(--th);position:relative;z-index:5}
+.splitter::before{content:"";position:absolute;left:-5px;right:-5px;top:0;bottom:0}
+.splitter::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:36px;transform:translate(-50%,-50%);box-sizing:border-box;border:2px solid var(--th);border-radius:7px;background:var(--panel)}
+body.resizing{cursor:col-resize;user-select:none}body.resizing iframe,body.resizing #side{pointer-events:none}
+.side-0{margin:auto;display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;padding:30px;max-width:320px}.side-0 b{font-size:16px}
+/* the pop up (side panel switched off in View) */
+.apop{position:fixed;inset:0;z-index:900;background:#0b0c0e66;display:grid;place-items:center;padding:3vh 3vw}
+.apop-w{width:min(1180px,100%);height:100%;background:var(--panel);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px #0006;container-type:inline-size;display:flex;flex-direction:column}
 #side.drop{box-shadow:inset 0 0 0 3px var(--th)}
 .sd-split{position:absolute;left:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:5}
 .sd-split:hover,.sd-split.on{background:color-mix(in srgb,var(--th) 35%,transparent)}
@@ -169,8 +178,11 @@ body:has(#tools[hidden]) main{height:calc(100% - var(--header-h))}
 .st-new{margin-top:6px}
 
 /* table */
-.tbl-wrap{min-width:100%;display:inline-block}
-.tbl{border-collapse:separate;border-spacing:0;table-layout:fixed;width:max-content;min-width:100%}
+.tbl-wrap{width:100%;container-type:inline-size}
+/* a narrow list (the panel open wide): the small yes or no and count columns step out first, then the dates; the rest share the width */
+@container (max-width:900px){ .tbl .lp1{display:none} }
+@container (max-width:640px){ .tbl .lp2{display:none} }
+.tbl{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%}
 .tbl th{position:sticky;top:0;z-index:2;background:var(--th);color:#fff;text-align:left;font-size:13px;font-weight:700;padding:0;white-space:nowrap;user-select:none;border-right:1px solid color-mix(in srgb,#fff 20%,transparent)}
 .tbl th .th-l{display:block;padding:9px 10px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .tbl th .th-r{position:absolute;right:-3px;top:0;bottom:0;width:7px;cursor:col-resize;z-index:3}.tbl th .th-r:hover{background:#fff6}
@@ -545,15 +557,18 @@ html.dark .av-tab b{color:var(--ink)}
 .av-body{flex:1;min-height:0;overflow:auto;padding:14px 18px 40px}
 .av-body .pt-main,.av-body .is-main{padding:0;height:auto;overflow:visible}
 .pt-h{font-size:15px}
-/* the Overview reads like a page of two columns: it fills the left one, then carries on at the top of the right (a
-   faint line down the middle); a section and its heading stay together */
-.ov-g{columns:2;column-gap:56px;column-rule:1px solid var(--line);column-fill:balance}
-.ov-l,.ov-r{display:contents}.ov-g .ov-r>h4:first-child{margin-top:16px}
-.ov-g>*>*{break-inside:avoid}.ov-g h4{break-after:avoid}
-.ov-g .det{display:block;break-inside:auto}.ov-g .det-r{display:grid;grid-template-columns:minmax(120px,38%) 1fr;gap:12px;align-items:center;margin-bottom:7px;break-inside:avoid}
+/* the Overview: two even columns with a faint line between (left: the writing, right: photos and details); one
+   column when the panel is narrow. Details go two to a row, label above */
+.ov-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .ov-g h4{margin:16px 0 6px;font-size:var(--fl);text-transform:uppercase;letter-spacing:.5px;color:var(--dim);display:flex;align-items:center;gap:8px}
 .ov-g h4:first-child{margin-top:4px}.ov-g h4 .cnt{color:var(--faint)}.ov-g h4 .link{margin-left:auto;text-transform:none;letter-spacing:0;font-size:13px}
-@media (max-width:1100px){ .ov-g{columns:1} }
+.ov-l{padding-right:22px}.ov-r{padding-left:22px;border-left:1px solid var(--line)}.ov-g .ov-r>h4:first-child{margin-top:4px}
+.ov-g .det{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;align-items:start}
+.ov-g .det-r{display:flex;flex-direction:column;gap:4px;min-width:0}.ov-g .det-r label{font-size:12px}
+.ov-g .det-r .in,.ov-g .det-r .combo,.ov-g .det-r .tagbox,.ov-g .det-r .dt{width:100%;min-width:0}
+@container (max-width:760px){ .ov-g{grid-template-columns:1fr} .ov-l{padding-right:0} .ov-r{padding-left:0;border-left:0;margin-top:8px} }
+@container (max-width:430px){ .ov-g .det{grid-template-columns:1fr} }
+
 
 /* the workflow steps under an action's title */
 .av-steps{display:flex;align-items:center;gap:0;padding:6px 18px 2px;overflow-x:auto;scrollbar-width:none}
@@ -630,3 +645,7 @@ html.dark .av-tab b{color:var(--ink)}
 .av-sub button{border:0;background:none;padding:5px 14px;border-radius:8px;font:600 var(--fb) var(--font);color:var(--muted);cursor:pointer}.av-sub button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px #0002}.av-sub b{font-size:11px;color:var(--dim);margin-left:3px}
 .av-body .pt-head .pt-h{visibility:hidden}   /* (the MTO / Spares tab above already names it) */
 .hl{all:unset;display:inline-flex;align-items:center;gap:3px;cursor:pointer;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}.hl .go{width:12px;height:12px;color:var(--th);flex:none}.hl:hover{color:var(--th)}.hl:focus-visible{outline:2px solid var(--th);outline-offset:2px;border-radius:3px}html.dark .hl .go{color:var(--accent)}
+/* the list scrolls up and down only: titles wrap to two lines rather than being cut off */
+#view[data-tab="actions"]{overflow-x:hidden}
+.tbl td.ttl{white-space:normal;line-height:1.3}.tbl td.ttl{display:table-cell}.tbl td.ttl{overflow:hidden}
+.tbl td.ttl{word-break:break-word}.tbl td.ttl{-webkit-line-clamp:2}

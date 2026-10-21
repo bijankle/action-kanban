@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.8.16";
+const APP_VERSION = "1.9.0";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -16,13 +16,18 @@ const App = (() => {
     if (A.mobile){ Mobile.render($("#mobile")); return; }
     projBox($("#pjBox")); renderStatus(); $$(".tab").forEach(t => t.classList.toggle("on", t.dataset.t === A.tab));
     /* the search box sits in the same place on every tab; the rest of the bar only where it applies */
-    const inAct = A.tab === "actions" && !!act(A.selRef), list = A.tab === "actions" && !inAct;
+    /* the list (Actions table or Organizer) stays on the left; the open action is in the panel on the right (or, with the
+       panel switched off in View, in a pop up over the list) */
+    const sideTab = A.tab === "actions" || A.tab === "kanban", panel = sideTab && lsGet("adPanel", true), sel = sideTab && !!act(A.selRef), inAct = false, list = A.tab === "actions";
     $("#pills").hidden = !list; $$("#xlsB,#printB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid";
     $("#q").placeholder = inAct ? "Search actions (back to the list)" : { actions: "Search actions", kanban: "Search, filters every stage", valid: "Search fields, stages and contacts" }[A.tab] || "Search";
     if ($("#q").value !== A.q) $("#q").value = A.q; pills(); $("#undoB").disabled = !Store.S.undo.length; $("#redoB").disabled = !Store.S.redo.length;
     const v = $("#view"); v.dataset.tab = A.tab;
     v.classList.toggle("in-act", inAct);
-    if (A.tab === "kanban") Kanban.render(v); else if (A.tab === "valid") Valid.render(v); else if (inAct) ActionView.render(v); else Table.render(v);
+    if (A.tab === "kanban") Kanban.render(v); else if (A.tab === "valid") Valid.render(v); else Table.render(v);
+    const side = $("#side"); side.hidden = $("#split").hidden = !panel;
+    if (panel){ if (sel) ActionView.render(side); else side.innerHTML = '<div class="side-0"><b>No action open</b><span class="dim">Click an action ' + (A.tab === "kanban" ? "card" : "in the list") + ' to see it here.</span><span class="dim">Drag the line on the left to make this panel wider or narrower.</span></div>'; }
+    popup(!panel && sel);
     $$("#vt button").forEach(b => b.classList.toggle("on", b.dataset.v === A.view)); $("#sizeB").hidden = !list || A.view !== "tiles"; $("#vt").hidden = !list; $("#colB").hidden = !list || A.view !== "list";
     lsSet("adPills", [...A.pills]); }
   function pills(){ const all = Store.visible(), el = $("#pills");
@@ -36,8 +41,18 @@ const App = (() => {
     else { cls = "ok"; t = "Saved"; }
     s.className = "status " + cls; s.innerHTML = '<i></i><span>' + esc(t) + '</span>';
     const lf = Local.state(); $("#folderB").hidden = !(S.edit && (lf === "locked" || lf === "none")); $("#folderB").textContent = lf === "locked" ? "Reconnect folder" : "Local folder"; }
-  /* open an action (its action view), or back to the list with null */
-  const select = (ref, sub) => { if (ref !== A.selRef || sub) A.sub = sub || "overview"; if (ref){ A.tab = "actions"; lsSet("adTab", "actions"); A.last = ref; } A.selRef = ref; if (ref) history.replaceState(null, "", "?a=" + encodeURIComponent(ref.split(":")[0] + ":" + (act(ref) || {}).no)); else history.replaceState(null, "", location.pathname); render(); };
+  /* an action in a pop up over the list (when the side panel is switched off in View) */
+  let popEl = null;
+  function popup(on){ if (!on){ if (popEl){ popEl.remove(); popEl = null; } return; }
+    if (!popEl){ popEl = h('<div class="apop"><div class="apop-w"></div></div>'); document.body.appendChild(popEl); popEl.addEventListener("mousedown", e => { if (e.target === popEl) select(null); }); }
+    ActionView.render($(".apop-w", popEl)); }
+  /* the side panel's width: drag the line between the list and the panel (kept on this computer) */
+  function splitter(){ const sp = $("#split"), m = $("#main"); sp.onpointerdown = e => { e.preventDefault(); sp.setPointerCapture(e.pointerId); document.body.classList.add("resizing");
+      sp.onpointermove = ev => { const r = m.getBoundingClientRect(), w = Math.max(360, Math.min(r.width - 320, r.right - ev.clientX)); m.style.setProperty("--side-w", w + "px"); };
+      sp.onpointerup = () => { sp.onpointermove = null; document.body.classList.remove("resizing"); const w = parseFloat(getComputedStyle(m).getPropertyValue("--side-w")); if (w) lsSet("adSideW", Math.round(w)); }; };
+    sp.ondblclick = () => { lsSet("adSideW", null); m.style.removeProperty("--side-w"); }; }
+  /* open an action (in the side panel or pop up), or close it with null; the list and its tab stay as they are */
+  const select = (ref, sub) => { if (ref !== A.selRef || sub) A.sub = sub || "overview"; if (ref){ if (A.tab !== "kanban" && A.tab !== "actions"){ A.tab = "actions"; lsSet("adTab", "actions"); } A.last = ref; } A.selRef = ref; if (ref) history.replaceState(null, "", "?a=" + encodeURIComponent(ref.split(":")[0] + ":" + (act(ref) || {}).no)); else history.replaceState(null, "", location.pathname); render(); };
   /* the MTO link in the table (or the action view or a callout): that action, on its MTO, Spares or Isolations tab */
   const openParts = (ref, kind) => select(ref, kind);
   document.addEventListener("click", e => { const l = e.target.closest(".av [data-parts], .kcall [data-parts]"); if (l){ e.preventDefault(); Fields.closePop(); openParts(l.dataset.ref, l.dataset.parts); } });
@@ -190,6 +205,7 @@ const App = (() => {
       + '<div class="mi-sub">Appearance</div><div class="mi-seg"><button type="button" data-d="0"' + (!v.dark ? ' class="on"' : "") + '>Light</button><button type="button" data-d="1"' + (v.dark ? ' class="on"' : "") + '>Dark</button></div>'
       + '<div class="mi-sub">Text size</div><div class="mi-seg">' + [[0.87, "Smaller"], [1, "Normal"], [1.13, "Larger"], [1.27, "Largest"]].map(([k, n]) => '<button type="button" data-z="' + k + '"' + (+v.text === k ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</div>'
       + '<div class="mi-sub">Font</div><div class="mi-fo">' + FONTS.map(([id, n, ff]) => '<button type="button" data-fo="' + id + '" style="font-family:' + esc(ff) + '"' + (v.font === id ? ' class="on"' : "") + '>' + esc(n) + '</button>').join("") + '</div>'
+      + '<div class="mi-sub">Open actions in</div><div class="mi-seg"><button type="button" data-pn="1"' + (lsGet("adPanel", true) ? ' class="on"' : "") + '>Side panel</button><button type="button" data-pn="0"' + (!lsGet("adPanel", true) ? ' class="on"' : "") + '>Pop up</button></div>'
       + '<div class="msep"></div><button type="button" class="mi" data-k="cols">Table columns…</button><button type="button" class="mi" data-k="side">Reset side panel width</button>';
     const set = o => { lsSet("adView", Object.assign(v, o)); applyView(); viewMenu(drop); };
     $$("[data-th]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ theme: b.dataset.th }); });
@@ -199,7 +215,8 @@ const App = (() => {
     $$("[data-z]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ text: +b.dataset.z }); });
     $$("[data-fo]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ font: b.dataset.fo }); });
     $("[data-k=cols]", drop).onclick = () => { closeMenus(); A.tab = "actions"; lsSet("adTab", "actions"); draw(); Table.columnsPop($("#colB")); };
-    $("[data-k=side]", drop).onclick = () => { lsSet("adSideW", null); document.documentElement.style.removeProperty("--side-w"); closeMenus(); }; }
+    $("[data-k=side]", drop).onclick = () => { lsSet("adSideW", null); $("#main").style.removeProperty("--side-w"); closeMenus(); };
+    $$("[data-pn]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); lsSet("adPanel", b.dataset.pn === "1"); render(); viewMenu(drop); }); }
 
   /* ---------- menus ---------- */
   const MENUS = {
@@ -261,12 +278,12 @@ const App = (() => {
   /* ---------- start ---------- */
   async function boot(){ applyView();
     A.mobile = matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1100px)").matches; document.body.classList.toggle("mobile", A.mobile);
-    const sw = lsGet("adSideW", null); if (sw) document.documentElement.style.setProperty("--side-w", sw + "px");
+    const sw = lsGet("adSideW", null); if (sw) $("#main").style.setProperty("--side-w", sw + "px"); splitter();
     $("#brand").innerHTML = LOGO(34) + '<span class="bn">Action <b>Database</b></span>'; $("#boot .bl").innerHTML = LOGO(84);
     $("#brand").title = "Home"; $("#brand").onclick = () => { A.tab = "actions"; lsSet("adTab", "actions"); select(null); };   // the logo goes home: the Actions list
     if (!A.mobile){ menus();
       $$(".tab").forEach(t => t.onclick = () => setTab(t.dataset.t));
-      $("#q").oninput = debounce(() => { A.q = $("#q").value; if (A.selRef && A.tab === "actions") select(null); render(); }, 150);
+      $("#q").oninput = debounce(() => { A.q = $("#q").value; render(); }, 150);
       $("#newB").onclick = () => newAction(); $("#pasteB").onclick = () => Intake.open(null, ""); $("#colB").onclick = e => { e.stopPropagation(); Table.columnsPop(e.currentTarget); };
       $$("#vt button").forEach(b => b.onclick = () => { A.view = b.dataset.v; lsSet("adViewType", A.view); render(); }); $("#sizeB").onclick = e => { e.stopPropagation(); Table.sizePop(e.currentTarget); };
       $("#printB").onclick = () => Print.dialog(); $("#xlsB").onclick = () => Excel.run();

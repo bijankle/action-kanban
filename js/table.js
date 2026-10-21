@@ -17,17 +17,24 @@ const Table = (() => {
     else list.sort(base);
     return list; }
   function render(el){ if (App.view === "tiles") return tiles(el); const cs = cols(), ws = widths(), list = rows(), sel = App.last;
-    const th = cs.map(c => '<th data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + (ws[c.id] || (c.type === "id" ? 96 : c.type === "proj" ? 140 : W[c.type] || 140)) + 'px">'
+    /* the columns share the width there is (their widths are proportions), so the list never scrolls sideways */
+    /* the narrow columns (ID, stage, ticks, counts) keep their width; the text columns share what's left */
+    const px = c => ws[c.id] || (c.type === "id" ? 96 : c.type === "proj" ? 140 : W[c.type] || 140);
+    const FIX = new Set(["id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || (c.type === "choice" && (c.options || []).length <= 3);
+    const lp = c => (["check", "complete", "mto", "sparelist", "isollist"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : ["date", "meta", "phone", "number"].includes(c.type) ? " lp2" : "";
+    const fixW = cs.filter(fix).reduce((t, c) => t + Math.min(px(c), c.type === "id" ? 110 : 150), 0), flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
+    const wid = c => fix(c) ? Math.min(px(c), c.type === "id" ? 110 : 150) + "px" : "calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + ")";
+    const th = cs.map(c => '<th class="' + lp(c).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + esc(c.label) + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><i class="th-r"></i></th>').join("");
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
       + (list.length ? "" : '<div class="empty">' + (Store.visible().length ? "No actions match the filter." : "No actions yet. Click <b>+ New action</b>, or <b>Paste text</b> to make one from an email.") + '</div>') + '</div>';
     const tb = $("tbody", el), frag = document.createDocumentFragment();
     list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on";
-      cs.forEach(c => { const td = document.createElement("td");
-        if (c.type === "id"){ td.className = "idc"; td.innerHTML = '<span class="aid">' + esc(Store.actId(a)) + '</span>' + (a.photos.length ? '<span class="pc" title="' + a.photos.length + ' photos">📷 ' + a.photos.length + '</span>' : ""); }
+      cs.forEach(c => { const td = document.createElement("td"); const l = lp(c).trim(); if (l) td.classList.add(l);
+        if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = '<span class="aid">' + esc(Store.actId(a)) + '</span>' + (a.photos.length ? '<span class="pc" title="' + a.photos.length + ' photos">📷 ' + a.photos.length + '</span>' : ""); }
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
-        else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi", "choice"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.className = "ed"; td.appendChild(Fields.editor(a, c)); }
-        else { td.innerHTML = Fields.show(a, c); if (c.id === "title") td.className = "ttl"; }
+        else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi", "choice"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.classList.add("ed"); td.appendChild(Fields.editor(a, c)); }
+        else { td.innerHTML = Fields.show(a, c); if (c.id === "title") td.classList.add("ttl"); }
         tr.appendChild(td); });
       frag.appendChild(tr); });
     tb.appendChild(frag);
@@ -44,7 +51,7 @@ const Table = (() => {
       const r = $(".th-r", th); r.onclick = e => e.stopPropagation();
       r.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const x0 = e.clientX, w0 = th.offsetWidth; r.setPointerCapture(e.pointerId);
         r.onpointermove = ev => { th.style.width = Math.max(50, w0 + ev.clientX - x0) + "px"; };
-        r.onpointerup = () => { r.onpointermove = null; const ws = widths(); ws[id] = th.offsetWidth; lsSet("adColW", ws); }; };
+        r.onpointerup = () => { r.onpointermove = null; const ws = widths(), k = (parseFloat(th.style.width) || th.offsetWidth) / th.offsetWidth; $$("th", el).forEach(t => { ws[t.dataset.c] = Math.round(t.offsetWidth); }); lsSet("adColW", ws); App.render(); }; };
       /* reorder (the field order is shared, it's also the order in the side panel) */
       th.ondragstart = e => { if (id[0] === "_") return e.preventDefault(); e.dataTransfer.setData("text/col", id); th.classList.add("drag"); };
       th.ondragend = () => th.classList.remove("drag");

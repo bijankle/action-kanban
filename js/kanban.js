@@ -1,5 +1,5 @@
 /* The Organizer tab: one column per stage, like Trello, kept minimal. Drag cards between and within columns
-   (cards keep the order they're dragged into). Click a card for a callout with its problem, solution and photos;
+   (cards keep the order they're dragged into). Click a card to open the action in the side panel;
    editing is done in the action itself. Double click a column name to rename it, drag its header to move it. */
 "use strict";
 const Kanban = (() => {
@@ -22,7 +22,7 @@ const Kanban = (() => {
       + (a.photos.length ? '<span>📷 ' + a.photos.length + '</span>' : "") + (a.files.length ? '<span>📎 ' + a.files.length + '</span>' : "")
       + (eta ? '<span class="' + (eta === "TBC" ? "tbc" : "") + '">ETA ' + esc(fmtDate(eta)) + '</span>' : "") + (a.f.spares ? '<span class="good">Spares ✓</span>' : "") + (n ? '<span class="tbc">' + n + ' TBC</span>' : "") + '</div></article>'; }
   function wire(el, ro){ const kb = $(".kb", el);
-    kb.onclick = e => { const c = e.target.closest(".kc"); if (c) callout(c); };
+    kb.onclick = e => { const c = e.target.closest(".kc"); if (c) App.select(c.dataset.ref); };   // (opens in the side panel, or the pop up)
     if (ro) return;
     let drag = null;
     $$(".kc", el).forEach(c => { c.ondragstart = e => { drag = c.dataset.ref; e.dataTransfer.setData("text/card", drag); e.dataTransfer.effectAllowed = "move"; setTimeout(() => c.classList.add("ghost"), 0); };
@@ -50,23 +50,6 @@ const Kanban = (() => {
     $(".kb-new", el).onclick = async () => { const n = await promptBox("Name of the new stage", ""); if (!n || !n.trim()) return;
       Store.mutate("config", () => { const ss = Store.S.config.stages; const at = ss.findIndex(s => !s.del && s.kind !== "open"); const s = Store.touch({ id: "st" + uid(), name: n.trim(), color: "#64748b", kind: "open", print: true });
         if (at < 0) ss.push(s); else ss.splice(at, 0, s); Store.S.config.mod = now(); }); }; }
-  /* the card callout: read only, beside the card */
-  function callout(card){ Fields.closePop(); const a = App.act(card.dataset.ref); if (!a) return; const ed = Store.S.edit; const s = Store.stage(a.stage), p = Store.project(a._p) || {};
-    const keys = ["eta", "spares", "contractor", "equipment", "location"].map(id => Store.field(id)).filter(f => f && Fields.text(a, f) && !(f.type === "check" && !Fields.val(a, f)));
-    const c = h('<div class="pop kcall"><div class="kca-h"><span class="aid">' + esc(Store.actId(a)) + '</span><span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span><span class="grow"></span><button type="button" class="ic-b sm" data-k="x" title="Close">✕</button></div>'
-      + '<div class="kca-t">' + (esc(a.f.title) || '<span class="dim">No title</span>') + '</div>' + (Store.selected().length > 1 ? '<div class="dim">' + esc(p.name) + '</div>' : "")
-      + '<h5>Problem</h5><div class="kca-x">' + (esc(a.f.problem) || '<span class="dim">–</span>') + '</div><h5>Solution</h5><div class="kca-x">' + (esc(a.f.solution) || '<span class="dim">–</span>') + '</div>'
-      + (a.photos.length ? '<h5>Photos ' + a.photos.length + '</h5><div class="kca-ph">' + a.photos.slice(0, 8).map((ph, i) => '<img alt="" data-i="' + i + '" src="' + esc(Media.src(a, ph, true)) + '">').join("") + '</div>' : "")
-      + (a.f.notes ? '<h5>Notes</h5><div class="kca-x">' + esc(a.f.notes) + '</div>' : "")
-      + (keys.length ? '<dl>' + keys.map(f => '<dt>' + esc(f.label) + '</dt><dd>' + Fields.show(a, f) + '</dd>').join("") + '</dl>' : "")
-      + '<div class="kca-b">' + (a.photos.length ? '<button type="button" class="btn ghost sm" data-k="ph">Photos</button>' : "")
-      + '<button type="button" class="btn sm" data-k="open">Open action</button></div></div>');
-    document.body.appendChild(c); const r = card.getBoundingClientRect(), w = c.offsetWidth || 360;
-    c.style.left = (r.right + 10 + w < innerWidth ? r.right + 10 : Math.max(8, r.left - w - 10)) + "px"; c.style.top = Math.max(8, Math.min(r.top, innerHeight - c.offsetHeight - 8)) + "px";
-    c.ondragover = e => { if (ed && Media.hasDrop(e)) e.preventDefault(); }; c.ondrop = e => { if (!ed || !Media.hasDrop(e)) return; e.preventDefault(); e.stopPropagation(); Fields.closePop(); Media.dropOn(a, e); };
-    $$(".kca-ph img", c).forEach(im => im.onclick = () => { Fields.closePop(); Media.view(a, +im.dataset.i); });
-    $$("[data-k]", c).forEach(b => b.onclick = () => { const k = b.dataset.k; Fields.closePop();
-      if (k === "ph") Media.view(a, 0); else if (k === "open") App.select(card.dataset.ref); }); }
   /* the column name is the step being done ("Draft RFQ"); its name on the action ("RFQ Sent") is renamed in Data validation */
   async function rename(st){ const s = Store.stage(st), was = Store.todo(s); const n = await promptBox("Rename the column (on the action this step reads " + s.name + ")", was); if (!n || !n.trim() || n.trim() === was) return; Store.mutate("config", () => { s.todo = n.trim(); Store.touch(s); }); }
   const COLORS = ["#3B8FE0", "#2F7FD1", "#7C5CD6", "#0E9AA7", "#2FB463", "#F2B03D", "#C07A12", "#E0453A", "#D6488A", "#64748b"];
