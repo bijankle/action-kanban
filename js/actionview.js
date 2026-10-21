@@ -6,6 +6,8 @@
 const ActionView = (() => {
   const CORE = new Set(["title", "status", "priority", "problem", "solution", "notes"]);
   const TABS = [["overview", "Overview"], ["materials", "Materials"], ["isol", "Isolations"], ["drawings", "Drawings"]];   // (Materials holds the MTO and Spares)
+  /* simple yes or no fields (tick boxes, Yes / No choices) are kept to the Actions table, not the action's details */
+  const yesNo = f => f.type === "check" || (f.type === "choice" && (f.options || []).filter(o => !o.del).length && (f.options || []).filter(o => !o.del).every(o => /^(yes|no)$/i.test(o.label)));
   /* the little diagonal arrow on a heading that opens more (a tab, the photos) */
   const GO = '<svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 16 16 8"/><path d="M9 8h7v7"/></svg>';
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
@@ -67,7 +69,7 @@ const ActionView = (() => {
     const cv = $(".ph-cover img", el); if (cv){ cv.src = Media.src(a, a.photos[0], true); cv.onerror = () => { if (!cv.dataset.r){ cv.dataset.r = 1; cv.src = Media.src(a, a.photos[0]); } }; }
     files(a, $(".att-l", el), ro);
     const mp = $(".ov-map", el); SiteMap.forAction(a).then(sm => { if (!sm || !mp.isConnected) return; mp.hidden = false; $("img", mp).src = sm.url; $("p", mp).textContent = sm.note; }).catch(() => {});
-    const det = $(".det", el); Store.fields().filter(f => !CORE.has(f.id) && !["mto", "sparelist", "isollist", "complete"].includes(f.type) && !Fields.DERIVED[f.id]).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); det.appendChild(r); });
+    const det = $(".det", el); Store.fields().filter(f => !CORE.has(f.id) && !["mto", "sparelist", "isollist", "complete"].includes(f.type) && !Fields.DERIVED[f.id] && !yesNo(f)).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); det.appendChild(r); });
     $$("[data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a)); }
   async function act(k, a, list, i){
     if (k === "x") App.select(null);
