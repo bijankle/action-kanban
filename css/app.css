@@ -238,7 +238,8 @@ body:has(#tools[hidden]) main{height:calc(100% - var(--header-h))}
 .dd-n{font-size:12.5px;color:var(--dim);padding:6px}
 .tagbox{display:flex}.tb-show{display:flex;align-items:center;gap:5px;cursor:pointer;min-height:30px;border:var(--ctl-bd);border-radius:8px;padding:2px 4px 2px 6px;width:100%}
 .tb-show:hover{border-color:var(--th)}.tbl .tb-show{border-color:transparent}
-.tb-more{margin-left:auto;border:0;background:var(--th-t);color:var(--th2);font-weight:800;font-size:12px;border-radius:6px;padding:2px 7px;cursor:pointer}
+.tb-show{min-width:0}.tb-show .chip{flex:none}.tb-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:calc(12.5px*var(--mt,1))}
+.tb-more{flex:none;margin-left:auto;border:0;background:var(--th-t);color:var(--th2);font-weight:800;font-size:12px;border-radius:6px;padding:2px 7px;cursor:pointer}
 .combo{position:relative}.combo .dd{position:absolute;left:0;right:0;top:calc(100% + 3px);z-index:50;background:var(--panel);border:var(--ctl-bd);border-radius:8px;box-shadow:0 10px 24px #0002;max-height:240px;overflow:auto;padding:4px}
 .dd-o{display:flex;flex-direction:column;align-items:flex-start;width:100%;border:0;background:none;text-align:left;padding:6px 8px;border-radius:6px;cursor:pointer}.dd-o:hover{background:var(--th-t)}.dd-o small{color:var(--dim)}
 .sw{display:flex;flex-wrap:wrap;gap:5px;padding:6px 4px}.sw button{width:22px;height:22px;border-radius:6px;border:0;background:var(--c);cursor:pointer}.sw button.on{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--c)}

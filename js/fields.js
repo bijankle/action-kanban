@@ -104,7 +104,10 @@ const Fields = (() => {
 
   /* equipment tags: the first tag, then +N; clicking opens the list of all tags with a box to add new ones */
   function tagBox(a, f){ const v = Array.isArray(val(a, f)) ? val(a, f) : [];
-    const w = h('<div class="tagbox"><div class="tb-show">' + (v.length ? chip(v[0], optColor(f, v[0])) : '<span class="dim">None</span>') + '<button type="button" class="tb-more">' + (v.length > 1 ? "+" + (v.length - 1) : "+") + '</button></div></div>');
+    /* equipment: the tag's name after it, cut short with … (the full names on hover) */
+    const nm = t => { const e = f.id === "equipment" && Equip.get(t); return e && e.n ? e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : ""; }, n0 = v.length ? nm(v[0]) : "";
+    const tip = v.map(t => t + (nm(t) ? " " + nm(t) : "")).join("\n");
+    const w = h('<div class="tagbox"><div class="tb-show"' + (tip ? ' title="' + esc(tip) + '"' : "") + '>' + (v.length ? chip(v[0], optColor(f, v[0])) + (n0 ? '<span class="tb-n">' + esc(n0) + '</span>' : "") : '<span class="dim">None</span>') + '<button type="button" class="tb-more">' + (v.length > 1 ? "+" + (v.length - 1) : "+") + '</button></div></div>');
     $(".tb-show", w).onclick = e => { e.stopPropagation(); openTags(w, a, f); }; return w; }
   function openTags(anchor, a, f){ closePop(); let cur = (Array.isArray(a.f[f.id]) ? a.f[f.id] : []).slice();
     const p = h('<div class="pop tagpop"><input class="in" type="text" placeholder="Search or add a tag…"><div class="tp-l"></div></div>'); document.body.appendChild(p); place(p, anchor);
