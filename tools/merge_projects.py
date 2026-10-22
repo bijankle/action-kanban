@@ -4,7 +4,7 @@ owner (the person whose list it came from, unless it has one) and a change histo
 thumbnails, attachments, RFQs and quotes move folder with it. The old projects stay in projects.json marked deleted,
 so a computer with the old list cached drops them rather than putting them back.
 
-  python3 relay/merge_projects.py <data repo folder>     (then commit and push the data repo)"""
+  python3 tools/merge_projects.py <data repo folder>     (then commit and push the data repo)"""
 import json, os, shutil, sys, time, random, string
 
 ROOT = sys.argv[1]

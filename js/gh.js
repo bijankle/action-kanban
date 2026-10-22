@@ -1,14 +1,20 @@
 /* GitHub storage. The actions, settings and compressed photos are files under data/ in their own repo
    (bijankle/action-kanban-data), kept apart from the app so saving never rebuilds the website. Viewers read
    the files straight from GitHub (no key needed while the data repo is public); anyone with a GitHub key that
-   can write to it saves through the GitHub API, every save as one commit. With the save relay (relay/worker.js, a
+   can write to it saves through the GitHub API, every save as one commit. With the save relay (an older Cloudflare Worker, a
    small Cloudflare Worker holding one key) set, everyone signed in reads and saves through it instead, no key of
    their own, and the data repo can be private. The relay also holds the accounts (email and password): signing in
-   gives a token (adSess, 90 days) that saving needs. */
+   gives a token (adSess, 90 days) that saving needs.
+   On the Cloudflare site (cloudflare/worker.js) the page is served behind its sign in, says who is signed in
+   (window.AD_SITE) and reads and saves through its /api, with the sign in cookie. Once SITE_URL is set, the GitHub
+   Pages copy sends people there. */
 "use strict";
 const GH = (() => {
   const RELAY = "";   // the save relay's address, once it's set up (Settings can also set one)
-  const relay = () => (lsGet("adRelay", "") || RELAY).trim().replace(/\/+$/, "");
+  const SITE_URL = "";   // the Cloudflare site's address, once it's set up: the GitHub Pages copy then opens it instead
+  const SITE = (typeof window !== "undefined" && window.AD_SITE) || null;
+  if (!SITE && SITE_URL && /github\.io$/i.test(location.hostname)) location.replace(SITE_URL.replace(/\/+$/, "") + "/" + location.search + location.hash);
+  const relay = () => SITE ? location.origin + "/api" : (lsGet("adRelay", "") || RELAY).trim().replace(/\/+$/, "");
   const API = () => relay() || lsGet("adApiBase", "") || "https://api.github.com";   // (tests point this at a local mock)
   const pagesRepo = () => { const m = location.hostname.match(/^([^.]+)\.github\.io$/i); const seg = location.pathname.split("/").filter(Boolean)[0];
     return m && seg ? m[1] + "/" + seg : ""; };
@@ -20,6 +26,7 @@ const GH = (() => {
   let branchP = null, editP = null;
   async function api(path, opts){ const c = cfg(); opts = opts || {};
     const r = await fetch(API() + "/repos/" + c.repo + path, { method: opts.method || "GET", cache: "no-store", headers: Object.assign(hd(c.token), opts.headers || {}, opts.body ? { "Content-Type": "application/json" } : {}), body: opts.body ? JSON.stringify(opts.body) : undefined });
+    if (SITE && r.status === 401){ location.href = "/login"; }   // (the site's sign in ended)
     if (!r.ok){ const e = new Error("GitHub " + r.status + " on " + path); e.status = r.status; try { e.detail = (await r.json()).message; } catch (x) {} throw e; }
     return opts.raw ? r.text() : r.json(); }
   async function branch(){ if (!branchP) branchP = api("").then(j => j.default_branch || "main").catch(e => { branchP = null; throw e; }); return branchP; }
@@ -46,7 +53,7 @@ const GH = (() => {
     const base = lsGet("adRawBase", ""); if (base) return base + path;
     return "https://raw.githubusercontent.com/" + cfg().repo + "/HEAD/" + path; }
   /* the public web address of the app, for share links and the Excel photo links */
-  function appUrl(){ if (/github\.io$/i.test(location.hostname) || /^https?:\/\/(localhost|127\.)/.test(location.href)) return location.href.replace(/[?#].*$/, ""); return APP_URL; }
+  function appUrl(){ if (SITE) return location.origin + "/"; if (/github\.io$/i.test(location.hostname) || /^https?:\/\/(localhost|127\.)/.test(location.href)) return location.href.replace(/[?#].*$/, ""); return APP_URL; }
   /* can people without a key see the data? (a private data repo answers 404 to anyone without a key) */
   async function isPublic(){ try { const r = await fetch("https://api.github.com/repos/" + cfg().repo, { cache: "no-store" }); return r.ok ? !(await r.json()).private : r.status === 404 ? false : null; } catch (e){ return null; } }
   async function blob(b64){ const j = await api("/git/blobs", { method: "POST", body: { content: b64, encoding: "base64" } }); return j.sha; }
@@ -63,5 +70,5 @@ const GH = (() => {
   async function auth(kind, body){ const r = await fetch(relay() + "/auth/" + kind, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const j = await r.json().catch(() => ({})); if (!r.ok){ const e = new Error(j.message || "Couldn't sign in (" + r.status + ")"); e.status = r.status; throw e; }
     if (j.token){ lsSet("adSess", j.token); reset(); } return j; }
-  return { relay, auth, needSign: () => needSign, cfg, head, canEdit, reset, readJson, fileUrl, appUrl, blob, commit, branch, onPages, pagesRepo, isPublic, DATA_REPO };
+  return { site: () => SITE, relay, auth, needSign: () => needSign, cfg, head, canEdit, reset, readJson, fileUrl, appUrl, blob, commit, branch, onPages, pagesRepo, isPublic, DATA_REPO };
 })();

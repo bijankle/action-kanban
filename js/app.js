@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.9.1";
+const APP_VERSION = "1.9.2";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -136,7 +136,7 @@ const App = (() => {
   /* sign in: email, then your password; the first time, your details and a password (and the team code). The account
      lives with the data (users.json, and keys.json for the passwords, Keys), or on the save server if there is one,
      so any computer remembers you. Signing in is also what lets this computer save. */
-  function signIn(after){ if ($(".si-win")) return; let step = "email", kind = "", known = null; const R = !!GH.relay();
+  function signIn(after){ if (GH.site()){ location.href = "/login"; return; } if ($(".si-win")) return; let step = "email", kind = "", known = null; const R = !!GH.relay();
     const m = modal('<div class="si-logo">' + LOGO(46) + '</div><h3>Sign in to Action Database</h3><p class="dim si-msg"></p><div class="si-body"></div><p class="bad si-err" hidden></p><div class="yn-btns"><button class="yn-yes" type="button">Next</button></div>', { cls: "si-win", sticky: true });
     const body = $(".si-body", m), go = $(".yn-yes", m), err = $(".si-err", m), msg = $(".si-msg", m);
     const F = (k, l, t, v, ph) => '<label class="fl">' + l + '<input class="in" data-k="' + k + '" type="' + (t || "text") + '" value="' + esc(v || "") + '"' + (ph ? ' placeholder="' + ph + '"' : "") + (t === "password" ? ' autocomplete="' + (step === "pass" ? "current-password" : "new-password") + '"' : "") + '></label>';
@@ -188,10 +188,11 @@ const App = (() => {
         done(p); }
       catch (e){ go.textContent = step === "pass" ? "Sign in" : "Create account"; fail(e.status === 401 ? "That password isn't right." : e.message || "Couldn't sign in"); } }; }
   function profMenu(btn){ Fields.closePop(); const p = Profile.get();
-    const pop = h('<div class="pop profpop"><div class="pp-h"><b>' + esc(Profile.name() || "Not signed in") + '</b><span class="dim">' + esc(p.role || "") + '</span><span class="dim">' + esc(p.email || "") + '</span></div><div class="msep"></div><button type="button" class="mi" data-k="ed">Edit profile…</button><button type="button" class="mi" data-k="out">Sign out</button></div>');
+    const pop = h('<div class="pop profpop"><div class="pp-h"><b>' + esc(Profile.name() || "Not signed in") + '</b><span class="dim">' + esc(p.role || "") + '</span><span class="dim">' + esc(p.email || "") + '</span></div><div class="msep"></div><button type="button" class="mi" data-k="ed">Edit profile…</button>' + (GH.site() && GH.site().admin ? '<button type="button" class="mi" data-k="acc">Accounts and approvals…</button>' : "") + '<button type="button" class="mi" data-k="out">Sign out</button></div>');
     document.body.appendChild(pop); const r = btn.getBoundingClientRect(); pop.style.top = (r.bottom + 6) + "px"; pop.style.left = Math.max(8, r.right - 260) + "px";
     $("[data-k=ed]", pop).onclick = () => { Fields.closePop(); profile(); };
-    $("[data-k=out]", pop).onclick = async () => { Fields.closePop(); if (!await confirmBox("Sign out of Action Database on this computer?", "Sign out")) return; lsSet("adUser", null); lsSet("adSess", null); Keys.forget(); Profile.set({}); drawProf(); GH.reset(); Store.S.edit = false; render(); signIn(); }; }
+    const acc = $("[data-k=acc]", pop); if (acc) acc.onclick = () => { Fields.closePop(); location.href = "/admin"; };
+    $("[data-k=out]", pop).onclick = async () => { Fields.closePop(); if (!await confirmBox("Sign out of Action Database on this computer?", "Sign out")) return; if (GH.site()){ location.href = "/auth/logout"; return; } lsSet("adUser", null); lsSet("adSess", null); Keys.forget(); Profile.set({}); drawProf(); GH.reset(); Store.S.edit = false; render(); signIn(); }; }
 
   /* ---------- two people on one action ---------- */
   const who = a => { const u = a.byE && Store.user(a.byE); return u ? [u.first, u.last].filter(Boolean).join(" ") + (u.role ? " (" + u.role + ")" : "") : a.by || "Someone"; };
@@ -314,6 +315,9 @@ const App = (() => {
       $("#profB").onclick = e => { e.stopPropagation(); if ($(".profpop")) return Fields.closePop(); Profile.name() ? profMenu(e.currentTarget) : signIn(); }; drawProf();
       $("#folderB").onclick = () => Local.state() === "locked" ? Local.reconnect() : Local.pick(); }
     await Local.init();
+    /* on the Cloudflare site, the site's sign in says who this is */
+    const site = GH.site(); if (site){ const p = { first: site.first, last: site.last, role: site.role, mobile: site.mobile, email: site.email }, had = Profile.get();
+      if (had.email !== site.email || !had.first) Profile.set(p); lsSet("adUser", site.email); lsSet("adSetup", 1); drawProf(); }
     const qs = new URLSearchParams(location.search);
     if (!A.mobile) Equip.load().then(() => render()).catch(() => {});   // (the plant tags and WBS areas, for picking equipment and locations)
     try { await Promise.all([Store.load(), checkEdit()]); } catch (e){ $("#boot .bt").textContent = "Couldn't load the actions: " + e.message; return; }
@@ -321,6 +325,7 @@ const App = (() => {
     const ar = qs.get("a"); if (ar){ const a = Store.findRef(ar); if (a){ if (!Store.selected().includes(a._p)) Store.setSelected(Store.selected().concat(a._p)); A.selRef = a._p + ":" + a.u;
         if (A.mobile) Mobile.show(A.selRef); const ph = +qs.get("photo"); if (ph && a.photos.length) setTimeout(() => Media.view(a, ph - 1), 300); } }
     $("#boot").remove(); draw();
+    if (site && Store.S.edit && !Store.user(site.email)) Store.saveUser(Profile.get(), true);   // (into the people list, for owners and edits)
     /* a private data repo can't be read without a key */
     if (!GH.cfg().token && !Store.projects().length) GH.isPublic().then(pub => { if (pub === false) note("The actions are in a private repository (" + GH.cfg().repo + "). Add a GitHub key in File, Settings to see them.", 12000); });
     const setup = () => { if (!lsGet("adSetup", 0)) settings(true); };
