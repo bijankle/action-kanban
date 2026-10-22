@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.json?v=2">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="css/app.css?v=1.9.3">
+<link rel="stylesheet" href="css/app.css?v=1.9.4">
 </head>
 <body>
 <div id="boot"><div class="bl"></div><div class="bar"><i></i></div><div class="bt">Loading actions</div></div>
@@ -27,8 +27,6 @@
   <button id="profB" class="prof-b" type="button" title="Your profile" aria-label="Your profile"></button>
 </header>
 <div id="tools">
-  <div class="hsearch"><input id="q" class="in" type="search" placeholder="Search actions" autocomplete="off"></div>
-  <div id="pills" class="pills"></div>
   <span class="grow"></span>
   <div id="vt" class="vt" role="group" aria-label="View"><button type="button" data-v="list" title="List">☰</button><button type="button" data-v="tiles" title="Tiles">▦</button></div>
   <button id="sizeB" class="btn ghost sm" type="button" title="Tile size">Size ▾</button>
@@ -38,32 +36,40 @@
   <button id="pasteB" class="btn ghost sm edit-only" type="button" title="Paste an email or note and Gemini fills in the fields">Paste text</button>
   <button id="newB" class="btn sm edit-only" type="button">+ New action</button>
 </div>
-<main id="main"><div id="view"></div><div class="splitter" id="split" hidden title="Drag to resize the panel"></div><aside id="side" hidden></aside></main>
+<main id="main">
+  <aside id="fpanel" aria-label="Search and filters"><div class="hx" id="hxL"><button id="phL" class="phd" type="button" aria-expanded="true" title="Hide the filters"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/></svg><span>Filters</span><b class="cnt" hidden></b><i class="chev" aria-hidden="true">‹</i></button></div>
+    <div class="fp-body" id="fbody"><div class="hsearch"><input id="q" class="in" type="search" placeholder="Search actions" autocomplete="off"></div></div></aside>
+  <div class="splitter" id="splitL" title="Drag to resize the filters"></div>
+  <section id="mid"><div class="hx hx3"><span class="slot" id="slotL"></span><div id="achips" class="achips"></div><span class="slot" id="slotR"></span></div><div id="view"></div></section>
+  <div class="splitter" id="split" hidden title="Drag to resize the panel"></div>
+  <aside id="side" hidden><div class="hx" id="hxR"><button id="phR" class="phd" type="button" aria-expanded="true" title="Hide the details. Actions then open as a pop up"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M14 4.5v15"/></svg><span>Details</span><i class="chev" aria-hidden="true">›</i></button></div><div id="sideBody"></div></aside>
+</main>
 <div id="mobile"></div>
 
-<script src="js/util.js?v=1.9.3"></script>
-<script src="js/gh.js?v=1.9.3"></script>
-<script src="js/keys.js?v=1.9.3"></script>
-<script src="js/store.js?v=1.9.3"></script>
-<script src="js/local.js?v=1.9.3"></script>
-<script src="js/media.js?v=1.9.3"></script>
-<script src="js/fields.js?v=1.9.3"></script>
-<script src="js/table.js?v=1.9.3"></script>
-<script src="js/actionview.js?v=1.9.3"></script>
-<script src="js/kanban.js?v=1.9.3"></script>
-<script src="js/validation.js?v=1.9.3"></script>
-<script src="js/print.js?v=1.9.3"></script>
-<script src="js/excel.js?v=1.9.3"></script>
-<script src="js/intake.js?v=1.9.3"></script>
-<script src="js/vendors.js?v=1.9.3"></script>
-<script src="js/parts.js?v=1.9.3"></script>
-<script src="js/isolsuggest.js?v=1.9.3"></script>
-<script src="js/isol.js?v=1.9.3"></script>
-<script src="js/sitemap.js?v=1.9.3"></script>
-<script src="js/docs.js?v=1.9.3"></script>
-<script src="js/drawings.js?v=1.9.3"></script>
-<script src="js/workpack.js?v=1.9.3"></script>
-<script src="js/mobile.js?v=1.9.3"></script>
-<script src="js/app.js?v=1.9.3"></script>
+<script src="js/util.js?v=1.9.4"></script>
+<script src="js/gh.js?v=1.9.4"></script>
+<script src="js/keys.js?v=1.9.4"></script>
+<script src="js/store.js?v=1.9.4"></script>
+<script src="js/local.js?v=1.9.4"></script>
+<script src="js/media.js?v=1.9.4"></script>
+<script src="js/fields.js?v=1.9.4"></script>
+<script src="js/filters.js?v=1.9.4"></script>
+<script src="js/table.js?v=1.9.4"></script>
+<script src="js/actionview.js?v=1.9.4"></script>
+<script src="js/kanban.js?v=1.9.4"></script>
+<script src="js/validation.js?v=1.9.4"></script>
+<script src="js/print.js?v=1.9.4"></script>
+<script src="js/excel.js?v=1.9.4"></script>
+<script src="js/intake.js?v=1.9.4"></script>
+<script src="js/vendors.js?v=1.9.4"></script>
+<script src="js/parts.js?v=1.9.4"></script>
+<script src="js/isolsuggest.js?v=1.9.4"></script>
+<script src="js/isol.js?v=1.9.4"></script>
+<script src="js/sitemap.js?v=1.9.4"></script>
+<script src="js/docs.js?v=1.9.4"></script>
+<script src="js/drawings.js?v=1.9.4"></script>
+<script src="js/workpack.js?v=1.9.4"></script>
+<script src="js/mobile.js?v=1.9.4"></script>
+<script src="js/app.js?v=1.9.4"></script>
 </body>
 </html>

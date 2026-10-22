@@ -126,7 +126,30 @@ kbd{font:600 12px var(--font);border:1px solid var(--line2);border-bottom-width:
 body.ro .edit-only{display:none}
 
 /* main area and side panel */
-main{display:flex;height:calc(100% - var(--header-h) - 51px);position:relative}
+main{display:flex;height:calc(100% - var(--header-h) - var(--tools-h,51px));position:relative}
+/* three columns: Filters | the list | Details, each with a header row of the same height */
+#fpanel{width:var(--fp-w,240px);flex:0 0 var(--fp-w,240px);min-width:0;display:flex;flex-direction:column;background:var(--panel2)}
+#fpanel[hidden],#splitL[hidden]{display:none}
+#mid{flex:1;min-width:0;display:flex;flex-direction:column}#mid #view{flex:1;min-height:0}
+#side{flex-direction:column}#sideBody{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}#sideBody>*{flex:1;min-height:0}
+.hx{flex:none;height:42px;display:flex;align-items:center;background:var(--panel2);border-bottom:1px solid var(--line);min-width:0}
+.hx3{gap:8px;padding:0 10px;background:var(--panel);overflow:hidden}
+.phd{display:flex;align-items:center;gap:7px;width:100%;height:100%;border:0;background:none;padding:0 10px 0 14px;font:700 14px var(--font);color:var(--ink);cursor:pointer;text-align:left}
+.phd .chev{margin-left:auto;font-style:normal;color:var(--muted);font-size:15px;width:22px;height:22px;border-radius:6px;display:grid;place-items:center}
+.phd:hover{color:var(--th)}.phd:hover .chev{background:var(--th);color:#fff}.phd:focus-visible{outline:2px solid var(--th);outline-offset:-3px}
+.phd .cnt{min-width:18px;height:18px;border-radius:9px;background:var(--th);color:#fff;font-size:11px;display:inline-grid;place-items:center;padding:0 5px}.phd .cnt[hidden]{display:none}
+.slot{display:flex;align-items:center;gap:8px;flex:none}.slot:empty{display:none}
+.slot .phd{width:auto;flex:none;white-space:nowrap;height:28px;border:1.5px solid var(--line);border-radius:999px;background:var(--panel);padding:0 6px 0 10px;font-size:13px}.slot .phd .chev{margin-left:2px;width:18px;height:18px}.slot .phd[hidden]{display:none}
+.slot .hsearch{width:220px;flex:none}
+.achips{flex:1;min-width:0;display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap;font-size:13px}.achips[hidden]{display:none}
+.fchip{display:inline-flex;align-items:center;gap:4px;border:1.5px solid var(--th);background:var(--th-t);border-radius:999px;padding:2px 9px;font:600 12px var(--font);color:var(--ink);cursor:pointer;flex:none}
+.fchip-all{font-size:12px;flex:none}.fcount{margin-left:auto;color:var(--dim);font-weight:600;font-variant-numeric:tabular-nums;flex:none}
+.fp-body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:12px 12px 16px;display:flex;flex-direction:column;gap:14px}
+.fp-body .hsearch{width:100%;flex:none}.fp-body .hsearch input{width:100%}
+.fp-groups{display:flex;flex-direction:column;gap:14px}
+.fg2{display:flex;flex-wrap:wrap;gap:6px}.fgh{flex:0 0 100%;display:flex;align-items:center;justify-content:space-between;font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
+.fgh .link{font-size:12px;text-transform:none;letter-spacing:0}
+.fpill.zero{color:var(--dim)}.fpill.ns{font-style:italic}.fshown{margin:0;font-size:12px}
 #view{flex:1;min-width:0;overflow:auto;position:relative}
 #view[data-tab="valid"]{overflow:auto}
 body:has(#tools[hidden]) main{height:calc(100% - var(--header-h))}
@@ -139,7 +162,7 @@ body:has(#tools[hidden]) main{height:calc(100% - var(--header-h))}
 body.resizing{cursor:col-resize;user-select:none}body.resizing iframe,body.resizing #side{pointer-events:none}
 .side-0{margin:auto;display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;padding:30px;max-width:320px}.side-0 b{font-size:16px}
 /* the pop up (side panel switched off in View) */
-.apop{position:fixed;inset:0;z-index:900;background:#0b0c0e66;display:grid;place-items:center;padding:3vh 3vw}
+.apop{position:fixed;inset:0;z-index:1300;background:#0b0c0e66;display:grid;place-items:center;padding:3vh 3vw}
 .apop-w{width:min(1180px,100%);height:100%;background:var(--panel);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px #0006;container-type:inline-size;display:flex;flex-direction:column}
 #side.drop{box-shadow:inset 0 0 0 3px var(--th)}
 .sd-split{position:absolute;left:-4px;top:0;bottom:0;width:8px;cursor:col-resize;z-index:5}
@@ -181,8 +204,8 @@ body.resizing{cursor:col-resize;user-select:none}body.resizing iframe,body.resiz
 .tbl-wrap{width:100%;container-type:inline-size}
 /* a narrow list (the panel open wide): the small yes or no and count columns step out first, then the dates; the rest share the width */
 .tbl{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%}
-.tbl th{position:sticky;top:0;z-index:2;background:var(--th);color:#fff;text-align:left;font-size:13px;font-weight:700;padding:0;white-space:nowrap;user-select:none;border-right:1px solid color-mix(in srgb,#fff 20%,transparent)}
-.tbl th .th-l{display:block;padding:9px 10px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.tbl th{position:sticky;top:0;z-index:2;background:var(--th);color:#fff;text-align:left;font-size:13px;font-weight:700;padding:0;white-space:normal;vertical-align:bottom;line-height:1.15;user-select:none;border-right:1px solid color-mix(in srgb,#fff 20%,transparent)}
+.tbl th .th-l{display:block;padding:8px 10px;overflow:hidden;overflow-wrap:normal;word-break:normal;cursor:pointer}   /* (headings wrap a word at a time, so a column can be as narrow as its longest word) */
 .tbl th .th-r{position:absolute;right:-3px;top:0;bottom:0;width:7px;cursor:col-resize;z-index:3}.tbl th .th-r:hover{background:#fff6}
 .tbl th.drag{opacity:.4}.tbl th.dover{box-shadow:inset 3px 0 0 #fff}
 .tbl td{padding:5px 10px;border-bottom:1px solid var(--line);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;height:40px}

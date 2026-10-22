@@ -2,14 +2,17 @@
    Click a row to open it in the side panel. Drag a header to reorder columns, drag its edge to resize. */
 "use strict";
 const Table = (() => {
+  const NEED = { id: 96, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
+  let cv = null;
+  /* the width of a heading's longest word, plus the cell padding and room for the sort arrow */
+  function headW(label, font){ cv = cv || document.createElement("canvas").getContext("2d"); cv.font = font || "700 13px " + getComputedStyle(document.body).fontFamily;
+    return Math.ceil(Math.max(...String(label || "").split(/\s+/).map(w => cv.measureText(w).width), 0)) + 20 + 14; }
   const W = { text: 200, longtext: 260, multi: 170, stage: 170, rank: 74, check: 90, choice: 120, date: 120, contact: 160, phone: 130, number: 90 };
   const widths = () => lsGet("adColW", {});
   function cols(){ const c = [{ id: "_id", label: "ID", type: "id" }]; if (Store.selected().length > 1) c.push({ id: "_proj", label: "Project", type: "proj" });
     return c.concat(Store.fields().filter(f => f.table)); }
   /* what's on show: the projects ticked, the stage pills, the search */
-  function rows(){ const q = (App.q || "").trim().toLowerCase(), pills = App.pills; let list = Store.visible();
-    if (pills.size) list = list.filter(a => pills.has(a.stage));
-    if (q) list = list.filter(a => Store.matches(a, q));
+  function rows(){ let list = Filters.apply(Store.visible());   // (the search box and the Filters panel's pills)
     const so = App.sort, ord = new Map(Store.stages().map((s, i) => [s.id, i]));
     const base = (x, y) => (ord.get(x.stage) - ord.get(y.stage)) || (x.rank || 0) - (y.rank || 0) || x.no - y.no;
     if (so && so.id){ const f = Store.field(so.id); const key = a => so.id === "_id" ? Store.actId(a) : so.id === "_proj" ? (Store.project(a._p) || {}).name : f ? (f.type === "rank" ? Fields.val(a, f) : f.type === "stage" ? ord.get(a.stage) : ["date", "meta", "number", "mto", "sparelist", "isollist"].includes(f.type) ? (v => v === "" || v == null || v === "TBC" || v === "N/A" || (typeof v === "number" && isNaN(v)) ? "\uffff" : typeof v === "number" ? String(v).padStart(16, "0") : String(v))(Fields.val(a, f)) : Fields.text(a, f).toLowerCase()) : "";
@@ -20,18 +23,21 @@ const Table = (() => {
   function render(el){ if (App.view === "tiles") return tiles(el); const all = cols(), ws = widths(), list = rows(), sel = App.last;
     /* the columns share the width there is (their widths are proportions), so the list never scrolls sideways */
     /* the narrow columns (ID, stage, ticks, counts) keep their width; the text columns share what's left */
-    const px = c => ws[c.id] || (c.type === "id" ? 96 : c.type === "proj" ? 140 : W[c.type] || 140);
+    /* a column nobody has sized: the narrow kinds (ticks, yes or no, dates, counts) are as wide as the longest word in
+       their heading (headings wrap onto two lines), or what their contents need if that's wider */
+    const px = c => ws[c.id] || (fix(c) ? Math.max(headW(c.label), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
     const FIX = new Set(["id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || (c.type === "choice" && (c.options || []).length <= 3);
     const lp = c => (["check", "complete", "mto", "sparelist", "isollist"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : ["date", "meta", "phone", "number"].includes(c.type) ? " lp2" : "";
     /* the least each column can be; when they don't all fit, the tick columns go first, then the dates and numbers,
        so a title never gets squeezed to one letter per line (and the list scrolls sideways only if even that's not enough) */
-    const least = c => fix(c) ? Math.min(px(c), c.type === "id" ? 110 : 150) : c.id === "title" ? 200 : 110;
+    const fw = c => ws[c.id] || Math.min(px(c), c.type === "id" ? 110 : 150);   // (a width someone set is kept as it is)
+    const least = c => fix(c) ? fw(c) : c.id === "title" ? 200 : 110;
     const lv = c => lp(c) === " lp1" ? 1 : lp(c) === " lp2" ? 2 : 3, need = n => all.filter(c => lv(c) > n).reduce((t, c) => t + least(c), 0);
     const w = el.clientWidth || 9999, level = need(0) <= w ? 0 : need(1) <= w ? 1 : 2, cs = all.filter(c => lv(c) > level); lastLv = level; levelOf = w2 => need(0) <= w2 ? 0 : need(1) <= w2 ? 1 : 2;
     if (!ro && window.ResizeObserver){ ro = new ResizeObserver(() => { if (App.view === "tiles" || !el.isConnected || !$(".tbl", el)) return; if (levelOf(el.clientWidth) !== lastLv) App.render(); }); ro.observe(el); }
-    const fixW = cs.filter(fix).reduce((t, c) => t + Math.min(px(c), c.type === "id" ? 110 : 150), 0), flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
+    const fixW = cs.filter(fix).reduce((t, c) => t + fw(c), 0), flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
-    const wid = c => fix(c) ? Math.min(px(c), c.type === "id" ? 110 : 150) + "px" : "max(" + (c.id === "title" ? 200 : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
+    const wid = c => fix(c) ? fw(c) + "px" : "max(" + (c.id === "title" ? 200 : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
     const th = cs.map(c => '<th class="' + lp(c).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + esc(c.label) + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><i class="th-r"></i></th>').join("");
     const minW = cs.reduce((t, c) => t + least(c), 0);
@@ -58,9 +64,16 @@ const Table = (() => {
       $(".th-l", th).onclick = () => { App.sort = App.sort && App.sort.id === id ? (App.sort.dir > 0 ? { id, dir: -1 } : null) : { id, dir: 1 }; App.render(); };
       /* resize */
       const r = $(".th-r", th); r.onclick = e => e.stopPropagation();
-      r.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const x0 = e.clientX, w0 = th.offsetWidth; r.setPointerCapture(e.pointerId);
-        r.onpointermove = ev => { th.style.width = Math.max(50, w0 + ev.clientX - x0) + "px"; };
-        r.onpointerup = () => { r.onpointermove = null; const ws = widths(), k = (parseFloat(th.style.width) || th.offsetWidth) / th.offsetWidth; $$("th", el).forEach(t => { ws[t.dataset.c] = Math.round(t.offsetWidth); }); lsSet("adColW", ws); App.render(); }; };
+      /* double click the edge: fit the column to its heading's longest word and its widest cell (as in Excel) */
+      r.ondblclick = e => { e.stopPropagation(); const i = [...th.parentNode.children].indexOf(th), l = $(".th-l", th);
+        let w = headW(cs[i] ? cs[i].label : l.textContent, getComputedStyle(l).font);
+        $$("tbody tr", el).forEach(tr => { const td = tr.children[i]; if (!td) return; const k = td.firstElementChild;
+          const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML; document.body.appendChild(m);
+          w = Math.max(w, Math.min(420, m.scrollWidth + 22, k && k.matches("select,input") ? k.scrollWidth + 22 : 9999)); m.remove(); });
+        const ws = widths(); ws[id] = Math.round(w); lsSet("adColW", ws); App.render(); };
+      r.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); if (e.detail > 1) return; const x0 = e.clientX, w0 = th.offsetWidth; r.setPointerCapture(e.pointerId);
+        let moved = false; r.onpointermove = ev => { if (Math.abs(ev.clientX - x0) > 2) moved = true; if (moved) th.style.width = Math.max(50, w0 + ev.clientX - x0) + "px"; };
+        r.onpointerup = () => { r.onpointermove = null; if (!moved) return; const ws = widths(), k = (parseFloat(th.style.width) || th.offsetWidth) / th.offsetWidth; $$("th", el).forEach(t => { ws[t.dataset.c] = Math.round(t.offsetWidth); }); lsSet("adColW", ws); App.render(); }; };
       /* reorder (the field order is shared, it's also the order in the side panel) */
       th.ondragstart = e => { if (id[0] === "_") return e.preventDefault(); e.dataTransfer.setData("text/col", id); th.classList.add("drag"); };
       th.ondragend = () => th.classList.remove("drag");

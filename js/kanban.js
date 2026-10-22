@@ -4,7 +4,7 @@
 "use strict";
 const Kanban = (() => {
   function render(el){ const ro = !Store.S.edit, q = (App.q || "").trim().toLowerCase(), fs = Store.fields(), multi = Store.selected().length > 1;
-    const match = a => Store.matches(a, q);
+    const match = a => Filters.match(a);
     const sx = $(".kb", el) ? $(".kb", el).scrollLeft : 0, sy = {}; $$(".kb-cards", el).forEach(c => sy[c.dataset.s] = c.scrollTop);
     el.innerHTML = '<div class="kb">' + Store.stages().map(s => { const cards = Store.ranked(s.id).filter(match);
         return '<section class="kb-col" data-s="' + s.id + '" style="--c:' + esc(s.color) + '"><header class="kb-h" draggable="' + !ro + '"><i class="dot"></i><span class="kb-n" title="' + esc("On the action this step reads " + s.name + ". Double click to rename the column") + '">' + esc(Store.todo(s)) + '</span><span class="kb-c">' + (q ? cards.length + " of " + Store.ranked(s.id).length : cards.length) + '</span>'

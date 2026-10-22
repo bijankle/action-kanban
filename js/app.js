@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.9.3";
+const APP_VERSION = "1.9.4";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -18,18 +18,30 @@ const App = (() => {
     /* the search box sits in the same place on every tab; the rest of the bar only where it applies */
     /* the list (Actions table or Organizer) stays on the left; the open action is in the panel on the right (or, with the
        panel switched off in View, in a pop up over the list) */
-    const sideTab = A.tab === "actions" || A.tab === "kanban", panel = sideTab && lsGet("adPanel", true), sel = sideTab && !!act(A.selRef), inAct = false, list = A.tab === "actions";
-    $("#pills").hidden = !list; $$("#xlsB,#printB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid";
+    const sideTab = A.tab === "actions" || A.tab === "kanban", panel = A.tab === "actions" && lsGet("adPanel", true),   /* (the Organizer has no Details panel: a card opens as a pop up) */ sel = sideTab && !!act(A.selRef), inAct = false, list = A.tab === "actions";
+    $$("#xlsB,#printB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid";
     $("#q").placeholder = inAct ? "Search actions (back to the list)" : { actions: "Search actions", kanban: "Search, filters every stage", valid: "Search fields, stages and contacts" }[A.tab] || "Search";
-    if ($("#q").value !== A.q) $("#q").value = A.q; pills(); $("#undoB").disabled = !Store.S.undo.length; $("#redoB").disabled = !Store.S.redo.length;
+    if ($("#q").value !== A.q) $("#q").value = A.q; panels(sideTab, panel); $("#undoB").disabled = !Store.S.undo.length; $("#redoB").disabled = !Store.S.redo.length;
     const v = $("#view"); v.dataset.tab = A.tab;
     v.classList.toggle("in-act", inAct);
     if (A.tab === "kanban") Kanban.render(v); else if (A.tab === "valid") Valid.render(v); else Table.render(v);
-    const side = $("#side"); side.hidden = $("#split").hidden = !panel;
-    if (panel){ if (sel) ActionView.render(side); else side.innerHTML = '<div class="side-0"><b>No action open</b><span class="dim">Click an action ' + (A.tab === "kanban" ? "card" : "in the list") + ' to see it here.</span><span class="dim">Drag the line on the left to make this panel wider or narrower.</span></div>'; }
+    const side = $("#side"), sb = $("#sideBody"); side.hidden = $("#split").hidden = !panel;
+    if (panel){ if (sel) ActionView.render(sb); else sb.innerHTML = '<div class="side-0"><b>No action open</b><span class="dim">Click an action ' + (A.tab === "kanban" ? "card" : "in the list") + ' to see it here.</span><span class="dim">Drag the line on the left to make this panel wider or narrower.</span></div>'; }
     popup(!panel && sel);
     $$("#vt button").forEach(b => b.classList.toggle("on", b.dataset.v === A.view)); $("#sizeB").hidden = !list || A.view !== "tiles"; $("#vt").hidden = !list; $("#colB").hidden = !list || A.view !== "list";
     lsSet("adPills", [...A.pills]); }
+  /* the Filters panel (left) and the Details panel (right): each one's header is its show and hide button; a hidden
+     panel's header waits at its end of the list's header row, beside what's filtering. With Details hidden an action
+     opens as a pop up. The search box sits in the Filters panel, or in the list's header row while that's hidden. */
+  function panels(sideTab, panel){ const fopen = sideTab && lsGet("adFpanel", true), fp = $("#fpanel"), q = $(".hsearch");
+    fp.hidden = $("#splitL").hidden = !fopen;
+    const phL = $("#phL"), phR = $("#phR"), n = Filters.count();
+    (fopen ? $("#hxL") : $("#slotL")).appendChild(phL); phL.hidden = !sideTab; phL.setAttribute("aria-expanded", fopen); $(".chev", phL).textContent = fopen ? "‹" : "›"; phL.title = fopen ? "Hide the filters" : "Show the filters";
+    const c = $(".cnt", phL); c.textContent = n; c.hidden = !n;
+    const qHome = fopen ? $("#fbody") : $("#slotL"); if (q.parentNode !== qHome){ const had = document.activeElement === $("#q"); qHome.insertBefore(q, qHome === $("#fbody") ? qHome.firstChild : null); if (had) $("#q").focus(); }
+    (panel ? $("#hxR") : $("#slotR")).appendChild(phR); phR.hidden = A.tab !== "actions"; phR.setAttribute("aria-expanded", !!panel); $(".chev", phR).textContent = panel ? "›" : "‹"; phR.title = panel ? "Hide the details. Actions then open as a pop up" : "Show the details panel";
+    if (fopen) Filters.render($("#fbody"));
+    const ac = $("#achips"); ac.hidden = !sideTab; if (sideTab){ const all = Store.visible(); ac.innerHTML = Filters.chipsHtml(Filters.apply(all).length, all.length); Filters.wireChips(ac); } }
   function pills(){ const all = Store.visible(), el = $("#pills");
     el.innerHTML = '<button type="button" class="pill' + (!A.pills.size ? " on" : "") + '" data-s="">All <b>' + all.length + '</b></button>' + Store.stages().map(s => '<button type="button" class="pill' + (A.pills.has(s.id) ? " on" : "") + '" data-s="' + s.id + '" style="--c:' + esc(s.color) + '" title="Click to show only this stage, Ctrl+click to add it"><i class="dot"></i>' + esc(s.name) + ' <b>' + all.filter(a => a.stage === s.id).length + '</b></button>').join("");
     $$(".pill", el).forEach(b => b.onclick = e => { const s = b.dataset.s; if (!s) A.pills.clear(); else if (e.ctrlKey || e.metaKey){ A.pills.has(s) ? A.pills.delete(s) : A.pills.add(s); } else if (A.pills.size === 1 && A.pills.has(s)) A.pills.clear(); else { A.pills.clear(); A.pills.add(s); } render(); }); }
@@ -47,6 +59,15 @@ const App = (() => {
     if (!popEl){ popEl = h('<div class="apop"><div class="apop-w"></div></div>'); document.body.appendChild(popEl); popEl.addEventListener("mousedown", e => { if (e.target === popEl) select(null); }); }
     ActionView.render($(".apop-w", popEl)); }
   /* the side panel's width: drag the line between the list and the panel (kept on this computer) */
+  function splitterL(){ const sp = $("#splitL"), m = $("#main"); const w0 = lsGet("adFpW", 0); if (w0) m.style.setProperty("--fp-w", w0 + "px");
+    sp.onpointerdown = e => { e.preventDefault(); sp.setPointerCapture(e.pointerId); document.body.classList.add("resizing");
+      sp.onpointermove = ev => { const r = m.getBoundingClientRect(), w = Math.max(170, Math.min(420, ev.clientX - r.left)); m.style.setProperty("--fp-w", w + "px"); };
+      sp.onpointerup = () => { sp.onpointermove = null; document.body.classList.remove("resizing"); const w = parseFloat(getComputedStyle(m).getPropertyValue("--fp-w")); if (w) lsSet("adFpW", Math.round(w)); }; };
+    sp.ondblclick = () => { lsSet("adFpW", null); m.style.removeProperty("--fp-w"); };
+    $("#phL").onclick = () => { lsSet("adFpanel", !lsGet("adFpanel", true)); render(); };
+    $("#phR").onclick = () => { const open = !lsGet("adPanel", true); lsSet("adPanel", open); if (!open) A.selRef = null; render(); };   // (hiding it closes the open action; the next one opens as a pop up)
+    /* the list's height follows the toolbar's */
+    if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty("--tools-h", $("#tools").offsetHeight + "px")).observe($("#tools")); }
   function splitter(){ const sp = $("#split"), m = $("#main"); sp.onpointerdown = e => { e.preventDefault(); sp.setPointerCapture(e.pointerId); document.body.classList.add("resizing");
       sp.onpointermove = ev => { const r = m.getBoundingClientRect(), w = Math.max(360, Math.min(r.width - 320, r.right - ev.clientX)); m.style.setProperty("--side-w", w + "px"); };
       sp.onpointerup = () => { sp.onpointermove = null; document.body.classList.remove("resizing"); const w = parseFloat(getComputedStyle(m).getPropertyValue("--side-w")); if (w) lsSet("adSideW", Math.round(w)); }; };
@@ -301,7 +322,7 @@ const App = (() => {
   /* ---------- start ---------- */
   async function boot(){ applyView();
     A.mobile = matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1100px)").matches; document.body.classList.toggle("mobile", A.mobile);
-    const sw = lsGet("adSideW", null); if (sw) $("#main").style.setProperty("--side-w", sw + "px"); splitter();
+    const sw = lsGet("adSideW", null); if (sw) $("#main").style.setProperty("--side-w", sw + "px"); splitter(); splitterL();
     $("#brand").innerHTML = LOGO(34) + '<span class="bn">Action <b>Database</b></span>'; $("#boot .bl").innerHTML = LOGO(84);
     $("#brand").title = "Home"; $("#brand").onclick = () => { A.tab = "actions"; lsSet("adTab", "actions"); select(null); };   // the logo goes home: the Actions list
     if (!A.mobile){ menus();
