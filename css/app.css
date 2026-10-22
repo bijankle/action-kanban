@@ -133,9 +133,9 @@ body:has(#tools[hidden]) main{height:calc(100% - var(--header-h))}
 /* the side panel on the right: the open action; a thin theme coloured line with a grip to drag it wider or narrower */
 #side{width:var(--side-w,45%);flex:0 0 var(--side-w,45%);max-width:calc(100% - 320px);min-width:360px;background:var(--panel);display:flex;flex-direction:column;container-type:inline-size;min-height:0}
 #side[hidden],.splitter[hidden]{display:none}
-.splitter{width:3px;flex:0 0 3px;cursor:col-resize;background:var(--th);position:relative;z-index:5}
+.splitter{width:3px;flex:0 0 3px;cursor:col-resize;background:var(--th);position:relative;z-index:900}
 .splitter::before{content:"";position:absolute;left:-5px;right:-5px;top:0;bottom:0}
-.splitter::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:36px;transform:translate(-50%,-50%);box-sizing:border-box;border:2px solid var(--th);border-radius:7px;background:var(--panel)}
+.splitter::after{content:"";position:absolute;left:50%;top:50%;width:14px;height:38px;transform:translate(-50%,-50%);box-sizing:border-box;border:2px solid var(--th);border-radius:7px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='20'%3E%3Cg fill='%23475569'%3E%3Ccircle cx='2' cy='2' r='2'/%3E%3Ccircle cx='2' cy='10' r='2'/%3E%3Ccircle cx='2' cy='18' r='2'/%3E%3C/g%3E%3C/svg%3E") center/4px 20px no-repeat}   /* (a white grip with three dots) */
 body.resizing{cursor:col-resize;user-select:none}body.resizing iframe,body.resizing #side{pointer-events:none}
 .side-0{margin:auto;display:flex;flex-direction:column;gap:6px;align-items:center;text-align:center;padding:30px;max-width:320px}.side-0 b{font-size:16px}
 /* the pop up (side panel switched off in View) */
@@ -180,8 +180,6 @@ body.resizing{cursor:col-resize;user-select:none}body.resizing iframe,body.resiz
 /* table */
 .tbl-wrap{width:100%;container-type:inline-size}
 /* a narrow list (the panel open wide): the small yes or no and count columns step out first, then the dates; the rest share the width */
-@container (max-width:900px){ .tbl .lp1{display:none} }
-@container (max-width:640px){ .tbl .lp2{display:none} }
 .tbl{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%}
 .tbl th{position:sticky;top:0;z-index:2;background:var(--th);color:#fff;text-align:left;font-size:13px;font-weight:700;padding:0;white-space:nowrap;user-select:none;border-right:1px solid color-mix(in srgb,#fff 20%,transparent)}
 .tbl th .th-l{display:block;padding:9px 10px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}

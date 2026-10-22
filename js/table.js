@@ -16,17 +16,26 @@ const Table = (() => {
       list.sort((x, y) => { const kx = key(x), ky = key(y); const r = kx < ky ? -1 : kx > ky ? 1 : 0; return (r * so.dir) || base(x, y); }); }
     else list.sort(base);
     return list; }
-  function render(el){ if (App.view === "tiles") return tiles(el); const cs = cols(), ws = widths(), list = rows(), sel = App.last;
+  let ro = null, lastLv = -1, levelOf = () => -1;
+  function render(el){ if (App.view === "tiles") return tiles(el); const all = cols(), ws = widths(), list = rows(), sel = App.last;
     /* the columns share the width there is (their widths are proportions), so the list never scrolls sideways */
     /* the narrow columns (ID, stage, ticks, counts) keep their width; the text columns share what's left */
     const px = c => ws[c.id] || (c.type === "id" ? 96 : c.type === "proj" ? 140 : W[c.type] || 140);
     const FIX = new Set(["id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || (c.type === "choice" && (c.options || []).length <= 3);
     const lp = c => (["check", "complete", "mto", "sparelist", "isollist"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : ["date", "meta", "phone", "number"].includes(c.type) ? " lp2" : "";
+    /* the least each column can be; when they don't all fit, the tick columns go first, then the dates and numbers,
+       so a title never gets squeezed to one letter per line (and the list scrolls sideways only if even that's not enough) */
+    const least = c => fix(c) ? Math.min(px(c), c.type === "id" ? 110 : 150) : c.id === "title" ? 200 : 110;
+    const lv = c => lp(c) === " lp1" ? 1 : lp(c) === " lp2" ? 2 : 3, need = n => all.filter(c => lv(c) > n).reduce((t, c) => t + least(c), 0);
+    const w = el.clientWidth || 9999, level = need(0) <= w ? 0 : need(1) <= w ? 1 : 2, cs = all.filter(c => lv(c) > level); lastLv = level; levelOf = w2 => need(0) <= w2 ? 0 : need(1) <= w2 ? 1 : 2;
+    if (!ro && window.ResizeObserver){ ro = new ResizeObserver(() => { if (App.view === "tiles" || !el.isConnected || !$(".tbl", el)) return; if (levelOf(el.clientWidth) !== lastLv) App.render(); }); ro.observe(el); }
     const fixW = cs.filter(fix).reduce((t, c) => t + Math.min(px(c), c.type === "id" ? 110 : 150), 0), flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
-    const wid = c => fix(c) ? Math.min(px(c), c.type === "id" ? 110 : 150) + "px" : "calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + ")";
+    /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
+    const wid = c => fix(c) ? Math.min(px(c), c.type === "id" ? 110 : 150) + "px" : "max(" + (c.id === "title" ? 200 : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
     const th = cs.map(c => '<th class="' + lp(c).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + esc(c.label) + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><i class="th-r"></i></th>').join("");
-    el.innerHTML = '<div class="tbl-wrap"><table class="tbl"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
+    const minW = cs.reduce((t, c) => t + least(c), 0);
+    el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
       + (list.length ? "" : '<div class="empty">' + (Store.visible().length ? "No actions match the filter." : "No actions yet. Click <b>+ New action</b>, or <b>Paste text</b> to make one from an email.") + '</div>') + '</div>';
     const tb = $("tbody", el), frag = document.createDocumentFragment();
     list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on";
