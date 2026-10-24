@@ -110,8 +110,8 @@ input.secret{-webkit-text-security:disc;font-family:monospace}
 .dt{display:flex;gap:5px;align-items:center}
 .ck{display:inline-flex;cursor:pointer;justify-self:start;align-self:center;width:max-content;max-width:max-content}.ck input{width:17px;height:17px;margin:0;accent-color:var(--th);cursor:pointer}.ck span{display:none}
 .fl{display:flex;flex-direction:column;gap:4px;font-size:var(--fl);font-weight:600;color:var(--muted);margin:10px 0}
-/* (a label with an (i) keeps the i beside its text: the label flows as text, its field drops to its own line) */
-.fl:has(>.tip-i):not(.in-row){display:block}.fl:has(>.tip-i):not(.in-row)>:is(input,select,textarea,.combo){display:block;width:100%;margin-top:4px}.fl:has(>.tip-i):not(.in-row)>div{margin-top:4px}
+/* a field label with its (i) right after the text, on the same line */
+.fl-h{display:flex;align-items:center;flex-wrap:wrap;gap:0 4px}.fl-h .tip-i{margin-left:2px}
 .fl .in{color:var(--ink);font-weight:400}.in-row{flex-direction:row;align-items:center;gap:8px;margin:6px 0}
 .tp-o{display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;font-size:var(--fb)}.tp-o input{accent-color:var(--th);width:16px;height:16px;margin:0}
 .sm-t{font-size:12.5px;margin-top:-4px}

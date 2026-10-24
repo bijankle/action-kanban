@@ -182,7 +182,7 @@ const Mto = (() => {
       + (res ? '<div class="lbl">How the total was worked out</div><p>' + esc(explain(it, res)) + '</p>'
         : T && (T.k === "len" || T.k === "plate") ? '<div class="lbl">How the total is worked out</div><p>' + esc(!it.L ? "Pick a stock " + (T.k === "plate" ? "sheet size" : "length") + " first." : "Add the pieces the job needs (▸). They're packed onto the fewest " + (T.k === "plate" ? "sheets" : "stock lengths, keeping offcuts of " + rules().keep + " mm or more,") + " with a " + rules().kerf + " mm saw cut between pieces, and Qty becomes the total.") + '</p>' : "")
       + (T && !z && it.z ? '<p class="bad">' + esc(it.z) + " isn't in the library for " + esc(S.n) + ". Check the size.</p>" : "")
-      + '<label class="fl">Notes' + tipI("Anything too long for a column.") + '<textarea class="in" rows="4"' + (ro ? " readonly" : "") + ' placeholder="e.g. Allowed 1 spare length for site fit up">' + esc(it.info || "") + '</textarea></label>';
+      + '<label class="fl"><span class="fl-h">Notes' + tipI("Anything too long for a column.") + '</span>' + '<textarea class="in" rows="4"' + (ro ? " readonly" : "") + ' placeholder="e.g. Allowed 1 spare length for site fit up">' + esc(it.info || "") + '</textarea></label>';
     document.body.appendChild(p); Fields.place(p, anchor); const pr = p.getBoundingClientRect(); if (pr.bottom > innerHeight - 8) p.style.top = Math.max(8, innerHeight - pr.height - 8) + "px";
     if (pr.right > innerWidth - 8) p.style.left = Math.max(8, innerWidth - pr.width - 8) + "px";
     const ta = $("textarea", p); p._done = () => { const v = ta.value.trim(); if (ro || v === (it.info || "")) return; Store.mutate("a:" + a._p, () => { it.info = v || undefined; Store.touch(a); }); }; }
