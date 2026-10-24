@@ -28,6 +28,7 @@ const ActionView = (() => {
       + '<div class="av-tabs">' + TABS.map(([k, t]) => { const mat = sub === "mto" || sub === "spares", on = k === sub || (k === "materials" && mat), c = k === "materials" ? n("mto") + n("spares") : k === "isol" ? n("isol") : k === "drawings" ? Drawings.count(a) : 0; return '<button type="button" class="av-tab' + (on ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'
       + '<div class="av-body' + (sub === "overview" ? " ov" : "") + '"></div></div>';
     $$(".av-head [data-f], .av-title[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
+    const hb = Hold.btn(a); if (hb) $(".av-st", el).insertAdjacentHTML("beforeend", hb);   // (on hold: who, their mobile and since when)
     const ti = $(".av-title .in", el); if (ti) ti.placeholder = "Title";
     ownerBox($(".own", el), a, ro);
     const body = $(".av-body", el);

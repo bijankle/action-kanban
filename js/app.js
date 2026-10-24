@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.9.7";
+const APP_VERSION = "1.9.8";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -8,7 +8,7 @@ const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI
 const THEMES = [["slate", "Slate", "#475569"], ["graphite", "Graphite", "#52525b"], ["navy", "Navy", "#1E3A5F"], ["petrol", "Petrol", "#1F4F5A"], ["olive", "Olive", "#5A5A2E"], ["stone", "Stone", "#7A6A5D"], ["rust", "Rust", "#9A3412"], ["ink", "Ink", "#111827"]];
 
 const App = (() => {
-  const A = { q: "", pills: new Set(lsGet("adPills", [])), sort: null, selRef: null, tab: ["actions", "kanban", "valid"].includes(lsGet("adTab", "actions")) ? lsGet("adTab", "actions") : "actions", sub: "overview", view: lsGet("adViewType", "list"), mobile: false };
+  const A = { q: "", pills: new Set(lsGet("adPills", [])), sort: null, selRef: null, tab: ["actions", "kanban", "contacts", "valid"].includes(lsGet("adTab", "actions")) ? lsGet("adTab", "actions") : "actions", sub: "overview", view: lsGet("adViewType", "list"), mobile: false };
   const act = ref => { if (!ref) return null; const [pid, u] = ref.split(":"); const a = Store.find(pid, u); if (!a || a.del) return null; a._p = pid; return a; };
   let raf = 0; const render = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); };
   function draw(){ if (!Store.S.config) return; document.body.classList.toggle("ro", !Store.S.edit);
@@ -19,17 +19,17 @@ const App = (() => {
     /* the list (Actions table or Organizer) stays on the left; the open action is in the panel on the right (or, with the
        panel switched off in View, in a pop up over the list) */
     const sideTab = A.tab === "actions" || A.tab === "kanban", panel = A.tab === "actions" && lsGet("adPanel", true),   /* (the Organizer has no Details panel: a card opens as a pop up) */ sel = sideTab && !!act(A.selRef), inAct = false, list = A.tab === "actions";
-    $$("#xlsB,#printB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid";
-    $("#q").placeholder = inAct ? "Search actions (back to the list)" : { actions: "Search actions", kanban: "Search, filters every stage", valid: "Search fields, stages and contacts" }[A.tab] || "Search";
+    $$("#xlsB,#printB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid" || A.tab === "contacts";
+    $("#q").placeholder = inAct ? "Search actions (back to the list)" : { actions: "Search actions", kanban: "Search, filters every stage", contacts: "Search people, companies, numbers", valid: "Search fields and stages" }[A.tab] || "Search";
     if ($("#q").value !== A.q) $("#q").value = A.q; panels(sideTab, panel); $("#undoB").disabled = !Store.S.undo.length; $("#redoB").disabled = !Store.S.redo.length;
     const v = $("#view"); v.dataset.tab = A.tab;
     v.classList.toggle("in-act", inAct);
-    if (A.tab === "kanban") Kanban.render(v); else if (A.tab === "valid") Valid.render(v); else Table.render(v);
+    if (A.tab === "kanban") Kanban.render(v); else if (A.tab === "contacts") Contacts.render(v); else if (A.tab === "valid") Valid.render(v); else Table.render(v);
     const side = $("#side"), sb = $("#sideBody"); side.hidden = $("#split").hidden = !panel;
     if (panel){ if (sel) ActionView.render(sb); else sb.innerHTML = '<div class="side-0"><b>No action open</b><span class="dim">Click an action ' + (A.tab === "kanban" ? "card" : "in the list") + ' to see it here.</span><span class="dim">Drag the line on the left to make this panel wider or narrower.</span></div>'; }
     popup(!panel && sel);
     $$("#vt button").forEach(b => b.classList.toggle("on", b.dataset.v === A.view)); $("#sizeB").hidden = !list || A.view !== "tiles"; $("#vt").hidden = !list; $("#colB").hidden = !list || A.view !== "list";
-    lsSet("adPills", [...A.pills]); }
+    lsSet("adPills", [...A.pills]); Hold.after(); }
   /* the Filters panel (left) and the Details panel (right): each one's header is its show and hide button; a hidden
      panel's header waits at its end of the list's header row, beside what's filtering. With Details hidden an action
      opens as a pop up. The search box sits in the Filters panel, or in the list's header row while that's hidden. */
@@ -308,7 +308,7 @@ const App = (() => {
     if (k === "escape"){ if (Media.open || $(".pop") || $(".mb.open")){ Fields.closePop(); closeMenus(); return; } if (typing()){ document.activeElement.blur(); return; } if (A.selRef) select(null); return; }
     if (typing() || mod || e.altKey) return;
     if (k === "n"){ e.preventDefault(); newAction(); }
-    else if (/^[1-3]$/.test(k)){ setTab(["actions", "kanban", "valid"][+k - 1]); }
+    else if (/^[1-4]$/.test(k)){ setTab(["actions", "kanban", "contacts", "valid"][+k - 1]); }
     else if ((k === "arrowdown" || k === "arrowup") && A.tab === "actions" && A.selRef){ const rs = Table.rows(), i = rs.findIndex(a => a._p + ":" + a.u === A.selRef), n = rs[i + (k === "arrowdown" ? 1 : -1)]; if (n){ e.preventDefault(); select(n._p + ":" + n.u); } } });
   /* pasted photos wait in the tray (bottom left) until dragged onto an action */
   document.addEventListener("paste", e => { if (A.mobile) return; const files = [...(e.clipboardData && e.clipboardData.files || [])];

@@ -3,10 +3,10 @@
 "use strict";
 const Table = (() => {
   const NEED = { id: 96, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
-  let cv = null;
+  let cv = null; const TICK = new Set(["check", "complete"]);
   /* the width of a heading's longest word, plus the cell padding and room for the sort arrow */
   function headW(label, font){ cv = cv || document.createElement("canvas").getContext("2d"); cv.font = font || "700 13px " + getComputedStyle(document.body).fontFamily;
-    return Math.ceil(Math.max(...String(label || "").split(/\s+/).map(w => cv.measureText(w).width), 0)) + 20 + 14; }
+    return Math.ceil(Math.max(...String(label || "").split(/\s+/).map(w => cv.measureText(w).width), 0)) + 20 + 10; }
   const W = { text: 200, longtext: 260, multi: 170, stage: 170, rank: 74, check: 90, choice: 120, date: 120, contact: 160, phone: 130, number: 90 };
   const widths = () => lsGet("adColW", {});
   function cols(){ const c = [{ id: "_id", label: "ID", type: "id" }]; if (Store.selected().length > 1) c.push({ id: "_proj", label: "Project", type: "proj" });
@@ -25,9 +25,10 @@ const Table = (() => {
     /* the narrow columns (ID, stage, ticks, counts) keep their width; the text columns share what's left */
     /* a column nobody has sized: the narrow kinds (ticks, yes or no, dates, counts) are as wide as the longest word in
        their heading (headings wrap onto two lines), or what their contents need if that's wider */
-    const px = c => ws[c.id] || (fix(c) ? Math.max(headW(c.label), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
+    const px = c => ws[c.id] || (fix(c) ? Math.max(c.id === "onhold" ? 64 : 0, headW(c.label, TICK.has(c.type) ? "700 11.5px " + getComputedStyle(document.body).fontFamily : null), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
     const FIX = new Set(["id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || (c.type === "choice" && (c.options || []).length <= 3);
-    const lp = c => (["check", "complete", "mto", "sparelist", "isollist"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : ["date", "meta", "phone", "number"].includes(c.type) ? " lp2" : "";
+    /* when space runs out, the counts and dates go first, then the location; the tick boxes stay */
+    const lp = c => (["mto", "sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
     /* the least each column can be; when they don't all fit, the tick columns go first, then the dates and numbers,
        so a title never gets squeezed to one letter per line (and the list scrolls sideways only if even that's not enough) */
     const fw = c => ws[c.id] || Math.min(px(c), c.type === "id" ? 110 : 150);   // (a width someone set is kept as it is)
@@ -38,7 +39,7 @@ const Table = (() => {
     const fixW = cs.filter(fix).reduce((t, c) => t + fw(c), 0), flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const wid = c => fix(c) ? fw(c) + "px" : "max(" + (c.id === "title" ? 200 : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
-    const th = cs.map(c => '<th class="' + lp(c).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + wid(c) + '">'
+    const th = cs.map(c => '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + esc(c.label) + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><i class="th-r"></i></th>').join("");
     const minW = cs.reduce((t, c) => t + least(c), 0);
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
@@ -48,7 +49,7 @@ const Table = (() => {
       cs.forEach(c => { const td = document.createElement("td"); const l = lp(c).trim(); if (l) td.classList.add(l);
         if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = '<span class="aid">' + esc(Store.actId(a)) + '</span>' + (a.photos.length ? '<span class="pc" title="' + a.photos.length + ' photos">📷 ' + a.photos.length + '</span>' : ""); }
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
-        else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi", "choice"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.classList.add("ed"); td.appendChild(Fields.editor(a, c)); }
+        else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi", "choice"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.classList.add("ed"); td.appendChild(Fields.editor(a, c)); if (c.id === "onhold"){ const hb = Hold.btn(a); if (hb){ td.classList.add("has-hold"); td.insertAdjacentHTML("beforeend", hb); } } }
         else { td.innerHTML = Fields.show(a, c); if (c.id === "title") td.classList.add("ttl"); }
         tr.appendChild(td); });
       frag.appendChild(tr); });

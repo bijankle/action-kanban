@@ -11,7 +11,7 @@ const Fields = (() => {
   const META = { created: a => a.created, modified: a => a.mod, completed: a => a.doneAt };
   const done = a => Store.stage(a.stage).kind === "done";
   const DERIVED = { eta: a => Store.eta(a) };   // (from the Materials tab, not typed in; the tick boxes are all ticked by hand, or by the stage)
-  const val = (a, f) => DERIVED[f.id] ? DERIVED[f.id](a) : f.type === "meta" ? (META[f.id] || (() => null))(a) : f.type === "complete" ? done(a) : f.id === "status" ? a.stage : f.id === "priority" ? Store.priority(a) : f.type === "mto" ? (a.mto || []).length : f.type === "sparelist" ? (a.spares || []).length : f.type === "isollist" ? (a.isol || []).length : (a.f || {})[f.id];
+  const val = (a, f) => f.id === "onhold" ? Hold.on(a) : DERIVED[f.id] ? DERIVED[f.id](a) : f.type === "meta" ? (META[f.id] || (() => null))(a) : f.type === "complete" ? done(a) : f.id === "status" ? a.stage : f.id === "priority" ? Store.priority(a) : f.type === "mto" ? (a.mto || []).length : f.type === "sparelist" ? (a.spares || []).length : f.type === "isollist" ? (a.isol || []).length : (a.f || {})[f.id];
   /* the MTO and spares counts: a link to that action on the MTO or Spares tab */
   const partsLink = (a, f) => { const n = val(a, f); return '<a href="#" class="mto-l' + (n ? "" : " none") + '" data-parts="' + ({ mto: "mto", sparelist: "spares", isollist: "isol" })[f.type] + '" data-ref="' + a._p + ":" + a.u + '">' + (n ? n + (f.type === "isollist" ? " isolation" : " x item") + (n > 1 ? "s" : "") : "None") + '</a>'; };
   /* plain text for search, export and Gemini */
@@ -38,6 +38,9 @@ const Fields = (() => {
       if (f.id === "status"){ if (a.stage !== v) Store.place(a, v); Store.log("Moved " + Store.actId(a) + " to " + Store.stage(v).name); return; }
       if (f.type === "complete"){ const fin = Store.stages().find(s => s.kind === "done"), ret = Store.stages().find(s => s.id === a.prevStage && s.kind !== "done") || Store.stages().find(s => s.kind !== "done");
         if (v && !done(a) && fin){ Store.place(a, fin.id, 0); Store.log("Completed " + Store.actId(a)); } else if (!v && done(a) && ret){ Store.place(a, ret.id); Store.log("Reopened " + Store.actId(a)); } return; }
+      /* the On hold tick: ticking it puts the action on hold (the i beside it then asks who it's waiting on); unticking takes it back to where it came from */
+      if (f.id === "onhold"){ const hold = Store.stages().find(s => s.kind === "hold"), back = Store.stages().find(s => s.id === a.prevHold && s.kind !== "hold") || Store.stages()[0];
+        if (v && hold && !Hold.on(a)){ Store.place(a, hold.id); Store.log("Put " + Store.actId(a) + " on hold"); } else if (!v && Hold.on(a)){ Store.place(a, back.id); Store.log("Took " + Store.actId(a) + " off hold"); } return; }
       if (f.id === "priority"){ Store.place(a, a.stage, v - 1); Store.log("Reordered " + Store.actId(a)); return; }
       a.f[f.id] = v; Store.touch(a); Store.log("Edited " + Store.actId(a));
       const auto = a.auto = a.auto || {}; delete auto[f.id]; if (f.id === "location") delete a.locAuto;

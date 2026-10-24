@@ -17,7 +17,7 @@ const Kanban = (() => {
     wire(el, ro); }
   function card(a, multi){ const p = Store.project(a._p) || {}, ref = a._p + ":" + a.u, n = Object.values(a.f || {}).filter(v => v === "TBC").length, eta = Store.eta(a);
     return '<article class="kc' + (ref === App.selRef ? " on" : "") + '" draggable="' + Store.S.edit + '" data-ref="' + ref + '">' + (a.photos.length ? '<img alt="" loading="lazy">' : "")
-      + '<div class="kc-top"><span class="aid">' + esc(Store.actId(a)) + '</span>' + (multi ? '<span class="ptag sm" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "") + '</div>'
+      + '<div class="kc-top"><span class="aid">' + esc(Store.actId(a)) + '</span>' + (multi ? '<span class="ptag sm" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "") + Hold.btn(a) + '</div>'
       + '<div class="kc-t">' + (esc(a.f.title) || '<span class="dim">No title</span>') + '</div><div class="kc-m">'
       + (a.photos.length ? '<span>📷 ' + a.photos.length + '</span>' : "") + (a.files.length ? '<span>📎 ' + a.files.length + '</span>' : "")
       + (eta ? '<span class="' + (eta === "TBC" ? "tbc" : "") + '">ETA ' + esc(fmtDate(eta)) + '</span>' : "") + (a.f.spares ? '<span class="good">Spares ✓</span>' : "") + (n ? '<span class="tbc">' + n + ' TBC</span>' : "") + '</div></article>'; }

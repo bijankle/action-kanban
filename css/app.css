@@ -670,3 +670,25 @@ html.dark .av-tab b{color:var(--ink)}
 #view[data-tab="actions"]{overflow-x:hidden}
 .tbl td.ttl{white-space:normal;line-height:1.3}.tbl td.ttl{display:table-cell}.tbl td.ttl{overflow:hidden}
 .tbl td.ttl{word-break:break-word}.tbl td.ttl{-webkit-line-clamp:2}
+
+/* On Hold: the i button beside the status (red while who, their mobile or the date is missing) and its form */
+.hold-i{flex:none;width:22px;height:22px;border-radius:50%;border:0;background:var(--th);color:#fff;font:italic 800 13px/22px Georgia,serif;cursor:pointer;display:inline-grid;place-items:center;padding:0;margin-left:6px;vertical-align:middle}
+.hold-i:hover{filter:brightness(1.15)}.hold-i:focus-visible{outline:2px solid var(--th);outline-offset:2px}
+.hold-i.bad{background:#c0392b;animation:holdpulse 2s ease-in-out infinite}
+@keyframes holdpulse{50%{box-shadow:0 0 0 4px color-mix(in srgb,#c0392b 30%,transparent)}}
+@media (prefers-reduced-motion:reduce){.hold-i.bad{animation:none}}
+.tbl td.has-hold{white-space:nowrap;overflow:visible}td.has-hold .sel-stage{display:inline-block;width:calc(100% - 30px);vertical-align:middle}td.has-hold .ck{display:inline-flex;vertical-align:middle}td.has-hold .hold-i{margin-left:4px}
+.av-st{display:inline-flex;align-items:center}.kc-top .hold-i{margin-left:auto}
+.holdpop{width:300px;padding:14px;display:flex;flex-direction:column;gap:8px}.holdpop p{margin:0 0 4px;font-size:12.5px}.holdpop .fl{margin:0}
+
+/* the Contacts tab and a person's pop up */
+.cts{padding:12px 14px 20px}.cts-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.cts-h b{font-size:16px}
+.cts-t td{padding:3px 4px}.cts-t td .in{width:100%}.cts-t th[data-s]{cursor:pointer}.cts-o{width:120px}.cts-x{width:64px;text-align:center}
+.ct-n{border:1.5px solid var(--line);background:var(--panel);border-radius:999px;padding:2px 10px;font:600 12.5px var(--font);color:var(--dim);cursor:pointer;white-space:nowrap}
+.ct-n.on{border-color:var(--th);color:var(--ink);background:var(--th-t)}.ct-n:hover{border-color:var(--th)}
+.pp-win{width:min(860px,94vw)}.pp-win .lbl{margin:14px 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--dim)}
+.pp-t{table-layout:auto}.pp-t th{position:static}.pp-t tbody tr{cursor:pointer}.pp-t td{padding:7px 8px;vertical-align:top}.pp-t td.bad{color:#c0392b;font-weight:700}
+.ps{display:inline-flex;align-items:center;gap:5px;font-weight:600;white-space:nowrap}.ps::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+.holdpop textarea{resize:vertical;min-height:60px;font:inherit}
+
+.tbl th.tk{font-size:11.5px}.tbl th.tk .th-l{padding:8px 6px}

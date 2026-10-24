@@ -109,7 +109,7 @@ const Store = (() => {
     if (cur) Object.assign(cur, u); else S.users.users.push(u);
     if (S.edit){ S.dirty.add("users"); stash(); saveSoon(); } else lsSet("adPendUser", p); }
   /* ---------- change history: who changed what on each action, and when (a.hist, newest last, the last 400) ---------- */
-  const HSKIP = new Set(["mod", "by", "byE", "_p", "hist", "rank", "stageAt", "doneAt", "prevStage", "prevHold", "isolNo", "am", "u", "no", "created"]);
+  const HSKIP = new Set(["mod", "by", "byE", "_p", "hist", "rank", "stageAt", "doneAt", "prevStage", "prevHold", "hold", "isolNo", "am", "u", "no", "created"]);
   const LIST = { isol: ["Isolations", x => x.tag || x.name], mto: ["MTO", x => x.desc || x.part], spares: ["Spares", x => x.desc || x.part], photos: ["Photos", x => x.name], files: ["Attachments", x => x.name],
     quotes: ["Quotes", x => x.name], rfq: ["RFQ revisions", x => x.name], dwgPick: ["Ticked drawings", x => x], rfqTo: ["Send RFQ to", x => x] };
   const short = v => { const t = v == null || v === "" ? "–" : typeof v === "boolean" ? (v ? "Yes" : "No") : Array.isArray(v) ? (v.join(", ") || "–") : typeof v === "object" ? (v.n || v.name || JSON.stringify(v)) : String(v); return t.length > 140 ? t.slice(0, 137) + "…" : t; };
@@ -173,7 +173,7 @@ const Store = (() => {
      only, so a skipped stage stays unticked; going back unticks that stage's box and every one after it. On Hold keeps
      the ticks and remembers where the action came from (prevHold), and leaving it counts from there. The boxes can also
      be ticked by hand. */
-  function ticks(a, was, to){ if (to.kind === "hold"){ if (was.kind !== "hold") a.prevHold = was.id; return; }
+  function ticks(a, was, to){ if (to.kind === "hold"){ if (was.kind !== "hold"){ a.prevHold = was.id; if (typeof Hold !== "undefined") Hold.entered(a); } return; }
     if (was.kind === "hold"){ was = stage(a.prevHold) || stages()[0]; a.prevHold = null; }
     const order = stages().filter(s => s.kind !== "hold"), at = s => order.findIndex(x => x.id === s.id), i = at(was), j = at(to); if (i < 0 || j < 0 || i === j) return;
     const box = s => fields().find(f => f.stage === s.id && f.type === "check");
