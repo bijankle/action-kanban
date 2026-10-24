@@ -1,6 +1,7 @@
 /* The Filters panel on the left of the Actions and Organizer tabs: the search box, then pills for the things many
-   actions share (Status, Action owner, Date modified, WBS code), each with a live count. Pills in one group add
-   together (Identified or On Hold); groups narrow each other (Jack's, in F12). The stage pills are App.pills. When the
+   actions share (Status, Action owner, Date modified, WBS code), each with a live count; a pill with no actions isn't
+   shown. Status is one stage at a time; in the other groups pills add together (Jack or Bijan), and groups narrow
+   each other (Jack's, in F12). The stage pills are App.pills. When the
    panel is hidden, what's filtering shows as removable chips above the list. */
 "use strict";
 const Filters = (() => {
@@ -28,12 +29,14 @@ const Filters = (() => {
       ["wbs", "WBS code", vals("wbs").map(v => ({ v, t: v }))]]; }
   /* the panel's body (the search box is moved in by the app, so it keeps its focus and value) */
   function render(el){ const list = Store.visible(), S = all();
+    if (S.st.size > 1){ const one = [...S.st].pop(); S.st.clear(); S.st.add(one); }   // (from before Status was one at a time)
     const html = groups().map(([k, name, items]) => '<div class="fg2" data-k="' + k + '"><div class="fgh"><span>' + name + '</span>' + (S[k].size ? '<button type="button" class="link fclr">Clear</button>' : "") + '</div>'
       + items.map(it => { const n = list.filter(a => val(a, k) === it.v && match(a, k)).length, on = S[k].has(it.v);
+        if (!n && !on) return "";   // (a pill with nothing behind it isn't shown)
         return '<button type="button" class="pill fpill' + (on ? " on" : "") + (n ? "" : " zero") + (it.v === NS ? " ns" : "") + '" data-v="' + esc(it.v) + '" aria-pressed="' + on + '"' + (it.c ? ' style="--c:' + esc(it.c) + '"' : "") + '>' + (it.c ? '<i class="dot"></i>' : "") + esc(it.t) + ' <b>' + n + '</b></button>'; }).join("") + '</div>').join("")
       + '<p class="dim fshown">' + apply(list).length + " of " + list.length + " actions shown" + (active() ? ' <button type="button" class="link fall">Clear all</button>' : "") + '</p>';
     let body = $(".fp-groups", el); if (!body){ body = document.createElement("div"); body.className = "fp-groups"; el.appendChild(body); } body.innerHTML = html;
-    $$(".fg2", body).forEach(g => { const k = g.dataset.k; g.onclick = e => { const b = e.target.closest(".fpill"); if (b){ const v = b.dataset.v; S[k].has(v) ? S[k].delete(v) : S[k].add(v); changed(); }
+    $$(".fg2", body).forEach(g => { const k = g.dataset.k; g.onclick = e => { const b = e.target.closest(".fpill"); if (b){ const v = b.dataset.v, had = S[k].has(v); if (k === "st") S[k].clear(); had ? S[k].delete(v) : S[k].add(v); changed(); }   // (Status is one at a time: a click picks it, a second click clears it)
       if (e.target.closest(".fclr")){ S[k].clear(); changed(); } }; });
     const fa = $(".fall", body); if (fa) fa.onclick = clear; }
   /* what's filtering, as chips for the list's header row */
