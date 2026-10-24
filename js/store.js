@@ -167,8 +167,18 @@ const Store = (() => {
     if (before && after && before.rank === after.rank){ col.forEach((x, i) => { x.rank = i * 2; touch(x); S.dirty.add("a:" + x._p); }); a.rank = index * 2 - 1; }
     if (a.stage !== st) enter(a, st); a.stage = st; touch(a); }
   /* the dates an action entered each stage, and when it was completed */
-  function enter(a, st){ const was = stage(a.stage), to = stage(st); (a.stageAt = a.stageAt || {})[st] = now();
+  function enter(a, st){ const was = stage(a.stage), to = stage(st); (a.stageAt = a.stageAt || {})[st] = now(); ticks(a, was, to);
     if (to.kind === "done" && was.kind !== "done"){ a.doneAt = now(); a.prevStage = a.stage; } else if (to.kind !== "done" && was.kind === "done") a.doneAt = null; }
+  /* the stage tick boxes (a field with stage: its stage's id): leaving a stage for a later one ticks that stage's box
+     only, so a skipped stage stays unticked; going back unticks that stage's box and every one after it. On Hold keeps
+     the ticks and remembers where the action came from (prevHold), and leaving it counts from there. The boxes can also
+     be ticked by hand. */
+  function ticks(a, was, to){ if (to.kind === "hold"){ if (was.kind !== "hold") a.prevHold = was.id; return; }
+    if (was.kind === "hold"){ was = stage(a.prevHold) || stages()[0]; a.prevHold = null; }
+    const order = stages().filter(s => s.kind !== "hold"), at = s => order.findIndex(x => x.id === s.id), i = at(was), j = at(to); if (i < 0 || j < 0 || i === j) return;
+    const box = s => fields().find(f => f.stage === s.id && f.type === "check");
+    if (j > i){ const b = box(was); if (b) a.f[b.id] = true; }
+    else order.slice(j).forEach(s => { const b = box(s); if (b && a.f[b.id]) a.f[b.id] = false; }); }
   /* rename a choice option everywhere it's used */
   function renameOption(f, oldL, newL){ all().forEach(a => { const v = a.f[f.id]; if (v === oldL){ a.f[f.id] = newL; touch(a); S.dirty.add("a:" + a._p); }
     else if (Array.isArray(v) && v.includes(oldL)){ a.f[f.id] = v.map(x => x === oldL ? newL : x); touch(a); S.dirty.add("a:" + a._p); } }); }
