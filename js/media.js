@@ -60,7 +60,7 @@ const Media = (() => {
     const show = async k => { const n = a.photos.length; $(".gal-none", V).hidden = !!n; vp.hidden = !n; move(0); $(".gal-n", V).textContent = n ? (cur + 1 > n ? n : cur + 1) + " of " + n : "";
       $$(".gal-arr", V).forEach(b => b.hidden = n < 2); if (!n){ strip.innerHTML = ""; $(".gal-cap", V).textContent = ""; return; }
       cur = (k + n) % n; const p = a.photos[cur]; $(".gal-n", V).textContent = (cur + 1) + " of " + n;
-      $(".gal-cap", V).textContent = (p.name || "") + (p.cap ? "  ·  " + p.cap : "");
+      $(".gal-cap", V).innerHTML = '<span class="gal-cn">' + (cur + 1) + " of " + n + '  ·  </span>' + esc((p.name || "") + (p.cap ? "  ·  " + p.cap : ""));   // (on a phone the count sits here, so the title has the top bar)
       if (strip.children.length !== n) drawStrip(); $$(".gal-th", strip).forEach((b, j) => b.classList.toggle("on", j === cur));
       const on = strip.children[cur]; on && on.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
       const side = (im, j) => { const q = a.photos[cur + j]; im.hidden = !q; if (q) im.src = src(a, q); }; side(imP, -1); side(imN, 1);   // the ones either side, for a swipe to peek at
