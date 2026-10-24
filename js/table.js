@@ -25,7 +25,9 @@ const Table = (() => {
     /* the narrow columns (ID, stage, ticks, counts) keep their width; the text columns share what's left */
     /* a column nobody has sized: the narrow kinds (ticks, yes or no, dates, counts) are as wide as the longest word in
        their heading (headings wrap onto two lines), or what their contents need if that's wider */
-    const px = c => ws[c.id] || (fix(c) ? Math.max(c.id === "onhold" ? 64 : 0, headW(c.label, TICK.has(c.type) ? "700 11.5px " + getComputedStyle(document.body).fontFamily : null), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
+    /* the tick box columns are all one width: the widest of their headings' longest words */
+    const tickF = "700 11.5px " + getComputedStyle(document.body).fontFamily, tickW = Math.max(64, ...all.filter(c => TICK.has(c.type)).map(c => headW(c.label, tickF)));
+    const px = c => ws[c.id] || (TICK.has(c.type) ? tickW : fix(c) ? Math.max(headW(c.label), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
     const FIX = new Set(["id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || (c.type === "choice" && (c.options || []).length <= 3);
     /* when space runs out, the counts and dates go first, then the location; the tick boxes stay */
     const lp = c => (["mto", "sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
@@ -46,7 +48,7 @@ const Table = (() => {
       + (list.length ? "" : '<div class="empty">' + (Store.visible().length ? "No actions match the filter." : "No actions yet. Click <b>+ New action</b>, or <b>Paste text</b> to make one from an email.") + '</div>') + '</div>';
     const tb = $("tbody", el), frag = document.createDocumentFragment();
     list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on";
-      cs.forEach(c => { const td = document.createElement("td"); const l = lp(c).trim(); if (l) td.classList.add(l);
+      cs.forEach(c => { const td = document.createElement("td"); const l = lp(c).trim(); if (l) td.classList.add(l); if (TICK.has(c.type)) td.classList.add("tk");
         if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = '<span class="aid">' + esc(Store.actId(a)) + '</span>'; }
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
         else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi", "choice"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.classList.add("ed"); td.appendChild(Fields.editor(a, c)); if (c.id === "onhold"){ const hb = Hold.btn(a); if (hb){ td.classList.add("has-hold"); td.insertAdjacentHTML("beforeend", hb); } } }

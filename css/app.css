@@ -691,4 +691,4 @@ html.dark .av-tab b{color:var(--ink)}
 .ps{display:inline-flex;align-items:center;gap:5px;font-weight:600;white-space:nowrap}.ps::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
 .holdpop textarea{resize:vertical;min-height:60px;font:inherit}
 
-.tbl th.tk{font-size:11.5px}.tbl th.tk .th-l{padding:8px 6px}
+.tbl th.tk{font-size:11.5px;text-align:center}.tbl th.tk .th-l{padding:8px 6px}.tbl td.tk{text-align:center}.tbl td.tk .ck{justify-content:center;margin:0 auto}
