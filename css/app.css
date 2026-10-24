@@ -711,3 +711,34 @@ html.dark .av-tab b{color:var(--ink)}
 .rb-hold{background:color-mix(in srgb,#d48a0b 16%,var(--panel));color:#b7791f}.rb-hold.on{background:#d48a0b;color:#fff}
 .rb-del{background:color-mix(in srgb,#c0392b 12%,var(--panel));color:#c0392b}
 html.dark .rb-done{color:#3ccf8e}html.dark .rb-hold{color:#f2b03d}html.dark .rb-del{color:#ff6b5b}
+/* the smart MTO rows (js/mto.js) */
+.mt-wrap{overflow-x:auto;margin:0 -2px}
+.mt-tbl{min-width:1500px}.mt-tbl td{vertical-align:middle}
+.mt-tbl .mt-sel{width:100%;min-width:0;padding:4px 4px;cursor:pointer}.mt-tbl select.mt-sel:disabled{cursor:default;opacity:1;appearance:none;border-color:transparent}
+.mt-tbl th:nth-child(2){width:170px}.mt-tbl th:nth-child(3){width:190px}.mt-tbl th:nth-child(4){width:140px}.mt-tbl th:nth-child(5){width:170px}.mt-tbl th:nth-child(6){width:110px}.mt-tbl th:nth-child(7){width:124px}
+.mt-tbl th:nth-child(8){width:70px}.mt-tbl th:nth-child(9){width:84px}.mt-tbl th:nth-child(10){width:34px}.mt-tbl th:nth-child(11){width:132px}
+.mt-tbl .pt-no{white-space:nowrap}
+.mt-tg{border:0;background:var(--panel2);color:var(--th2);border-radius:6px;padding:1px 6px;margin-left:6px;font:700 12px/18px inherit;cursor:pointer;display:inline-flex;gap:3px;align-items:center}
+.mt-tg b{font-size:11px;background:var(--th);color:#fff;border-radius:999px;padding:0 5px;line-height:15px}.mt-tg:hover,.mt-tg.on{background:var(--th-t)}
+.mt-row.open td{border-bottom-color:transparent}
+.mt-ic{text-align:center}
+.mt-i{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);background:var(--panel);color:var(--dim);font:italic 800 13px/19px Georgia,serif;cursor:pointer;padding:0}
+.mt-i.on{background:var(--th);border-color:var(--th);color:#fff}.mt-i:hover{filter:brightness(1.1)}
+.mt-sub>td{overflow:visible;white-space:normal;height:auto;background:color-mix(in srgb,var(--panel2) 60%,transparent);padding:8px 10px 12px!important}.mt-subin{position:sticky;left:10px}
+.mt-cuts{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.mt-ct{border-collapse:collapse;font-size:13px}.mt-ct th{font-size:11.5px;color:var(--dim);font-weight:700;text-align:left;padding:2px 4px;background:none}
+.mt-ct td{padding:1px 3px;border:0}.mt-ct .pt-in{width:96px}.mt-ct td:nth-last-child(2) .pt-in{width:190px}.mt-ct .pt-in.bad{border-color:#c0392b}
+.mt-side{flex:1;min-width:240px;font-size:13px}.mt-side p{margin:6px 0 0;line-height:1.45}.mt-sp{display:inline-flex;align-items:center;gap:6px;color:var(--dim)}.mt-sp .pt-in{width:56px}
+.mt-draw{margin-top:10px;display:flex;flex-direction:column;gap:5px}
+.mt-bar{display:flex;align-items:center;gap:8px}.mt-bar svg{flex:1;height:30px;min-width:0}
+.mt-bn{font-size:12px;font-weight:700;color:var(--dim);min-width:34px;white-space:nowrap}
+.mt-draw .pc{fill:#cde1f8;stroke:#3c64a0;stroke-width:1.5;vector-effect:non-scaling-stroke}
+.mt-draw .of{fill:#dcdcdc;stroke:#999;stroke-width:1;vector-effect:non-scaling-stroke}
+.mt-draw .sc{fill:#f1d6d2;stroke:#c0392b;stroke-width:1;vector-effect:non-scaling-stroke}.mt-draw .kf{fill:#333}
+.mt-draw text{font:700 13px system-ui,sans-serif;fill:#14325f;text-anchor:middle}.mt-draw .ot{fill:#555;font-weight:600}
+.mt-shs{display:flex;flex-wrap:wrap;gap:12px}.mt-sh{display:flex;flex-direction:column;gap:3px;width:min(340px,100%)}.mt-sh svg{width:100%;height:auto;border:1px solid #999}
+.mt-key{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dim);margin-top:2px}.mt-key i{width:14px;height:10px;border-radius:2px;display:inline-block;margin-left:8px}
+.mt-key i.pc{background:#cde1f8;border:1.5px solid #3c64a0}.mt-key i.of{background:#dcdcdc;border:1px solid #999}.mt-key i.sc{background:#f1d6d2;border:1px solid #c0392b}
+.mt-pop{width:340px;max-width:calc(100vw - 16px);padding:14px;display:flex;flex-direction:column;gap:8px;font-size:13px;max-height:calc(100vh - 16px);overflow:auto}
+.mt-pop dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0}.mt-pop dt{color:var(--dim)}.mt-pop dd{margin:0}.mt-pop p{margin:0;line-height:1.45}.mt-pop .fl{margin:0}.mt-pop textarea{resize:vertical;font:inherit}
+.sm-n{width:64px;display:inline-block;margin:0 4px}

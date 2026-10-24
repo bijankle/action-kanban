@@ -15,7 +15,7 @@ const ActionView = (() => {
   function render(el){ const a = App.act(App.selRef); if (!a) return; const ro = !Store.S.edit, p = Store.project(a._p) || {}, sub = App.sub || "overview";
     /* keep the cursor and scroll where they were when the view redraws */
     const ae = document.activeElement, keep = ae && el.contains(ae) && ae.closest("[data-f]") ? { f: ae.closest("[data-f]").dataset.f, s: ae.selectionStart, e: ae.selectionEnd, v: ae.value, tag: ae.tagName } : null;
-    const keepP = ae && el.contains(ae) && ae.dataset.c ? { r: ae.dataset.r, c: ae.dataset.c, s: ae.selectionStart, v: ae.value } : null;
+    const keepP = ae && el.contains(ae) && ae.dataset.c ? { r: ae.dataset.r, c: ae.dataset.c, cut: ae.dataset.cut, s: ae.selectionStart, v: ae.value } : null;
     const same = last === App.selRef + sub, sc = same && $(".av-body", el) ? $(".av-body", el).scrollTop : 0; last = App.selRef + sub;
     const list = Table.rows(), i = list.indexOf(a), n = k => (a[k] || []).length;
     el.innerHTML = '<div class="av"><div class="av-head"><button type="button" class="ic-b av-close" data-k="x" title="Close (Esc)" aria-label="Close">✕</button>'

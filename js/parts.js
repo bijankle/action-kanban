@@ -13,7 +13,8 @@ const Parts = (() => {
   /* one action's list, drawn into its action view tab; keep is where the cursor was before the redraw */
   function renderFor(el, a, kind, keep){ const ro = !Store.S.edit;
     el.innerHTML = '<div class="pt-main">' + pane(a, kind, ro) + '</div>'; wire(el, a, kind, ro);
-    if (keep && keep.c){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
+    if (keep && keep.c){ let r = keep.r, cut = keep.cut; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } if (cut === "new" && created.has("cut:" + r)) cut = created.get("cut:" + r);
+      const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]' + (cut ? '[data-cut="' + cut + '"]' : ":not([data-cut])"), el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
 
   function pane(a, kind, ro){ const s = Store.stage(a.stage), items = list(a, kind), cols = COLS[kind];
     const blanks = Math.max(ro ? 0 : 1, 5 - items.length);
@@ -22,6 +23,7 @@ const Parts = (() => {
     const blank = k => '<tr class="pt-blank"><td class="pt-no"></td>' + cols.map(([c]) => '<td><input class="in pt-in" data-r="new' + k + '" data-c="' + c + '"' + (c === "eta" ? ' type="date"' : "") + (ro ? " readonly" : "") + '></td>').join("") + '<td></td></tr>';
     return '<div class="pt-head"><b class="pt-h">' + NAME[kind] + '</b><span class="grow"></span>'
       + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="gem" title="Paste a list of parts and Gemini fills in the rows">Paste text</button>')
+      + (kind === "mto" && Mto.needsCut(a) ? '<button type="button" class="dl dl-pdf" data-k="cut" title="The cutting list for the trades: which pieces come out of which length or sheet, and the offcuts. It also comes with each RFQ export.">' + DLI + '<b>Cut list</b></button>' : "")
       + '<button type="button" class="dl dl-xl" data-k="xls" title="Export this ' + NAME[kind] + ' to Excel">' + DLI + '<b>XLSX</b></button>'
       + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF. Each export is the next rev (A, B, C…) and is kept below." : "Export the spares list as a PDF") + '">' + DLI + '<b>' + (kind === "mto" ? "RFQ" : "PDF") + '</b></button></div>'
       + (kind === "mto" ? Vendors.box(a, ro) : "")
@@ -29,19 +31,19 @@ const Parts = (() => {
           + ((a.quotes || []).length ? (a.quotes || []).slice().reverse().map(f => '<div class="pt-file"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : "FILE") + '</span><button type="button" class="link" data-q="' + f.h + '">' + esc(f.name) + '</button><span class="dim">' + esc(fmtDate(f.added)) + ' · ' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" data-qx="' + f.h + '" title="Remove">✕</button>') + '</div>').join("") : '<div class="dim pt-drop">No quotes yet.' + (ro ? "" : " Upload them, or drop them here.") + '</div>') + '</div>'
         + '<div class="pt-box"><div class="pt-bh"><b>RFQ revisions</b><span class="dim">' + (a.rfq || []).length + '</span><span class="grow"></span><span class="dim">next export: Rev ' + rev((a.rfq || []).length) + '</span></div>'
           + ((a.rfq || []).length ? (a.rfq || []).slice().reverse().map(r => '<div class="pt-file"><span class="pt-rev">Rev ' + esc(r.rev) + '</span><button type="button" class="link" data-rfq="' + esc(r.rev) + '">' + esc(r.name) + '</button><span class="dim">' + esc(fmtDate(r.at)) + (r.by ? " · " + esc(r.by) : "") + ' · ' + r.n + ' item' + (r.n === 1 ? "" : "s") + '</span></div>').join("") : '<div class="dim">None yet. Export to PDF makes Rev A.</div>') + '</div></div>' : "")
-      + '<table class="tbl pt-tbl"><thead><tr><th class="pt-no">Item</th>' + cols.map(([k, n]) => '<th class="pt-' + k + '">' + esc(n) + '</th>').join("") + '<th class="pt-act"></th></tr></thead><tbody>'
-      + items.map(row).join("") + Array.from({ length: blanks }, (_, k) => blank(k)).join("") + '</tbody></table>'
+      + (kind === "mto" ? Mto.table(a, ro) : '<table class="tbl pt-tbl"><thead><tr><th class="pt-no">Item</th>' + cols.map(([k, n]) => '<th class="pt-' + k + '">' + esc(n) + '</th>').join("") + '<th class="pt-act"></th></tr></thead><tbody>'
+      + items.map(row).join("") + Array.from({ length: blanks }, (_, k) => blank(k)).join("") + '</tbody></table>')
       + '<div class="dim pt-foot">' + (items.length ? items.length + " item" + (items.length > 1 ? "s" : "") : "Empty, type in the rows to fill it in") + (kind === "mto" && (a.spares || []).length ? " · " + a.spares.length + " more from spares, not on the RFQ" : "") + '</div>'; }
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
 
-  function wire(el, a, kind, ro){ const key = "a:" + a._p, items = list(a, kind); if (kind === "mto") Vendors.wire(el, a, ro);
-    $$(".pt-in", el).forEach(i => { i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); const c = i.dataset.c, k = $$('.pt-in[data-c="' + c + '"]').indexOf(i); i.blur();
+  function wire(el, a, kind, ro){ const key = "a:" + a._p, items = list(a, kind); if (kind === "mto"){ Vendors.wire(el, a, ro); Mto.wire(el, a, ro); }
+    $$(kind === "mto" ? ".mt-tbl .pt-in:not(.mt-cin)" : ".pt-in", el).forEach(i => { if (kind === "mto"){ i.addEventListener("keydown", e => { if (e.key === "Enter" && i.tagName === "INPUT"){ e.preventDefault(); i.blur(); } }); return; } i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); const c = i.dataset.c, k = $$('.pt-in[data-c="' + c + '"]').indexOf(i); i.blur();
         setTimeout(() => { const ins = $$('.pt-in[data-c="' + c + '"]'), n = ins[k + 1] || $('.pt-in[data-r^="new"][data-c="' + c + '"]'); n && n.focus(); }, 40); } };
       if (ro) return;
       i.onchange = () => { const v = i.value.trim(), r = i.dataset.r, c = i.dataset.c;
         if (r.startsWith("new")){ if (!v) return; const it = { id: uid() }; it[c] = v; created.set(r, it.id); Store.mutate(key, () => { items.push(it); Store.touch(a); }); Store.log("Added to the " + NAME[kind] + " of " + Store.actId(a)); return; }
         const it = items.find(x => x.id === r); if (!it || (it[c] || "") === v) return; Store.mutate(key, () => { it[c] = v; Store.touch(a); }); Store.log("Edited the " + NAME[kind] + " of " + Store.actId(a)); }; });
-    $$(".pt-mv", el).forEach(b => b.onclick = () => { const id = b.closest("tr").dataset.id; Store.mutate(key, () => { const i = items.findIndex(x => x.id === id); const it = items.splice(i, 1)[0]; list(a, OTHER[kind]).push(it); Store.touch(a); });
+    $$(".pt-mv", el).forEach(b => b.onclick = () => { const id = b.closest("tr").dataset.id; Store.mutate(key, () => { const i = items.findIndex(x => x.id === id); const it = items.splice(i, 1)[0]; if (kind === "mto") it.desc = Mto.desc(it); list(a, OTHER[kind]).push(it); Store.touch(a); });
       note("Moved to " + NAME[OTHER[kind]] + " (Ctrl+Z to undo)"); Store.log("Moved a part of " + Store.actId(a) + " to " + NAME[OTHER[kind]]); });
     $$(".pt-x", el).forEach(b => b.onclick = () => { const id = b.closest("tr").dataset.id; Store.mutate(key, () => { const i = items.findIndex(x => x.id === id); items.splice(i, 1); Store.touch(a); }); });
     $$("[data-q]", el).forEach(b => b.onclick = () => Media.openFile(a, a.quotes.find(f => f.h === b.dataset.q)));
@@ -49,7 +51,7 @@ const Parts = (() => {
     $$("[data-rfq]", el).forEach(b => b.onclick = () => openRfq(a, a.rfq.find(r => r.rev === b.dataset.rfq)));
     $$("[data-k]", el).forEach(b => b.onclick = () => { const k = b.dataset.k;
       if (k === "quote") pickFile("", true, fs => quotes(a, fs));
-      else if (k === "xls") excel(a, kind); else if (k === "pdf") pdf(a, kind); else if (k === "gem") gemini(a, kind); });
+      else if (k === "xls") excel(a, kind); else if (k === "pdf") pdf(a, kind); else if (k === "gem") gemini(a, kind); else if (k === "cut") Mto.cutList(a); });
     const qb = $(".pt-quotes", el); if (qb && !ro){ qb.ondragover = e => { if ([...e.dataTransfer.types].includes("Files")){ e.preventDefault(); qb.classList.add("drop"); } };
       qb.ondragleave = () => qb.classList.remove("drop"); qb.ondrop = e => { qb.classList.remove("drop"); if (!e.dataTransfer.files.length) return; e.preventDefault(); e.stopPropagation(); quotes(a, e.dataTransfer.files); }; } }
 
@@ -96,6 +98,7 @@ const Parts = (() => {
       /* the rev is recorded first, so its letter is never handed out twice */
       Store.mutate("a:" + a._p, () => { (a.rfq = a.rfq || []).push({ rev: r, at: now(), by: Profile.name(), n: items.length, name, path, items: clone(items) }); Store.touch(a); }); Store.log("Exported " + name);
       Media.mem.set("rfq:" + path, URL.createObjectURL(blob)); Excel.save(blob, name); Local.saveOriginal(a, name, blob);
+      if (Mto.needsCut(a)) await Mto.cutList(a, r);   // (the trades' cutting list comes too, only when something needs more than one length or sheet)
       try { await Store.addBlob(path, bufToB64(await blob.arrayBuffer())); note("Exported " + name + ", saved in the RFQ revisions"); }
       catch (e){ alert(name + " is downloaded and recorded as Rev " + r + ", but its copy couldn't be uploaded (" + e.message + "). Keep the downloaded file."); } }
     catch (e){ console.error(e); alert("Couldn't make the PDF: " + e.message); } finally { exporting = false; } }
@@ -119,5 +122,5 @@ const Parts = (() => {
     $(".yn-no", m).onclick = () => m.close();
     add.onclick = () => { const take = rows.filter(r => r._on).map(r => { const o = { id: uid() }; cols.forEach(([k]) => { if (r[k]) o[k] = r[k]; }); return o; }); if (!take.length) return;
       Store.mutate("a:" + a._p, () => { list(a, kind).push(...take); Store.touch(a); }); Store.log("Added " + take.length + " parts to the " + NAME[kind] + " of " + Store.actId(a)); m.close(); }; }
-  return { renderFor, rev, NAME, loadPdf };
+  return { renderFor, rev, NAME, loadPdf, created };
 })();
