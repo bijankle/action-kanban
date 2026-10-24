@@ -43,6 +43,13 @@ const Fields = (() => {
         if (v && hold && !Hold.on(a)){ Store.place(a, hold.id); Store.log("Put " + Store.actId(a) + " on hold"); } else if (!v && Hold.on(a)){ Store.place(a, back.id); Store.log("Took " + Store.actId(a) + " off hold"); } return; }
       if (f.id === "priority"){ Store.place(a, a.stage, v - 1); Store.log("Reordered " + Store.actId(a)); return; }
       a.f[f.id] = v; Store.touch(a); Store.log("Edited " + Store.actId(a));
+      /* a stage's tick box moves the action on the Organizer: ticking it moves the action past that stage (to the next
+         one, but never into Done by itself); unticking it takes the action back to that stage. On hold and done
+         actions just keep the tick */
+      if (f.stage && f.type === "check" && !Hold.on(a) && !done(a)){ const order = Store.stages().filter(s => s.kind !== "hold"), at = id => order.findIndex(s => s.id === id), k = at(f.stage), cur = at(a.stage);
+        if (k >= 0 && cur >= 0){ const next = order[k + 1];
+          if (v && cur <= k && next && next.kind !== "done"){ Store.place(a, next.id); Store.log("Moved " + Store.actId(a) + " to " + next.name); }
+          else if (!v && cur > k){ Store.place(a, f.stage); Store.log("Moved " + Store.actId(a) + " back to " + Store.stage(f.stage).name); } } }
       const auto = a.auto = a.auto || {}; delete auto[f.id]; if (f.id === "location") delete a.locAuto;
       const fill = (id, val) => { if (a.f[id] && !auto[id] && !(id === "location" && a.locAuto)) return; if (val){ a.f[id] = val; auto[id] = true; } else if (auto[id]){ a.f[id] = ""; delete auto[id]; } };
       /* the location follows the equipment's WBS area until someone types their own */

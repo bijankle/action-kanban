@@ -764,3 +764,4 @@ html.dark .rb-done.on{color:#3ccf8e}html.dark .rb-hold.on{color:#f2b03d}html.dar
 .tbl td.ed input.in{border-color:var(--line2);background:var(--panel)}.tbl td.ed input.in:hover{border-color:var(--th)}
 /* the slot after the on hold button for its i, kept the same width on every row so the buttons line up */
 .rb-hi{width:24px;display:inline-flex;justify-content:center}.rb-hi .hold-i{margin-left:0}
+.det-own .own{display:block}.det-own .in,.det-own .combo{width:100%}
