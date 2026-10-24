@@ -24,7 +24,7 @@ function defaultConfig(){ const t = now(); const opt = (labels, colors) => label
       F("equipment", "Equipment tags", "multi", { table: true, options: [] }),
       F("location", "Location", "text", { table: true, suggest: true }),
       F("procurement", "Procurement required", "check", { table: true }),
-      F("spares", "Spares available", "check", { table: true }),
+      F("spares", "Spares required", "check", { table: true }),
       F("defect", "Defect notice sent", "choice", { options: opt(YN), tbc: true, na: true, table: true }),
       F("scope", "Scope document sent", "choice", { options: opt(YN), tbc: true, na: true, table: true }),
       F("contractor", "Contractor company", "text", { suggest: true, tbc: true, na: true }),

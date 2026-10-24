@@ -20,7 +20,7 @@ const Kanban = (() => {
       + '<div class="kc-top"><span class="aid">' + esc(Store.actId(a)) + '</span>' + (multi ? '<span class="ptag sm" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "") + Hold.btn(a) + '</div>'
       + '<div class="kc-t">' + (esc(a.f.title) || '<span class="dim">No title</span>') + '</div><div class="kc-m">'
       + (a.photos.length ? '<span>📷 ' + a.photos.length + '</span>' : "") + (a.files.length ? '<span>📎 ' + a.files.length + '</span>' : "")
-      + (eta ? '<span class="' + (eta === "TBC" ? "tbc" : "") + '">ETA ' + esc(fmtDate(eta)) + '</span>' : "") + (a.f.spares ? '<span class="good">Spares ✓</span>' : "") + (n ? '<span class="tbc">' + n + ' TBC</span>' : "") + '</div></article>'; }
+      + (eta ? '<span class="' + (eta === "TBC" ? "tbc" : "") + '">ETA ' + esc(fmtDate(eta)) + '</span>' : "") + (a.f.secured ? '<span class="good">Spares ✓</span>' : "") + (n ? '<span class="tbc">' + n + ' TBC</span>' : "") + '</div></article>'; }
   function wire(el, ro){ const kb = $(".kb", el);
     kb.onclick = e => { const c = e.target.closest(".kc"); if (c) App.select(c.dataset.ref); };   // (opens in the side panel, or the pop up)
     if (ro) return;
