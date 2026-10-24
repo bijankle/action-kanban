@@ -2,7 +2,7 @@
    Click a row to open it in the side panel. Drag a header to reorder columns, drag its edge to resize. */
 "use strict";
 const Table = (() => {
-  const NEED = { act: 144, id: 96, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
+  const NEED = { act: 144, id: 200, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
   let cv = null; const TICK = new Set(["check", "complete"]);
   /* a tick column's heading is one word (its short name); the i beside it says what it means */
   const head = c => TICK.has(c.type) && c.short ? c.short : c.label;
@@ -42,7 +42,17 @@ const Table = (() => {
     const b = (k, on, tip) => '<button type="button" class="rb rb-' + k + (on ? " on" : "") + '" data-rb="' + k + '" aria-pressed="' + on + '" title="' + tip + '" aria-label="' + tip + '"' + dis + '>' + IC[k] + '</button>';
     /* complete, delete, then on hold furthest right, with its i (who it's waiting on, red while details are missing) after it */
     return '<span class="rbs">' + b("done", dn, dn ? "Complete: click to reopen " + id : "Mark " + id + " complete") + b("del", false, "Delete " + id) + b("hold", hd, hd ? "On hold: click to take " + id + " off hold" : "Put " + id + " on hold") + '<span class="rb-hi">' + Hold.btn(a) + '</span></span>'; }
-  document.addEventListener("click", async e => { const b = e.target.closest("[data-rb]"); if (!b) return; e.stopPropagation(); const tr = b.closest("tr"), a = tr && App.act(tr.dataset.ref); if (!a) return;
+  /* the ID in a box with its copy and PDF buttons, in the list and the Details header alike */
+  const IDI = { copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>',
+    tick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5 9.5-10"/></svg>',
+    dn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>' };
+  function idBox(a, big){ const id = esc(Store.actId(a));
+    return '<span class="idw' + (big ? " big" : "") + '"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + id + '</span><button type="button" class="cp" data-idk="copy" title="Copy ' + id + ' to the clipboard" aria-label="Copy ' + id + '">' + IDI.copy + '</button><button type="button" class="pj" data-idk="pdf" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares" aria-label="Download the PDF of ' + id + '">' + IDI.dn + '<b>PDF</b></button></span>'; }
+  document.addEventListener("click", async e => { const b = e.target.closest("[data-idk]"); if (!b) return; e.stopPropagation(); const r = b.closest("[data-ref]"), a = r && App.act(r.dataset.ref); if (!a) return;
+    if (b.dataset.idk === "pdf") return Workpack.run(a);
+    const t = Store.actId(a) + " " + (a.f.title || ""); let ok = true; try { await navigator.clipboard.writeText(t); } catch (err){ ok = false; }
+    if (!ok) return note("Couldn't copy here: " + t); b.classList.add("ok"); b.innerHTML = IDI.tick; note("Copied " + Store.actId(a)); setTimeout(() => { b.classList.remove("ok"); b.innerHTML = IDI.copy; }, 1400); }, true);
+  document.addEventListener("click", async e => { const b = e.target.closest("[data-rb]"); if (!b) return; e.stopPropagation(); const tr = b.closest("[data-ref]"), a = tr && App.act(tr.dataset.ref); if (!a) return;
     if (!Store.S.edit) return App.viewOnly(); const k = b.dataset.rb;
     if (k === "done"){ const f = Store.field("complete"); if (f) Fields.set(a, f, Store.stage(a.stage).kind !== "done"); }
     else if (k === "hold"){ const f = Store.field("onhold") || { id: "onhold", type: "check" }; Fields.set(a, f, !Hold.on(a)); }
@@ -65,7 +75,7 @@ const Table = (() => {
     const lp = c => (["sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
     /* the least each column can be; when they don't all fit, the tick columns go first, then the dates and numbers,
        so a title never gets squeezed to one letter per line (and the list scrolls sideways only if even that's not enough) */
-    const fw = c => ws[c.id] || Math.min(px(c), c.type === "id" ? 110 : 150);   // (a width someone set is kept as it is)
+    const fw = c => ws[c.id] || (c.type === "id" ? NEED.id : Math.min(px(c), 150));   // (the ID column fits its box: ID, copy, PDF)   // (a width someone set is kept as it is)
     const least = c => fix(c) ? fw(c) : c.id === "title" ? 260 : 110;
     const lv = c => lp(c) === " lp1" ? 1 : lp(c) === " lp2" ? 2 : 3, need = n => all.filter(c => lv(c) > n).reduce((t, c) => t + least(c), 0);
     const w = el.clientWidth || 9999, level = need(0) <= w ? 0 : need(1) <= w ? 1 : 2, cs = all.filter(c => lv(c) > level); lastLv = level; levelOf = w2 => need(0) <= w2 ? 0 : need(1) <= w2 ? 1 : 2;
@@ -84,7 +94,7 @@ const Table = (() => {
     list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on";
       cs.forEach(c => { const td = document.createElement("td"); const l = lp(c).trim(); if (l) td.classList.add(l); if (TICK.has(c.type)) td.classList.add("tk");
         if (c.type === "act"){ td.classList.add("actc"); td.innerHTML = rowBtns(a); }
-        else if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = '<span class="aid">' + esc(Store.actId(a)) + '</span>'; }
+        else if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = idBox(a); }
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
         else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi", "choice"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.classList.add("ed"); td.appendChild(Fields.editor(a, c)); if (c.id === "onhold"){ const hb = Hold.btn(a); if (hb){ td.classList.add("has-hold"); td.insertAdjacentHTML("beforeend", hb); } } }
         else if (c.id === "title"){ td.classList.add("ttl"); td.innerHTML = '<div class="tt-w"><span class="tt">' + (esc(a.f.title || "") || '<span class="dim">No title</span>') + '</span><button type="button" class="tt-more" title="Show the full title">more…</button></div>'; }
@@ -161,5 +171,5 @@ const Table = (() => {
   function columnsPop(anchor){ Fields.closePop(); const p = h('<div class="pop colpop"><div class="pop-h">Columns in the table</div>' + Store.fields().filter(f => f.id !== "title").map(f => '<label class="tp-o"><input type="checkbox" data-f="' + f.id + '"' + (f.table ? " checked" : "") + '><span>' + esc(f.label) + '</span></label>').join("") + '<div class="pop-n">Drag the column headers to reorder them.</div></div>');
     document.body.appendChild(p); Fields.place(p, anchor);
     $$("input", p).forEach(c => c.onchange = () => Store.mutate("config", () => { const f = Store.field(c.dataset.f); f.table = c.checked; Store.touch(f); })); }
-  return { render, rows, forget, columnsPop, sizePop };
+  return { render, rows, forget, columnsPop, sizePop, rowBtns, idBox };
 })();

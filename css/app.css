@@ -765,3 +765,13 @@ html.dark .rb-done.on{color:#3ccf8e}html.dark .rb-hold.on{color:#f2b03d}html.dar
 /* the slot after the on hold button for its i, kept the same width on every row so the buttons line up */
 .rb-hi{width:24px;display:inline-flex;justify-content:center}.rb-hi .hold-i{margin-left:0}
 .det-own .own{display:block}.det-own .in,.det-own .combo{width:100%}
+/* the ID box: the ID, its copy button and its PDF button joined (list rows and the Details header) */
+.idw{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:7px;padding:0 0 0 8px;background:var(--panel);height:28px;vertical-align:middle;white-space:nowrap}
+.idw .aid{margin-right:6px}
+.idw .cp,.idw .pj{height:100%;border:0;border-left:1px solid var(--line);background:transparent;color:var(--dim);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0 6px}
+.idw .cp svg{width:14px;height:14px}.idw .pj{gap:3px;padding:0 7px;color:var(--ink);border-radius:0 6px 6px 0}.idw .pj svg{width:13px;height:13px}.idw .pj b{font:800 9px/1 Arial,sans-serif;letter-spacing:.3px;color:#c0392b}
+html.dark .idw .pj b{color:#ff6b5b}
+.idw .cp:hover,.idw .pj:hover{background:var(--panel2);color:var(--ink)}.idw .cp:focus-visible,.idw .pj:focus-visible{outline:2px solid var(--th);outline-offset:-2px}
+.idw .cp.ok{color:#1f8a58;background:color-mix(in srgb,#1f8a58 12%,var(--panel))}
+.idw.big{height:32px}.idw.big .aid{font-size:16px}
+.av-head{flex-wrap:nowrap}.av-head .rbs{flex:none}
