@@ -112,7 +112,7 @@ const Fields = (() => {
      on typing replaces it. Nothing pops up over the rows below. */
   function tagBox(a, f){ const v = Array.isArray(val(a, f)) ? val(a, f) : [], eq = f.id === "equipment";
     const nm = t => { const e = eq && Equip.get(t); return e && e.n ? e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : ""; };
-    const w = h('<div class="tagbox"><input class="in tagin" type="text" spellcheck="false" autocomplete="off" placeholder="' + (eq ? "Add equipment tag" : "Add " + esc(f.label.toLowerCase())) + '"></div>'), i = $("input", w);
+    const w = h('<div class="tagbox"><input class="in tagin" type="text" spellcheck="false" autocomplete="off" placeholder="' + (eq ? "Add tag" : "Add " + esc(f.label.toLowerCase())) + '"></div>'), i = $("input", w);
     const show = () => { i.value = v.join(", "); i.title = v.map(t => t + (nm(t) ? "  " + nm(t) : "")).join("\n"); }; show();
     if (!Store.S.edit){ i.readOnly = true; return w; }
     const pool = () => eq ? [] : optLabels(f).concat(...Store.all().map(x => Array.isArray(x.f[f.id]) ? x.f[f.id] : []));

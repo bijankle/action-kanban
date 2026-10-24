@@ -753,3 +753,12 @@ html.dark .rb-done.on{color:#3ccf8e}html.dark .rb-hold.on{color:#f2b03d}html.dar
 .tip-i:hover,.tip-i[aria-expanded="true"]{border-color:var(--th);color:var(--th)}.tip-i:focus-visible{outline:2px solid var(--th);outline-offset:2px}
 .tip-pop{z-index:9800;max-width:320px;padding:10px 12px;font-size:13px;line-height:1.45;white-space:pre-line}
 .in-row>label.dim+label.dim{margin-left:14px}
+/* the + Add column strip at the end of the list (option C) */
+.tbl th.addcol{background:color-mix(in srgb,var(--thb,#475569) 82%,#000);border-left:1px dashed rgba(255,255,255,.35);text-align:center;padding:0 8px}
+.tbl td.addcol{background:color-mix(in srgb,var(--panel2) 60%,transparent);border-left:1px dashed var(--line)}
+.addc{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.5);background:transparent;color:#fff;border-radius:7px;padding:4px 10px;font:600 12px var(--font);cursor:pointer;white-space:nowrap}
+.addc:hover,.addc:focus-visible{background:rgba(255,255,255,.14);outline:none}
+.addpop{width:240px;padding:8px}.addpop .in{margin:4px 0 6px;padding:5px 8px}.ap-l{max-height:280px;overflow:auto;display:flex;flex-direction:column}
+.ap-l button{text-align:left;border:0;background:none;padding:6px 8px;border-radius:6px;font:13.5px var(--font);color:var(--ink);cursor:pointer}.ap-l button:hover{background:var(--panel2)}
+/* boxes you type in, in the list, show their border so they invite typing (option A) */
+.tbl td.ed input.in{border-color:var(--line2);background:var(--panel)}.tbl td.ed input.in:hover{border-color:var(--th)}
