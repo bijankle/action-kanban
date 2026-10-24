@@ -47,7 +47,7 @@ const Table = (() => {
     const tb = $("tbody", el), frag = document.createDocumentFragment();
     list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on";
       cs.forEach(c => { const td = document.createElement("td"); const l = lp(c).trim(); if (l) td.classList.add(l);
-        if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = '<span class="aid">' + esc(Store.actId(a)) + '</span>' + (a.photos.length ? '<span class="pc" title="' + a.photos.length + ' photos">📷 ' + a.photos.length + '</span>' : ""); }
+        if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = '<span class="aid">' + esc(Store.actId(a)) + '</span>'; }
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
         else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi", "choice"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.classList.add("ed"); td.appendChild(Fields.editor(a, c)); if (c.id === "onhold"){ const hb = Hold.btn(a); if (hb){ td.classList.add("has-hold"); td.insertAdjacentHTML("beforeend", hb); } } }
         else { td.innerHTML = Fields.show(a, c); if (c.id === "title") td.classList.add("ttl"); }
