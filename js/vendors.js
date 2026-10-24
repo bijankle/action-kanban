@@ -62,7 +62,7 @@ const Vendors = (() => {
       + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="imp">Import approved vendor list (Excel)…</button>')
       + '<table class="tbl ct vd-tbl"><thead><tr><th>Vendor</th><th>Category</th><th>Supply type</th><th>What we have ordered from them</th><th>POs</th><th>Last PO</th></tr></thead><tbody>'
       + list.slice(0, 600).map(v => '<tr><td><b>' + esc(v.name) + '</b></td><td>' + esc(v.cat) + '</td><td>' + esc(v.type) + '</td><td>' + esc(v.ordered) + '</td><td>' + (v.po || "") + '</td><td>' + esc(fmtDate(v.last)) + '</td></tr>').join("") + '</tbody></table>';
-    const b = $("[data-k=imp]", body); if (b) b.onclick = () => { const i = h('<input type="file" accept=".xlsx">'); i.onchange = () => importFile(i.files[0]); i.click(); }; }
+    const b = $("[data-k=imp]", body); if (b) b.onclick = () => pickFile(".xlsx", false, importFile); }
   async function importFile(file){ if (!file) return; if (!Store.S.edit) return App.viewOnly();
     try { const book = await Excel.read(file), sheets = Object.values(book);
       const find = (need) => { for (const rows of sheets){ const hi = rows.findIndex(r => r && need.every(n => r.some(c => String(c || "").trim().toUpperCase() === n))); if (hi >= 0) return { rows, hi, col: n => rows[hi].findIndex(c => String(c || "").trim().toUpperCase() === n) }; } return null; };

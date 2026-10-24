@@ -40,7 +40,7 @@ const Contacts = (() => {
     const nr = $(".ct-new", el); if (nr){ const add = () => { const v = k => $("[data-k=" + k + "]", nr).value.trim(); if (!v("first") && !v("last")) return;
         Store.mutate("config", () => { const c = { id: uid(), first: v("first"), last: v("last"), company: v("company"), mobile: v("mobile"), email: v("email") }; c.name = full(c); Store.S.config.contacts.push(Store.touch(c)); }); };
       $("[data-k=add]", nr).onclick = add; $$("input", nr).forEach(i => i.onkeydown = e => { if (e.key === "Enter") add(); }); }
-    const imp = $("[data-k=imp]", el); if (imp) imp.onclick = () => { const i = h('<input type="file" accept=".xlsx">'); i.onchange = () => importFile(i.files[0]); i.click(); }; }
+    const imp = $("[data-k=imp]", el); if (imp) imp.onclick = () => pickFile(".xlsx", false, importFile); }
   const up = (c, fn) => { if (!Store.S.edit) return App.viewOnly(); Store.mutate("config", () => { fn(); Store.touch(c); }); };
   /* everything outstanding on one person */
   function person(c){ norm(c); const o = owed(c), due = d => d && d < today();

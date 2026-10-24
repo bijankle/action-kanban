@@ -100,7 +100,7 @@ const Media = (() => {
   function close(){ if (!V) return; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); V.remove(); V = null; }
   /* after photos are added to the action the gallery is showing, show the newest */
   const refresh = a => { if (V && V._a === a) V._show(); };
-  function pickFiles(a, accept){ const i = h('<input type="file" multiple' + (accept ? ' accept="' + accept + '"' : "") + '>'); i.onchange = () => addFiles(a, i.files); i.click(); }
+  function pickFiles(a, accept){ pickFile(accept, true, fs => addFiles(a, fs)); }
 
   /* ---------- the tray: pasted photos wait here until dragged onto an action ---------- */
   const tray = [];

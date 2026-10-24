@@ -48,7 +48,7 @@ const Parts = (() => {
     $$("[data-qx]", el).forEach(b => b.onclick = () => Store.mutate(key, () => { a.quotes = a.quotes.filter(f => f.h !== b.dataset.qx); Store.touch(a); }));
     $$("[data-rfq]", el).forEach(b => b.onclick = () => openRfq(a, a.rfq.find(r => r.rev === b.dataset.rfq)));
     $$("[data-k]", el).forEach(b => b.onclick = () => { const k = b.dataset.k;
-      if (k === "quote"){ const i = h('<input type="file" multiple>'); i.onchange = () => quotes(a, i.files); i.click(); }
+      if (k === "quote") pickFile("", true, fs => quotes(a, fs));
       else if (k === "xls") excel(a, kind); else if (k === "pdf") pdf(a, kind); else if (k === "gem") gemini(a, kind); });
     const qb = $(".pt-quotes", el); if (qb && !ro){ qb.ondragover = e => { if ([...e.dataTransfer.types].includes("Files")){ e.preventDefault(); qb.classList.add("drop"); } };
       qb.ondragleave = () => qb.classList.remove("drop"); qb.ondrop = e => { qb.classList.remove("drop"); if (!e.dataTransfer.files.length) return; e.preventDefault(); e.stopPropagation(); quotes(a, e.dataTransfer.files); }; } }
