@@ -98,7 +98,7 @@ const Fields = (() => {
   /* combo box: type or pick (contacts) */
   function combo(a, f, items, all){ const v = val(a, f) || "";
     const w = h('<div class="combo"><input class="in' + (tbc(v) ? " tbc" : "") + '" type="text" autocomplete="off"><div class="dd" hidden></div></div>'); const i = $("input", w), dd = $(".dd", w); i.value = v;
-    const draw = () => { const q = all && i.value === v ? "" : i.value.toLowerCase(); const list = items.filter(x => !q || x.v.toLowerCase().includes(q) || (x.sub || "").toLowerCase().includes(q));
+    const draw = () => { const q = all && i.value === v ? "" : i.value; const list = items.filter(x => smartHit(x.v + " " + (x.sub || ""), q));
       dd.innerHTML = list.length ? list.map(x => '<button type="button" class="dd-o" data-v="' + esc(x.v) + '"><span class="' + (tbc(x.v) ? "tbc" : "") + '"' + (x.c ? ' style="box-shadow:inset 3px 0 0 ' + esc(x.c) + ';padding-left:7px"' : "") + '>' + esc(x.v) + '</span>' + (x.sub ? '<small>' + esc(x.sub) + '</small>' : "") + '</button>').join("") : '<div class="dd-n">' + (f.type === "contact" ? "New name, it will be added to the contacts" : "Not in the list; it's kept just for this action") + '</div>';
       $$(".dd-o", dd).forEach(b => b.onmousedown = e => { e.preventDefault(); i.value = b.dataset.v; dd.hidden = true; set(a, f, b.dataset.v); }); };
     i.onfocus = () => { draw(); dd.hidden = false; }; i.oninput = draw;
@@ -139,7 +139,7 @@ const Fields = (() => {
     /* equipment tags: every tag in the plant lists, searched by tag or name (the ones chosen first) */
     const eq = f.id === "equipment"; if (eq) Equip.load().then(() => p.isConnected && draw()).catch(() => {});
     const draw = () => { const q = i.value.trim().toLowerCase(); const found = eq && q ? Equip.find(q, /^[a-z]{0,2}\d/i.test(q) ? "t" : "n").map(x => x.t) : [];
-      const all = [...new Set(cur.concat(eq ? found : optLabels(f)))].filter(x => !q || cur.includes(x) || found.includes(x) || x.toLowerCase().includes(q));
+      const all = [...new Set(cur.concat(eq ? found : optLabels(f)))].filter(x => !q || cur.includes(x) || found.includes(x) || smartHit(x, q));
       const nm = x => { const e = eq && Equip.get(x); return e && e.n ? '<small>' + esc(e.n) + '</small>' : ""; };
       l.innerHTML = (eq && !q && !cur.length ? '<div class="dd-n">Type a tag or a name, e.g. F13-MB-401 or ball mill</div>' : "") + all.map(x => '<label class="tp-o"><input type="checkbox"' + (cur.includes(x) ? " checked" : "") + ' data-v="' + esc(x) + '"><span>' + esc(x) + nm(x) + '</span></label>').join("")
         + (q && !all.some(x => x.toLowerCase() === q) ? '<button type="button" class="tp-add">Add “' + esc(i.value.trim()) + '”</button>' : "") + (!all.length && !q && !eq ? '<div class="dd-n">No tags yet, type one above</div>' : "");

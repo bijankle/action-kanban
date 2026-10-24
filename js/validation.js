@@ -79,7 +79,7 @@ const Valid = (() => {
     const e = $("[data-k=edtags]", body); if (e) e.onclick = () => { sec = "fields"; cur = "equipment"; App.render(); };
     $("[data-k=ref]", body).onclick = () => Equip.load(true).then(() => App.render());
     if (!Equip.count) Equip.load().then(() => App.render()); }
-  const hit = (...xs) => { const w = (App.q || "").toLowerCase().split(/\s+/).filter(Boolean); const t = xs.join(" ").toLowerCase(); return w.every(x => t.includes(x)); };
+  const hit = (...xs) => smartHit(xs.join(" "), App.q);
   function contacts(body){ const q = (App.q || "").toLowerCase(); const cs = Store.contacts().filter(c => hit(c.name, c.company, c.mobile, c.email)).sort((a, b) => a.name.localeCompare(b.name));
     body.innerHTML = '<div class="dv-h">Contacts <span class="dim">picking a name on an action fills in its number</span></div>'
       + '<table class="tbl ct"><thead><tr><th>Name</th><th>Company</th><th>Mobile</th><th>Email</th><th></th></tr></thead><tbody>' + cs.map(c => '<tr data-id="' + c.id + '">' + ["name", "company", "mobile", "email"].map(k => '<td><input class="in" data-k="' + k + '" value="' + esc(c[k] || "") + '"></td>').join("") + '<td><button type="button" class="ic-b sm" title="Delete">✕</button></td></tr>').join("")

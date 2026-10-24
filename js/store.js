@@ -79,7 +79,7 @@ const Store = (() => {
       a.photos.map(x => x.name + " " + (x.cap || "")).join(" "), a.files.map(x => x.name).join(" "), (a.quotes || []).map(x => x.name).join(" "), (a.rfq || []).map(x => x.name).join(" "),
       ct.company, ct.mobile, ct.email].join(" ").toLowerCase();
     hayCache.set(a, { mod: a.mod, t }); return t; }
-  const matches = (a, q) => { const w = String(q || "").toLowerCase().split(/\s+/).filter(Boolean); if (!w.length) return true; const t = hay(a); return w.every(x => t.includes(x)); };
+  const matches = (a, q) => smartHit(hay(a), q);   // (CV 402 finds CV-402 and CV402)
 
   /* ---------- changing ---------- */
   const snap = () => JSON.stringify({ c: S.config, p: S.projects, a: S.acts, us: S.users });

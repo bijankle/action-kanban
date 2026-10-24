@@ -19,11 +19,11 @@ const Equip = (() => {
       return list; })();
     return loadP; }
   /* best matches for what's typed, from the tag (field "t") or the name (field "n") */
-  function find(q, by){ const w = String(q || "").toLowerCase().split(/\s+/).filter(Boolean); if (!w.length) return [];
+  function find(q, by){ const w = qWords(q); if (!w.length) return [];   // (spaces and dashes don't matter: CV 402 finds CV-402)
     const extra = ((Store.field("equipment") || {}).options || []).filter(o => !o.del).map(o => ({ t: o.label, n: "", k: "Tags" }));
-    const all = extra.concat(list || []), first = w[0], out = [];
-    for (const it of all){ const t = it.t.toLowerCase(), n = it.n.toLowerCase(), hay = t + " " + n; if (!w.every(x => hay.includes(x))) continue;
-      const f = by === "n" ? n : t; out.push([f.startsWith(first) ? 0 : f.includes(first) ? 1 : 2, it, KR[it.k] == null ? 3 : KR[it.k], n.length]); if (out.length > 4000) break; }
+    const all = extra.concat(list || []), first = w[0], whole = w.join(""), out = [];   // (the words run together, CV402, rank first)
+    for (const it of all){ const t = squash(it.t), n = squash(it.n), hay = t + " " + n; if (!w.every(x => hay.includes(x))) continue;
+      const f = by === "n" ? n : t; out.push([f.startsWith(whole) ? 0 : f.includes(whole) ? 1 : f.startsWith(first) ? 2 : f.includes(first) ? 3 : 4, it, KR[it.k] == null ? 3 : KR[it.k], n.length]); if (out.length > 4000) break; }
     /* (main equipment before its instruments and valves; for a name, the shortest match first: BALL MILL before BALL MILL LUBE UNIT) */
     out.sort((a, b) => a[0] - b[0] || a[2] - b[2] || (by === "n" ? a[3] - b[3] : 0) || a[1].t.localeCompare(b[1].t)); return out.slice(0, 40).map(x => x[1]); }
   const KR = { "Tags": 0, "Mech equipment": 1, "Elec equipment": 2 };

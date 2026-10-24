@@ -29,7 +29,7 @@ const Vendors = (() => {
     /* the vendor list: this category first (most used first), then the rest when you type */
     const i = $("[data-k=ven]", b); if (!i) return; let dd = null, hi = 0, res = [];
     const close = () => { dd && dd.remove(); dd = null; };
-    const draw = () => { const q = i.value.trim().toLowerCase(), w = q.split(/\s+/).filter(Boolean), hit = v => w.every(x => (v.name + " " + v.ordered + " " + v.cat + " " + v.aka).toLowerCase().includes(x));
+    const draw = () => { const q = i.value.trim().toLowerCase(), w = qWords(q), hit = v => smartHit(v.name + " " + v.ordered + " " + v.cat + " " + v.aka, w);
       const mine = a.rfqCat ? inCat(a.rfqCat).filter(hit) : [], rest = q || !a.rfqCat ? all().filter(v => v.cat !== a.rfqCat && hit(v)).sort((x, y) => (y.po || 0) - (x.po || 0)) : [];
       res = mine.concat(rest).filter(v => !(a.rfqTo || []).includes(v.name)).slice(0, 60); close(); if (!res.length) return; hi = Math.min(hi, res.length - 1);
       dd = h('<div class="is-dd vd-dd">' + res.map((v, k) => (k === mine.length && mine.length && rest.length ? '<div class="vd-sep">Other categories</div>' : "") + '<button type="button" class="vd-o' + (k === hi ? " on" : "") + '" data-k="' + k + '"><b>' + esc(v.name) + '</b><span>' + esc(v.ordered) + '</span><small>' + esc(v.cat !== a.rfqCat ? v.cat : (v.po || 0) + " PO" + (v.po === 1 ? "" : "s")) + '</small></button>').join("") + '</div>');
@@ -57,7 +57,7 @@ const Vendors = (() => {
     catch (e){ if (loud) alert("Gemini couldn't pick a category: " + e.message); else console.warn(e); } }
 
   /* ---------- the Vendors page on the Data validation tab ---------- */
-  function page(body, ro){ const q = (App.q || "").toLowerCase().split(/\s+/).filter(Boolean), hit = v => q.every(x => (v.name + " " + v.cat + " " + v.ordered + " " + v.type).toLowerCase().includes(x));
+  function page(body, ro){ const hit = v => smartHit(v.name + " " + v.cat + " " + v.ordered + " " + v.type, App.q);
     const list = all().filter(hit).sort((a, b) => a.cat.localeCompare(b.cat) || (b.po || 0) - (a.po || 0));
     body.innerHTML = '<div class="dv-h">Approved vendors <span class="dim">' + all().length + ' vendors in ' + cats().length + ' categories' + (V().source ? ", from " + esc(V().source) : "") + (V().updated ? ", " + esc(fmtDate(V().updated)) : "") + '</span></div>'
       + '<p class="dim">The vendors offered on an action\'s MTO tab.' + tipI("To update them, import the latest Approved Vendor List spreadsheet. It replaces the list for everyone, and keeps the contact details already entered.") + '</p>'

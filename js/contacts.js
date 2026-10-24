@@ -19,8 +19,8 @@ const Contacts = (() => {
     const hold = Store.visible().filter(a => Hold.on(a) && a.hold && same(a.hold.who, n));
     const con = Store.visible().filter(a => open(a) && !hold.includes(a) && same(a.f.contractorContact, n));
     return { hold, con, n: hold.length + con.length }; }
-  function render(el){ const ro = !Store.S.edit, q = (App.q || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
-    const all = list(), cs = all.filter(c => { const t = [c.first, c.last, c.company, c.mobile, c.email].join(" ").toLowerCase(); return q.every(w => t.includes(w)); })
+  function render(el){ const ro = !Store.S.edit;
+    const all = list(), cs = all.filter(c => { return smartHit([c.first, c.last, c.company, c.mobile, c.email].join(" "), App.q); })
       .sort((a, b) => String(a[sort.k] || "").localeCompare(String(b[sort.k] || ""), undefined, { sensitivity: "base", numeric: true }) * sort.dir || full(a).localeCompare(full(b)));
     const COLS = [["first", "First name"], ["last", "Last name"], ["company", "Company"], ["mobile", "Mobile"], ["email", "Email"]];
     el.innerHTML = '<div class="cts"><div class="cts-h"><b>Contacts</b><span class="dim">' + cs.length + (cs.length !== all.length ? " of " + all.length : "") + ' people</span>' + tipI("Click a name to see what's outstanding on them.") + '<span class="grow"></span>'

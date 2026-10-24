@@ -84,3 +84,17 @@ const tipI = (text, label) => '<span class="tip-i" role="button" tabindex="0" da
   document.addEventListener("keydown", e => { if (e.key === "Escape" && cur){ e.stopPropagation(); close(); }
     if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("[data-tip]")){ e.preventDefault(); e.target.click(); } }, true);
   addEventListener("scroll", close, true); addEventListener("resize", close); })();
+
+/* search that ignores spaces, dashes and dots: CV 402, CV-402 and CV402 all find each other. Every word typed has to be
+   somewhere in the text */
+const squash = s => String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9]+/g, "");
+const qWords = q => String(q || "").toLowerCase().split(/\s+/).map(squash).filter(Boolean);
+const smartHit = (text, q) => { const w = Array.isArray(q) ? q : qWords(q); if (!w.length) return true; const t = squash(text); return w.every(x => t.includes(x)); };
+
+/* a click only counts when the press and the release are on the same thing: pressing in a box and letting go
+   past its edge (or dragging to select text) doesn't open the row or card underneath */
+(() => { let down = null, x0 = 0, y0 = 0;
+  document.addEventListener("mousedown", e => { down = e.target; x0 = e.clientX; y0 = e.clientY; }, true);
+  document.addEventListener("click", e => { const d = down; down = null; if (!d || e.detail === 0 || !e.isTrusted) return;
+    const field = d.closest && d.closest("input,textarea,select,[contenteditable]"), moved = Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) > 6;
+    if ((field && !field.contains(e.target)) || (moved && !(e.target.contains(d) && e.target.closest("button,a,label,input,select,textarea,[role=button]")))){ e.stopPropagation(); e.preventDefault(); } }, true); })();
