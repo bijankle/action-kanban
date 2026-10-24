@@ -39,7 +39,7 @@ const Table = (() => {
     const px = c => ws[c.id] || (TICK.has(c.type) ? tickW : fix(c) ? Math.max(headW(c.label), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
     const FIX = new Set(["id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || (c.type === "choice" && (c.options || []).length <= 3) || !!ws[c.id];   // (a column someone has sized keeps that width; the rest share what's left)
     /* when space runs out, the counts and dates go first, then the location; the tick boxes stay */
-    const lp = c => (["mto", "sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
+    const lp = c => (["sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
     /* the least each column can be; when they don't all fit, the tick columns go first, then the dates and numbers,
        so a title never gets squeezed to one letter per line (and the list scrolls sideways only if even that's not enough) */
     const fw = c => ws[c.id] || Math.min(px(c), c.type === "id" ? 110 : 150);   // (a width someone set is kept as it is)
