@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.14";
+const APP_VERSION = "1.10.15";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -9,7 +9,8 @@ const THEMES = [["slate", "Slate", "#475569"], ["graphite", "Graphite", "#52525b
 
 const App = (() => {
   const A = { q: "", pills: new Set(lsGet("adPills", [])), sort: null, selRef: null, tab: ["actions", "kanban", "contacts", "valid"].includes(lsGet("adTab", "actions")) ? lsGet("adTab", "actions") : "actions", sub: "overview", view: lsGet("adViewType", "list"), mobile: false };
-  const act = ref => { if (!ref) return null; const [pid, u] = ref.split(":"); const a = Store.find(pid, u); if (!a || a.del) return null; a._p = pid; return a; };
+  /* (a deleted action is found too: it can be opened from the Deleted pill, and brought back) */
+  const act = ref => { if (!ref) return null; const [pid, u] = ref.split(":"); const a = Store.find(pid, u); if (!a) return null; a._p = pid; return a; };
   let raf = 0; const render = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); };
   function draw(){ if (!Store.S.config) return; document.body.classList.toggle("ro", !Store.S.edit);
     if (A.selRef && !act(A.selRef)) A.selRef = null;
@@ -267,7 +268,7 @@ const App = (() => {
 
   /* ---------- menus ---------- */
   const MENUS = {
-    File: [["New action", "N", () => newAction()], ["New action from pasted text…", "", () => Intake.open(null, "")], "-", ["Projects…", "", projectsWin], ["New project…", "", () => editProject(null)], "-", ["Export to PDF or print…", "Ctrl+P", () => Print.dialog()], ["Export to Excel", "", () => Excel.run()], "-", ["Your profile…", "", () => profile()], ["Settings…", "", () => settings()]],
+    File: [["New action", "N", () => newAction()], ["New action from pasted text…", "", () => Intake.open(null, "")], "-", ["Projects…", "", projectsWin], ["New project…", "", () => editProject(null)], "-", ["Export to PDF or print…", "Ctrl+P", () => Print.dialog()], ["Export to Excel…", "", () => Print.excelDialog()], "-", ["Your profile…", "", () => profile()], ["Settings…", "", () => settings()]],
     Edit: [["Undo", "Ctrl+Z", () => Store.undo()], ["Redo", "Ctrl+Y", () => Store.redo()], "-", ["Delete selected action", "", () => { const a = act(A.selRef); if (a) $(".av [data-k=del]") && $(".av [data-k=del]").click(); }]],
     View: null,
     Help: [["How to use", "", guide], ["Keyboard shortcuts", "", keys], "-", ["Update app", "", update], ["About", "", about]] };
@@ -333,7 +334,7 @@ const App = (() => {
       $("#q").oninput = debounce(() => { A.q = $("#q").value; render(); }, 150);
       $("#newB").onclick = () => newAction(); $("#pasteB").onclick = () => Intake.open(null, ""); $("#colB").onclick = e => { e.stopPropagation(); Table.columnsPop(e.currentTarget); };
       $$("#vt button").forEach(b => b.onclick = () => { A.view = b.dataset.v; lsSet("adViewType", A.view); render(); }); $("#sizeB").onclick = e => { e.stopPropagation(); Table.sizePop(e.currentTarget); };
-      $("#printB").onclick = () => Print.dialog(); $("#xlsB").onclick = () => Excel.run();
+      $("#printB").onclick = () => Print.dialog(); $("#xlsB").onclick = () => Print.excelDialog();
       $("#undoB").onclick = () => Store.undo(); $("#redoB").onclick = () => Store.redo(); $("#updB").onclick = update;
       $("#status").onclick = () => { if (!Store.S.edit) settings(); else if (Store.S.status === "error") Store.save(); };
       $("#profB").onclick = e => { e.stopPropagation(); if ($(".profpop")) return Fields.closePop(); Profile.name() ? profMenu(e.currentTarget) : signIn(); }; drawProf();

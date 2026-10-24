@@ -80,7 +80,7 @@ const ActionView = (() => {
     else if (k === "viewall") Media.view(a, 0);
     else if (k === "addph") Media.pickFiles(a, "image/*");
     else if (k === "addf") Media.pickFiles(a);
-    else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "?  You can undo with Ctrl+Z.", "Delete", true)){ Store.mutate("a:" + a._p, () => { a.del = true; Store.touch(a); }); Store.log("Deleted " + Store.actId(a)); App.select(null); } } }
+    else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Store.mutate("a:" + a._p, () => { a.del = true; Store.touch(a); }); Store.log("Deleted " + Store.actId(a)); App.select(null); } } }
   function files(a, l, ro){ l.innerHTML = a.files.length ? "" : '<div class="dim">No attachments.' + tipI("Drop a PDF, Excel or any file on the action to attach it.") + '</div>';
     a.files.forEach(f => { const r = h('<div class="att"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : /docx?$/i.test(f.name) ? "DOC" : "FILE") + '</span><button type="button" class="link att-n">' + esc(f.name) + '</button><span class="dim">' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" title="Remove">✕</button>') + '</div>');
       $(".att-n", r).onclick = () => Media.openFile(a, f);

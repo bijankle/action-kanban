@@ -775,3 +775,4 @@ html.dark .idw .pj b{color:#ff6b5b}
 .idw .cp.ok{color:#1f8a58;background:color-mix(in srgb,#1f8a58 12%,var(--panel))}
 .idw.big{height:32px}.idw.big .aid{font-size:16px}
 .av-head{flex-wrap:nowrap}.av-head .rbs{flex:none}
+.pr-dt{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pr-dt label{display:inline-flex;align-items:center;gap:6px}.pr-dt .in{width:auto}.pr-win .lbl{margin:4px 0 2px}

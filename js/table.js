@@ -26,7 +26,7 @@ const Table = (() => {
       Store.visible().forEach(a => { if (!had.has(ref(a)) && stick.pos.has(ref(a))) list.push(a); });   // (one that no longer fits a Status filter stays too, until next time)
       list.sort((x, y) => at(x) - at(y)); }   // (new ones first, the rest where they were)
     stick = { ctx, pos: new Map(list.map((a, i) => [ref(a), i])) }; return list; }
-  function sorted(){ let list = Filters.apply(Store.visible());   // (the search box and the Filters panel's pills)
+  function sorted(){ let list = Filters.apply(Store.visible().concat(Store.deleted()));   // (the search box and the Filters panel's pills)
     const so = App.sort, ord = new Map(Store.stages().map((s, i) => [s.id, i]));
     const base = (x, y) => (ord.get(x.stage) - ord.get(y.stage)) || (x.rank || 0) - (y.rank || 0) || x.no - y.no;
     if (so && so.id){ const f = Store.field(so.id); const key = a => so.id === "_id" ? Store.actId(a) : so.id === "_proj" ? (Store.project(a._p) || {}).name : f ? (f.type === "rank" ? Fields.val(a, f) : f.type === "stage" ? ord.get(a.stage) : ["date", "meta", "number", "mto", "sparelist", "isollist"].includes(f.type) ? (v => v === "" || v == null || v === "TBC" || v === "N/A" || (typeof v === "number" && isNaN(v)) ? "\uffff" : typeof v === "number" ? String(v).padStart(16, "0") : String(v))(Fields.val(a, f)) : Fields.text(a, f).toLowerCase()) : "";
@@ -41,7 +41,7 @@ const Table = (() => {
   function rowBtns(a){ const dn = Store.stage(a.stage).kind === "done", hd = Hold.on(a), id = esc(Store.actId(a)), dis = Store.S.edit ? "" : " disabled";
     const b = (k, on, tip) => '<button type="button" class="rb rb-' + k + (on ? " on" : "") + '" data-rb="' + k + '" aria-pressed="' + on + '" title="' + tip + '" aria-label="' + tip + '"' + dis + '>' + IC[k] + '</button>';
     /* complete, delete, then on hold furthest right, with its i (who it's waiting on, red while details are missing) after it */
-    return '<span class="rbs">' + b("done", dn, dn ? "Complete: click to reopen " + id : "Mark " + id + " complete") + b("del", false, "Delete " + id) + b("hold", hd, hd ? "On hold: click to take " + id + " off hold" : "Put " + id + " on hold") + '<span class="rb-hi">' + Hold.btn(a) + '</span></span>'; }
+    return '<span class="rbs">' + b("done", dn, dn ? "Complete: click to reopen " + id : "Mark " + id + " complete") + b("del", !!a.del, a.del ? "Deleted: click to bring " + id + " back" : "Delete " + id) + b("hold", hd, hd ? "On hold: click to take " + id + " off hold" : "Put " + id + " on hold") + '<span class="rb-hi">' + Hold.btn(a) + '</span></span>'; }
   /* the ID in a box with its copy and PDF buttons, in the list and the Details header alike */
   const IDI = { copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>',
     tick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5 9.5-10"/></svg>',
@@ -56,7 +56,8 @@ const Table = (() => {
     if (!Store.S.edit) return App.viewOnly(); const k = b.dataset.rb;
     if (k === "done"){ const f = Store.field("complete"); if (f) Fields.set(a, f, Store.stage(a.stage).kind !== "done"); }
     else if (k === "hold"){ const f = Store.field("onhold") || { id: "onhold", type: "check" }; Fields.set(a, f, !Hold.on(a)); }
-    else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "?  You can undo with Ctrl+Z.", "Delete", true)){ Store.mutate("a:" + a._p, () => { a.del = true; Store.touch(a); }); Store.log("Deleted " + Store.actId(a)); if (App.selRef === tr.dataset.ref) App.select(null); } } }, true);
+    else if (k === "del" && a.del){ Store.mutate("a:" + a._p, () => { a.del = false; Store.touch(a); }); Store.log("Brought back " + Store.actId(a)); note("Brought back " + Store.actId(a)); }
+    else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Store.mutate("a:" + a._p, () => { a.del = true; Store.touch(a); }); Store.log("Deleted " + Store.actId(a)); if (App.selRef === tr.dataset.ref) App.select(null); } } }, true);
   /* titles are one line: a title too long for its column ends in … with a more… that shows it in full */
   function cut(el){ $$("td.ttl", el).forEach(td => { const t = $(".tt", td); if (t) td.classList.toggle("cut", t.scrollWidth > t.clientWidth + 1); }); }
   document.addEventListener("click", e => { const b = e.target.closest(".tt-more"); if (!b) return; e.stopPropagation(); Fields.closePop(); const tr = b.closest("tr"), a = tr && App.act(tr.dataset.ref); if (!a) return;
@@ -85,7 +86,7 @@ const Table = (() => {
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? 260 : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
-    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" aria-label="Complete, delete, on hold" style="width:' + NEED.act + 'px"></th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + wid(c) + '">'
+    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" aria-label="Complete, delete, on hold" style="width:' + NEED.act + 'px">Status</th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + esc(head(c)) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">i</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '><button type="button" class="addc" aria-haspopup="true">+ Add column</button></th>' : "");
     const minW = cs.reduce((t, c) => t + least(c), 0) + ADD;
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'

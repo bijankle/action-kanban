@@ -63,6 +63,8 @@ const Store = (() => {
   const actsOf = pid => live((S.acts[pid] || {}).actions);
   const all = () => projects().flatMap(p => actsOf(p.id).map(a => (a._p = p.id, a)));
   const visible = () => { const sel = selected(); return all().filter(a => sel.includes(a._p)); };
+  /* deleted actions are kept, marked, as an archive: the Deleted pill shows them and the bin brings one back */
+  const deleted = () => { const sel = selected(); return projects().filter(p => sel.includes(p.id)).flatMap(p => ((S.acts[p.id] || {}).actions || []).filter(a => a && a.del).map(a => (a._p = p.id, a))); };
   const find = (pid, u) => ((S.acts[pid] || {}).actions || []).find(a => a.u === u);
   const findRef = ref => { const [pid, n] = String(ref || "").split(":"); const a = live((S.acts[pid] || {}).actions).find(x => String(x.no) === n || x.u === n); return a ? (a._p = pid, a) : null; };
   const actId = a => { const p = project(a._p) || {}; return (p.prefix || "ACT") + "-" + String(a.no).padStart(4, "0"); };
@@ -286,6 +288,6 @@ const Store = (() => {
     /* Action complete stays the very last field */
     const i = c.fields.findIndex(f => f.id === "complete"); if (i >= 0 && i !== c.fields.length - 1) c.fields.push(c.fields.splice(i, 1)[0]); }
 
-  return { S, enter, stages, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, find, findRef, actId, ranked, priority,
+  return { S, enter, stages, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, deleted, find, findRef, actId, ranked, priority,
     stashNow: () => stash.flush ? stash.flush() : stash(), vendors: () => S.vendors, owner, procurement, sparesAvail, eta, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();

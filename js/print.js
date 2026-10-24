@@ -4,20 +4,36 @@
 "use strict";
 const Print = (() => {
   const prefs = () => Object.assign({ photos: true, per: 2, board: true, newPage: true }, lsGet("adPrint", {}));
-  function dialog(){ const ss = Store.stages(), pick = lsGet("adPrintSt", null), pf = prefs();
-    const on = s => pick && s.id in pick ? pick[s.id] : s.print;
-    const m = modal('<h3>Export to PDF or print' + tipI("Pick “Save as PDF” as the printer for a PDF. Only the projects ticked in the project box are included, and only what the search shows.") + '</h3><div class="pr-st">' + ss.map(s => { const n = Store.visible().filter(a => a.stage === s.id).length;
-        return '<label class="tp-o"><input type="checkbox" data-s="' + s.id + '"' + (on(s) ? " checked" : "") + '><span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span><span class="dim">' + n + '</span></label>'; }).join("") + '</div>'
+  /* what goes into an export (the list's PDF and Excel buttons): which statuses, Deleted included, and a date range
+     on the date created, last modified or completed (blank is all time). The search and the other Filters panel pills
+     still apply. Done and Deleted are unticked to start with; the choice is remembered per export. */
+  const DATES = [["created", "Date created"], ["mod", "Last modified"], ["doneAt", "Date completed"]];
+  function pickHtml(key){ const pick = lsGet(key, null), base = Store.visible().concat(Store.deleted()).filter(a => Filters.match(a, "st"));
+    const sts = Store.stages().map(s => ({ id: s.id, name: s.name, c: s.color, def: s.kind !== "done" })).concat({ id: "_del", name: "Deleted", c: "#9aa3ad", def: false });
+    const on = s => pick && pick.st && s.id in pick.st ? pick.st[s.id] : s.def, d = (pick && pick.d) || {};
+    return '<div class="lbl">Include</div><div class="pr-st">' + sts.map(s => '<label class="tp-o"><input type="checkbox" data-s="' + s.id + '"' + (on(s) ? " checked" : "") + '><span class="stg" style="--c:' + esc(s.c) + '">' + esc(s.name) + '</span><span class="dim">' + base.filter(a => Filters.val(a, "st") === s.id).length + '</span></label>').join("") + '</div>'
+      + '<div class="msep"></div><div class="lbl">Dates <span class="dim">blank is all time</span></div><div class="pr-dt"><select class="in sm" data-d="by">' + DATES.map(([k, n]) => '<option value="' + k + '"' + (d.by === k ? " selected" : "") + '>' + n + '</option>').join("") + '</select>'
+      + '<label class="dim">from <input class="in sm" type="date" data-d="from" value="' + esc(d.from || "") + '"></label><label class="dim">to <input class="in sm" type="date" data-d="to" value="' + esc(d.to || "") + '"></label></div>'; }
+  function pickList(m, key){ const st = {}; $$("[data-s]", m).forEach(c => st[c.dataset.s] = c.checked); const d = {}; $$("[data-d]", m).forEach(i => d[i.dataset.d] = i.value); lsSet(key, { st, d });
+    const from = d.from ? new Date(d.from + "T00:00:00").getTime() : -Infinity, to = d.to ? new Date(d.to + "T23:59:59").getTime() : Infinity;
+    const inRange = a => { if (!d.from && !d.to) return true; const t = a[d.by] || (d.by === "created" ? a.mod : null); if (!t) return false; const x = typeof t === "number" ? t : new Date(t).getTime(); return x >= from && x <= to; };
+    const ord = new Map(Store.stages().map((s, i) => [s.id, i]));
+    return Store.visible().concat(Store.deleted()).filter(a => st[Filters.val(a, "st")] && Filters.match(a, "st") && inRange(a))
+      .sort((x, y) => (x.del - y.del) || (ord.get(x.stage) - ord.get(y.stage)) || (x.rank || 0) - (y.rank || 0) || x.no - y.no); }
+  function dialog(){ const pf = prefs();
+    const m = modal('<h3>Export to PDF or print' + tipI("Pick “Save as PDF” as the printer for a PDF. Only the projects ticked in the project box are included, and only what the search and the other filters show.") + '</h3>' + pickHtml("adPrintPick")
       + '<div class="msep"></div><label class="tp-o"><input type="checkbox" data-o="board"' + (pf.board ? " checked" : "") + '><span>Organizer overview first</span></label>'
       + '<label class="tp-o"><input type="checkbox" data-o="photos"' + (pf.photos ? " checked" : "") + '><span>Photos</span></label><label class="fl in-row">Photos per row <select class="in sm" data-o="per">' + [1, 2, 3, 4].map(n => '<option' + (n === pf.per ? " selected" : "") + '>' + n + '</option>').join("") + '</select></label>'
       + '<label class="tp-o"><input type="checkbox" data-o="newPage"' + (pf.newPage ? " checked" : "") + '><span>Each action on a new page</span></label>'
       + '<div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Export</button></div>', { cls: "pr-win" });
     $(".yn-no", m).onclick = () => m.close();
-    $(".yn-yes", m).onclick = () => { const st = {}; $$("[data-s]", m).forEach(c => st[c.dataset.s] = c.checked); lsSet("adPrintSt", st);
-      const o = {}; $$("[data-o]", m).forEach(c => o[c.dataset.o] = c.type === "checkbox" ? c.checked : +c.value); lsSet("adPrint", o); m.close();
-      const q = (App.q || "").trim().toLowerCase(), fs = Store.fields();
-      const list = Store.stages().filter(s => st[s.id]).flatMap(s => Store.ranked(s.id)).filter(a => Store.matches(a, q));
-      if (!list.length) return alert("Nothing to print with those stages ticked."); run(list, o); }; }
+    $(".yn-yes", m).onclick = () => { const list = pickList(m, "adPrintPick"); const o = {}; $$("[data-o]", m).forEach(c => o[c.dataset.o] = c.type === "checkbox" ? c.checked : +c.value); lsSet("adPrint", o);
+      if (!list.length) return alert("Nothing matches those choices."); m.close(); run(list, o); }; }
+  /* the Excel export's window: the same choices, then the list as a spreadsheet */
+  function excelDialog(){ const m = modal('<h3>Export to Excel' + tipI("Only the projects ticked in the project box are included, and only what the search and the other filters show.") + '</h3>' + pickHtml("adXlsPick")
+      + '<div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Export</button></div>', { cls: "pr-win" });
+    $(".yn-no", m).onclick = () => m.close();
+    $(".yn-yes", m).onclick = () => { const list = pickList(m, "adXlsPick"); if (!list.length) return alert("Nothing matches those choices."); m.close(); Excel.run(list); }; }
   async function run(list, o){ o = Object.assign(prefs(), o || {}); if (list.length === 1 && !arguments[1]) o.board = false;
     $$("#printRoot").forEach(x => x.remove());
     const root = h('<div id="printRoot"></div>'), projs = [...new Set(list.map(a => a._p))].map(p => (Store.project(p) || {}).name).join(", ");
@@ -43,5 +59,5 @@ const Print = (() => {
     await Promise.race([Promise.all($$("img", root).map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))), new Promise(r => setTimeout(r, 20000))]);
     const done = () => { root.remove(); removeEventListener("afterprint", done); }; addEventListener("afterprint", done);
     window.print(); }
-  return { dialog, run };
+  return { excelDialog, dialog, run };
 })();
