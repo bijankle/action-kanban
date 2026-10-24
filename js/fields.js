@@ -107,12 +107,31 @@ const Fields = (() => {
     return w; }
 
   /* equipment tags: the first tag, then +N; clicking opens the list of all tags with a box to add new ones */
-  function tagBox(a, f){ const v = Array.isArray(val(a, f)) ? val(a, f) : [];
-    /* equipment: the tag's name after it, cut short with … (the full names on hover) */
-    const nm = t => { const e = f.id === "equipment" && Equip.get(t); return e && e.n ? e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : ""; }, n0 = v.length ? nm(v[0]) : "";
-    const tip = v.map(t => t + (nm(t) ? " " + nm(t) : "")).join("\n");
-    const w = h('<div class="tagbox"><div class="tb-show"' + (tip ? ' title="' + esc(tip) + '"' : "") + '>' + (v.length ? chip(v[0], optColor(f, v[0])) + (n0 ? '<span class="tb-n">' + esc(n0) + '</span>' : "") : '<span class="tb-ph">' + (f.id === "equipment" ? "Add equipment tag" : "Add " + esc(f.label.toLowerCase())) + '</span>') + (v.length > 1 ? '<button type="button" class="tb-more">+' + (v.length - 1) + '</button>' : "") + '</div></div>');   // (an empty box says what goes in it)
-    $(".tb-show", w).onclick = e => { e.stopPropagation(); openTags(w, a, f); }; return w; }
+  /* tags (equipment and the like): typed straight into the box, several split by commas. As you type, the box finishes the
+     tag from the plant lists (or the tags used before) in place, the way Excel finishes a word: Tab or Enter keeps it, carrying
+     on typing replaces it. Nothing pops up over the rows below. */
+  function tagBox(a, f){ const v = Array.isArray(val(a, f)) ? val(a, f) : [], eq = f.id === "equipment";
+    const nm = t => { const e = eq && Equip.get(t); return e && e.n ? e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : ""; };
+    const w = h('<div class="tagbox"><input class="in tagin" type="text" spellcheck="false" autocomplete="off" placeholder="' + (eq ? "Add equipment tag" : "Add " + esc(f.label.toLowerCase())) + '"></div>'), i = $("input", w);
+    const show = () => { i.value = v.join(", "); i.title = v.map(t => t + (nm(t) ? "  " + nm(t) : "")).join("\n"); }; show();
+    if (!Store.S.edit){ i.readOnly = true; return w; }
+    const pool = () => eq ? [] : optLabels(f).concat(...Store.all().map(x => Array.isArray(x.f[f.id]) ? x.f[f.id] : []));
+    const finish = seg => { const q = seg.toLowerCase(); if (q.length < 2) return "";
+      const list = eq ? (Equip.find(seg, "t") || []).map(x => x.t) : pool(); return list.find(t => t.toLowerCase().startsWith(q) && t.length > seg.length) || ""; };
+    i.onfocus = () => { if (eq) Equip.load().catch(() => {}); if (i.value && !/,\s*$/.test(i.value)) i.value += ", "; const n = i.value.length; setTimeout(() => i.setSelectionRange(n, n), 0); };
+    i.oninput = e => { if (!e.inputType || !e.inputType.startsWith("insert")) return; const at = i.selectionStart; if (at !== i.value.length) return;
+      const cut = i.value.lastIndexOf(","), head = cut < 0 ? "" : i.value.slice(0, cut + 1) + " ", seg = i.value.slice(cut + 1).trimStart(), c = finish(seg);
+      if (c){ i.value = head + seg + c.slice(seg.length); i.setSelectionRange(head.length + seg.length, i.value.length); } };
+    const commit = () => { let tags = i.value.split(",").map(t => t.trim()).filter(Boolean);
+      tags = tags.map(t => { if (eq){ const hit = (Equip.find(t, "t") || []).find(x => x.t.toLowerCase() === t.toLowerCase()); return hit ? hit.t : t.toUpperCase(); } return optLabels(f).find(x => x.toLowerCase() === t.toLowerCase()) || t; });
+      tags = [...new Set(tags)];
+      if (!eq){ const fresh = tags.filter(t => !optLabels(f).includes(t)); if (fresh.length) Store.mutate("config", () => { f.options = f.options || []; fresh.forEach(t => f.options.push({ id: uid(), label: t, color: "" })); Store.touch(f); }); }
+      if (JSON.stringify(tags) !== JSON.stringify(v)) set(a, f, tags); else show(); };
+    i.onblur = commit;
+    i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); if (i.selectionStart !== i.selectionEnd){ const n = i.value.length; i.setSelectionRange(n, n); i.value += ", "; return; } i.blur(); }
+      else if (e.key === "Tab" && i.selectionStart !== i.selectionEnd){ e.preventDefault(); const n = i.value.length; i.setSelectionRange(n, n); i.value += ", "; }
+      else if (e.key === "Escape"){ show(); i.blur(); } };
+    return w; }
   function openTags(anchor, a, f){ closePop(); let cur = (Array.isArray(a.f[f.id]) ? a.f[f.id] : []).slice();
     const p = h('<div class="pop tagpop"><input class="in" type="text" placeholder="Search or add a tag…"><div class="tp-l"></div></div>'); document.body.appendChild(p); place(p, anchor);
     const i = $("input", p), l = $(".tp-l", p);

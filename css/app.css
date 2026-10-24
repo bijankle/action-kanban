@@ -699,3 +699,6 @@ html.dark .av-tab b{color:var(--ink)}
 .th-i{display:inline-grid;place-items:center;width:15px;height:15px;margin-left:4px;border-radius:50%;border:0;background:color-mix(in srgb,#fff 28%,transparent);color:#fff;font:italic 800 10px/15px Georgia,serif;cursor:pointer;padding:0;vertical-align:1px}
 .th-i:hover{background:#fff;color:var(--th)}.tbl th.tk .th-l{white-space:nowrap}
 .thpop{max-width:280px;padding:10px 12px}.thpop b{display:block;margin-bottom:3px}.thpop p{margin:0;color:var(--muted);font-size:13px;line-height:1.4}
+
+/* the tag box is a plain text box */
+.tagin{width:100%;min-width:0;text-overflow:ellipsis}.tbl td.ed .tagin{height:30px;padding:3px 8px;font-size:13px}
