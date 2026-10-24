@@ -23,7 +23,7 @@ const Contacts = (() => {
     const all = list(), cs = all.filter(c => { const t = [c.first, c.last, c.company, c.mobile, c.email].join(" ").toLowerCase(); return q.every(w => t.includes(w)); })
       .sort((a, b) => String(a[sort.k] || "").localeCompare(String(b[sort.k] || ""), undefined, { sensitivity: "base", numeric: true }) * sort.dir || full(a).localeCompare(full(b)));
     const COLS = [["first", "First name"], ["last", "Last name"], ["company", "Company"], ["mobile", "Mobile"], ["email", "Email"]];
-    el.innerHTML = '<div class="cts"><div class="cts-h"><b>Contacts</b><span class="dim">' + cs.length + (cs.length !== all.length ? " of " + all.length : "") + ' people. Click a name to see what\'s outstanding on them.</span><span class="grow"></span>'
+    el.innerHTML = '<div class="cts"><div class="cts-h"><b>Contacts</b><span class="dim">' + cs.length + (cs.length !== all.length ? " of " + all.length : "") + ' people</span>' + tipI("Click a name to see what's outstanding on them.") + '<span class="grow"></span>'
       + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="imp">Import contact list (Excel)…</button>') + '</div>'
       + '<table class="tbl cts-t"><thead><tr>' + COLS.map(([k, n]) => '<th data-s="' + k + '"><span class="th-l">' + n + (sort.k === k ? (sort.dir > 0 ? " ▲" : " ▼") : "") + '</span></th>').join("") + '<th class="cts-o"><span class="th-l">Outstanding</span></th><th class="cts-x"></th></tr></thead><tbody>'
       + (ro ? "" : '<tr class="ct-new">' + COLS.map(([k, n]) => '<td><input class="in" data-k="' + k + '" placeholder="' + (k === "first" ? "+ New person" : n) + '"></td>').join("") + '<td></td><td><button type="button" class="btn sm" data-k="add">Add</button></td></tr>')

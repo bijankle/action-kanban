@@ -60,7 +60,7 @@ const Vendors = (() => {
   function page(body, ro){ const q = (App.q || "").toLowerCase().split(/\s+/).filter(Boolean), hit = v => q.every(x => (v.name + " " + v.cat + " " + v.ordered + " " + v.type).toLowerCase().includes(x));
     const list = all().filter(hit).sort((a, b) => a.cat.localeCompare(b.cat) || (b.po || 0) - (a.po || 0));
     body.innerHTML = '<div class="dv-h">Approved vendors <span class="dim">' + all().length + ' vendors in ' + cats().length + ' categories' + (V().source ? ", from " + esc(V().source) : "") + (V().updated ? ", " + esc(fmtDate(V().updated)) : "") + '</span></div>'
-      + '<p class="dim">These are the vendors offered on an action\'s MTO tab. To update them, import the latest Approved Vendor List spreadsheet: it replaces the list for everyone.</p>'
+      + '<p class="dim">The vendors offered on an action\'s MTO tab.' + tipI("To update them, import the latest Approved Vendor List spreadsheet. It replaces the list for everyone, and keeps the contact details already entered.") + '</p>'
       + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="imp">Import approved vendor list (Excel)…</button>')
       + '<table class="tbl ct vd-tbl"><thead><tr><th>Vendor</th><th>Category</th><th>Supply type</th><th>What we have ordered from them</th><th>POs</th><th>Last PO</th><th>Contact <span class="dim">(on the RFQ)</span></th></tr></thead><tbody>'
       + list.slice(0, 600).map(v => '<tr><td><b>' + esc(v.name) + '</b></td><td>' + esc(v.cat) + '</td><td>' + esc(v.type) + '</td><td>' + esc(v.ordered) + '</td><td>' + (v.po || "") + '</td><td>' + esc(fmtDate(v.last)) + '</td><td><button type="button" class="link vd-det' + (v.contact || v.email || v.phone ? "" : " dim") + '" data-vd="' + esc(v.name) + '">' + esc([v.contact, v.phone, v.email].filter(Boolean).join(", ") || (ro ? "" : "Add")) + '</button></td></tr>').join("") + '</tbody></table>';
@@ -69,7 +69,7 @@ const Vendors = (() => {
   /* a vendor's contact details, which go on the RFQ: who to send it to, their phone, email and address */
   const DET = [["contact", "Contact person"], ["phone", "Phone"], ["email", "Email"], ["address", "Address"]];
   function details(name, anchor){ const v = byName(name); if (!v) return; Fields.closePop(); const ro = !Store.S.edit;
-    const p = h('<div class="pop vd-pop"><b>' + esc(v.name) + '</b><p class="dim">These go on the RFQ, under To. Everyone shares them.</p>'
+    const p = h('<div class="pop vd-pop"><b>' + esc(v.name) + '' + tipI("These go on the RFQ, under To. Everyone shares them.") + '</b>'
       + DET.map(([k, l]) => '<label class="fl">' + l + (k === "address" ? '<textarea class="in" rows="2" data-k="' + k + '"' + (ro ? " readonly" : "") + '>' + esc(v[k] || "") + '</textarea>' : '<input class="in" data-k="' + k + '" type="' + (k === "email" ? "email" : k === "phone" ? "tel" : "text") + '" value="' + esc(v[k] || "") + '"' + (ro ? " readonly" : "") + '>') + '</label>').join("")
       + (ro ? "" : '<div class="yn-btns"><button type="button" class="yn-yes" data-k="ok">Save</button></div>') + '</div>');
     document.body.appendChild(p); Fields.place(p, anchor); const r = p.getBoundingClientRect(); if (r.bottom > innerHeight - 8) p.style.top = Math.max(8, innerHeight - r.height - 8) + "px"; if (r.right > innerWidth - 8) p.style.left = Math.max(8, innerWidth - r.width - 8) + "px";

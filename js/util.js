@@ -67,3 +67,20 @@ function dragResize(handle, get, set, sign){ sign = sign || -1; handle.addEventL
   const mv = ev => set(w0 + sign * (ev.clientX - x0));
   const up = () => { handle.classList.remove("on"); handle.removeEventListener("pointermove", mv); handle.removeEventListener("pointerup", up); };
   handle.addEventListener("pointermove", mv); handle.addEventListener("pointerup", up); }); }
+
+/* an (i) button that shows a how-to note in a small callout, so guidance doesn't take up room on screen */
+/* (a span, not a button, so a label around it doesn't pass its clicks on to it) */
+const tipI = (text, label) => '<span class="tip-i" role="button" tabindex="0" data-tip="' + esc(text) + '" aria-label="' + esc(label || "More information") + '" title="' + esc(label || "More information") + '">i</span>';
+(() => { let cur = null;
+  const close = () => { if (cur){ cur.p.remove(); cur.b.setAttribute("aria-expanded", "false"); cur = null; } };
+  document.addEventListener("click", e => { const b = e.target.closest("[data-tip]");
+    if (!b){ if (cur && !e.target.closest(".tip-pop")) close(); return; }
+    e.preventDefault(); e.stopPropagation(); if (cur && cur.b === b) return close(); close();
+    const p = document.createElement("div"); p.className = "pop tip-pop"; p.setAttribute("role", "note"); p.textContent = b.dataset.tip; document.body.appendChild(p);
+    const r = b.getBoundingClientRect(), pr = p.getBoundingClientRect();
+    p.style.left = Math.max(8, Math.min(r.left - 10, innerWidth - pr.width - 8)) + "px";
+    p.style.top = (innerHeight - r.bottom > pr.height + 12 ? r.bottom + 6 : Math.max(8, r.top - pr.height - 6)) + "px";
+    b.setAttribute("aria-expanded", "true"); cur = { p, b }; }, true);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && cur){ e.stopPropagation(); close(); }
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("[data-tip]")){ e.preventDefault(); e.target.click(); } }, true);
+  addEventListener("scroll", close, true); addEventListener("resize", close); })();

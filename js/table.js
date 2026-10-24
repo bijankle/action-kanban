@@ -16,7 +16,17 @@ const Table = (() => {
   function cols(){ const c = [{ id: "_act", label: "", type: "act" }, { id: "_id", label: "ID", type: "id" }]; if (Store.selected().length > 1) c.push({ id: "_proj", label: "Project", type: "proj" });
     return c.concat(Store.fields().filter(f => f.table)); }
   /* what's on show: the projects ticked, the stage pills, the search */
-  function rows(){ let list = Filters.apply(Store.visible());   // (the search box and the Filters panel's pills)
+  /* the order sticks while you work: ticking Done or Hold, or changing a status, leaves the row where it is (so you
+     can carry on with it) until the list is opened again, sorted, filtered or searched */
+  let stick = { ctx: null, pos: new Map() };
+  const forget = () => { stick = { ctx: null, pos: new Map() }; };
+  function rows(fresh){ const list = sorted(); if (fresh) return list;
+    const ctx = [App.tab, JSON.stringify(App.sort || {}), App.q || "", JSON.stringify(lsGet("adF", {})), [...(App.pills || [])].join(","), Store.selected().join(",")].join("|"), ref = a => a._p + ":" + a.u;
+    if (ctx === stick.ctx){ const at = a => stick.pos.has(ref(a)) ? stick.pos.get(ref(a)) : -1, had = new Set(list.map(ref));
+      Store.visible().forEach(a => { if (!had.has(ref(a)) && stick.pos.has(ref(a))) list.push(a); });   // (one that no longer fits a Status filter stays too, until next time)
+      list.sort((x, y) => at(x) - at(y)); }   // (new ones first, the rest where they were)
+    stick = { ctx, pos: new Map(list.map((a, i) => [ref(a), i])) }; return list; }
+  function sorted(){ let list = Filters.apply(Store.visible());   // (the search box and the Filters panel's pills)
     const so = App.sort, ord = new Map(Store.stages().map((s, i) => [s.id, i]));
     const base = (x, y) => (ord.get(x.stage) - ord.get(y.stage)) || (x.rank || 0) - (y.rank || 0) || x.no - y.no;
     if (so && so.id){ const f = Store.field(so.id); const key = a => so.id === "_id" ? Store.actId(a) : so.id === "_proj" ? (Store.project(a._p) || {}).name : f ? (f.type === "rank" ? Fields.val(a, f) : f.type === "stage" ? ord.get(a.stage) : ["date", "meta", "number", "mto", "sparelist", "isollist"].includes(f.type) ? (v => v === "" || v == null || v === "TBC" || v === "N/A" || (typeof v === "number" && isNaN(v)) ? "\uffff" : typeof v === "number" ? String(v).padStart(16, "0") : String(v))(Fields.val(a, f)) : Fields.text(a, f).toLowerCase()) : "";
@@ -26,7 +36,7 @@ const Table = (() => {
   let ro = null, lastLv = -1, levelOf = () => -1;
   /* the row's own buttons, before the ID: complete (green), on hold (amber) and delete (red) */
   const IC = { done: '<svg class="big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11"/></svg>',
-    hold: '<svg class="big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M8.5 5.5v13M15.5 5.5v13"/></svg>',
+    hold: '<svg class="big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M8.75 7.25v9.5M15.25 7.25v9.5"/></svg>',
     del: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>' };
   function rowBtns(a){ const dn = Store.stage(a.stage).kind === "done", hd = Hold.on(a), id = esc(Store.actId(a)), dis = Store.S.edit ? "" : " disabled";
     const b = (k, on, tip) => '<button type="button" class="rb rb-' + k + (on ? " on" : "") + '" data-rb="' + k + '" aria-pressed="' + on + '" title="' + tip + '" aria-label="' + tip + '"' + dis + '>' + IC[k] + '</button>';
@@ -136,5 +146,5 @@ const Table = (() => {
   function columnsPop(anchor){ Fields.closePop(); const p = h('<div class="pop colpop"><div class="pop-h">Columns in the table</div>' + Store.fields().filter(f => f.id !== "title").map(f => '<label class="tp-o"><input type="checkbox" data-f="' + f.id + '"' + (f.table ? " checked" : "") + '><span>' + esc(f.label) + '</span></label>').join("") + '<div class="pop-n">Drag the column headers to reorder them.</div></div>');
     document.body.appendChild(p); Fields.place(p, anchor);
     $$("input", p).forEach(c => c.onchange = () => Store.mutate("config", () => { const f = Store.field(c.dataset.f); f.table = c.checked; Store.touch(f); })); }
-  return { render, rows, columnsPop, sizePop };
+  return { render, rows, forget, columnsPop, sizePop };
 })();

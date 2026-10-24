@@ -17,14 +17,14 @@ const Hold = (() => {
   function entered(a){ a.hold = { since: new Date().toISOString().slice(0, 10) }; pending = a._p + ":" + a.u; }
   function after(){ if (!pending) return; const ref = pending; pending = null; setTimeout(() => { const b = $('[data-hold="' + CSS.escape(ref) + '"]'); if (b) open(ref, b); }, 60); }
   function open(ref, anchor){ const a = App.act(ref); if (!a) return; Fields.closePop(); const h = rec(a), ro = !Store.S.edit;
-    const p = h_('<div class="pop holdpop"><b>On hold</b><p class="dim">Who is it waiting on? They go into the contact list so whoever picks this up can chase them.</p>'
+    const p = h_('<div class="pop holdpop"><b>On hold' + tipI("Who is it waiting on? They go into the contact list so whoever picks this up can chase them.") + '</b>'
       + '<label class="fl">Waiting on<input class="in" data-k="who" list="holdNames" autocomplete="off" value="' + esc(h.who || "") + '" placeholder="Name"' + (ro ? " readonly" : "") + '></label>'
       + '<datalist id="holdNames">' + Store.contacts().map(c => '<option value="' + esc(c.name) + '">' + esc([c.company, c.mobile].filter(Boolean).join(" · ")) + '</option>').join("") + '</datalist>'
       + '<label class="fl">Their mobile<input class="in" data-k="mobile" type="tel" value="' + esc(h.mobile || "") + '"' + (ro ? " readonly" : "") + '></label>'
-      + '<label class="fl">Company <span class="dim">(optional)</span><input class="in" data-k="company" value="' + esc(h.company || "") + '"' + (ro ? " readonly" : "") + '></label>'
+      + '<label class="fl">Company <span class="dim">optional</span><input class="in" data-k="company" value="' + esc(h.company || "") + '"' + (ro ? " readonly" : "") + '></label>'
       + '<label class="fl">On hold since<input class="in" data-k="since" type="date" value="' + esc(h.since || "") + '"' + (ro ? " readonly" : "") + '></label>'
-      + '<label class="fl">Due back <span class="dim">(when it should come back to us)</span><input class="in" data-k="due" type="date" value="' + esc(h.due || "") + '"' + (ro ? " readonly" : "") + '></label>'
-      + '<label class="fl">Note <span class="dim">(why it\'s on hold)</span><textarea class="in" data-k="why" rows="3" placeholder="e.g. waiting on the vendor\'s revised quote for the hoses"' + (ro ? " readonly" : "") + '>' + esc(h.why || "") + '</textarea></label>'
+      + '<label class="fl">Due back' + tipI("When it should come back to us.") + '<input class="in" data-k="due" type="date" value="' + esc(h.due || "") + '"' + (ro ? " readonly" : "") + '></label>'
+      + '<label class="fl">Note' + tipI("Why it's on hold.") + '<textarea class="in" data-k="why" rows="3" placeholder="e.g. waiting on the vendor\'s revised quote for the hoses"' + (ro ? " readonly" : "") + '>' + esc(h.why || "") + '</textarea></label>'
       + (ro ? "" : '<div class="yn-btns"><button type="button" class="yn-yes" data-k="ok">Save</button></div>') + '</div>');
     document.body.appendChild(p); Fields.place(p, anchor); const pr = p.getBoundingClientRect(); if (pr.bottom > innerHeight - 8) p.style.top = Math.max(8, innerHeight - pr.height - 8) + "px";
     const v = k => $('[data-k="' + k + '"]', p).value.trim(), who = $('[data-k="who"]', p);

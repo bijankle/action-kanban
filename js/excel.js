@@ -41,7 +41,7 @@ const Excel = (() => {
       ["xl/_rels/workbook.xml.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
       ["xl/worksheets/sheet1.xml", sheet], ["xl/styles.xml", styles]]); }
   function save(blob, fname){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fname; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
-  function run(){ const list = Table.rows(); if (!list.length) return alert("No actions to export.");
+  function run(){ const list = Table.rows(true); if (!list.length) return alert("No actions to export.");
     const b = exportRows(list), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "Actions " + new Date().toISOString().slice(0, 10) + ".xlsx"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     note("Exported " + list.length + " actions, as filtered in the table"); }
   /* ---------- reading an .xlsx (for importing the approved vendor list): every sheet as rows of cell values ---------- */

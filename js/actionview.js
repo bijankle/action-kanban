@@ -55,7 +55,7 @@ const ActionView = (() => {
       + (hs.length ? '<div class="ch-l">' + hs.map(h => '<div class="ch-e"><div class="ch-h"><b>' + esc(h.by || "Someone") + '</b><span class="dim">' + esc(when(h.t)) + (h.note ? " · " + esc(h.note) : "") + '</span></div>'
           + (h.c || []).map(([k, f, t]) => '<div class="ch-c"><span class="ch-k">' + esc(k) + '</span>' + (f || t ? '<span class="ch-v">' + (f ? '<s>' + esc(f) + '</s>' : "") + (f && t ? ' → ' : "") + (t ? esc(t) : "") + '</span>' : "") + '</div>').join("") + '</div>').join("") + '</div>'
         : '<p class="dim">No changes recorded yet. Changes are recorded from now on.</p>')
-      + '<p class="dim sm-t">Created ' + esc(when(a.created || a.mod)) + '. The last 400 changes are kept with the action.</p><div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>', { cls: "ch-win" });
+      + '<p class="dim sm-t">Created ' + esc(when(a.created || a.mod)) + '.' + tipI("The last 400 changes are kept with the action.") + '</p><div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>', { cls: "ch-win" });
     $(".yn-yes", m).onclick = () => m.close(); }
   function overview(el, a, ro){
     el.innerHTML = (!Store.mine(a) && a.mod && now() - a.mod < 15 * 60000 ? '<div class="sd-warn">⚠ <b>' + esc(App.who(a)) + '</b> edited this action ' + esc(App.ago(a.mod)) + ' and may still be working on it. Changes to different fields are both kept; if you both change the same field you\'ll both be warned.</div>' : "")
@@ -82,7 +82,7 @@ const ActionView = (() => {
     else if (k === "addph") Media.pickFiles(a, "image/*");
     else if (k === "addf") Media.pickFiles(a);
     else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "?  You can undo with Ctrl+Z.", "Delete", true)){ Store.mutate("a:" + a._p, () => { a.del = true; Store.touch(a); }); Store.log("Deleted " + Store.actId(a)); App.select(null); } } }
-  function files(a, l, ro){ l.innerHTML = a.files.length ? "" : '<div class="dim">No attachments. Drop a PDF, Excel or any file on the action.</div>';
+  function files(a, l, ro){ l.innerHTML = a.files.length ? "" : '<div class="dim">No attachments.' + tipI("Drop a PDF, Excel or any file on the action to attach it.") + '</div>';
     a.files.forEach(f => { const r = h('<div class="att"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : /docx?$/i.test(f.name) ? "DOC" : "FILE") + '</span><button type="button" class="link att-n">' + esc(f.name) + '</button><span class="dim">' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" title="Remove">✕</button>') + '</div>');
       $(".att-n", r).onclick = () => Media.openFile(a, f);
       const x = $(".ic-b", r); if (x) x.onclick = () => Store.mutate("a:" + a._p, () => { const i = a.files.indexOf(f); if (i >= 0) a.files.splice(i, 1); Store.touch(a); });

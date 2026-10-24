@@ -110,6 +110,8 @@ input.secret{-webkit-text-security:disc;font-family:monospace}
 .dt{display:flex;gap:5px;align-items:center}
 .ck{display:inline-flex;cursor:pointer;justify-self:start;align-self:center;width:max-content;max-width:max-content}.ck input{width:17px;height:17px;margin:0;accent-color:var(--th);cursor:pointer}.ck span{display:none}
 .fl{display:flex;flex-direction:column;gap:4px;font-size:var(--fl);font-weight:600;color:var(--muted);margin:10px 0}
+/* (a label with an (i) keeps the i beside its text: the label flows as text, its field drops to its own line) */
+.fl:has(>.tip-i):not(.in-row){display:block}.fl:has(>.tip-i):not(.in-row)>:is(input,select,textarea,.combo){display:block;width:100%;margin-top:4px}.fl:has(>.tip-i):not(.in-row)>div{margin-top:4px}
 .fl .in{color:var(--ink);font-weight:400}.in-row{flex-direction:row;align-items:center;gap:8px;margin:6px 0}
 .tp-o{display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;font-size:var(--fb)}.tp-o input{accent-color:var(--th);width:16px;height:16px;margin:0}
 .sm-t{font-size:12.5px;margin-top:-4px}
@@ -746,3 +748,8 @@ html.dark .rb-done.on{color:#3ccf8e}html.dark .rb-hold.on{color:#f2b03d}html.dar
 .vd-chip .vd-det{color:var(--th2)}.vd-chip .vd-det.bad{color:#c0392b;font-weight:700}.vd-tbl .vd-det{background:none;padding:0;max-width:260px}
 .vd-pop{width:320px;padding:14px;display:flex;flex-direction:column;gap:8px}.vd-pop p{margin:0;font-size:12.5px}.vd-pop .fl{margin:0}.vd-pop textarea{resize:vertical;font:inherit}
 .pt-tbl .pt-sec{width:76px;text-align:center}.pt-ck{cursor:pointer}
+/* the (i) how-to buttons (tipI in util.js) */
+.tip-i{flex:none;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line2);background:var(--panel);color:var(--dim);font:italic 800 11px/15px Georgia,serif;cursor:pointer;padding:0;display:inline-grid;place-items:center;vertical-align:middle;margin-left:6px}
+.tip-i:hover,.tip-i[aria-expanded="true"]{border-color:var(--th);color:var(--th)}.tip-i:focus-visible{outline:2px solid var(--th);outline-offset:2px}
+.tip-pop{z-index:9800;max-width:320px;padding:10px 12px;font-size:13px;line-height:1.45;white-space:pre-line}
+.in-row>label.dim+label.dim{margin-left:14px}
