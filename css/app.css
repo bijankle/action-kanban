@@ -702,3 +702,12 @@ html.dark .av-tab b{color:var(--ink)}
 
 /* the tag box is a plain text box */
 .tagin{width:100%;min-width:0;text-overflow:ellipsis}.tbl td.ed .tagin{height:30px;padding:3px 8px;font-size:13px}
+
+/* the row buttons (complete, on hold, delete): soft circles of their own colour, solid when on */
+.tbl td.actc{padding:0 6px;white-space:nowrap}.rbs{display:inline-flex;gap:5px;align-items:center;vertical-align:middle}
+.rb{width:28px;height:28px;border-radius:50%;border:0;display:inline-grid;place-items:center;cursor:pointer;padding:0;transition:filter .12s}
+.rb svg{width:16px;height:16px}.rb:hover{filter:brightness(.93)}.rb:focus-visible{outline:2px solid var(--th);outline-offset:2px}.rb:disabled{opacity:.45;cursor:default}
+.rb-done{background:color-mix(in srgb,#1f8a58 14%,var(--panel));color:#1f8a58}.rb-done.on{background:#1f8a58;color:#fff}
+.rb-hold{background:color-mix(in srgb,#d48a0b 16%,var(--panel));color:#b7791f}.rb-hold.on{background:#d48a0b;color:#fff}
+.rb-del{background:color-mix(in srgb,#c0392b 12%,var(--panel));color:#c0392b}
+html.dark .rb-done{color:#3ccf8e}html.dark .rb-hold{color:#f2b03d}html.dark .rb-del{color:#ff6b5b}
