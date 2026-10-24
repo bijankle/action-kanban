@@ -745,3 +745,4 @@ html.dark .rb-done{color:#3ccf8e}html.dark .rb-hold{color:#f2b03d}html.dark .rb-
 .vd-det{border:0;background:var(--panel);color:var(--th2);border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vd-chip .vd-det{color:var(--th2)}.vd-chip .vd-det.bad{color:#c0392b;font-weight:700}.vd-tbl .vd-det{background:none;padding:0;max-width:260px}
 .vd-pop{width:320px;padding:14px;display:flex;flex-direction:column;gap:8px}.vd-pop p{margin:0;font-size:12.5px}.vd-pop .fl{margin:0}.vd-pop textarea{resize:vertical;font:inherit}
+.pt-tbl .pt-sec{width:76px;text-align:center}.pt-ck{cursor:pointer}
