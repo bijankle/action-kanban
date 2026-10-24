@@ -33,7 +33,7 @@ const Table = (() => {
     /* the tick box columns are all one width: the widest of their headings' longest words */
     const tickF = "700 11.5px " + getComputedStyle(document.body).fontFamily, tickW = Math.max(64, ...all.filter(c => TICK.has(c.type)).map(c => headW(c.label, tickF)));
     const px = c => ws[c.id] || (TICK.has(c.type) ? tickW : fix(c) ? Math.max(headW(c.label), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
-    const FIX = new Set(["id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || (c.type === "choice" && (c.options || []).length <= 3);
+    const FIX = new Set(["id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || (c.type === "choice" && (c.options || []).length <= 3) || !!ws[c.id];   // (a column someone has sized keeps that width; the rest share what's left)
     /* when space runs out, the counts and dates go first, then the location; the tick boxes stay */
     const lp = c => (["mto", "sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
     /* the least each column can be; when they don't all fit, the tick columns go first, then the dates and numbers,
@@ -78,11 +78,11 @@ const Table = (() => {
         let w = headW(cs[i] ? cs[i].label : l.textContent, getComputedStyle(l).font);
         $$("tbody tr", el).forEach(tr => { const td = tr.children[i]; if (!td) return; const k = td.firstElementChild;
           const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML; document.body.appendChild(m);
-          w = Math.max(w, Math.min(420, m.scrollWidth + 22, k && k.matches("select,input") ? k.scrollWidth + 22 : 9999)); m.remove(); });
+          w = Math.max(w, Math.min(640, m.scrollWidth + 22, k && k.matches("select,input") ? k.scrollWidth + 22 : 9999)); m.remove(); });
         const ws = widths(); ws[id] = Math.round(w); lsSet("adColW", ws); App.render(); };
       r.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); if (e.detail > 1) return; const x0 = e.clientX, w0 = th.offsetWidth; r.setPointerCapture(e.pointerId);
         let moved = false; r.onpointermove = ev => { if (Math.abs(ev.clientX - x0) > 2) moved = true; if (moved) th.style.width = Math.max(50, w0 + ev.clientX - x0) + "px"; };
-        r.onpointerup = () => { r.onpointermove = null; if (!moved) return; const ws = widths(), k = (parseFloat(th.style.width) || th.offsetWidth) / th.offsetWidth; $$("th", el).forEach(t => { ws[t.dataset.c] = Math.round(t.offsetWidth); }); lsSet("adColW", ws); App.render(); }; };
+        r.onpointerup = () => { r.onpointermove = null; if (!moved) return; const ws = widths(); ws[id] = Math.round(parseFloat(th.style.width) || th.offsetWidth); lsSet("adColW", ws); App.render(); }; };   // (only the column dragged)
       /* reorder (the field order is shared, it's also the order in the side panel) */
       th.ondragstart = e => { if (id[0] === "_") return e.preventDefault(); e.dataTransfer.setData("text/col", id); th.classList.add("drag"); };
       th.ondragend = () => th.classList.remove("drag");

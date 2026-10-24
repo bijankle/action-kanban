@@ -206,7 +206,7 @@ body.resizing{cursor:col-resize;user-select:none}body.resizing iframe,body.resiz
 .tbl{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%}
 .tbl th{position:sticky;top:0;z-index:2;background:var(--th);color:#fff;text-align:left;font-size:13px;font-weight:700;padding:0;white-space:normal;vertical-align:middle;line-height:1.15;user-select:none;border-right:1px solid color-mix(in srgb,#fff 20%,transparent)}
 .tbl th .th-l{display:block;padding:8px 10px;overflow:hidden;overflow-wrap:normal;word-break:normal;cursor:pointer}   /* (headings wrap a word at a time, so a column can be as narrow as its longest word) */
-.tbl th .th-r{position:absolute;right:-3px;top:0;bottom:0;width:7px;cursor:col-resize;z-index:3}.tbl th .th-r:hover{background:#fff6}
+.tbl th .th-r{position:absolute;right:-5px;top:0;bottom:0;width:10px;cursor:col-resize;z-index:3}.tbl th .th-r:hover{background:#fff6}
 .tbl th.drag{opacity:.4}.tbl th.dover{box-shadow:inset 3px 0 0 #fff}
 .tbl td{padding:5px 10px;border-bottom:1px solid var(--line);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;height:40px}
 .tbl tbody tr{cursor:pointer}.tbl tbody tr:hover td{background:var(--panel2)}
