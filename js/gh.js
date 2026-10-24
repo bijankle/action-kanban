@@ -11,7 +11,7 @@
 "use strict";
 const GH = (() => {
   const RELAY = "";   // the save relay's address, once it's set up (Settings can also set one)
-  const SITE_URL = "";   // the Cloudflare site's address, once it's set up: the GitHub Pages copy then opens it instead
+  const SITE_URL = "https://action-database.bijank-2015.workers.dev";   // the Cloudflare site's address, once it's set up: the GitHub Pages copy then opens it instead
   const SITE = (typeof window !== "undefined" && window.AD_SITE) || null;
   if (!SITE && SITE_URL && /github\.io$/i.test(location.hostname)) location.replace(SITE_URL.replace(/\/+$/, "") + "/" + location.search + location.hash);
   const relay = () => SITE ? location.origin + "/api" : (lsGet("adRelay", "") || RELAY).trim().replace(/\/+$/, "");
