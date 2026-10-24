@@ -742,3 +742,6 @@ html.dark .rb-done{color:#3ccf8e}html.dark .rb-hold{color:#f2b03d}html.dark .rb-
 .mt-pop{width:340px;max-width:calc(100vw - 16px);padding:14px;display:flex;flex-direction:column;gap:8px;font-size:13px;max-height:calc(100vh - 16px);overflow:auto}
 .mt-pop dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:0}.mt-pop dt{color:var(--dim)}.mt-pop dd{margin:0}.mt-pop p{margin:0;line-height:1.45}.mt-pop .fl{margin:0}.mt-pop textarea{resize:vertical;font:inherit}
 .sm-n{width:64px;display:inline-block;margin:0 4px}
+.vd-det{border:0;background:var(--panel);color:var(--th2);border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vd-chip .vd-det{color:var(--th2)}.vd-chip .vd-det.bad{color:#c0392b;font-weight:700}.vd-tbl .vd-det{background:none;padding:0;max-width:260px}
+.vd-pop{width:320px;padding:14px;display:flex;flex-direction:column;gap:8px}.vd-pop p{margin:0;font-size:12.5px}.vd-pop .fl{margin:0}.vd-pop textarea{resize:vertical;font:inherit}

@@ -78,10 +78,20 @@ const Parts = (() => {
     if (r){ doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("Rev " + r, 196, 14, { align: "right" }); }
     doc.setTextColor(30); doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text(doc.splitTextToSize(a.f.title || "", 182), 14, 36);
     doc.setFont("helvetica", "normal"); doc.setTextColor(90);
-    const pf = Profile.get(), meta = ["Date: " + fmtDate(now()), Profile.name() ? "Issued by: " + Profile.name() + (pf.role ? ", " + pf.role : "") : "", pf.mobile ? "Mobile: " + pf.mobile : "", pf.email ? "Email: " + pf.email : "", a.f.location ? "Location: " + a.f.location : "", Array.isArray(a.f.equipment) && a.f.equipment.length ? "Equipment: " + a.f.equipment.join(", ") : ""].filter(Boolean);
-    doc.text(doc.splitTextToSize(meta.join("     "), 182), 14, 44);
-    if (kind === "mto" && (a.rfqTo || []).length){ doc.setFont("helvetica", "bold"); doc.setTextColor(30); doc.text(doc.splitTextToSize("To: " + a.rfqTo.join(", ") + (a.rfqCat ? "   (" + a.rfqCat + ")" : ""), 182), 14, 49.5); doc.setFont("helvetica", "normal"); }
-    doc.autoTable({ startY: kind === "mto" && (a.rfqTo || []).length ? 55 : 50, head: [["Item"].concat(COLS[kind].map(c => c[1]))], body: items.map((it, i) => [i + 1].concat(COLS[kind].map(([k]) => it[k] || ""))),
+    const pf = Profile.get(), tl = doc.splitTextToSize(a.f.title || "", 182).length;
+    let y0 = 36 + tl * 4.6 + 2;
+    if (kind === "mto"){
+      /* From (whoever exports it, from their profile) and To (the vendors picked), side by side */
+      const from = [Profile.name() || "Name not set (File, Your profile)", pf.role, pf.company, pf.mobile && "Mobile " + pf.mobile, pf.email].filter(Boolean);
+      const to = (a.rfqTo || []).length ? a.rfqTo.map(n => Vendors.lines(n)) : [["No vendor picked"]];
+      const box = (x, label, groups) => { let yy = y0 + 5.5; doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(110); doc.text(label.toUpperCase(), x + 3, y0 + 4.5); yy += 1;
+        groups.forEach((g, gi) => { if (gi) yy += 2; g.forEach((l, li) => { doc.setFont("helvetica", li ? "normal" : "bold"); doc.setFontSize(li ? 9 : 10); doc.setTextColor(li ? 60 : 25); const w = doc.splitTextToSize(String(l), 84); doc.text(w, x + 3, yy + 3); yy += w.length * 4.2; }); });
+        return yy - y0 + 2; };
+      const hF = box(14, "From", [from]), hT = box(108, "To" + (a.rfqCat ? "  ·  " + a.rfqCat : ""), to), hb = Math.max(hF, hT);
+      doc.setDrawColor(217, 222, 229); doc.setLineWidth(0.3); doc.roundedRect(14, y0, 90, hb, 1.5, 1.5); doc.roundedRect(108, y0, 88, hb, 1.5, 1.5); y0 += hb + 5; }
+    const meta = ["Date: " + fmtDate(now()), kind !== "mto" && Profile.name() ? "Issued by: " + Profile.name() + (pf.role ? ", " + pf.role : "") : "", kind !== "mto" && pf.mobile ? "Mobile: " + pf.mobile : "", kind !== "mto" && pf.email ? "Email: " + pf.email : "", a.f.location ? "Location: " + a.f.location : "", Array.isArray(a.f.equipment) && a.f.equipment.length ? "Equipment: " + a.f.equipment.join(", ") : ""].filter(Boolean);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(90); const ml = doc.splitTextToSize(meta.join("     "), 182); doc.text(ml, 14, y0 + 2); y0 += ml.length * 4.4 + 4;
+    doc.autoTable({ startY: y0, head: [["Item"].concat(COLS[kind].map(c => c[1]))], body: items.map((it, i) => [i + 1].concat(COLS[kind].map(([k]) => it[k] || ""))),
       styles: { font: "helvetica", fontSize: 9.5, cellPadding: 2.2, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" }, headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 62 }, 3: { cellWidth: 14, halign: "right" }, 4: { cellWidth: 16 } }, margin: { left: 14, right: 14 } });
     let y = doc.lastAutoTable.finalY + 8; doc.setFontSize(9); doc.setTextColor(110);
@@ -93,7 +103,9 @@ const Parts = (() => {
   async function pdf(a, kind){ const items = list(a, kind); if (!items.length) return alert("Nothing to export yet."); if (exporting) return; exporting = true;
     try { if (kind !== "mto"){ Excel.save(await build(a, kind), fname(a, kind)); return; }
       if (!Store.S.edit) return App.viewOnly();
-      const r = rev((a.rfq || []).length); if (!await confirmBox("Export the RFQ as Rev " + r + "? It's kept in the RFQ revisions for traceability.", "Export Rev " + r)) return;
+      const r = rev((a.rfq || []).length), pf = Profile.get(), miss = [!Profile.name() && "your name", !pf.mobile && "your mobile", !pf.email && "your email"].filter(Boolean), noTo = !(a.rfqTo || []).length, bare = (a.rfqTo || []).filter(n => { const v = Vendors.byName(n) || {}; return !(v.contact || v.email || v.phone); });
+      const warn = (miss.length ? " Your profile has no " + miss.join(", ") + " (File, Your profile)." : "") + (noTo ? " No vendor is picked in Send RFQ to." : bare.length ? " No contact details for " + bare.join(", ") + " (click the vendor in Send RFQ to)." : "");
+      if (!await confirmBox("Export the RFQ as Rev " + r + "? It's kept in the RFQ revisions for traceability." + (warn ? " Missing on the RFQ:" + warn : ""), "Export Rev " + r)) return;
       const blob = await build(a, kind, r), name = fname(a, kind, r), path = pRfq(a._p, Store.actId(a) + "-rev-" + r + ".pdf");
       /* the rev is recorded first, so its letter is never handed out twice */
       Store.mutate("a:" + a._p, () => { (a.rfq = a.rfq || []).push({ rev: r, at: now(), by: Profile.name(), n: items.length, name, path, items: clone(items) }); Store.touch(a); }); Store.log("Exported " + name);

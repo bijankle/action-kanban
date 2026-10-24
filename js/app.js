@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.0";
+const APP_VERSION = "1.10.1";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -148,7 +148,7 @@ const App = (() => {
   /* the profile window, from the round button top right */
   function profile(after){ const p = Profile.get(), F = (k, l, t, ph) => '<label class="fl">' + l + '<input class="in" data-k="' + k + '" type="' + (t || "text") + '" value="' + esc(p[k]) + '"' + (ph ? ' placeholder="' + ph + '"' : "") + '></label>';
     const m = modal('<h3>Your profile</h3><p class="dim">Goes on the workpacks and RFQs you export, so people know who to contact with any queries. Everyone signed in can see it.</p><div class="pf-g">' + F("first", "First name") + F("last", "Last name") + '</div>'
-      + F("role", "Role", "text", "e.g. Maintenance Engineer") + '<div class="pf-g">' + F("mobile", "Mobile", "tel") + F("email", "Email", "email") + '</div><div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Save</button></div>', { cls: "pf-win" });
+      + '<div class="pf-g">' + F("role", "Role", "text", "e.g. Maintenance Engineer") + F("company", "Company", "text", "e.g. KCGM") + '</div>' + '<div class="pf-g">' + F("mobile", "Mobile", "tel") + F("email", "Email", "email") + '</div><div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Save</button></div>', { cls: "pf-win" });
     $("[data-k=first]", m).focus(); $(".yn-no", m).onclick = () => m.close();
     $(".yn-yes", m).onclick = () => { const o = {}; $$("[data-k]", m).forEach(i => o[i.dataset.k] = i.value.trim());
       if (!o.first || !/^\S+@\S+\.\S+$/.test(o.email)) return note("First name and a valid email are needed");

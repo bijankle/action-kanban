@@ -18,8 +18,10 @@ const Vendors = (() => {
       + (ro || !hasKey() ? "" : '<button type="button" class="btn ghost sm vd-sug" data-k="sug" title="Ask Gemini which category fits the MTO">✨ Suggest</button>')
       + '<label class="fl vd-pick">Vendor<div class="combo"><input class="in" data-k="ven" autocomplete="off" placeholder="' + (c ? "Pick from " + inCat(c).length + " approved vendors" : "Search all approved vendors") + '"' + (ro ? " readonly" : "") + '></div></label></div>'
       + (c ? '<div class="dim vd-look">' + esc((cats().find(x => x.name === c) || {}).look || "") + '</div>' : "")
-      + '<div class="vd-to">' + (to.length ? to.map(n => { const v = byName(n) || {}; return '<span class="vd-chip" title="' + esc([v.cat, v.ordered, v.po ? v.po + " POs, last " + fmtDate(v.last) : ""].filter(Boolean).join("\n")) + '"><b>' + esc(n) + '</b>' + (v.type ? '<i>' + esc(v.type) + '</i>' : "") + (ro ? "" : '<button type="button" data-x="' + esc(n) + '" title="Remove">✕</button>') + '</span>'; }).join("") : '<span class="dim">No vendors picked yet.</span>') + '</div></div>'; }
-  function wire(el, a, ro){ const b = $(".vd-box", el); if (!b || ro || !all().length) return; const key = "a:" + a._p;
+      + '<div class="vd-to">' + (to.length ? to.map(n => { const v = byName(n) || {}; const has = !!(v.contact || v.email || v.phone); return '<span class="vd-chip" title="' + esc([v.cat, v.ordered, v.po ? v.po + " POs, last " + fmtDate(v.last) : ""].filter(Boolean).join("\n")) + '"><b>' + esc(n) + '</b>' + (v.type ? '<i>' + esc(v.type) + '</i>' : "")
+        + '<button type="button" class="vd-det' + (has ? "" : " bad") + '" data-vd="' + esc(n) + '" title="' + esc(has ? [v.contact, v.phone, v.email, v.address].filter(Boolean).join("\n") + "\nClick to edit" : "No contact details yet, they go on the RFQ. Click to add them.") + '">' + (has ? esc(v.contact || v.email || v.phone) : "Add contact details") + '</button>' + (ro ? "" : '<button type="button" data-x="' + esc(n) + '" title="Remove">✕</button>') + '</span>'; }).join("") : '<span class="dim">No vendors picked yet.</span>') + '</div></div>'; }
+  function wire(el, a, ro){ const b = $(".vd-box", el); if (!b || !all().length) return; const key = "a:" + a._p;
+    $$("[data-vd]", b).forEach(x => x.onclick = () => details(x.dataset.vd, x)); if (ro) return;
     const set = (fn, msg) => { Store.mutate(key, () => { fn(); Store.touch(a); }); if (msg) Store.log(msg); };
     const sel = $("[data-k=cat]", b); if (sel) sel.onchange = () => set(() => { a.rfqCat = sel.value; a.rfqCatAI = false; a.rfqCatWhy = ""; }, "Set the vendor category of " + Store.actId(a));
     const sg = $("[data-k=sug]", b); if (sg) sg.onclick = () => suggest(a, true);
@@ -60,22 +62,41 @@ const Vendors = (() => {
     body.innerHTML = '<div class="dv-h">Approved vendors <span class="dim">' + all().length + ' vendors in ' + cats().length + ' categories' + (V().source ? ", from " + esc(V().source) : "") + (V().updated ? ", " + esc(fmtDate(V().updated)) : "") + '</span></div>'
       + '<p class="dim">These are the vendors offered on an action\'s MTO tab. To update them, import the latest Approved Vendor List spreadsheet: it replaces the list for everyone.</p>'
       + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="imp">Import approved vendor list (Excel)…</button>')
-      + '<table class="tbl ct vd-tbl"><thead><tr><th>Vendor</th><th>Category</th><th>Supply type</th><th>What we have ordered from them</th><th>POs</th><th>Last PO</th></tr></thead><tbody>'
-      + list.slice(0, 600).map(v => '<tr><td><b>' + esc(v.name) + '</b></td><td>' + esc(v.cat) + '</td><td>' + esc(v.type) + '</td><td>' + esc(v.ordered) + '</td><td>' + (v.po || "") + '</td><td>' + esc(fmtDate(v.last)) + '</td></tr>').join("") + '</tbody></table>';
-    const b = $("[data-k=imp]", body); if (b) b.onclick = () => pickFile(".xlsx", false, importFile); }
+      + '<table class="tbl ct vd-tbl"><thead><tr><th>Vendor</th><th>Category</th><th>Supply type</th><th>What we have ordered from them</th><th>POs</th><th>Last PO</th><th>Contact <span class="dim">(on the RFQ)</span></th></tr></thead><tbody>'
+      + list.slice(0, 600).map(v => '<tr><td><b>' + esc(v.name) + '</b></td><td>' + esc(v.cat) + '</td><td>' + esc(v.type) + '</td><td>' + esc(v.ordered) + '</td><td>' + (v.po || "") + '</td><td>' + esc(fmtDate(v.last)) + '</td><td><button type="button" class="link vd-det' + (v.contact || v.email || v.phone ? "" : " dim") + '" data-vd="' + esc(v.name) + '">' + esc([v.contact, v.phone, v.email].filter(Boolean).join(", ") || (ro ? "" : "Add")) + '</button></td></tr>').join("") + '</tbody></table>';
+    const b = $("[data-k=imp]", body); if (b) b.onclick = () => pickFile(".xlsx", false, importFile);
+    $$("[data-vd]", body).forEach(x => x.onclick = () => details(x.dataset.vd, x)); }
+  /* a vendor's contact details, which go on the RFQ: who to send it to, their phone, email and address */
+  const DET = [["contact", "Contact person"], ["phone", "Phone"], ["email", "Email"], ["address", "Address"]];
+  function details(name, anchor){ const v = byName(name); if (!v) return; Fields.closePop(); const ro = !Store.S.edit;
+    const p = h('<div class="pop vd-pop"><b>' + esc(v.name) + '</b><p class="dim">These go on the RFQ, under To. Everyone shares them.</p>'
+      + DET.map(([k, l]) => '<label class="fl">' + l + (k === "address" ? '<textarea class="in" rows="2" data-k="' + k + '"' + (ro ? " readonly" : "") + '>' + esc(v[k] || "") + '</textarea>' : '<input class="in" data-k="' + k + '" type="' + (k === "email" ? "email" : k === "phone" ? "tel" : "text") + '" value="' + esc(v[k] || "") + '"' + (ro ? " readonly" : "") + '>') + '</label>').join("")
+      + (ro ? "" : '<div class="yn-btns"><button type="button" class="yn-yes" data-k="ok">Save</button></div>') + '</div>');
+    document.body.appendChild(p); Fields.place(p, anchor); const r = p.getBoundingClientRect(); if (r.bottom > innerHeight - 8) p.style.top = Math.max(8, innerHeight - r.height - 8) + "px"; if (r.right > innerWidth - 8) p.style.left = Math.max(8, innerWidth - r.width - 8) + "px";
+    const ok = $("[data-k=ok]", p); if (ok) ok.onclick = () => { const o = {}; DET.forEach(([k]) => o[k] = $('[data-k="' + k + '"]', p).value.trim());
+      if (DET.some(([k]) => (v[k] || "") !== o[k])){ Store.mutate("vendors", () => { DET.forEach(([k]) => { if (o[k]) v[k] = o[k]; else delete v[k]; }); }); Store.log("Edited the contact details of " + v.name); }
+      Fields.closePop(); };
+    $$("input", p).forEach(i => i.onkeydown = e => { if (e.key === "Enter" && ok) ok.click(); if (e.key === "Escape") Fields.closePop(); });
+    setTimeout(() => $("input", p).focus(), 0); }
+  /* the To lines on the RFQ */
+  const lines = name => { const v = byName(name) || { name }; return [v.name, v.contact && "Attn: " + v.contact, v.phone && "Phone " + v.phone, v.email, v.address].filter(Boolean); };
   async function importFile(file){ if (!file) return; if (!Store.S.edit) return App.viewOnly();
     try { const book = await Excel.read(file), sheets = Object.values(book);
       const find = (need) => { for (const rows of sheets){ const hi = rows.findIndex(r => r && need.every(n => r.some(c => String(c || "").trim().toUpperCase() === n))); if (hi >= 0) return { rows, hi, col: n => rows[hi].findIndex(c => String(c || "").trim().toUpperCase() === n) }; } return null; };
       const d = find(["CATEGORY", "VENDOR"]); if (!d) throw new Error("No sheet has CATEGORY and VENDOR columns.");
-      const C = { cat: d.col("CATEGORY"), name: d.col("VENDOR"), type: d.col("SUPPLY TYPE"), ordered: d.col("WHAT WE HAVE ORDERED FROM THEM"), po: d.col("PO COUNT"), first: d.col("FIRST PO"), last: d.col("LAST PO"), aka: d.col("NAMES USED IN PO REGISTER") };
+      const C = { cat: d.col("CATEGORY"), name: d.col("VENDOR"), type: d.col("SUPPLY TYPE"), ordered: d.col("WHAT WE HAVE ORDERED FROM THEM"), po: d.col("PO COUNT"), first: d.col("FIRST PO"), last: d.col("LAST PO"), aka: d.col("NAMES USED IN PO REGISTER"),
+        contact: ["CONTACT", "CONTACT NAME", "CONTACT PERSON"].map(d.col).find(i => i >= 0) ?? -1, phone: ["PHONE", "MOBILE", "PHONE NUMBER"].map(d.col).find(i => i >= 0) ?? -1, email: ["EMAIL", "E-MAIL", "EMAIL ADDRESS"].map(d.col).find(i => i >= 0) ?? -1, address: ["ADDRESS"].map(d.col).find(i => i >= 0) ?? -1 };
       const g = (r, k) => C[k] >= 0 && r[C[k]] != null ? r[C[k]] : "";
       const vendors = d.rows.slice(d.hi + 1).filter(r => r && g(r, "name") && g(r, "cat")).map(r => ({ name: String(g(r, "name")).trim(), cat: String(g(r, "cat")).trim(), type: String(g(r, "type")).trim(), ordered: String(g(r, "ordered")).trim(), po: +g(r, "po") || 0, first: Excel.xlDate(g(r, "first")), last: Excel.xlDate(g(r, "last")), aka: String(g(r, "aka")).trim() }))
         .filter(v => !/non procurement/i.test(v.cat));
+      /* contact details: from the sheet when it has them, else kept from the list being replaced */
+      d.rows.slice(d.hi + 1).forEach(r => { const n = r && String(g(r, "name")).trim(), v = n && vendors.find(x => x.name === n); if (!v) return; const old = byName(n) || {};
+        ["contact", "phone", "email", "address"].forEach(k => { const x = String(g(r, k) || "").trim() || old[k]; if (x) v[k] = x; }); });
       const qg = find(["CATEGORY", "LOOK HERE FOR"]), look = {}; if (qg) qg.rows.slice(qg.hi + 1).forEach(r => { if (r && r[qg.col("CATEGORY")]) look[String(r[qg.col("CATEGORY")]).trim()] = String(r[qg.col("LOOK HERE FOR")] || "").trim(); });
       const categories = [...new Set((qg ? Object.keys(look) : []).concat(vendors.map(v => v.cat)))].filter(c => vendors.some(v => v.cat === c)).map(name => ({ name, look: look[name] || "" }));
       if (!await confirmBox("Replace the approved vendor list with " + vendors.length + " vendors in " + categories.length + " categories from " + file.name + "?", "Replace")) return;
       Store.mutate("vendors", () => { Store.S.vendors = { v: 1, source: file.name, updated: new Date().toISOString().slice(0, 10), categories, vendors }; }); Store.log("Imported the approved vendor list " + file.name);
       note("Imported " + vendors.length + " approved vendors"); }
     catch (e){ console.error(e); alert("Couldn't import the vendor list: " + e.message); } }
-  return { box, wire, suggest, page, importFile, byName };
+  return { box, wire, suggest, page, importFile, byName, lines, details };
 })();
