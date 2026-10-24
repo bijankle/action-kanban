@@ -72,7 +72,7 @@ const Table = (() => {
     const fixW = cs.filter(fix).reduce((t, c) => t + fw(c), 0), flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const wid = c => fix(c) ? fw(c) + "px" : "max(" + (c.id === "title" ? 260 : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
-    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" aria-label="Complete, on hold, delete"></th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + wid(c) + '">'
+    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" aria-label="Complete, on hold, delete" style="width:' + NEED.act + 'px"></th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + esc(head(c)) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">i</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><i class="th-r"></i></th>').join("");
     const minW = cs.reduce((t, c) => t + least(c), 0);
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
@@ -104,8 +104,11 @@ const Table = (() => {
       r.ondblclick = e => { e.stopPropagation(); const i = [...th.parentNode.children].indexOf(th), l = $(".th-l", th);
         let w = headW(cs[i] ? cs[i].label : l.textContent, getComputedStyle(l).font);
         $$("tbody tr", el).forEach(tr => { const td = tr.children[i]; if (!td) return; const k = td.firstElementChild;
-          const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML; document.body.appendChild(m);
-          w = Math.max(w, Math.min(640, m.scrollWidth + 22, k && k.matches("select,input") ? k.scrollWidth + 22 : 9999)); m.remove(); });
+          const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML;
+          /* (a box you type in measures by what's in it, or its hint when empty, not by the box's default width) */
+          $$("input,select,textarea", m).forEach((x, n) => { const src = $$("input,select,textarea", td)[n], t = document.createElement("span");
+            t.textContent = src.tagName === "SELECT" ? ((src.options[src.selectedIndex] || {}).text || "") : (src.value || src.placeholder || ""); t.style.padding = "0 9px"; x.replaceWith(t); });
+          document.body.appendChild(m); w = Math.max(w, Math.min(640, m.scrollWidth + 22)); m.remove(); });
         const ws = widths(); ws[id] = Math.round(w); lsSet("adColW", ws); App.render(); };
       r.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); if (e.detail > 1) return; const x0 = e.clientX, w0 = th.offsetWidth; r.setPointerCapture(e.pointerId);
         let moved = false; r.onpointermove = ev => { if (Math.abs(ev.clientX - x0) > 2) moved = true; if (moved) th.style.width = Math.max(50, w0 + ev.clientX - x0) + "px"; };
