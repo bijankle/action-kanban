@@ -435,7 +435,7 @@ html.dark .ap-r input[type=range]{background:linear-gradient(var(--accent),var(-
 .ph-btns{display:flex;flex-direction:column;align-items:flex-start;gap:7px;font-size:13px}
 
 /* list rows: photo count and upload buttons */
-.tbl td.idc{display:flex;align-items:center;gap:4px}
+.tbl td.idc{white-space:nowrap}
 .pc{border:0;background:none;font-size:12px;color:var(--dim);padding:2px 5px;border-radius:6px;cursor:pointer;margin-left:2px;white-space:nowrap}.pc:hover{background:var(--th-t);color:var(--ink)}
 .pc.up{opacity:0;font-size:14px}.tbl tr:hover .pc.up{opacity:1}
 
@@ -668,8 +668,10 @@ html.dark .av-tab b{color:var(--ink)}
 .hl{all:unset;display:inline-flex;align-items:center;gap:3px;cursor:pointer;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}.hl .go{width:12px;height:12px;color:var(--th);flex:none}.hl:hover{color:var(--th)}.hl:focus-visible{outline:2px solid var(--th);outline-offset:2px;border-radius:3px}html.dark .hl .go{color:var(--accent)}
 /* the list scrolls up and down only: titles wrap to two lines rather than being cut off */
 #view[data-tab="actions"]{overflow-x:hidden}
-.tbl td.ttl{white-space:normal;line-height:1.3}.tbl td.ttl{display:table-cell}.tbl td.ttl{overflow:hidden}
-.tbl td.ttl{word-break:break-word}.tbl td.ttl{-webkit-line-clamp:2}
+/* one line titles: … and a more… when it doesn't fit */
+.tbl td.ttl{overflow:hidden}.tt-w{display:flex;align-items:center;gap:6px;min-width:0}.tt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tt-more{display:none;flex:none;border:0;background:none;padding:0;color:var(--th);font:600 12px var(--font);cursor:pointer;text-decoration:underline}.tt-more:hover{color:var(--ink)}td.ttl.cut .tt-more{display:inline}
+.ttpop{max-width:360px;display:flex;flex-direction:column;gap:6px;padding:12px 14px}.ttpop-id{font-weight:800;font-size:12px;color:var(--dim)}.ttpop-t{font-weight:600;font-size:14px;line-height:1.4}.ttpop .link{align-self:flex-start}
 
 /* On Hold: the i button beside the status (red while who, their mobile or the date is missing) and its form */
 .hold-i{flex:none;width:22px;height:22px;border-radius:50%;border:0;background:var(--th);color:#fff;font:italic 800 13px/22px Georgia,serif;cursor:pointer;display:inline-grid;place-items:center;padding:0;margin-left:6px;vertical-align:middle}
