@@ -191,15 +191,15 @@ const Fields = (() => {
     draw(); i.focus(); p._done = commit; }
   function place(p, anchor){ const r = anchor.getBoundingClientRect(); p.style.left = Math.min(r.left, innerWidth - 290) + "px";
     const below = innerHeight - r.bottom > 300; p.style.top = (below ? r.bottom + 4 : Math.max(8, r.top - 304)) + "px"; }
-  /* a text field opened over its box in full to read and edit: saved when you click away or press Ctrl+Enter (Enter too
-     for one line fields like the title), Esc to leave it as it was */
+  /* a text field opened over its box in full to read and edit: Enter or clicking away saves it and closes it, Shift+Enter
+     starts a new line (not in one line fields like the title), Esc leaves it as it was */
   function textPop(anchor, a, f){ closePop(); const r = anchor.getBoundingClientRect(), one = f.type !== "longtext";
-    const p = h('<div class="pop ltpop"><div class="ltpop-h"><b>' + esc(Store.actId(a)) + '</b> ' + esc(f.label) + '</div><textarea class="in ta" rows="' + (one ? 2 : 5) + '"></textarea><div class="dim sm-t">Saved when you click away' + (one ? " or press Enter" : "") + '. Esc to cancel.</div></div>');
+    const p = h('<div class="pop ltpop"><div class="ltpop-h"><b>' + esc(Store.actId(a)) + '</b> ' + esc(f.label) + '</div><textarea class="in ta" rows="' + (one ? 2 : 5) + '"></textarea><div class="dim sm-t">Enter to save' + (one ? "" : ", Shift+Enter for a new line") + '. Esc to cancel.</div></div>');
     const ta = $("textarea", p), was = String(a.f[f.id] || ""); ta.value = was; document.body.appendChild(p);
     const w = Math.max(r.width, 340); p.style.width = Math.min(w, innerWidth - 16) + "px"; p.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + "px"; p.style.top = Math.max(8, Math.min(r.top, innerHeight - p.offsetHeight - 8)) + "px";
     const grow = () => { ta.style.height = "auto"; ta.style.height = Math.min(innerHeight * 0.6, ta.scrollHeight + 2) + "px"; }; ta.oninput = grow; grow();
     let keep = true; p._done = () => { const v = one ? ta.value.replace(/\s*\n\s*/g, " ").trim() : ta.value; if (keep && v !== was) set(a, f, v); };
-    ta.onkeydown = ev => { if (ev.key === "Escape"){ ev.stopPropagation(); keep = false; closePop(); } else if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey || one)){ ev.preventDefault(); closePop(); } };
+    ta.onkeydown = ev => { if (ev.key === "Escape"){ ev.stopPropagation(); keep = false; closePop(); } else if (ev.key === "Enter" && (one || !ev.shiftKey)){ ev.preventDefault(); closePop(); } };
     ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); return p; }
   function closePop(){ $$(".pop").forEach(p => { p._done && p._done(); p.remove(); }); }
   document.addEventListener("mousedown", e => { if (!e.target.closest(".pop, .pj-b, #profB")) closePop(); });
