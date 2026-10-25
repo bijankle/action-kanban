@@ -834,3 +834,6 @@ html.dark .eta-i.ok{background:#173326;color:#5fd39a}html.dark .eta-i.late{backg
 .tg-o b{white-space:nowrap}.tg-o span{color:var(--muted);font-size:12.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tg-o i{font-style:normal;font-size:11px;color:var(--dim);white-space:nowrap}
 .tg-o.on{background:var(--th-t)}.tg-o mark{background:#fff3c4;color:inherit;border-radius:2px;padding:0 1px}
 html.dark .tg-o mark{background:#5a4a12}
+/* a box you're typing in (option 1): a thin blue edge, no glow */
+:root{--focus:#2f6fd1}html.dark{--focus:#7fa8e0}
+.in:focus,.tbl td.ed .in:focus,.ct .in:focus,.mt-tbl .pt-in:focus,.cb input:focus{border-color:var(--focus);box-shadow:0 0 0 1px var(--focus);background:var(--panel)}
