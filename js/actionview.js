@@ -27,6 +27,10 @@ const ActionView = (() => {
       + '<div class="av-body' + (sub === "overview" ? " ov" : "") + '"></div></div>';
     $$(".av-head [data-f], .av-title[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     const ti = $(".av-title .in", el); if (ti) ti.placeholder = "Title";
+    /* a title too long for the header ends in … with a more… that opens it in full to read and edit */
+    const avt = $(".av-title", el); if (avt){ const mb = h('<button type="button" class="av-more" title="Show the full title">more…</button>'); avt.appendChild(mb); mb.onclick = () => Fields.textPop(avt, a, Store.field("title"));
+      const fit = () => { if (!avt.isConnected){ ob.disconnect(); return; } const t = $(".in, .fv", avt); avt.classList.toggle("cut", !!t && document.activeElement !== t && t.scrollWidth > t.clientWidth + 1); };
+      const ob = new ResizeObserver(fit); ob.observe(avt); const t = $(".in", avt); if (t){ t.addEventListener("focus", fit); t.addEventListener("blur", () => setTimeout(fit, 0)); } }
     const body = $(".av-body", el);
     if (sub === "overview") overview(body, a, ro); else if (sub === "isol") Isol.renderFor(body, a, keepP); else if (sub === "drawings") Drawings.renderFor(body, a); else { Parts.renderFor(body, a, sub, keepP); body.insertAdjacentHTML("afterbegin", '<div class="av-sub" role="tablist">' + [["mto", "MTO"], ["spares", "Spares"]].map(([k, t]) => '<button type="button" data-m="' + k + '"' + (k === sub ? ' class="on"' : "") + '>' + t + (n(k) ? ' <b>' + n(k) + '</b>' : "") + '</button>').join("") + '</div>'); $$(".av-sub button", body).forEach(b => b.onclick = () => { App.sub = b.dataset.m; lsSet("adMat", b.dataset.m); App.render(); }); }
     body.scrollTop = sc;

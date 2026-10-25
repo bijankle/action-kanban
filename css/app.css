@@ -889,3 +889,7 @@ input[type=checkbox]{width:18px;height:18px}
 /* the ID box in the middle of its column, with the same gap either side of the ID inside the box */
 .tbl td.idc{padding:0;text-align:center}.idw .aid{margin-right:8px}
 .fico .fa{fill:#6d4fd8}html.dark .fico .fa{fill:#a993ff}
+/* the header title: one line, ending in … with a more… when it doesn't fit */
+.av-title{display:flex;align-items:center;gap:8px;min-width:0}.av-title>.in,.av-title>.fv{flex:1;min-width:0;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.av-title .av-more{display:none}.av-title.cut .av-more{display:inline}
+.av-more{flex:none;border:0;background:none;padding:0;color:var(--th);font:600 12px var(--font);cursor:pointer;text-decoration:underline}.av-more:hover{color:var(--ink)}

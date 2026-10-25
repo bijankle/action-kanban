@@ -71,14 +71,7 @@ const Table = (() => {
   /* long text (notes and the like) in the list: click the box, or its more…, and it opens over the cell in full to edit,
      saved when you click away or press Ctrl+Enter, Esc to leave it as it was */
   document.addEventListener("click", e => { const b = e.target.closest("[data-lt]"); if (!b || !b.closest(".tbl")) return; e.stopPropagation(); Fields.closePop();
-    const tr = b.closest("tr"), a = tr && App.act(tr.dataset.ref), f = a && Store.field(b.dataset.lt); if (!f) return; const td = b.closest("td"), r = td.getBoundingClientRect();
-    const p = h('<div class="pop ltpop"><div class="ltpop-h"><b>' + esc(Store.actId(a)) + '</b> ' + esc(f.label) + '</div><textarea class="in ta" rows="5"></textarea><div class="dim sm-t">Saved when you click away. Esc to cancel.</div></div>');
-    const ta = $("textarea", p), was = String(a.f[f.id] || ""); ta.value = was; document.body.appendChild(p);
-    const w = Math.max(r.width, 340); p.style.width = w + "px"; p.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + "px"; p.style.top = Math.max(8, Math.min(r.top, innerHeight - p.offsetHeight - 8)) + "px";
-    const grow = () => { ta.style.height = "auto"; ta.style.height = Math.min(innerHeight * 0.6, ta.scrollHeight + 2) + "px"; }; ta.oninput = grow; grow();
-    let keep = true; p._done = () => { if (keep && ta.value !== was) Fields.set(a, f, ta.value); };
-    ta.onkeydown = ev => { if (ev.key === "Escape"){ ev.stopPropagation(); keep = false; Fields.closePop(); } else if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)){ ev.preventDefault(); Fields.closePop(); } };
-    ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, true);
+    const tr = b.closest("tr"), a = tr && App.act(tr.dataset.ref), f = a && Store.field(b.dataset.lt); if (f) Fields.textPop(b.closest("td"), a, f); }, true);
   document.addEventListener("click", e => { const b = e.target.closest(".tt-more"); if (!b) return; e.stopPropagation(); Fields.closePop(); const tr = b.closest("tr"), a = tr && App.act(tr.dataset.ref); if (!a) return;
     const p = h('<div class="pop ttpop"><div class="ttpop-id">' + esc(Store.actId(a)) + '</div><div class="ttpop-t">' + esc(a.f.title || "") + '</div><button type="button" class="link">Open the action</button></div>');
     document.body.appendChild(p); Fields.place(p, b); $(".link", p).onclick = () => { Fields.closePop(); App.select(tr.dataset.ref); }; }, true);

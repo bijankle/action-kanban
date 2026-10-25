@@ -57,10 +57,12 @@ const Intake = (() => {
           if (f.type === "longtext") i = '<textarea class="in ta" rows="3" data-f="' + f.id + '">' + esc(v || "") + '</textarea>';
           else if (f.type === "choice") i = '<input class="in' + (v === "TBC" ? " tbc" : "") + '" data-f="' + f.id + '" list="nl_' + f.id + '" value="' + esc(v || "") + '"><datalist id="nl_' + f.id + '">' + Fields.optLabels(f).concat(f.tbc ? ["TBC"] : [], f.na ? ["N/A"] : []).map(o => '<option value="' + esc(o) + '">').join("") + '</datalist>';
           else if (f.type === "check") i = '<input type="checkbox" data-f="' + f.id + '"' + (v ? " checked" : "") + '>';
-          else i = '<input class="in' + (v === "TBC" ? " tbc" : "") + '" data-f="' + f.id + '" type="' + (f.type === "date" && (!v || /^\d{4}-/.test(v)) ? "date" : "text") + '" value="' + esc(Array.isArray(v) ? v.join(", ") : v || "") + '"' + (f.type === "multi" ? ' placeholder="Separate with commas"' : "") + '>';
+          else i = '<input class="in' + (v === "TBC" ? " tbc" : "") + '" data-f="' + f.id + '" type="' + (f.type === "date" && (!v || /^\d{4}-/.test(v)) ? "date" : "text") + '" value="' + esc(Array.isArray(v) ? v.join(", ") : v || "") + '"' + (f.type === "multi" ? ' placeholder="' + (f.id === "equipment" ? "Add tag" : "Add " + esc(f.label.toLowerCase())) + '"' : "") + '>';
           return '<label class="fl' + (f.type === "check" ? " in-row" : "") + '">' + esc(f.label) + i + '</label>'; }).join("") + (full ? "" : '<button type="button" class="link" data-k="more">Show all fields</button>');
       const mo = $("[data-k=more]", form); if (mo) mo.onclick = () => { read(); draw(true); };
-      $$("textarea", form).forEach(t => { Fields.grow(t); t.oninput = () => Fields.grow(t); }); const t = $("[data-f=title]", form); t && !full && t.focus(); };
+      $$("textarea", form).forEach(t => { Fields.grow(t); t.oninput = () => Fields.grow(t); });
+      $$("input[data-f]", form).forEach(i => { const f = Store.field(i.dataset.f); if (f && f.type === "multi") Fields.suggest(i, f); });
+      const t = $("[data-f=title]", form); t && !full && t.focus(); };
     const read = () => { const s = $("[data-k=stage]", form); if (s) stage = s.value; $$("[data-f]", form).forEach(i => { const f = Store.field(i.dataset.f); let v = i.type === "checkbox" ? i.checked : i.value.trim();
         if (f.type === "multi") v = v ? v.split(/\s*,\s*/).filter(Boolean) : []; if (v === "" || (Array.isArray(v) && !v.length) || v === false) delete vals[f.id]; else vals[f.id] = v; }); };
     draw(false);
