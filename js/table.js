@@ -70,9 +70,9 @@ const Table = (() => {
        their heading (headings wrap onto two lines), or what their contents need if that's wider */
     const tickF = "700 11.5px " + getComputedStyle(document.body).fontFamily;
     /* a column nobody has sized is as wide as the longest word in its heading (the heading wraps a word at a line) or its widest entry */
-    const tickOf = c => Math.max(52, headW(head(c), tickF) + 4);
-    const px = c => ws[c.id] || (TICK.has(c.type) ? tickOf(c) : fix(c) ? Math.max(headW(head(c)), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
-    const FIX = new Set(["act", "id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || (c.type === "choice" && (c.options || []).length <= 3) || !!ws[c.id];   // (a column someone has sized keeps that width; the rest share what's left)
+    const tickOf = c => Math.max(44, headW(head(c), tickF) - 14);   // (the i sits under the heading, so only the longest word and a little padding count)
+    const px = c => ws[c.id] || (c.id === "equipment" ? Math.max(headW("F12-CV-402", "600 13px " + getComputedStyle(document.body).fontFamily) + 34, headW(head(c))) : TICK.has(c.type) ? tickOf(c) : fix(c) ? Math.max(headW(head(c)), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
+    const FIX = new Set(["act", "id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || c.id === "equipment" || (c.type === "choice" && (c.options || []).length <= 3) || !!ws[c.id];   // (a column someone has sized keeps that width; the rest share what's left)
     /* when space runs out, the counts and dates go first, then the location; the tick boxes stay */
     const lp = c => (["sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
     /* the least each column can be; when they don't all fit, the tick columns go first, then the dates and numbers,
@@ -98,6 +98,7 @@ const Table = (() => {
         if (c.type === "act"){ td.classList.add("actc"); td.innerHTML = rowBtns(a); }
         else if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = idBox(a); }
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
+        else if (c.id === "equipment"){ td.classList.add("ed", "tgc"); tagCell(td, a, c); }
         else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi", "choice"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.classList.add("ed"); td.appendChild(Fields.editor(a, c)); if (c.id === "onhold"){ const hb = Hold.btn(a); if (hb){ td.classList.add("has-hold"); td.insertAdjacentHTML("beforeend", hb); } } }
         else if (c.id === "title"){ td.classList.add("ttl"); td.innerHTML = '<div class="tt-w"><span class="tt">' + (esc(a.f.title || "") || '<span class="dim">No title</span>') + '</span><button type="button" class="tt-more" title="Show the full title">more…</button></div>'; }
         else td.innerHTML = Fields.show(a, c);
@@ -113,6 +114,16 @@ const Table = (() => {
     tb.ondrop = e => { const tr = e.target.closest("tr"); $$("tr.drop", tb).forEach(x => x.classList.remove("drop")); if (!tr || !Media.hasDrop(e)) return; e.preventDefault(); e.stopPropagation(); const a = App.act(tr.dataset.ref); Media.dropOn(a, e); };
     const ab = $(".addc", el); if (ab) ab.onclick = e => { e.stopPropagation(); addPop(ab); };
     wireHead(el, cs); }
+  /* the Tags cell shows the first tag only, as wide as a typical tag number, with +2 when there are more (click it to see
+     them all); clicking the tag box opens it for typing */
+  function tagCell(td, a, c){ const tags = [].concat(a.f[c.id] || []).filter(Boolean), ro = !Store.S.edit;
+    td.innerHTML = '<div class="tgv"><span class="tg1' + (tags.length ? "" : " ph") + '"' + (ro ? "" : ' role="button" tabindex="0" title="Edit the tags"') + '>' + esc(tags[0] || (ro ? "" : "Add tag")) + '</span>'
+      + (tags.length > 1 ? '<button type="button" class="tg-more" title="Show all ' + tags.length + ' tags">+' + (tags.length - 1) + '</button>' : "") + '</div>';
+    const edit = () => { if (ro) return; td.innerHTML = ""; const ed = Fields.editor(a, c); td.appendChild(ed); const i = $("input", ed); if (i){ i.focus(); try { i.setSelectionRange(i.value.length, i.value.length); } catch (e) {} i.addEventListener("blur", () => setTimeout(() => { if (td.isConnected && !td.contains(document.activeElement)) tagCell(td, a, c); }, 150)); } };
+    const t1 = $(".tg1", td); t1.onclick = e => { e.stopPropagation(); edit(); }; t1.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); edit(); } };
+    const mb = $(".tg-more", td); if (mb) mb.onclick = e => { e.stopPropagation(); Fields.closePop();
+      const p = h('<div class="pop tgpop"><div class="pop-h">' + tags.length + ' tags on ' + esc(Store.actId(a)) + '</div>' + tags.map(t => { const it = Equip.get(t); return '<div class="tgp-r"><b>' + esc(t) + '</b>' + (it && it.n ? '<span class="dim">' + esc(it.n) + '</span>' : "") + '</div>'; }).join("") + (ro ? "" : '<button type="button" class="link">Edit the tags</button>') + '</div>');
+      document.body.appendChild(p); Fields.place(p, mb); const l = $(".link", p); if (l) l.onclick = () => { Fields.closePop(); edit(); }; }; }
   /* a column heading's ▾: sort it either way, fit it to its contents, or take it out of the list (+ Add column brings it back) */
   function colMenu(anchor, id, fit){ Fields.closePop(); const f = Store.field(id), keep = id[0] === "_" || id === "title";
     const p = h('<div class="pop colm"><button type="button" data-m="asc">Sort A to Z</button><button type="button" data-m="desc">Sort Z to A</button>' + (App.sort && App.sort.id === id ? '<button type="button" data-m="off">Clear the sort</button>' : "")
@@ -135,7 +146,7 @@ const Table = (() => {
       const mb = $(".th-m", th); if (mb) mb.onclick = e => { e.stopPropagation(); colMenu(mb, id, () => r.ondblclick(new MouseEvent("dblclick"))); };
       /* double click the edge: fit the column to its heading's longest word and its widest cell (as in Excel) */
       r.ondblclick = e => { e.stopPropagation(); const i = [...th.parentNode.children].indexOf(th), l = $(".th-l", th);
-        let w = cs[i] && TICK.has(cs[i].type) ? headW(head(cs[i]), getComputedStyle(l).font) + 4 : headW(cs[i] ? head(cs[i]) : l.textContent, getComputedStyle(l).font);
+        let w = cs[i] && TICK.has(cs[i].type) ? headW(head(cs[i]), getComputedStyle(l).font) - 14 : headW(cs[i] ? head(cs[i]) : l.textContent, getComputedStyle(l).font);
         $$("tbody tr", el).forEach(tr => { const td = tr.children[i]; if (!td) return; const k = td.firstElementChild;
           const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML;
           /* (a box you type in measures by what's in it, or its hint when empty, not by the box's default width) */
