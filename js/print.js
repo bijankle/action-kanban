@@ -53,7 +53,7 @@ const Print = (() => {
       const txt = [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([, v]) => String(v || "").trim()).map(([k, v]) => '<div class="pa-b"><h5>' + k + '</h5><div class="pa-tx">' + esc(v) + '</div></div>').join("");
       const link = GH.appUrl() + "?a=" + encodeURIComponent(a._p + ":" + a.no);
       root.appendChild(h('<section class="pr-act' + (o.newPage || (!o.board && i === 0) ? " np" : "") + '">' + (!o.board && i === 0 ? head : "") + '<div class="pa-h" style="--c:' + esc(s.color) + '"><b>' + esc(Store.actId(a)) + '</b><span class="pa-t">' + esc(a.f.title || "") + '</span><span class="stg">' + esc(s.name) + '</span></div>'
-        + '<div class="pa-sub">' + esc(p.name || "") + ' · <a href="' + esc(link) + '">Open online</a></div>'
+        + (i === 0 ? '<div class="pa-sub">' + esc(p.name || "") + ' · <a href="' + esc(link) + '">Open online</a></div>' : "")   // (the link once, on the first page)
         + (Hold.lines(a).length ? '<div class="pa-hold"><b>On hold</b>' + Hold.lines(a).map(([k, v]) => '<span><i>' + esc(k) + '</i> ' + (k === "Mobile" ? '<a href="tel:' + esc(String(v).replace(/\s/g, "")) + '">' + esc(v) + '</a>' : k === "Email" ? '<a href="mailto:' + esc(v) + '">' + esc(v) + '</a>' : esc(v)) + '</span>').join("") + '</div>' : "")
         /* the text down the left column, the photos down the right; text that runs longer than the photos moves across
            under them (balance, below) */
@@ -72,12 +72,14 @@ const Print = (() => {
      the photos, one at a time while that evens the two columns up */
   function balance(root){ root.classList.add("measure"); $$(".pa-cols", root).forEach(bal); root.classList.remove("measure"); }
   function bal(c){ { const L = $(".pa-l", c), R = $(".pa-r", c); if (!L || !R) return;
+      /* (a column that still ends on the action's first page stays as it is: nothing moves across while there's room) */
+      const top = c.getBoundingClientRect().top - c.closest(".pr-act").getBoundingClientRect().top, fits = col => top + col.offsetHeight <= 273 * 96 / 25.4 - 6;
       $$(".pa-r > .pa-b", R).forEach(b => L.appendChild(b)); const lp0 = $(".pa-ph2", L), rp0 = $(".pa-ph", R); if (lp0){ if (rp0) $$("figure", lp0).forEach(f => rp0.appendChild(f)); lp0.remove(); }   // (start again from all the text on the left, all the photos on the right)
-      let at = null; for (let n = 0; n < 20; n++){ const bs = $$(":scope > .pa-b", L); if (bs.length < 2) break; const last = bs[bs.length - 1], d = L.offsetHeight - R.offsetHeight;
+      let at = null; for (let n = 0; n < 20; n++){ const bs = $$(":scope > .pa-b", L); if (bs.length < 2 || fits(L)) break; const last = bs[bs.length - 1], d = L.offsetHeight - R.offsetHeight;
         if (d <= 0 || last.offsetHeight >= d) break; R.insertBefore(last, at); at = last; }
       /* and the other way: when the photos run well past the text, the last photos fill the left column under the text */
       const rp = $(".pa-ph", R); if (!rp) return; let lp = $(".pa-ph", L);
-      for (let n = 0; n < 60; n++){ const fs = $$("figure", rp); if (fs.length < 2) break; const f = fs[fs.length - 1], d = R.offsetHeight - L.offsetHeight; if (d <= 0 || f.offsetHeight >= d) break;
+      for (let n = 0; n < 60; n++){ const fs = $$("figure", rp); if (fs.length < 2 || fits(R)) break; const f = fs[fs.length - 1], d = R.offsetHeight - L.offsetHeight; if (d <= 0 || f.offsetHeight >= d) break;
         if (!lp){ lp = h('<div class="pa-ph pa-ph2"></div>'); lp.style.setProperty("--per", rp.style.getPropertyValue("--per")); L.appendChild(lp); } lp.insertBefore(f, lp.firstChild); } } }
   /* pages per action: each action is laid out off screen at the printed width, and while it's taller than its pages its
      photos get more to a row and then a lower height, until it fits (or the photos are as small as they go) */
