@@ -125,3 +125,8 @@ const properTitle = (() => {
     if (!lead && SMALL.has(low)) return low;
     return low.charAt(0).toUpperCase() + low.slice(1); });
   return s => String(s || "").replace(/\s+/g, " ").trim().split(" ").map((w, i) => word(w, i === 0)).join(" "); })();
+
+/* the file symbol on export buttons: a page with its type on a coloured label (red for PDF, green for Excel) */
+const fileIco = (label, cls) => { const t = String(label).toUpperCase(), xl = /XLS|CSV/.test(t), w = t.length > 3 ? 17 : 15, fs = t.length > 3 ? 5.2 : 6.2;
+  return '<svg class="fico' + (cls ? " " + cls : "") + '" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2.5H6.5a2 2 0 00-2 2v15a2 2 0 002 2h11a2 2 0 002-2V8z M14 2.5v5.5h5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'
+    + '<rect x="' + (12 - w / 2 - 2) + '" y="12" width="' + w + '" height="7.5" rx="1.5" fill="' + (xl ? "#1d6f42" : "#c0392b") + '"/><text x="' + (10) + '" y="17.9" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="' + fs + '" fill="#fff">' + esc(t) + '</text></svg>'; };

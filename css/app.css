@@ -820,3 +820,6 @@ html.dark .eta-i.ok{background:#173326;color:#5fd39a}html.dark .eta-i.late{backg
 /* the column menu marker (look A): a thin chevron, faint on every heading, brighter when you point at the heading */
 .tbl th .th-m,.tbl th.tk .th-m{opacity:.5;background:transparent;width:14px;height:14px;display:grid;place-items:center;right:2px;bottom:2px}
 .tbl th .th-m svg{width:10px;height:10px}.tbl th:hover .th-m,.tbl th.tk:hover .th-m,.tbl th .th-m:focus-visible,.tbl th .th-m[aria-expanded="true"]{opacity:1}
+/* the export buttons show a page with its file type on a coloured label */
+.dl .fico{width:22px;height:22px}.dl b{display:none}.dl{color:var(--muted)}
+.idw .pj{width:28px;padding:0}.idw .pj .fico{width:18px;height:18px}
