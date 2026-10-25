@@ -35,9 +35,9 @@ function note(msg, ms){ let n = $("#note"); if (!n){ n = h('<div id="note" role=
 /* modal window; returns the window element */
 function modal(html, opts){ opts = opts || {};
   const m = h('<div class="ynmodal show"><div class="yn-win ' + (opts.cls || "") + '">' + html + '</div></div>');
-  document.body.appendChild(m);
+  (document.fullscreenElement || document.body).appendChild(m);   // (over everything, the photo viewer in full screen too)
   const close = () => { m.remove(); document.removeEventListener("keydown", key, true); opts.onClose && opts.onClose(); };
-  const key = e => { if (e.key === "Escape" && document.body.lastElementChild === m){ e.stopPropagation(); close(); } };
+  const key = e => { if (e.key === "Escape" && m.parentNode && m.parentNode.lastElementChild === m){ e.stopPropagation(); close(); } };
   document.addEventListener("keydown", key, true);
   m.addEventListener("mousedown", e => { if (e.target === m && !opts.sticky) close(); });
   m.close = close; return m; }

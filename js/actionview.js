@@ -89,9 +89,11 @@ const ActionView = (() => {
      columns (at least 2) whose rows still fit the height left beside the map and details; if none fit, the smallest
      tiles and the box grows */
   function photos(a, box, ro){ const g = $(".ph-g", box), n = a.photos.length + (ro ? 0 : 1), GAP = 6, MIN = 64;
-    g.innerHTML = a.photos.map((p, i) => '<button type="button" class="ph-t" data-i="' + i + '" title="View photo ' + (i + 1) + '"><img alt="Photo ' + (i + 1) + '" loading="lazy"></button>').join("")
+    g.innerHTML = a.photos.map((p, i) => '<div class="ph-c"><button type="button" class="ph-t" data-i="' + i + '" title="View photo ' + (i + 1) + '"><img alt="Photo ' + (i + 1) + '" loading="lazy"></button>' + (ro ? "" : '<button type="button" class="ph-del" data-i="' + i + '" title="Remove this photo" aria-label="Remove photo ' + (i + 1) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg></button>') + '</div>').join("")
       + (ro ? "" : '<button type="button" class="ph-add" title="Upload photos, or drop or paste them anywhere on the action">+ Add photos</button>');
     $$(".ph-t", g).forEach(b => { const p = a.photos[+b.dataset.i], im = $("img", b); im.src = Media.src(a, p, true); im.onerror = () => { if (!im.dataset.r){ im.dataset.r = 1; im.src = Media.src(a, p); } }; b.onclick = () => Media.view(a, +b.dataset.i); });
+    $$(".ph-del", g).forEach(b => b.onclick = async () => { const i = +b.dataset.i, p = a.photos[i];
+      if (p && await confirmBox("Remove photo " + (i + 1) + " from " + Store.actId(a) + "? You can undo with Ctrl+Z.", "Remove", true)){ Store.mutate("a:" + a._p, () => { const k = a.photos.indexOf(p); if (k >= 0) a.photos.splice(k, 1); Store.touch(a); }); Store.log("Removed a photo from " + Store.actId(a)); } });
     const ad = $(".ph-add", g); if (ad) ad.onclick = () => Media.pickFiles(a, "image/*");
     if (!n) return;
     let last = "";
