@@ -128,21 +128,38 @@ const Fields = (() => {
     const show = () => { i.value = v.join(", "); i.title = v.map(t => t + (nm(t) ? "  " + nm(t) : "")).join("\n"); }; show();
     if (!Store.S.edit){ i.readOnly = true; return w; }
     const pool = () => eq ? [] : optLabels(f).concat(...Store.all().map(x => Array.isArray(x.f[f.id]) ? x.f[f.id] : []));
-    const finish = seg => { const q = seg.toLowerCase(); if (q.length < 2) return "";
-      const list = eq ? (Equip.find(seg, "t") || []).map(x => x.t) : pool(); return list.find(t => t.toLowerCase().startsWith(q) && t.length > seg.length) || ""; };
+    /* typing shows the matching candidates under the box: the plant equipment and instruments for tags (spaces and
+       dashes don't matter, so cv 402 finds F12-CV-402), the list's own options otherwise. Arrows move, Enter or a click
+       picks, Escape closes */
+    let dd = null, res = [], hi = 0;
+    const seg = () => { const cut = i.value.lastIndexOf(","); return { head: cut < 0 ? "" : i.value.slice(0, cut + 1) + " ", q: i.value.slice(cut + 1).trimStart() }; };
+    const closeDD = () => { if (dd){ dd.remove(); dd = null; } i.setAttribute("aria-expanded", "false"); };
+    const mark = (t, w) => { let o = esc(t); w.forEach(x => { const re = new RegExp("(" + x.split("").map(c => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^a-z0-9]*") + ")", "i"); o = o.replace(re, "<mark>$1</mark>"); }); return o; };
+    const paint = () => { if (!dd) return; $$(".tg-o", dd).forEach((o, k) => { o.classList.toggle("on", k === hi); if (k === hi) o.scrollIntoView({ block: "nearest" }); }); };
+    const draw = () => { const { q } = seg(), w = qWords(q); if (!w.length){ closeDD(); return; }
+      const have = new Set(i.value.split(",").map(t => t.trim().toLowerCase()).filter(Boolean));
+      res = (eq ? (Equip.find(q, "t") || []).map(x => ({ t: x.t, n: x.n ? x.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "", k: x.k })) : [...new Set(pool())].filter(t => smartHit(t, w)).map(t => ({ t, n: "" })))
+        .filter(x => !have.has(x.t.toLowerCase()) || x.t.toLowerCase() === q.trim().toLowerCase()).slice(0, 40);
+      if (!res.length){ closeDD(); return; } hi = 0;
+      if (!dd){ dd = h('<div class="tg-dd" role="listbox"></div>'); document.body.appendChild(dd); }
+      dd.innerHTML = res.map((x, k) => '<div class="tg-o" role="option" data-k="' + k + '"><b>' + mark(x.t, w) + '</b>' + (x.n ? '<span>' + mark(x.n, w) + '</span>' : "") + (x.k ? '<i>' + esc(x.k) + '</i>' : "") + '</div>').join("");
+      const r = i.getBoundingClientRect(), below = innerHeight - r.bottom > 260; Object.assign(dd.style, { left: Math.max(8, Math.min(r.left, innerWidth - 428)) + "px", width: Math.max(r.width, 420) + "px", top: (below ? r.bottom + 3 : Math.max(8, r.top - 263)) + "px" });
+      i.setAttribute("aria-expanded", "true"); paint();
+      $$(".tg-o", dd).forEach(o => { o.onmousedown = e => { e.preventDefault(); pick(res[+o.dataset.k]); }; o.onmousemove = () => { if (hi !== +o.dataset.k){ hi = +o.dataset.k; paint(); } }; }); };
+    const pick = x => { const { head } = seg(); i.value = head + x.t + ", "; const n = i.value.length; i.setSelectionRange(n, n); closeDD(); i.focus(); };
+    i.setAttribute("role", "combobox"); i.setAttribute("aria-autocomplete", "list"); i.setAttribute("aria-expanded", "false");
     i.onfocus = () => { if (eq) Equip.load().catch(() => {}); if (i.value && !/,\s*$/.test(i.value)) i.value += ", "; const n = i.value.length; setTimeout(() => i.setSelectionRange(n, n), 0); };
-    i.oninput = e => { if (!e.inputType || !e.inputType.startsWith("insert")) return; const at = i.selectionStart; if (at !== i.value.length) return;
-      const cut = i.value.lastIndexOf(","), head = cut < 0 ? "" : i.value.slice(0, cut + 1) + " ", seg = i.value.slice(cut + 1).trimStart(), c = finish(seg);
-      if (c){ i.value = head + seg + c.slice(seg.length); i.setSelectionRange(head.length + seg.length, i.value.length); } };
+    i.oninput = () => { if (eq && !Equip.count) Equip.load().then(() => document.activeElement === i && draw()).catch(() => {}); draw(); };
     const commit = () => { let tags = i.value.split(",").map(t => t.trim()).filter(Boolean);
       tags = tags.map(t => { if (eq){ const hit = (Equip.find(t, "t") || []).find(x => x.t.toLowerCase() === t.toLowerCase()); return hit ? hit.t : t.toUpperCase(); } return optLabels(f).find(x => x.toLowerCase() === t.toLowerCase()) || t; });
       tags = [...new Set(tags)];
       if (!eq){ const fresh = tags.filter(t => !optLabels(f).includes(t)); if (fresh.length) Store.mutate("config", () => { f.options = f.options || []; fresh.forEach(t => f.options.push({ id: uid(), label: t, color: "" })); Store.touch(f); }); }
       if (JSON.stringify(tags) !== JSON.stringify(v)) set(a, f, tags); else show(); };
-    i.onblur = commit;
-    i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); if (i.selectionStart !== i.selectionEnd){ const n = i.value.length; i.setSelectionRange(n, n); i.value += ", "; return; } i.blur(); }
-      else if (e.key === "Tab" && i.selectionStart !== i.selectionEnd){ e.preventDefault(); const n = i.value.length; i.setSelectionRange(n, n); i.value += ", "; }
-      else if (e.key === "Escape"){ show(); i.blur(); } };
+    i.onblur = () => { closeDD(); commit(); };
+    i.onkeydown = e => { if (dd && (e.key === "ArrowDown" || e.key === "ArrowUp")){ e.preventDefault(); hi = (hi + (e.key === "ArrowDown" ? 1 : -1) + res.length) % res.length; paint(); return; }
+      if (e.key === "Enter"){ e.preventDefault(); if (dd && res[hi]) return pick(res[hi]); i.blur(); }
+      else if (e.key === "Tab" && dd && res[hi]){ e.preventDefault(); pick(res[hi]); }
+      else if (e.key === "Escape"){ if (dd){ e.stopPropagation(); closeDD(); return; } show(); i.blur(); } };
     return w; }
   function openTags(anchor, a, f){ closePop(); let cur = (Array.isArray(a.f[f.id]) ? a.f[f.id] : []).slice();
     const p = h('<div class="pop tagpop"><input class="in" type="text" placeholder="Search or add a tag…"><div class="tp-l"></div></div>'); document.body.appendChild(p); place(p, anchor);

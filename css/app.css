@@ -828,3 +828,9 @@ html.dark .eta-i.ok{background:#173326;color:#5fd39a}html.dark .eta-i.late{backg
 .tbl th.tk .th-l{padding:7px 4px 26px}
 .tbl th.tk .th-i{position:absolute;left:50%;bottom:5px;margin:0;transform:translateX(-50%)}
 .tbl th.actc{vertical-align:top}
+/* the tag candidates under the box (look A, a plain list) */
+.tg-dd{position:fixed;z-index:9000;background:var(--panel);border:1px solid var(--line2);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.16);max-height:260px;overflow:auto;padding:4px}
+.tg-o{display:flex;gap:10px;align-items:baseline;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px}
+.tg-o b{white-space:nowrap}.tg-o span{color:var(--muted);font-size:12.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tg-o i{font-style:normal;font-size:11px;color:var(--dim);white-space:nowrap}
+.tg-o.on{background:var(--th-t)}.tg-o mark{background:#fff3c4;color:inherit;border-radius:2px;padding:0 1px}
+html.dark .tg-o mark{background:#5a4a12}
