@@ -15,7 +15,7 @@ function pickFile(accept, multiple, done){ const i = document.createElement("inp
   i.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0"; document.body.appendChild(i);
   i.onchange = () => { const f = [...i.files]; i.remove(); if (f.length) done(multiple ? f : f[0]); }; i.oncancel = () => i.remove(); i.click(); }
 function fmtDate(v){ if (!v) return ""; if (v === "TBC" || v === "N/A") return v; const d = new Date(typeof v === "number" ? v : v + (String(v).length === 10 ? "T00:00:00" : ""));
-  return isNaN(d) ? String(v) : d.getDate() + " " + "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ")[d.getMonth()] + " " + d.getFullYear(); }
+  return isNaN(d) ? String(v) : d.getDate() + " " + "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ")[d.getMonth()] + " " + d.getFullYear() + (/T\d\d:\d\d$/.test(String(v)) ? ", " + String(v).slice(11, 16) : ""); }   // (a date with a time shows it: 3 Nov 2026, 07:30)
 function fmtSize(n){ return n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; }
 function slug(s){ return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "x"; }
 function safeName(s){ return String(s || "file").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 120); }
