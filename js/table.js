@@ -68,9 +68,10 @@ const Table = (() => {
     /* the narrow columns (ID, stage, ticks, counts) keep their width; the text columns share what's left */
     /* a column nobody has sized: the narrow kinds (ticks, yes or no, dates, counts) are as wide as the longest word in
        their heading (headings wrap onto two lines), or what their contents need if that's wider */
-    /* the tick box columns are all one width: the widest of their headings' longest words */
-    const tickF = "700 11.5px " + getComputedStyle(document.body).fontFamily, tickW = Math.max(52, ...all.filter(c => TICK.has(c.type)).map(c => headW(head(c), tickF) + 4));   // (headW already allows for the i and the padding; the ▾ shows over it on hover)
-    const px = c => ws[c.id] || (TICK.has(c.type) ? tickW : fix(c) ? Math.max(headW(c.label), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
+    const tickF = "700 11.5px " + getComputedStyle(document.body).fontFamily;
+    /* a column nobody has sized is as wide as the longest word in its heading (the heading wraps a word at a line) or its widest entry */
+    const tickOf = c => Math.max(52, headW(head(c), tickF) + 4);
+    const px = c => ws[c.id] || (TICK.has(c.type) ? tickOf(c) : fix(c) ? Math.max(headW(head(c)), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
     const FIX = new Set(["act", "id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || (c.type === "choice" && (c.options || []).length <= 3) || !!ws[c.id];   // (a column someone has sized keeps that width; the rest share what's left)
     /* when space runs out, the counts and dates go first, then the location; the tick boxes stay */
     const lp = c => (["sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
@@ -134,7 +135,7 @@ const Table = (() => {
       const mb = $(".th-m", th); if (mb) mb.onclick = e => { e.stopPropagation(); colMenu(mb, id, () => r.ondblclick(new MouseEvent("dblclick"))); };
       /* double click the edge: fit the column to its heading's longest word and its widest cell (as in Excel) */
       r.ondblclick = e => { e.stopPropagation(); const i = [...th.parentNode.children].indexOf(th), l = $(".th-l", th);
-        let w = headW(cs[i] ? cs[i].label : l.textContent, getComputedStyle(l).font);
+        let w = cs[i] && TICK.has(cs[i].type) ? headW(head(cs[i]), getComputedStyle(l).font) + 4 : headW(cs[i] ? head(cs[i]) : l.textContent, getComputedStyle(l).font);
         $$("tbody tr", el).forEach(tr => { const td = tr.children[i]; if (!td) return; const k = td.firstElementChild;
           const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML;
           /* (a box you type in measures by what's in it, or its hint when empty, not by the box's default width) */
