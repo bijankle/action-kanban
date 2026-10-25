@@ -27,7 +27,7 @@ const Table = (() => {
   let stick = { ctx: null, pos: new Map() };
   const forget = () => { stick = { ctx: null, pos: new Map() }; };
   function rows(fresh){ const list = sorted(); if (fresh) return list;
-    const ctx = [App.tab, JSON.stringify(App.sort || {}), App.q || "", JSON.stringify(lsGet("adF", {})), [...(App.pills || [])].join(","), Store.selected().join(",")].join("|"), ref = a => a._p + ":" + a.u;
+    const ctx = [App.tab, JSON.stringify(App.sort || {}), App.q || "", JSON.stringify(lsGet("adF", {})), JSON.stringify(lsGet("adDate", {})), [...(App.pills || [])].join(","), Store.selected().join(",")].join("|"), ref = a => a._p + ":" + a.u;
     if (ctx === stick.ctx){ const at = a => stick.pos.has(ref(a)) ? stick.pos.get(ref(a)) : -1, had = new Set(list.map(ref));
       Store.visible().forEach(a => { if (!had.has(ref(a)) && stick.pos.has(ref(a))) list.push(a); });   // (one that no longer fits a Status filter stays too, until next time)
       list.sort((x, y) => at(x) - at(y)); }   // (new ones first, the rest where they were)
