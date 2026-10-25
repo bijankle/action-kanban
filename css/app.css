@@ -962,3 +962,6 @@ input[type=checkbox]{width:18px;height:18px}
 /* printed sections (option A): a faint line under each heading, a clear gap before the next section */
 #printRoot h5{border-bottom:1px solid #dde1e6;padding-bottom:3px;margin:0 0 5px}
 #printRoot .pa-b+.pa-b,#printRoot .pa-b+.pa-ph2{margin-top:14px}#printRoot .pa-l>.pa-b:first-child h5{margin-top:0}
+.ov-g h4.det-h2{margin-top:18px}
+/* Overview headings: a faint line under each, like the PDF export */
+.ov-g h4{border-bottom:1px solid var(--line);padding-bottom:4px}
