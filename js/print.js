@@ -46,29 +46,45 @@ const Print = (() => {
     const skip = new Set(["title", "problem", "solution", "notes"]);
     list.forEach((a, i) => { const s = Store.stage(a.stage), p = Store.project(a._p) || {};
       /* only what has something in it: blank boxes, unticked ticks and empty columns are left out to save the space */
-      const det = Store.fields().filter(f => !skip.has(f.id)).map(f => [f, Fields.show(a, f)]).filter(([, v]) => { const t = String(v || "").replace(/<[^>]*>/g, "").trim(); return t && !/^(none|–|-|0 items?)$/i.test(t); }).map(([f, v]) => '<tr><th>' + esc(f.label) + '</th><td>' + v + '</td></tr>').join("");
-      const tbl = (title, cols, rows) => { const keep = cols.map((c, k) => k === 0 || rows.some(r => String(r[k] == null ? "" : r[k]).trim())); return rows.length ? '<h5>' + title + '</h5><table class="pa-mto"><tr>' + cols.filter((c, k) => keep[k]).map(c => '<th>' + c + '</th>').join("") + '</tr>' + rows.map(r => '<tr>' + r.filter((c, k) => keep[k]).map(c => '<td>' + esc(c == null ? "" : c) + '</td>').join("") + '</tr>').join("") + '</table>' : ""; };
-      const txt = [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([, v]) => String(v || "").trim()).map(([k, v]) => '<h5>' + k + '</h5><div class="pa-tx">' + esc(v) + '</div>').join("");
+      /* the ticked boxes together in one row, each with a tick (unticked ones are left out) */
+      const ticks = Store.fields().filter(f => f.type === "check" && a.f[f.id] === true).map(f => '<span class="pa-tk">✓ ' + esc(f.label) + '</span>').join("");
+      const det = (ticks ? '<tr><th>Done</th><td class="pa-tks">' + ticks + '</td></tr>' : "") + Store.fields().filter(f => !skip.has(f.id) && f.type !== "check").map(f => [f, Fields.show(a, f)]).filter(([, v]) => { const t = String(v || "").replace(/<[^>]*>/g, "").trim(); return t && !/^(none|–|-|0 items?)$/i.test(t); }).map(([f, v]) => '<tr><th>' + esc(f.label) + '</th><td>' + v + '</td></tr>').join("");
+      const tbl = (title, cols, rows) => { const keep = cols.map((c, k) => k === 0 || rows.some(r => String(r[k] == null ? "" : r[k]).trim())); return rows.length ? '<div class="pa-b"><h5>' + title + '</h5><table class="pa-mto"><tr>' + cols.filter((c, k) => keep[k]).map(c => '<th>' + c + '</th>').join("") + '</tr>' + rows.map(r => '<tr>' + r.filter((c, k) => keep[k]).map(c => '<td>' + esc(c == null ? "" : c) + '</td>').join("") + '</tr>').join("") + '</table></div>' : ""; };
+      const txt = [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([, v]) => String(v || "").trim()).map(([k, v]) => '<div class="pa-b"><h5>' + k + '</h5><div class="pa-tx">' + esc(v) + '</div></div>').join("");
       const link = GH.appUrl() + "?a=" + encodeURIComponent(a._p + ":" + a.no);
       root.appendChild(h('<section class="pr-act' + (o.newPage || (!o.board && i === 0) ? " np" : "") + '">' + (!o.board && i === 0 ? head : "") + '<div class="pa-h" style="--c:' + esc(s.color) + '"><b>' + esc(Store.actId(a)) + '</b><span class="pa-t">' + esc(a.f.title || "") + '</span><span class="stg">' + esc(s.name) + '</span></div>'
         + '<div class="pa-sub">' + esc(p.name || "") + ' · <a href="' + esc(link) + '">Open online</a></div>'
-        + (txt || det ? '<div class="pa-grid' + (txt && det ? "" : " one") + '">' + (txt ? '<div>' + txt + '</div>' : "") + (det ? '<table class="pa-det">' + det + '</table>' : "") + '</div>' : "")
+        + (Hold.lines(a).length ? '<div class="pa-hold"><b>On hold</b>' + Hold.lines(a).map(([k, v]) => '<span><i>' + esc(k) + '</i> ' + (k === "Mobile" ? '<a href="tel:' + esc(String(v).replace(/\s/g, "")) + '">' + esc(v) + '</a>' : k === "Email" ? '<a href="mailto:' + esc(v) + '">' + esc(v) + '</a>' : esc(v)) + '</span>').join("") + '</div>' : "")
+        /* the text down the left column, the photos down the right; text that runs longer than the photos moves across
+           under them (balance, below) */
+        + '<div class="pa-cols' + (o.photos && a.photos.length ? "" : " one") + '"><div class="pa-l">' + (det ? '<div class="pa-b"><table class="pa-det">' + det + '</table></div>' : "") + txt
         + tbl("Isolations", ["No.", "Equipment number", "Equipment name", "Note"], (a.isol || []).map((it, k) => [k + 1, it.tag, it.name, it.note]))
         + tbl("MTO", ["Item", "Description", "Part / tag no.", "Qty", "Unit", "Notes"], (a.mto || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes]))
         + tbl("From spares", ["Item", "Description", "Part / tag no.", "Qty", "Unit", "Store location / notes", "Secured"], (a.spares || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes, it.secured ? "Yes" : ""]))
-        + (a.files.length ? '<h5>Attachments</h5>' + a.files.map(f => '<div class="pa-file">📎 <a href="' + esc(Media.fileUrlOnline(a, f)) + '">' + esc(f.name) + '</a> <span class="dim">' + fmtSize(f.size || 0) + '</span></div>').join("") : "")
-        + (o.photos && a.photos.length ? '<h5>Photos</h5><div class="pa-ph" style="--per:' + o.per + '">' + a.photos.map(ph => '<figure><img src="' + esc(Media.src(a, ph)) + '" alt=""><figcaption>' + esc(ph.name || "") + '</figcaption></figure>').join("") + '</div>' : "") + '</section>')); });
+        + (a.files.length ? '<div class="pa-b"><h5>Attachments</h5>' + a.files.map(f => '<div class="pa-file">📎 <a href="' + esc(Media.fileUrlOnline(a, f)) + '">' + esc(f.name) + '</a> <span class="dim">' + fmtSize(f.size || 0) + '</span></div>').join("") + '</div>' : "") + '</div>'
+        + (o.photos && a.photos.length ? '<div class="pa-r"><h5>Photos</h5><div class="pa-ph" style="--per:' + Math.max(1, o.per - 1) + '">' + a.photos.map(ph => '<figure><img src="' + esc(Media.src(a, ph)) + '" alt=""><figcaption>' + esc(ph.name || "") + '</figcaption></figure>').join("") + '</div></div>' : "") + '</div></section>')); });
     document.body.appendChild(root); note("Getting the photos ready to print…", 8000);
     await Promise.race([Promise.all($$("img", root).map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))), new Promise(r => setTimeout(r, 20000))]);
-    if (o.pages > 0) fit(root, o);
+    balance(root); if (o.pages > 0) fit(root, o);
     const done = () => { root.remove(); removeEventListener("afterprint", done); }; addEventListener("afterprint", done);
     window.print(); }
+  /* when the text column runs well past the photos, its last blocks (tables, attachments, then notes) move across under
+     the photos, one at a time while that evens the two columns up */
+  function balance(root){ root.classList.add("measure"); $$(".pa-cols", root).forEach(bal); root.classList.remove("measure"); }
+  function bal(c){ { const L = $(".pa-l", c), R = $(".pa-r", c); if (!L || !R) return;
+      $$(".pa-r > .pa-b", R).forEach(b => L.appendChild(b)); const lp0 = $(".pa-ph2", L), rp0 = $(".pa-ph", R); if (lp0){ if (rp0) $$("figure", lp0).forEach(f => rp0.appendChild(f)); lp0.remove(); }   // (start again from all the text on the left, all the photos on the right)
+      let at = null; for (let n = 0; n < 20; n++){ const bs = $$(":scope > .pa-b", L); if (bs.length < 2) break; const last = bs[bs.length - 1], d = L.offsetHeight - R.offsetHeight;
+        if (d <= 0 || last.offsetHeight >= d) break; R.insertBefore(last, at); at = last; }
+      /* and the other way: when the photos run well past the text, the last photos fill the left column under the text */
+      const rp = $(".pa-ph", R); if (!rp) return; let lp = $(".pa-ph", L);
+      for (let n = 0; n < 60; n++){ const fs = $$("figure", rp); if (fs.length < 2) break; const f = fs[fs.length - 1], d = R.offsetHeight - L.offsetHeight; if (d <= 0 || f.offsetHeight >= d) break;
+        if (!lp){ lp = h('<div class="pa-ph pa-ph2"></div>'); lp.style.setProperty("--per", rp.style.getPropertyValue("--per")); L.appendChild(lp); } lp.insertBefore(f, lp.firstChild); } } }
   /* pages per action: each action is laid out off screen at the printed width, and while it's taller than its pages its
      photos get more to a row and then a lower height, until it fits (or the photos are as small as they go) */
   function fit(root, o){ const mm = 96 / 25.4, page = 273 * mm, room = o.pages * page - 8 * mm; root.classList.add("measure");
-    $$(".pr-act", root).forEach(sec => { const ph = $(".pa-ph", sec); if (!ph || sec.offsetHeight <= room) return; const imgs = $$("img", ph);
-      const tries = []; for (let per = o.per; per <= 6; per++) tries.push([per, 120]); [100, 80, 65, 50, 40, 32, 25].forEach(hh => tries.push([6, hh]));
-      for (const [per, hh] of tries){ ph.style.setProperty("--per", per); imgs.forEach(im => im.style.maxHeight = hh + "mm"); if (sec.offsetHeight <= room) break; } });
+    $$(".pr-act", root).forEach(sec => { const cols = $(".pa-cols", sec); if (!$(".pa-ph", sec) || sec.offsetHeight <= room) return; const imgs = $$(".pa-ph img", sec);
+      const tries = []; for (let per = Math.max(1, o.per - 1); per <= 4; per++) tries.push([per, 85]); [70, 55, 45, 35, 28, 22].forEach(hh => tries.push([4, hh]));   // (in the half width photo column)
+      for (const [per, hh] of tries){ $$(".pa-ph", sec).forEach(ph => ph.style.setProperty("--per", per)); imgs.forEach(im => im.style.maxHeight = hh + "mm"); bal(cols); if (sec.offsetHeight <= room) break; } });
     root.classList.remove("measure"); }
   return { excelDialog, dialog, run };
 })();

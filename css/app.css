@@ -520,7 +520,7 @@ html.dark .dl-xl b{color:#3fbf78}html.dark .dl-pdf b{color:#ff6b5b}
 .pt-act{width:120px;white-space:nowrap;text-align:right}.pt-act .btn{padding:3px 8px;font-size:12px}
 .pt-foot{margin-top:8px;font-size:13px}
 .mto-l{font-weight:700;color:var(--accent)}.mto-l.none{color:var(--faint);font-weight:400;text-decoration:none}
-@media print{ .pa-mto{border-collapse:collapse;width:100%;font-size:9pt;margin-bottom:6px} .pa-mto th{background:#f3f4f6;text-align:left} .pa-mto th,.pa-mto td{border:1px solid #ddd;padding:2px 5px;vertical-align:top} }
+#printRoot .pa-mto{border-collapse:collapse;width:100%;font-size:9pt;margin-bottom:6px}#printRoot .pa-mto th{background:#f3f4f6;text-align:left}#printRoot .pa-mto th,#printRoot .pa-mto td{border:1px solid #ddd;padding:2px 5px;vertical-align:top}
 .pt-side{width:290px;max-width:290px;overflow:hidden}.pt-a{min-width:0}
 .pt-tbl th{padding:8px 8px}
 
@@ -937,3 +937,11 @@ input[type=checkbox]{width:18px;height:18px}
 .ph-cp{width:24px;height:24px;flex:none;border:1px solid var(--line2);border-radius:6px;background:var(--panel);color:var(--dim);display:inline-grid;place-items:center;padding:0;cursor:pointer;text-transform:none}
 .ph-cp svg{width:14px;height:14px}.ph-cp:hover{color:var(--ink);border-color:var(--th)}.ph-cp.ok{color:#1f8a58;border-color:#1f8a58}.ph-cp:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
 #printRoot .pa-det{align-self:start}
+#printRoot .pa-tks{line-height:1.7}#printRoot .pa-tk{display:inline-block;margin:0 8px 2px 0;padding:0 6px;border-radius:4px;background:#e3f1ea;color:#1f6f48;font-weight:700;font-size:9pt;white-space:nowrap}
+#printRoot .pa-hold{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;border:1px solid #e8c77a;border-left:5px solid #c9820a;background:#fdf6e7;border-radius:4px;padding:6px 10px;margin:0 0 8px;font-size:9.5pt}#printRoot .pa-hold b{color:#9a6408;margin-right:4px}#printRoot .pa-hold i{font-style:normal;color:#7a6a4a;font-weight:600}
+/* printed action: the text down the left column, the photos down the right (text that runs long moves under the photos) */
+#printRoot .pa-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-top:6px}#printRoot .pa-cols.one{grid-template-columns:1fr}
+#printRoot .pa-l,#printRoot .pa-r{min-width:0}#printRoot .pa-l>.pa-b:first-child h5,#printRoot .pa-r>h5:first-child{margin-top:0}
+#printRoot .pa-mto{font-size:8.5pt}
+#printRoot h5{break-after:avoid}#printRoot .pa-ph img{max-height:85mm}
+#printRoot .pa-ph2{margin-top:8px}

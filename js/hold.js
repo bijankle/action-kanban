@@ -41,5 +41,9 @@ const Hold = (() => {
         else if ((!c.mobile && h.mobile) || (!c.company && h.company)){ if (!c.mobile) c.mobile = h.mobile; if (!c.company) c.company = h.company; Store.touch(c); Store.S.dirty.add("config"); } } }); }
   const h_ = s => { const t = document.createElement("template"); t.innerHTML = s.trim(); return t.content.firstChild; };
   document.addEventListener("click", e => { const b = e.target.closest("[data-hold]"); if (!b) return; e.preventDefault(); e.stopPropagation(); open(b.dataset.hold, b); }, true);
-  return { btn, entered, after, open, missing, on };
+  /* for the PDFs: who it's waiting on and how to reach them (their email from the contact list), as [label, value]
+     pairs with the blank ones left out; nothing when it isn't on hold */
+  function lines(a){ if (!on(a)) return []; const h = rec(a), c = h.who ? Store.contacts().find(x => !x.del && x.name.toLowerCase() === h.who.toLowerCase()) || {} : {};
+    return [["Waiting on", [h.who, h.company || c.company].filter(Boolean).join(", ")], ["Mobile", h.mobile || c.mobile], ["Email", c.email], ["On hold since", h.since && fmtDate(h.since)], ["Due back", h.due && fmtDate(h.due)], ["Why", h.why]].filter(x => String(x[1] || "").trim()); }
+  return { btn, entered, after, open, missing, on, lines };
 })();
