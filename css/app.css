@@ -959,6 +959,3 @@ input[type=checkbox]{width:18px;height:18px}
 #printRoot .pa-hold{display:flex;flex-direction:column;gap:3px}#printRoot .pa-hr{display:flex;flex-wrap:wrap;gap:3px 18px;align-items:baseline}#printRoot .pa-hn{color:#5b4a26}
 #printRoot .pa-hr b{color:inherit;margin:0}
 #printRoot .pa-ic{width:12px;height:12px;margin-right:5px;vertical-align:-1.5px;fill:none;stroke:#1d2430;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-/* on hold strip, option B: no box, a thin amber line down the left, the notes in italics */
-#printRoot .pa-hold{border:0;border-left:3px solid #c9820a;background:none;border-radius:0;padding:2px 0 2px 10px;margin:4px 0 8px}
-#printRoot .pa-hn{font-style:italic;color:#44506a}
