@@ -54,7 +54,7 @@ const SiteMap = (() => {
       const [cx, cy] = merc([GMAP.lat, GMAP.lng]); return { cv, k, x0: cx - Wl / 2, y0: cy - Hl / 2, Wl, Hl }; })().catch(e => { console.warn("colour map", e); return null; }));
   /* the whole site, the same view every time: the colour map if there is one (north up, edge to edge), else the black
      and white one cut to the plant outline. Each spot is a large soft red circle, as the positions are only a guide to
-     the area, with its tags on a label beside it */
+     the area (no tag on it: the action already says which) */
   async function renderWhole(locs, w){ const gm = await gmap(), gs = groups(locs); let c, g, W, H, at;
     if (gm){ W = Math.min(w || 2400, gm.cv.width); H = Math.round(W * gm.Hl / gm.Wl); c = document.createElement("canvas"); c.width = W; c.height = H; g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(gm.cv, 0, 0, W, H);
       at = ll => { const [x, y] = merc(ll); return [(x - gm.x0) * W / gm.Wl, (y - gm.y0) * H / gm.Hl]; }; }
@@ -63,13 +63,11 @@ const SiteMap = (() => {
       const P = POLY.map(([px, py]) => [(px * q - sx) * k, (py * q - sy) * k]), path = () => { g.beginPath(); P.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py)); g.closePath(); };
       g.beginPath(); g.rect(0, 0, W, H); P.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py)); g.closePath(); g.fillStyle = "#ebe8e1"; g.fill("evenodd"); path(); g.strokeStyle = "rgba(29,36,48,.45)"; g.lineWidth = Math.max(1.5, W / 600); g.stroke();
       at = ll => [(((ll[1] - BOUNDS.w) / (BOUNDS.e - BOUNDS.w)) * im.naturalWidth - sx) * k, (((BOUNDS.n - ll[0]) / (BOUNDS.n - BOUNDS.s)) * im.naturalHeight - sy) * k]; }
-    const R = Math.round(W * 0.08), fs = Math.round(W / 42);
+    const R = Math.round(W * 0.08);
     gs.forEach(grp => { const [x, y] = at(grp.ll);
       g.lineWidth = Math.max(2, W / 300); g.strokeStyle = "rgba(255,255,255,.9)"; g.beginPath(); g.arc(x, y, R + g.lineWidth, 0, 7); g.stroke();
       g.fillStyle = "rgba(212,42,30,.28)"; g.strokeStyle = "#d42a1e"; g.lineWidth = Math.max(3, W / 220); g.beginPath(); g.arc(x, y, R, 0, 7); g.fill(); g.stroke();
-      const t = grp.tags.length > 2 ? grp.tags[0] + " +" + (grp.tags.length - 1) : grp.tags.join(", "); g.font = "bold " + fs + "px Arial"; const tw = g.measureText(t).width, bw = tw + fs, bh = fs * 1.5;
-      const bx = x + R + 10 + bw < W - 4 ? x + R + 10 : Math.max(4, x - R - 10 - bw), by = Math.max(4, Math.min(H - bh - 4, y - bh / 2));
-      g.fillStyle = "rgba(255,255,255,.95)"; g.fillRect(bx, by, bw, bh); g.strokeStyle = "rgba(29,36,48,.5)"; g.lineWidth = 1; g.strokeRect(bx, by, bw, bh); g.fillStyle = "#1d2430"; g.fillText(t, bx + fs / 2, by + fs * 1.08); });
+      });
     /* north is straight up on both maps */
     const n = Math.round(W / 50); g.fillStyle = "rgba(255,255,255,.92)"; g.beginPath(); g.arc(W - n * 1.8, n * 1.8, n, 0, 7); g.fill(); g.fillStyle = "#1d2430"; g.beginPath(); g.moveTo(W - n * 1.8, n * 1.1); g.lineTo(W - n * 2.15, n * 2.3); g.lineTo(W - n * 1.8, n * 2.05); g.lineTo(W - n * 1.45, n * 2.3); g.closePath(); g.fill();
     return c.toDataURL("image/jpeg", gm ? 0.86 : 0.85); }
