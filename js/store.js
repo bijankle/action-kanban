@@ -242,7 +242,7 @@ const Store = (() => {
         try { await GH.commit(entries, commitMsg(), at);
           keys.forEach(k => { if (ser(k) === wrote[k]) S.dirty.delete(k); if (k.startsWith("a:")) setBase(k.slice(2), JSON.parse(wrote[k])); }); S.blobs = S.blobs.filter(b => !blobs.includes(b)); break; }
         catch (e){ S.conflicts.length = clashN; if (!e.conflict || tries > 3) throw e; } }
-      lastMsgs = []; stash(); setStatus("saved"); Local.backup(S); App.render();
+      lastMsgs = []; stash(); setStatus("saved"); Local.backup(S); App.renderIdle();   // (not while a dropdown or box is in use)
       if (S.conflicts.length){ const c = S.conflicts.splice(0); App.clashes && App.clashes(c); } }
     catch (e){ console.error(e); setStatus("error", e.status === 401 || e.status === 403 ? "The GitHub key was refused" : navigator.onLine ? (e.detail || e.message) : "Offline"); retryT = setTimeout(save, 20000); }
     finally { saving = false; if (again){ again = false; saveSoon(); } } }
