@@ -88,6 +88,14 @@ export default {
       return json({ message: "Unknown" }, 404); }
     if (p === "/auth/approve") return approvePage(env, A, url);
 
+    /* ---------- a shared file: a signed link from a PDF, so anyone it's sent to can open the attachment without signing
+       in. The link names one file, can't be changed, and stops working after a year ---------- */
+    if (p.startsWith("/share/") && m === "GET"){
+      const o = await unseal(env, p.split("/")[2]); if (!o || !SHARE_OK.test(o.p || "") || o.p.includes("..")) return html(page("Link not valid", "<p>This file link has expired or isn't right. Ask whoever sent it for a new copy.</p>"), 404);
+      const r = await gh("/repos/" + repo + "/contents/" + o.p.split("/").map(encodeURIComponent).join("/"), { headers: { Accept: "application/vnd.github.raw+json" } });
+      if (!r.ok) return html(page("File not found", "<p>This file is no longer there.</p>"), 404);
+      return new Response(r.body, { headers: fileHeaders(o.n || o.p.split("/").pop(), r, "private, max-age=86400") }); }
+
     /* ---------- everything else needs a sign in ---------- */
     const who = await me();
     if (!who){ if (p.startsWith("/api/")) return json({ message: "Sign in again" }, 401); return new Response(null, { status: 302, headers: { Location: "/login" + (p === "/" || p === "/index.html" ? "" : "?next=" + encodeURIComponent(p + url.search)) } }); }
@@ -106,9 +114,14 @@ export default {
       if (fixed){ const hit = await cache.match(key); if (hit) return withHeaders(hit, { "Cache-Control": "private, max-age=31536000, immutable" }); }
       const r = await gh("/repos/" + repo + "/contents/" + path.split("/").map(encodeURIComponent).join("/"), { headers: { Accept: "application/vnd.github.raw+json" } });
       if (!r.ok) return new Response(null, { status: r.status });
-      const type = /\.jpe?g$/i.test(path) ? "image/jpeg" : /\.png$/i.test(path) ? "image/png" : /\.pdf$/i.test(path) ? "application/pdf" : /\.json$/i.test(path) ? "application/json" : r.headers.get("Content-Type") || "application/octet-stream";
-      const res = new Response(r.body, { headers: { "Content-Type": type, "Cache-Control": fixed ? "private, max-age=31536000, immutable" : "no-store" } });
+      const res = new Response(r.body, { headers: fileHeaders(path.split("/").pop(), r, fixed ? "private, max-age=31536000, immutable" : "no-store") });
       if (fixed) ctx.waitUntil(cache.put(key, withHeaders(res.clone(), { "Cache-Control": "public, max-age=31536000, immutable" }))); return res; }
+
+    /* links to attachments for a PDF: { items: [{ p: path, n: file name }] } gives { urls: [...] }, each good for a year */
+    if (p === "/api/share" && m === "POST"){ let q = {}; try { q = await req.json(); } catch (e){}
+      const items = (Array.isArray(q.items) ? q.items : []).slice(0, 500), x = Date.now() + 365 * DAY;
+      const urls = await Promise.all(items.map(async it => SHARE_OK.test(String(it.p || "")) && !String(it.p).includes("..") ? url.origin + "/share/" + await seal(env, { p: String(it.p), n: String(it.n || "").slice(0, 200), x }) + "/" + encodeURIComponent(String(it.n || "file")) : null));
+      return json({ urls }); }
 
     /* the GitHub API, for the data repository only, and only what reading and saving need */
     if (p.startsWith("/api/")){
@@ -137,6 +150,15 @@ export default {
   }
 };
 const HIDDEN_IN = body => { try { return (JSON.parse(body).tree || []).some(e => HIDDEN.has(e.path)); } catch (e){ return true; } };
+/* the files a share link may name: an action's attachments, photos, RFQs and quotes */
+const SHARE_OK = /^data\/p\/[\w\-]+\/(files|img|thumb|rfq|quotes)\/[^\/]+(\/[^\/]+)?$/;
+/* a file's type from its name, so a phone opens a Word or Excel file as itself (not as text), and its name for saving */
+const TYPES = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp", pdf: "application/pdf", json: "application/json", txt: "text/plain; charset=utf-8", csv: "text/csv; charset=utf-8",
+  doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ppt: "application/vnd.ms-powerpoint", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation", dwg: "application/acad", dxf: "application/dxf", zip: "application/zip", msg: "application/vnd.ms-outlook", eml: "message/rfc822" };
+function fileHeaders(name, r, cache){ const ext = String(name).split(".").pop().toLowerCase(), type = TYPES[ext] || "application/octet-stream", show = /^(image|application\/pdf|text\/plain|application\/json)/.test(type);
+  const safe = String(name).replace(/["\\\r\n]/g, "_");
+  return { "Content-Type": type, "Cache-Control": cache, "Content-Disposition": (show ? "inline" : "attachment") + '; filename="' + safe.replace(/[^\x20-\x7e]/g, "_") + '"; filename*=UTF-8\'\'' + encodeURIComponent(name), "X-Content-Type-Options": "nosniff" }; }
 const withHeaders = (r, h) => { const n = new Response(r.body, r); Object.entries(h).forEach(([k, v]) => n.headers.set(k, v)); return n; };
 const profile = (u, isAdmin) => ({ email: u.email, first: u.first || "", last: u.last || "", role: u.role || "", mobile: u.mobile || "", admin: !!isAdmin });
 

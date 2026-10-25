@@ -43,7 +43,7 @@ const Print = (() => {
     if (o.board){ const ss = Store.stages().filter(s => list.some(a => a.stage === s.id));
       root.appendChild(h('<section class="pr-board">' + head + '<div class="pb-cols" style="--n:' + ss.length + '">' + ss.map(s => '<div class="pb-col" style="--c:' + esc(s.color) + '"><div class="pb-h">' + esc(Store.todo(s)) + ' <span>' + list.filter(a => a.stage === s.id).length + '</span></div>'
         + list.filter(a => a.stage === s.id).map(a => '<div class="pb-card"><b>' + esc(Store.actId(a)) + '</b> ' + esc(a.f.title || "") + (Store.eta(a) ? '<i class="' + (Store.eta(a) === "TBC" ? "tbc" : "") + '">ETA ' + esc(fmtDate(Store.eta(a))) + '</i>' : "") + '</div>').join("") + '</div>').join("") + '</div></section>')); }
-    const skip = new Set(["title", "problem", "solution", "notes"]);
+    const skip = new Set(["title", "problem", "solution", "notes"]), links = await Media.shareLinks(list);   // (attachment links anyone can open)
     list.forEach((a, i) => { const s = Store.stage(a.stage), p = Store.project(a._p) || {};
       /* only what has something in it: blank boxes, unticked ticks and empty columns are left out to save the space */
       /* the ticked boxes together in one row, each with a tick (unticked ones are left out) */
@@ -61,7 +61,7 @@ const Print = (() => {
         + tbl("Isolations", ["No.", "Equipment number", "Equipment name", "Note"], (a.isol || []).map((it, k) => [k + 1, it.tag, it.name, it.note]))
         + tbl("MTO", ["Item", "Description", "Part / tag no.", "Qty", "Unit", "Notes"], (a.mto || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes]))
         + tbl("From spares", ["Item", "Description", "Part / tag no.", "Qty", "Unit", "Store location / notes", "Secured"], (a.spares || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes, it.secured ? "Yes" : ""]))
-        + (a.files.length ? '<div class="pa-b"><h5>Attachments</h5>' + a.files.map(f => '<div class="pa-file">📎 <a href="' + esc(Media.fileUrlOnline(a, f)) + '">' + esc(f.name) + '</a> <span class="dim">' + fmtSize(f.size || 0) + '</span></div>').join("") + '</div>' : "") + '</div>'
+        + (a.files.length ? '<div class="pa-b"><h5>Attachments</h5>' + a.files.map(f => '<div class="pa-file">📎 <a href="' + esc(links.get(f) || Media.fileUrlOnline(a, f)) + '">' + esc(f.name) + '</a> <span class="dim">' + fmtSize(f.size || 0) + '</span></div>').join("") + '</div>' : "") + '</div>'
         + (o.photos && a.photos.length ? '<div class="pa-r"><h5>Photos</h5><div class="pa-ph" style="--per:' + Math.max(1, o.per - 1) + '">' + a.photos.map(ph => '<figure><img src="' + esc(Media.src(a, ph)) + '" alt=""><figcaption>' + esc(ph.name || "") + '</figcaption></figure>').join("") + '</div></div>' : "") + '</div></section>')); });
     document.body.appendChild(root); note("Getting the photos ready to print…", 8000);
     await Promise.race([Promise.all($$("img", root).map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))), new Promise(r => setTimeout(r, 20000))]);

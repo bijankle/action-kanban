@@ -38,6 +38,13 @@ const Media = (() => {
   const src = (a, p, thumb) => { const m = mem.get(p.h); if (m) return thumb ? m.thumb : m.main; return GH.fileUrl(thumb ? pThumb(a._p, p.h) : pImg(a._p, p.h)); };
   const fileSrc = (a, f) => mem.get("f" + f.h) || GH.fileUrl(pFile(a._p, f.h, f.name));
   const fileUrlOnline = (a, f) => GH.fileUrl(pFile(a._p, f.h, f.name));
+  /* links for the attachments in a PDF that open for anyone it's sent to, no sign in needed: the site signs one link per
+     file, good for a year. Off the site, or if the site can't yet, the usual link. Gives a Map of file → link */
+  async function shareLinks(acts){ const fs = []; acts.forEach(a => (a.files || []).forEach(f => fs.push([a, f]))); const out = new Map(fs.map(([a, f]) => [f, fileUrlOnline(a, f)]));
+    if (!fs.length || !GH.site()) return out;
+    try { const r = await fetch(location.origin + "/api/share", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: fs.map(([a, f]) => ({ p: pFile(a._p, f.h, f.name), n: f.name })) }) });
+      if (r.ok){ const j = await r.json(); (j.urls || []).forEach((u, i) => { if (u) out.set(fs[i][1], u); }); } } catch (e){ console.warn("share links", e); }
+    return out; }
   async function openFile(a, f){ const loc = Local.ok && await Local.original(a, f.lname || f.name); if (loc){ window.open(URL.createObjectURL(loc), "_blank"); return; }
     if (f.local){ alert(f.name + " is only in the local folder of the computer that added it."); return; } window.open(fileSrc(a, f), "_blank"); }
 
@@ -119,5 +126,5 @@ const Media = (() => {
   function dropOn(a, e){ if (!a) return; const id = e.dataTransfer.getData("text/tray");
     if (id){ const x = tray.find(y => y.id === id); if (!x) return; tray.splice(tray.indexOf(x), 1); drawTray(); return addFiles(a, [x.f]); }
     if (e.dataTransfer.files.length) addFiles(a, e.dataTransfer.files); }
-  return { uniq, addFiles, src, fileSrc, fileUrlOnline, openFile, view, close, refresh, pickFiles, toTray, hasDrop, dropOn, isImg, compress, mem, get open(){ return !!V; } };
+  return { uniq, addFiles, src, fileSrc, fileUrlOnline, shareLinks, openFile, view, close, refresh, pickFiles, toTray, hasDrop, dropOn, isImg, compress, mem, get open(){ return !!V; } };
 })();

@@ -27,6 +27,8 @@ Passwords are kept only as salted hashes in `data/auth.json` in the data reposit
 
 ## Notes
 
+Attachments in a PDF export or work pack are links anyone can open without signing in, so a PDF sent to a contractor still opens its files. Each link names one file, is signed by the worker so it can't be changed into another, and stops working after a year. Word, Excel and other files download as themselves. After changing worker.js, paste it into the worker again (step 3) and Deploy.
+
 The worker fetches the app's own files from GitHub Pages, so app updates show up on the site within a minute with no change here.
 
 Every save is a commit by the GitHub key's owner, and the commit message names the person who made it.

@@ -88,7 +88,7 @@ const Workpack = (() => {
               doc.addImage(d, /png/i.test(d.slice(0, 30)) ? "PNG" : "JPEG", x, y, w, hh, undefined, "FAST"); rowH = Math.max(rowH, hh);
               if (ph.cap){ doc.setFontSize(7.5); doc.setTextColor(110); doc.text(doc.splitTextToSize(ph.cap, gw)[0] || "", M + k * (gw + 6), y + hh + 3.5); } } catch (e){ console.warn("photo", e); } }
           y += rowH + 8; } }
-      if (id === "att"){ head("Attachments"); doc.setFontSize(9.5); a.files.forEach(f => { need(5.5); doc.setTextColor(31, 95, 191); doc.textWithLink(f.name, M, y, { url: Media.fileUrlOnline(a, f) }); doc.setTextColor(120); doc.text(fmtSize(f.size || 0), W - M, y, { align: "right" }); y += 5.5; }); y += 2; } }
+      if (id === "att"){ const links = await Media.shareLinks([a]); head("Attachments"); doc.setFontSize(9.5); a.files.forEach(f => { need(5.5); doc.setTextColor(31, 95, 191); doc.textWithLink(f.name, M, y, { url: links.get(f) || Media.fileUrlOnline(a, f) }); doc.setTextColor(120); doc.text(fmtSize(f.size || 0), W - M, y, { align: "right" }); y += 5.5; }); y += 2; } }
     /* the photo panel's page number and links, now the Photos page exists */
     const php = tocE.photos && tocE.photos.page; photoLinks.forEach(l => { doc.setPage(l.page); if (!php) return; if (l.tx != null){ doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(31, 95, 191); doc.text(String(php), l.tx, l.ty); doc.setFont("helvetica", "normal"); } doc.link(l.x, l.y, l.w, l.h, { pageNumber: php }); });
     /* page numbers */
