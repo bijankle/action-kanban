@@ -893,3 +893,6 @@ input[type=checkbox]{width:18px;height:18px}
 .av-title{display:flex;align-items:center;gap:8px;min-width:0}.av-title>.in,.av-title>.fv{flex:1;min-width:0;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 .av-title .av-more{display:none}.av-title.cut .av-more{display:inline}
 .av-more{flex:none;border:0;background:none;padding:0;color:var(--th);font:600 12px var(--font);cursor:pointer;text-decoration:underline}.av-more:hover{color:var(--ink)}
+/* boxes that show text without being a typing box (Tags, Notes in the list) put it exactly where a typing box does:
+   one line, top aligned, which on a 28px box reads as the middle whatever the font */
+.tg1,.lt-b,.tbl td.ed .lt-b,.tbl td.ed .tg1{box-sizing:border-box;height:var(--ctl-h);border-width:1px;padding:0 8px;line-height:calc(var(--ctl-h) - 2px);vertical-align:top;margin:0}
