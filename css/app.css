@@ -953,3 +953,5 @@ input[type=checkbox]{width:18px;height:18px}
 #printRoot .pa-ph figure{display:block;width:auto;margin:0 0 6px;break-inside:avoid}
 /* the save status keeps one width, so "Saving…" and "Saved" don't shift the buttons beside it */
 #status{min-width:150px;justify-content:flex-start}
+/* details labels only as wide as the longest one, the values take the rest */
+#printRoot .pa-det th{width:1%;white-space:nowrap;padding-right:14px}
