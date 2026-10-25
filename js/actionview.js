@@ -66,7 +66,7 @@ const ActionView = (() => {
   function overview(el, a, ro){
     el.innerHTML = (!Store.mine(a) && a.mod && now() - a.mod < 15 * 60000 ? '<div class="sd-warn">⚠ <b>' + esc(App.who(a)) + '</b> edited this action ' + esc(App.ago(a.mod)) + ' and may still be working on it. Changes to different fields are both kept; if you both change the same field you\'ll both be warned.</div>' : "")
       + '<div class="ov-g"><div class="ov-l"><h4>Problem</h4><div data-f="problem"></div><h4>Solution</h4><div data-f="solution"></div><h4>Notes</h4><div data-f="notes"></div>'
-      + '<h4>Attachments <span class="cnt">' + (a.files.length || "") + '</span>' + (ro ? "" : '<button type="button" class="link" data-k="addf">Attach file</button>') + '</h4><div class="att-l"></div>'
+      + '<h4>Attachments <span class="cnt">' + (a.files.length || "") + '</span></h4><div class="att-l"></div>'
       + '<h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span><button type="button" class="ph-cp" data-k="phcopy" title="Copy a picture of this action: ID and title, problem, solution and every photo" aria-label="Copy a picture of the problem, solution and photos">' + Table.IDI.copy + '</button></h4><div class="ph-fill"><div class="ph-g"></div></div></div>'
       + '<div class="ov-r">'
       + '<h4>Details</h4><div class="det"></div><h4 class="det-h2" hidden>Contractor</h4><div class="det det-c"></div><h4 class="det-h2">Record</h4><div class="det det-m"></div><div class="sd-foot">' + (a.by ? "Last edited by " + esc(a.by) + " " + esc(fmtDate(a.mod)) + " · " : "") + '<button type="button" class="link ch-ln" data-k="hist">Change history</button>' + (a.gps ? ' · <a target="_blank" rel="noopener" href="https://maps.google.com/?q=' + a.gps.lat + "," + a.gps.lng + '">Map pin</a>' : "") + '</div></div></div>';
@@ -125,10 +125,13 @@ const ActionView = (() => {
       box.style.minHeight = need > H ? need + "px" : "";
       if (k === last) return; last = k; g.style.gridTemplateColumns = "repeat(" + c + "," + s + "px)"; g.style.gridAutoRows = s + "px"; GRID.set(a.u, [g.style.gridTemplateColumns, g.style.gridAutoRows, box.style.minHeight]); };
     const ro2 = new ResizeObserver(() => requestAnimationFrame(fit)); ro2.observe(box.closest(".ov-g") || box); requestAnimationFrame(fit); }
-  function files(a, l, ro){ l.innerHTML = a.files.length ? "" : '<div class="dim">No attachments.' + tipI("Drop a PDF, Excel or any file on the action to attach it.") + '</div>';
+  /* the files, then a slim dashed bar one box high to attach another (or drop one on it) */
+  function files(a, l, ro){ l.innerHTML = a.files.length || !ro ? "" : '<div class="dim">No attachments.</div>';
     a.files.forEach(f => { const r = h('<div class="att"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : /docx?$/i.test(f.name) ? "DOC" : "FILE") + '</span><button type="button" class="link att-n">' + esc(f.name) + '</button><span class="dim">' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" title="Remove">✕</button>') + '</div>');
       $(".att-n", r).onclick = () => Media.openFile(a, f);
       const x = $(".ic-b", r); if (x) x.onclick = () => Store.mutate("a:" + a._p, () => { const i = a.files.indexOf(f); if (i >= 0) a.files.splice(i, 1); Store.touch(a); });
-      l.appendChild(r); }); }
+      l.appendChild(r); });
+    if (!ro){ const b = h('<button type="button" class="att-add" title="Attach a PDF, Excel or any file, or drop one here">+ Attach file</button>'); b.onclick = () => Media.pickFiles(a);
+      b.ondragover = e => { if (Media.hasDrop(e)){ e.preventDefault(); b.classList.add("drop"); } }; b.ondragleave = () => b.classList.remove("drop"); b.ondrop = () => b.classList.remove("drop"); l.appendChild(b); } }
   return { render };
 })();
