@@ -959,3 +959,6 @@ input[type=checkbox]{width:18px;height:18px}
 #printRoot .pa-hold{display:flex;flex-direction:column;gap:3px}#printRoot .pa-hr{display:flex;flex-wrap:wrap;gap:3px 18px;align-items:baseline}#printRoot .pa-hn{color:#5b4a26}
 #printRoot .pa-hr b{color:inherit;margin:0}
 #printRoot .pa-ic{width:12px;height:12px;margin-right:5px;vertical-align:-1.5px;fill:none;stroke:#1d2430;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+/* printed sections (option A): a faint line under each heading, a clear gap before the next section */
+#printRoot h5{border-bottom:1px solid #dde1e6;padding-bottom:3px;margin:0 0 5px}
+#printRoot .pa-b+.pa-b,#printRoot .pa-b+.pa-ph2{margin-top:14px}#printRoot .pa-l>.pa-b:first-child h5{margin-top:0}
