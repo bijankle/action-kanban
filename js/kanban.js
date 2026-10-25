@@ -7,7 +7,7 @@ const Kanban = (() => {
     const match = a => Filters.match(a);
     const sx = $(".kb", el) ? $(".kb", el).scrollLeft : 0, sy = {}; $$(".kb-cards", el).forEach(c => sy[c.dataset.s] = c.scrollTop);
     el.innerHTML = '<div class="kb">' + Store.stages().map(s => { const cards = Store.ranked(s.id).filter(match);
-        return '<section class="kb-col" data-s="' + s.id + '" style="--c:' + esc(s.color) + '"><header class="kb-h" draggable="' + !ro + '"><i class="dot"></i><span class="kb-n" title="' + esc("On the action this step reads " + s.name + ". Double click to rename the column") + '">' + esc(Store.todo(s)) + '</span><span class="kb-c">' + (q ? cards.length + " of " + Store.ranked(s.id).length : cards.length) + '</span>'
+        return '<section class="kb-col" data-s="' + s.id + '" style="' + esc(stageVars(s.color)) + '"><header class="kb-h" draggable="' + !ro + '"><i class="dot"></i><span class="kb-n" title="' + esc("On the action this step reads " + s.name + ". Double click to rename the column") + '">' + esc(Store.todo(s)) + '</span><span class="kb-c">' + (q ? cards.length + " of " + Store.ranked(s.id).length : cards.length) + '</span>'
           + (s.kind === "hold" ? '<span class="kb-k">on hold</span>' : s.kind === "done" ? '<span class="kb-k">complete</span>' : "") + '<span class="grow"></span>'
           + (ro ? "" : '<button type="button" class="ic-b sm kb-m" title="Stage options">⋯</button>') + '</header>'
           + '<div class="kb-cards" data-s="' + s.id + '">' + cards.map(a => card(a, multi)).join("") + '</div></section>'; }).join("")

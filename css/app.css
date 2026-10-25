@@ -781,3 +781,16 @@ html.dark .idw .pj b{color:#ff6b5b}
 .tbl th:hover .th-m,.tbl th .th-m:focus-visible,.tbl th .th-m[aria-expanded="true"]{opacity:1}.tbl th .th-m:hover{background:rgba(255,255,255,.2)}
 .tbl th[data-c]:not(.actc):not(.tk) .th-l{padding-right:24px}.tbl th.tk .th-m{opacity:0;right:2px;background:var(--th)}.tbl th.tk:hover .th-m,.tbl th.tk .th-m:focus-visible{opacity:1}
 .colm{width:200px;padding:4px;display:flex;flex-direction:column}.colm button{text-align:left;border:0;background:none;padding:7px 10px;border-radius:6px;font:13.5px var(--font);color:var(--ink);cursor:pointer}.colm button:hover{background:var(--panel2)}.colm .bad{color:#c0392b}.colm .msep{margin:4px 0}
+/* faint lines running down from each heading between the columns (option A) */
+.tbl td+td{border-left:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+/* the Status heading over the row buttons gets the same inset as the other headings */
+.tbl th.actc{padding:8px 10px;font-size:13px}
+/* stage labels, option 2: a pale tint of the stage colour with its text in a deep shade of the same colour */
+.kb-col{border-top:0}.kb-h{background:var(--stb,var(--panel2));color:var(--stf,var(--ink));border-radius:12px 12px 0 0;padding:10px 10px 9px 12px;font-weight:600}
+.kb-h .dot{display:none}.kb-h .kb-c{color:inherit;opacity:.85;background:rgba(255,255,255,.55);border-radius:999px;padding:0 8px;font-size:12.5px}
+html.dark .kb-h{background:color-mix(in srgb,var(--c) 26%,var(--panel));color:color-mix(in srgb,var(--c) 40%,#fff)}html.dark .kb-h .kb-c{background:rgba(0,0,0,.25)}
+.fpill[style*="--stb"].on{background:var(--stb);color:var(--stf);border-color:color-mix(in srgb,var(--c) 45%,var(--stb))}.fpill[style*="--stb"].on b{color:inherit;opacity:.8}
+.fpill[style*="--stb"]:not(.on){border-color:color-mix(in srgb,var(--c) 50%,var(--line))}
+html.dark .fpill[style*="--stb"].on{background:color-mix(in srgb,var(--c) 26%,var(--panel));color:color-mix(in srgb,var(--c) 40%,#fff)}
+/* the tick boxes sit in the middle of their cell */
+.tbl td.tk .ck{display:flex;justify-content:center;align-items:center;margin:0 auto}

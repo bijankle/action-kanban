@@ -98,3 +98,14 @@ const smartHit = (text, q) => { const w = Array.isArray(q) ? q : qWords(q); if (
   document.addEventListener("click", e => { const d = down; down = null; if (!d || e.detail === 0 || !e.isTrusted) return;
     const field = d.closest && d.closest("input,textarea,select,[contenteditable]"), moved = Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) > 6;
     if ((field && !field.contains(e.target)) || (moved && !(e.target.contains(d) && e.target.closest("button,a,label,input,select,textarea,[role=button]")))){ e.stopPropagation(); e.preventDefault(); } }, true); })();
+
+/* a stage's label colours (option 2): a pale tint of its colour, and its text in a deep shade of the same colour,
+   dark enough to read (6 to 1 or better). Returned as style variables: --c, --stb (the tint) and --stf (the text) */
+const stageVars = (() => { const memo = new Map();
+  const hx = h => [1, 3, 5].map(i => parseInt(String(h).substr(i, 2), 16) || 0), toH = c => "#" + c.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("");
+  const lum = h => { const c = hx(h).map(v => v / 255).map(v => v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4)); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+  const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+  const mix = (a, b, t) => { const x = hx(a), y = hx(b); return toH(x.map((v, i) => v + (y[i] - v) * t)); };
+  return c => { c = /^#[0-9a-f]{6}$/i.test(c || "") ? c : "#64748b"; if (memo.has(c)) return memo.get(c);
+    const stb = mix(c, "#ffffff", .8); let t = 0, stf = c; while (cr(stf, stb) < 6 && t < 1){ t += .02; stf = mix(c, "#101418", t); }
+    const out = "--c:" + c + ";--stb:" + stb + ";--stf:" + stf; memo.set(c, out); return out; }; })();
