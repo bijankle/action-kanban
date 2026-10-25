@@ -69,14 +69,14 @@ const Table = (() => {
     /* a column nobody has sized: the narrow kinds (ticks, yes or no, dates, counts) are as wide as the longest word in
        their heading (headings wrap onto two lines), or what their contents need if that's wider */
     /* the tick box columns are all one width: the widest of their headings' longest words */
-    const tickF = "700 11.5px " + getComputedStyle(document.body).fontFamily, tickW = Math.max(52, ...all.filter(c => TICK.has(c.type)).map(c => headW(head(c), tickF) + 20));   // (+ the i)
+    const tickF = "700 11.5px " + getComputedStyle(document.body).fontFamily, tickW = Math.max(52, ...all.filter(c => TICK.has(c.type)).map(c => headW(head(c), tickF) + 4));   // (headW already allows for the i and the padding; the ▾ shows over it on hover)
     const px = c => ws[c.id] || (TICK.has(c.type) ? tickW : fix(c) ? Math.max(headW(c.label), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
     const FIX = new Set(["act", "id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || (c.type === "choice" && (c.options || []).length <= 3) || !!ws[c.id];   // (a column someone has sized keeps that width; the rest share what's left)
     /* when space runs out, the counts and dates go first, then the location; the tick boxes stay */
     const lp = c => (["sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
     /* the least each column can be; when they don't all fit, the tick columns go first, then the dates and numbers,
        so a title never gets squeezed to one letter per line (and the list scrolls sideways only if even that's not enough) */
-    const fw = c => ws[c.id] || (c.type === "id" ? NEED.id : Math.min(px(c), 150));   // (the ID column fits its box: ID, copy, PDF)   // (a width someone set is kept as it is)
+    const fw = c => c.type === "id" ? Math.max(ws[c.id] || 0, NEED.id) : ws[c.id] || Math.min(px(c), 150);   // (the ID column fits its box: ID, copy, PDF)   // (a width someone set is kept as it is)
     const least = c => fix(c) ? fw(c) : c.id === "title" ? 260 : 110;
     const lv = c => lp(c) === " lp1" ? 1 : lp(c) === " lp2" ? 2 : 3, need = n => all.filter(c => lv(c) > n).reduce((t, c) => t + least(c), 0);
     const w = el.clientWidth || 9999, level = need(0) <= w ? 0 : need(1) <= w ? 1 : 2, cs = all.filter(c => lv(c) > level); lastLv = level; levelOf = w2 => need(0) <= w2 ? 0 : need(1) <= w2 ? 1 : 2;

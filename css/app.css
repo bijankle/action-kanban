@@ -695,7 +695,7 @@ html.dark .av-tab b{color:var(--ink)}
 .ps{display:inline-flex;align-items:center;gap:5px;font-weight:600;white-space:nowrap}.ps::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
 .holdpop textarea{resize:vertical;min-height:60px;font:inherit}
 
-.tbl th.tk{font-size:11.5px;text-align:center}.tbl th.tk .th-l{padding:8px 6px}.tbl td.tk{text-align:center}.tbl td.tk .ck{justify-content:center;margin:0 auto}
+.tbl th.tk{font-size:11.5px;text-align:center}.tbl th.tk .th-l{padding:8px 4px}.tbl td.tk{text-align:center}.tbl td.tk .ck{justify-content:center;margin:0 auto}
 
 /* tick column headings: one word and an i for what it means */
 .th-i{display:inline-grid;place-items:center;width:15px;height:15px;margin-left:4px;border-radius:50%;border:0;background:color-mix(in srgb,#fff 28%,transparent);color:#fff;font:italic 800 10px/15px Georgia,serif;cursor:pointer;padding:0;vertical-align:1px}
@@ -779,5 +779,5 @@ html.dark .idw .pj b{color:#ff6b5b}
 /* a column heading's ▾ menu button: faint until you point at the heading */
 .tbl th .th-m{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:18px;height:18px;border:0;border-radius:4px;background:transparent;color:#fff;opacity:.45;font-size:10px;line-height:18px;padding:0;cursor:pointer;z-index:2}
 .tbl th:hover .th-m,.tbl th .th-m:focus-visible,.tbl th .th-m[aria-expanded="true"]{opacity:1}.tbl th .th-m:hover{background:rgba(255,255,255,.2)}
-.tbl th[data-c]:not(.actc) .th-l{padding-right:24px}
+.tbl th[data-c]:not(.actc):not(.tk) .th-l{padding-right:24px}.tbl th.tk .th-m{opacity:0;right:2px;background:var(--th)}.tbl th.tk:hover .th-m,.tbl th.tk .th-m:focus-visible{opacity:1}
 .colm{width:200px;padding:4px;display:flex;flex-direction:column}.colm button{text-align:left;border:0;background:none;padding:7px 10px;border-radius:6px;font:13.5px var(--font);color:var(--ink);cursor:pointer}.colm button:hover{background:var(--panel2)}.colm .bad{color:#c0392b}.colm .msep{margin:4px 0}
