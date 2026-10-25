@@ -109,3 +109,19 @@ const stageVars = (() => { const memo = new Map();
   return c => { c = /^#[0-9a-f]{6}$/i.test(c || "") ? c : "#64748b"; if (memo.has(c)) return memo.get(c);
     const stb = mix(c, "#ffffff", .8); let t = 0, stf = c; while (cr(stf, stb) < 6 && t < 1){ t += .02; stf = mix(c, "#101418", t); }
     const out = "--c:" + c + ";--stb:" + stb + ";--stf:" + stf; memo.set(c, out); return out; }; })();
+
+/* titles in proper case: each word starts with a capital, except the small joining words (and, or, of, the…) unless
+   they come first; words already in capitals (PC2, FIM, III), codes with digits (cv402 → CV402, f12-rb-401 → F12-RB-401)
+   and common plant acronyms (rom → ROM) are kept or put in capitals; mixed case words (McKenzie) are left alone */
+const properTitle = (() => {
+  const SMALL = new Set("a an and as at but by for from in into nor of on onto or over per the to via vs with".split(" "));
+  const ACR = new Set("ac bom ccr cctv cv dc dcs dol esd fat fim hmi hpgr hv hvac id ip lan lv mcc mcp mto ocr od oem ohs pc pcs pid plc po ppe ptw qa qc rfi rfq rom sag scada sop tsf ups vfd vsd wbs wo".split(" "));
+  const word = (w, first) => w.replace(/[A-Za-z0-9][A-Za-z0-9'’.]*/g, (t, i) => {
+    const low = t.toLowerCase(), lead = first && i === 0;
+    if (/[0-9]/.test(t) && /[a-z]/i.test(t)) return t.toUpperCase();   // (a code or tag number)
+    if (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) return t;   // (already capitals)
+    if (/[a-z]/.test(t) && /[A-Z]/.test(t.slice(1))) return t;   // (mixed case on purpose)
+    if (ACR.has(low.replace(/[.'’]/g, ""))) return low.replace(/[.'’]/g, "").toUpperCase();
+    if (!lead && SMALL.has(low)) return low;
+    return low.charAt(0).toUpperCase() + low.slice(1); });
+  return s => String(s || "").replace(/\s+/g, " ").trim().split(" ").map((w, i) => word(w, i === 0)).join(" "); })();

@@ -159,7 +159,7 @@ const Store = (() => {
 
   function newAction(pid, vals, stageId){ const pa = S.acts[pid] || (S.acts[pid] = { nextNo: 1, actions: [] });
     const st = stageId || stages()[0].id; const top = ranked(st)[0];
-    const a = touch({ u: uid(), no: pa.nextNo++, stage: st, stageAt: { [st]: now() }, rank: top ? (top.rank || 0) - 1 : 0, created: now(), f: Object.assign({}, vals || {}), photos: [], files: [] });
+    const a = touch({ u: uid(), no: pa.nextNo++, stage: st, stageAt: { [st]: now() }, rank: top ? (top.rank || 0) - 1 : 0, created: now(), f: Object.assign({}, vals || {}, vals && vals.title ? { title: properTitle(vals.title) } : {}), photos: [], files: [] });
     if (Profile.name()) a.owner = me() ? { n: Profile.name(), e: me() } : { n: Profile.name() };   // (the owner starts as whoever made it)
     pa.actions.push(a); a._p = pid; return a; }
   /* move an action to a stage, at a position in that column (index among what's on show) */

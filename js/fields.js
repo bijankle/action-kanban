@@ -33,7 +33,8 @@ const Fields = (() => {
       case "phone": return v ? '<a href="tel:' + esc(String(v).replace(/\s/g, "")) + '">' + esc(v) + '</a>' : "";
       default: return v == null || v === "" ? "" : '<span class="' + (tbc(v) ? "tbc" : "") + '">' + esc(v) + '</span>'; } }
 
-  function set(a, f, v){ if (!["stage", "rank", "complete"].includes(f.type) && JSON.stringify(a.f[f.id] == null ? "" : a.f[f.id]) === JSON.stringify(v == null ? "" : v)) return;   // nothing changed
+  function set(a, f, v){ if (f.id === "title" && typeof v === "string") v = properTitle(v);   // (titles in proper case)
+    if (!["stage", "rank", "complete"].includes(f.type) && JSON.stringify(a.f[f.id] == null ? "" : a.f[f.id]) === JSON.stringify(v == null ? "" : v)) return;   // nothing changed
     Store.mutate("a:" + a._p, () => {
       if (f.id === "status"){ if (a.stage !== v) Store.place(a, v); Store.log("Moved " + Store.actId(a) + " to " + Store.stage(v).name); return; }
       if (f.type === "complete"){ const fin = Store.stages().find(s => s.kind === "done"), ret = Store.stages().find(s => s.id === a.prevStage && s.kind !== "done") || Store.stages().find(s => s.kind !== "done");
