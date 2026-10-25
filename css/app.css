@@ -823,3 +823,8 @@ html.dark .eta-i.ok{background:#173326;color:#5fd39a}html.dark .eta-i.late{backg
 /* the export buttons show a page with its file type on a coloured label */
 .dl .fico{width:22px;height:22px}.dl b{display:none}.dl{color:var(--muted)}
 .idw .pj{width:28px;padding:0}.idw .pj .fico{width:18px;height:18px}
+/* every heading's words sit at the top of the heading row; a tick heading's (i) is pinned to the bottom, so they line up */
+.tbl th,.tbl th.tk{vertical-align:top}
+.tbl th.tk .th-l{padding:7px 4px 26px}
+.tbl th.tk .th-i{position:absolute;left:50%;bottom:5px;margin:0;transform:translateX(-50%)}
+.tbl th.actc{vertical-align:top}
