@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.27";
+const APP_VERSION = "1.10.28";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -30,7 +30,7 @@ const App = (() => {
     const side = $("#side"), sb = $("#sideBody"); side.hidden = $("#split").hidden = !panel;
     if (panel){ if (sel) ActionView.render(sb); else sb.innerHTML = '<div class="side-0"><b>No action open</b><span class="dim">Click an action ' + (A.tab === "kanban" ? "card" : "in the list") + ' to see it here.' + tipI("Drag the line on the left to make this panel wider or narrower.") + '</span></div>'; }
     popup(!panel && sel);
-    $$("#vt button").forEach(b => b.classList.toggle("on", b.dataset.v === A.view)); $("#sizeB").hidden = !list || A.view !== "tiles"; $("#vt").hidden = !list; $("#colB").hidden = !list || A.view !== "list";
+    $$("#vt button").forEach(b => b.classList.toggle("on", b.dataset.v === A.view)); $("#sizeB").hidden = !list || A.view !== "tiles"; $("#vt").hidden = !list;
     lsSet("adPills", [...A.pills]); Hold.after(); }
   /* the Filters panel (left) and the Details panel (right): each one's header is its show and hide button; a hidden
      panel's header waits at its end of the list's header row, beside what's filtering. With Details hidden an action
@@ -254,7 +254,7 @@ const App = (() => {
       + '<div class="mi-sub">Text size</div><div class="mi-seg">' + [[0.87, "Smaller"], [1, "Normal"], [1.13, "Larger"], [1.27, "Largest"]].map(([k, n]) => '<button type="button" data-z="' + k + '"' + (+v.text === k ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</div>'
       + '<div class="mi-sub">Font</div><div class="mi-fo">' + FONTS.map(([id, n, ff]) => '<button type="button" data-fo="' + id + '" style="font-family:' + esc(ff) + '"' + (v.font === id ? ' class="on"' : "") + '>' + esc(n) + '</button>').join("") + '</div>'
       + '<div class="mi-sub">Open actions in</div><div class="mi-seg"><button type="button" data-pn="1"' + (lsGet("adPanel", true) ? ' class="on"' : "") + '>Side panel</button><button type="button" data-pn="0"' + (!lsGet("adPanel", true) ? ' class="on"' : "") + '>Pop up</button></div>'
-      + '<div class="msep"></div><button type="button" class="mi" data-k="cols">Table columns…</button><button type="button" class="mi" data-k="side">Reset side panel width</button>';
+      + '<div class="msep"></div><button type="button" class="mi" data-k="side">Reset side panel width</button>';
     const set = o => { lsSet("adView", Object.assign(v, o)); applyView(); viewMenu(drop); };
     $$("[data-th]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ theme: b.dataset.th }); });
     $(".thp-c input", drop).oninput = e => { lsSet("adView", Object.assign(v, { theme: "custom", custom: e.target.value })); applyView(); };
@@ -262,7 +262,6 @@ const App = (() => {
     $$("[data-d]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ dark: b.dataset.d === "1" }); });
     $$("[data-z]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ text: +b.dataset.z }); });
     $$("[data-fo]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ font: b.dataset.fo }); });
-    $("[data-k=cols]", drop).onclick = () => { closeMenus(); A.tab = "actions"; lsSet("adTab", "actions"); draw(); Table.columnsPop($("#colB")); };
     $("[data-k=side]", drop).onclick = () => { lsSet("adSideW", null); $("#main").style.removeProperty("--side-w"); closeMenus(); };
     $$("[data-pn]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); lsSet("adPanel", b.dataset.pn === "1"); render(); viewMenu(drop); }); }
 
@@ -332,7 +331,7 @@ const App = (() => {
     if (!A.mobile){ menus();
       $$(".tab").forEach(t => t.onclick = () => setTab(t.dataset.t));
       $("#q").oninput = debounce(() => { A.q = $("#q").value; render(); }, 150);
-      $("#newB").onclick = () => newAction(); $("#pasteB").onclick = () => Intake.open(null, ""); $("#colB").onclick = e => { e.stopPropagation(); Table.columnsPop(e.currentTarget); };
+      $("#newB").onclick = () => newAction(); $("#pasteB").onclick = () => Intake.open(null, "");
       $$("#vt button").forEach(b => b.onclick = () => { A.view = b.dataset.v; lsSet("adViewType", A.view); render(); }); $("#sizeB").onclick = e => { e.stopPropagation(); Table.sizePop(e.currentTarget); };
       $("#printB").onclick = () => Print.dialog(); $("#xlsB").onclick = () => Print.excelDialog();
       $("#undoB").onclick = () => Store.undo(); $("#redoB").onclick = () => Store.redo(); $("#updB").onclick = update;
