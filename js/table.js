@@ -13,6 +13,9 @@ const Table = (() => {
     return Math.ceil(Math.max(...String(label || "").split(/\s+/).map(w => cv.measureText(w).width), 0)) + 20 + 10; }
   const W = { text: 200, longtext: 260, multi: 170, stage: 170, rank: 74, check: 90, choice: 120, date: 120, contact: 160, phone: 130, number: 90 };
   const widths = () => lsGet("adColW", {});
+  /* (once: the headings now wrap a word at a time and the i sits underneath, so column widths saved before that are
+     dropped and every column takes its new default; a title width someone set is kept) */
+  if (lsGet("adColWv", 0) < 2){ const w = widths(), keep = {}; if (w.title) keep.title = w.title; lsSet("adColW", keep); lsSet("adColWv", 2); }
   function cols(){ const c = [{ id: "_act", label: "", type: "act" }, { id: "_id", label: "ID", type: "id" }]; if (Store.selected().length > 1) c.push({ id: "_proj", label: "Project", type: "proj" });
     return c.concat(Store.fields().filter(f => f.table)); }
   /* what's on show: the projects ticked, the stage pills, the search */
