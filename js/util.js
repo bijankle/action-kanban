@@ -143,3 +143,12 @@ const noAutofill = root => (root.matches && root.matches(AF_SEL) ? [root] : []).
 const AF_SEL = "input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=password]):not([data-af]), textarea:not([data-af])";
 new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && noAutofill(n)))).observe(document.documentElement, { childList: true, subtree: true });
 document.addEventListener("DOMContentLoaded", () => noAutofill(document.body));
+
+/* text that may be cut short: moreCut(html, heading) is the text with a more… after it, shown only when the text doesn't
+   fit (moreFit(root) checks after drawing). Clicking more… shows it all in a small popup under the heading. Use ⓘ only
+   for explaining something, not for showing text that was cut */
+const moreCut = (html, head) => '<span class="mc"' + (head ? ' data-h="' + esc(head) + '"' : "") + '><span class="mc-t">' + html + '</span><button type="button" class="mc-more" title="Show it all">more…</button></span>';
+function moreFit(root){ (root || document).querySelectorAll(".mc").forEach(m => { const t = m.firstElementChild; m.classList.toggle("cut", !!t && t.scrollWidth > t.clientWidth + 1); }); }
+document.addEventListener("click", e => { const b = e.target.closest(".mc-more"); if (!b) return; e.preventDefault(); e.stopPropagation(); const m = b.closest(".mc"); if (typeof Fields !== "undefined") Fields.closePop();
+  const p = document.createElement("div"); p.className = "pop mc-pop"; p.innerHTML = (m.dataset.h ? '<div class="mc-ph">' + esc(m.dataset.h) + '</div>' : "") + '<div class="mc-pt">' + m.firstElementChild.innerHTML + '</div>';
+  document.body.appendChild(p); const r = b.getBoundingClientRect(); p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.right - p.offsetWidth)) + "px"; p.style.top = (r.bottom + 6 + p.offsetHeight > innerHeight ? Math.max(8, r.top - p.offsetHeight - 6) : r.bottom + 6) + "px"; }, true);

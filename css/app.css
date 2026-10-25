@@ -971,3 +971,8 @@ input[type=checkbox]{width:18px;height:18px}
 .dw-dl{flex:none;width:34px;height:var(--ctl-h);border:1px solid var(--line2);border-radius:8px;background:var(--panel);display:grid;place-items:center;color:var(--muted)}.dw-dl:hover{border-color:var(--th)}
 .dw-dl svg{width:22px;height:24px}.dw-dl .fsp{fill:#038387}html.dark .dw-dl .fsp{fill:#2ec4c9}.dw-dl0{width:34px;flex:none}
 .dw-s .dw-all{margin-left:1px}
+/* text cut short: a more… after it only when it doesn't fit, and the popup that shows it all */
+.mc{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%}.mc-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-more{display:none;flex:none;border:0;background:none;padding:0;color:var(--th);font:600 12px var(--font);cursor:pointer;text-decoration:underline}.mc-more:hover{color:var(--ink)}.mc.cut .mc-more{display:inline}
+.mc-pop{max-width:380px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}.mc-ph{font-size:12px;font-weight:700;color:var(--dim)}.mc-pt{font-size:13.5px;line-height:1.45;white-space:normal;overflow-wrap:anywhere}
+.dw-h .dw-t{display:flex}

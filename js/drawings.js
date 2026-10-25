@@ -55,6 +55,7 @@ const Drawings = (() => {
     const fx = $("[data-k=fx]", el); if (fx) fx.onclick = () => { fails.delete(ref); draw(el, a); };
     /* the box above the ticks: clears them all if any are ticked, else ticks every one shown */
     const ta = $("[data-k=all]", el); if (ta) ta.onchange = () => Store.mutate("a:" + a._p, () => { a.dwgPick = anyOn ? [] : [...new Set((a.dwgPick || []).concat(list.map(([, d]) => d.n)))]; Store.touch(a); });
+    moreFit(el);
     $$(".dw-b", el).forEach(r => { const k = r.dataset.key, [t, d] = list.find(([t, d]) => key(t, d) === k) || [];
       $(".dw-i", r).onclick = e => { e.stopPropagation(); info(e.currentTarget, t, d); }; }); }
   /* a document's line: the tick, its number and rev as one link to SharePoint, its title, ⓘ, the sub equipment it's
@@ -63,7 +64,7 @@ const Drawings = (() => {
     return '<div class="dw-b' + (on ? " pk" : "") + '" data-key="' + esc(k) + '"><div class="dw-h">'
       + '<label class="dw-ck" title="Include in the work pack"><input type="checkbox" data-n="' + esc(d.n) + '"' + (on ? " checked" : "") + (Store.S.edit ? "" : " disabled") + ' aria-label="Include ' + esc(d.n) + ' in the work pack"></label>'
       + (d.url ? '<a class="dw-a" href="' + esc(d.url) + '" target="_blank" rel="noopener" title="View it in SharePoint">' + nr + '</a>' : '<span class="dw-a dw-a0" title="Not in SharePoint">' + nr + '</span>')
-      + '<span class="dw-t">' + esc(d.t || "") + '</span><button type="button" class="dw-i" title="Where it comes from" aria-label="About ' + esc(d.n) + '">i</button>'
+      + '<span class="dw-t">' + moreCut(esc(d.t || ""), d.n + (d.rev ? "_" + d.rev : "")) + '</span><button type="button" class="dw-i" title="Where it comes from: which equipment it\'s for and why it\'s listed" aria-label="Where ' + esc(d.n) + ' comes from">i</button>'
       + (!d.own ? '<span class="dw-of" title="' + esc(e.n || "") + '">' + esc(d.of) + '</span>' : "")
       + (d.pdf ? '<a class="dw-dl" href="' + esc(d.pdf.split("#")[0]) + '" target="_blank" rel="noopener" download title="Download the PDF copy' + (d.pdfRev ? ", rev " + esc(d.pdfRev) : "") + ' (no SharePoint needed)" aria-label="Download the PDF copy of ' + esc(d.n) + '">' + DLI + '</a>' : '<span class="dw-dl0"></span>') + '</div></div>'; }
   /* the download button's symbol: a cloud with an arrow, SHARE in SharePoint teal underneath */

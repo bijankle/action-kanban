@@ -67,7 +67,7 @@ const Table = (() => {
   /* titles are one line: a title too long for its column ends in … with a more… that shows it in full */
   /* the ID column is just wide enough for its box with an 8px margin each side, like the Status buttons */
   let idW = NEED.id;
-  function cut(el){ const ids = $$(".idw .aid", el); el.style.removeProperty("--aid-w"); if (ids.length) el.style.setProperty("--aid-w", Math.ceil(Math.max(...ids.map(x => x.getBoundingClientRect().width))) + "px");
+  function cut(el){ moreFit(el); const ids = $$(".idw .aid", el); el.style.removeProperty("--aid-w"); if (ids.length) el.style.setProperty("--aid-w", Math.ceil(Math.max(...ids.map(x => x.getBoundingClientRect().width))) + "px");
     const bx = $$("td.idc .idw", el); if (bx.length){ const want = Math.ceil(Math.max(...bx.map(x => x.getBoundingClientRect().width))) + 16 + 1; if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
     $$("td.ttl", el).forEach(td => { const t = $(".tt", td); if (t) td.classList.toggle("cut", t.scrollWidth > t.clientWidth + 1); });
     $$("td.ltc", el).forEach(td => { const t = $(".lt-b", td), v = String((App.act(td.closest("tr").dataset.ref) || { f: {} }).f[t.dataset.lt] || ""); td.classList.toggle("cut", v.includes("\n") || t.scrollWidth > t.clientWidth + 1); }); }
@@ -117,7 +117,7 @@ const Table = (() => {
         else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi", "choice"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.classList.add("ed"); td.appendChild(Fields.editor(a, c)); if (c.id === "onhold"){ const hb = Hold.btn(a); if (hb){ td.classList.add("has-hold"); td.insertAdjacentHTML("beforeend", hb); } } }
         else if (c.type === "longtext" && Store.S.edit){ td.classList.add("ed", "ltc"); const v = String(a.f[c.id] || ""); td.innerHTML = '<div class="lt-w"><button type="button" class="lt-b in" data-lt="' + esc(c.id) + '" title="Click to edit">' + (v ? esc(v.split("\n").join("  ·  ")) : '<span class="dim">Add ' + esc((c.label || "").toLowerCase()) + '</span>') + '</button><button type="button" class="lt-more" data-lt="' + esc(c.id) + '" title="Show and edit it all">more…</button></div>'; }
         else if (c.id === "title"){ td.classList.add("ttl"); td.innerHTML = '<div class="tt-w"><span class="tt">' + (esc(a.f.title || "") || '<span class="dim">No title</span>') + '</span><button type="button" class="tt-more" title="Show the full title">more…</button></div>'; }
-        else td.innerHTML = Fields.show(a, c);
+        else { const v = Fields.show(a, c); td.innerHTML = v && !TICK.has(c.type) && /^(text|longtext|choice|contact|multi)$/.test(c.type) ? moreCut(v, Store.actId(a) + " " + c.label) : v; }
         if (c.id === "parts"){ td.classList.add("has-eta"); td.insertAdjacentHTML("beforeend", etaI(a)); }   // (the space is kept on every row so the boxes line up)
         tr.appendChild(td); });
       if (ADD){ const td = document.createElement("td"); td.className = "addcol"; tr.appendChild(td); }
