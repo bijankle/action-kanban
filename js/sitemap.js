@@ -105,8 +105,9 @@ const SiteMap = (() => {
     if (!whole){ g.fillStyle = "rgba(255,255,255,.9)"; g.fillRect(16, H - 48, bar + 20, 32); g.fillStyle = "#1d2430"; g.fillRect(26, H - 26, bar, 5); g.font = "bold " + Math.round(Math.min(r, 24) * 0.8) + "px Arial"; g.fillText(m + " m", 26, H - 32); }
     g.fillStyle = "rgba(255,255,255,.9)"; g.beginPath(); g.arc(W - 36, 38, 24, 0, 7); g.fill(); g.fillStyle = "#1d2430"; g.beginPath(); g.moveTo(W - 36, 18); g.lineTo(W - 44, 42); g.lineTo(W - 36, 37); g.lineTo(W - 28, 42); g.closePath(); g.fill(); g.font = "bold 12px Arial"; g.fillText("N", W - 40, 56);
     return c.toDataURL("image/jpeg", 0.85); }
-  /* the note under the map: how each tag was placed, and to check it */
-  const note = locs => "Auto generated location, check it on site before relying on it. " + locs.map(l => l.tag + " is placed from " + l.how + ".").join(" ");
+  /* the note under the map: one short line on how the least certain of the tags was placed */
+  const note = locs => { const hw = locs.map(l => l.how); return hw.some(h => /^the middle of plant area/.test(h)) ? "Rough location only, based purely on WBS code" : hw.some(h => /same P&ID/.test(h)) ? "Rough location only, based on other equipment on the same P&ID"
+    : hw.some(h => /main equipment/.test(h)) ? "Approximate location, from the main equipment it belongs to" : hw.some(h => /approximate/.test(h)) ? "Approximate location, from the plant layout" : "Location from the plant layout, check it on site"; };
   /* for an action: { url, locs, note } (cached while its tags stay the same), or null if nothing can be placed */
   function forAction(a, whole){ const tags = tagsOf(a), key = tags.join("|") + (whole ? "|whole" : ""); if (!tags.length) return Promise.resolve(null);
     if (!shots.has(key)) shots.set(key, locateAll(tags).then(async locs => { const r = locs.length ? { url: await render(locs, whole ? 2400 : 1200, whole), locs, note: note(locs) } : null; done.set(key, r); return r; }).catch(e => { shots.delete(key); throw e; }));
