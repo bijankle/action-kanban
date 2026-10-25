@@ -148,7 +148,7 @@ document.addEventListener("DOMContentLoaded", () => noAutofill(document.body));
    fit (moreFit(root) checks after drawing). Clicking more… shows it all in a small popup under the heading. Use ⓘ only
    for explaining something, not for showing text that was cut */
 const moreCut = (html, head) => '<span class="mc"' + (head ? ' data-h="' + esc(head) + '"' : "") + '><span class="mc-t">' + html + '</span><button type="button" class="mc-more" title="Show it all">more…</button></span>';
-function moreFit(root){ (root || document).querySelectorAll(".mc").forEach(m => { const t = m.firstElementChild; m.classList.toggle("cut", !!t && t.scrollWidth > t.clientWidth + 1); }); }
+function moreFit(root){ (root || document).querySelectorAll(".mc").forEach(m => { const t = m.firstElementChild; m.classList.toggle("cut", !!t && (t.scrollWidth > t.clientWidth + 1 || t.scrollHeight > t.clientHeight + 1)); }); }   // (cut off at the side, or below its last line)
 document.addEventListener("click", e => { const b = e.target.closest(".mc-more"); if (!b) return; e.preventDefault(); e.stopPropagation(); const m = b.closest(".mc"); if (typeof Fields !== "undefined") Fields.closePop();
   const p = document.createElement("div"); p.className = "pop mc-pop"; p.innerHTML = (m.dataset.h ? '<div class="mc-ph">' + esc(m.dataset.h) + '</div>' : "") + '<div class="mc-pt">' + m.firstElementChild.innerHTML + '</div>';
   document.body.appendChild(p); const r = b.getBoundingClientRect(); p.style.left = Math.max(8, Math.min(innerWidth - p.offsetWidth - 8, r.right - p.offsetWidth)) + "px"; p.style.top = (r.bottom + 6 + p.offsetHeight > innerHeight ? Math.max(8, r.top - p.offsetHeight - 6) : r.bottom + 6) + "px"; }, true);
@@ -158,3 +158,6 @@ const KSYM = { "Mech equipment": '<path d="M10.37 5.19L10.5 2.52L13.5 2.52L13.63
   "Control valve": '<path d="M3.5 13.5l8.5 5v-10zM20.5 13.5l-8.5 5v-10z"/><path d="M12 8.5V5M8 5a4 3 0 018 0z"/>', "Manual valve": '<path d="M3.5 13.5l8.5 5v-10zM20.5 13.5l-8.5 5v-10z"/><path d="M12 8.5V4M8 4h8"/>',
   "Instrument": '<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M8 17h8"/>', "Tags": '<path d="M3.5 12.5V4.5h8l9 9-8 8z"/><circle cx="8" cy="8.5" r="1.3"/>' };
 const kindSym = k => { const n = k === "Tags" ? "Tag added in the app" : k; return '<span class="ksym" role="img" aria-label="' + esc(n) + '" title="' + esc(n) + '"><svg viewBox="0 0 24 24">' + (KSYM[k] || KSYM.Tags) + '</svg></span>'; };
+
+/* a person's name with each word capitalised (bijan KHADEMBASHI → Bijan Khadembashi, o'brien → O'Brien) */
+const properName = s => String(s || "").trim().replace(/\s+/g, " ").toLowerCase().replace(/(^|[\s\-'’])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());

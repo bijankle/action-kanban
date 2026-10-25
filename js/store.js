@@ -67,7 +67,9 @@ const Store = (() => {
   const deleted = () => { const sel = selected(); return projects().filter(p => sel.includes(p.id)).flatMap(p => ((S.acts[p.id] || {}).actions || []).filter(a => a && a.del).map(a => (a._p = p.id, a))); };
   const find = (pid, u) => ((S.acts[pid] || {}).actions || []).find(a => a.u === u);
   const findRef = ref => { const [pid, n] = String(ref || "").split(":"); const a = live((S.acts[pid] || {}).actions).find(x => String(x.no) === n || x.u === n); return a ? (a._p = pid, a) : null; };
-  const actId = a => { const p = project(a._p) || {}; return (p.prefix || "ACT") + "-" + String(a.no).padStart(4, "0"); };
+  /* the ID's letters come from the action's category (DEF-0024); until it has one, the project's (ACT-0024) */
+  const CAT = { Defect: "DEF", Maintenance: "MAN", Operations: "OPS", Punchlist: "PUN", Commissioning: "COM" };
+  const actId = a => { const p = project(a._p) || {}; return (CAT[a.f && a.f.category] || p.prefix || "ACT") + "-" + String(a.no).padStart(4, "0"); };
   /* priority: the action's place in its stage column, counted over the projects on show */
   const ranked = st => visible().filter(a => a.stage === st).sort((x, y) => (x.rank || 0) - (y.rank || 0) || x.no - y.no);
   const priority = a => ranked(a.stage).indexOf(a) + 1;
@@ -77,7 +79,7 @@ const Store = (() => {
   function hay(a){ const c = hayCache.get(a); if (c && c.mod === a.mod) return c.t;
     const p = project(a._p) || {}, ct = contacts().find(x => x.name && x.name === a.f.contractor) || {};
     const parts = r => (r || []).map(it => [it.desc, it.part, it.qty, it.unit, it.notes].join(" ")).join(" ");
-    const t = [actId(a), a.oldId, (a.owner || {}).n, p.name, p.prefix, stage(a.stage).name, fields().map(f => Fields.text(a, f)).join(" "), a.f.notes, parts(a.mto), parts(a.spares), (a.rfqTo || []).join(" "), a.rfqCat, (a.isol || []).map(it => [it.tag, it.name, it.note].join(" ")).join(" "),
+    const t = [actId(a), ((project(a._p) || {}).prefix || "ACT") + "-" + String(a.no).padStart(4, "0"), a.oldId, (a.owner || {}).n, p.name, p.prefix, stage(a.stage).name, fields().map(f => Fields.text(a, f)).join(" "), a.f.notes, parts(a.mto), parts(a.spares), (a.rfqTo || []).join(" "), a.rfqCat, (a.isol || []).map(it => [it.tag, it.name, it.note].join(" ")).join(" "),
       a.photos.map(x => x.name + " " + (x.cap || "")).join(" "), a.files.map(x => x.name).join(" "), (a.quotes || []).map(x => x.name).join(" "), (a.rfq || []).map(x => x.name).join(" "),
       ct.company, ct.mobile, ct.email].join(" ").toLowerCase();
     hayCache.set(a, { mod: a.mod, t }); return t; }
@@ -104,11 +106,19 @@ const Store = (() => {
   function oneEach(list){ const m = new Map(); (list || []).forEach(u => { const k = String(u.id || u.email || "").trim().toLowerCase(); if (!k) return; u.id = k; const o = m.get(k); if (!o || (u.mod || 0) >= (o.mod || 0)) m.set(k, o ? Object.assign({}, o, u) : u); }); return [...m.values()]; }
   /* the action's owner, with their details from the people who've signed in: { n, e, role, mobile } */
   const owner = a => { const o = a && a.owner || {}, u = (o.e && users().find(x => x.id === o.e)) || (o.n && users().find(x => [x.first, x.last].filter(Boolean).join(" ").toLowerCase() === String(o.n).toLowerCase()));
-    return u ? { n: [u.first, u.last].filter(Boolean).join(" ") || o.n, e: u.email || u.id, role: u.role, mobile: u.mobile } : { n: o.n || "", e: o.e || "" }; };
+    return u ? { n: properName([u.first, u.last].filter(Boolean).join(" ") || o.n), e: u.nameOnly ? "" : u.email || u.id, role: u.role, mobile: u.mobile } : { n: properName(o.n), e: o.e || "" }; };
+  /* the people an action can be owned by: everyone who has signed up, plus names typed in for people who haven't yet
+     (kept in the same list, matched without caring about capitals, and dropped once that person signs up) */
+  const fullName = u => properName([u.first, u.last].filter(Boolean).join(" "));
+  const people = () => { const acc = users().filter(u => !u.nameOnly), have = new Set(acc.map(u => fullName(u).toLowerCase()));
+    return acc.concat(users().filter(u => u.nameOnly && !have.has(fullName(u).toLowerCase()))).filter(u => fullName(u)); };
+  function addPerson(name){ const n = properName(name); if (!n || people().some(u => fullName(u).toLowerCase() === n.toLowerCase())) return;
+    const [first, ...rest] = n.split(" "); S.users.users.push({ id: "n:" + n.toLowerCase(), first, last: rest.join(" "), nameOnly: true, created: now(), mod: now() }); S.dirty.add("users"); stash(); saveSoon(); }
   const user = email => users().find(u => u.id === String(email || "").toLowerCase());
   function saveUser(p, force){ const id = String(p.email || "").trim().toLowerCase(); if (!id) return; const cur = S.users.users.find(u => u.id === id), u = Object.assign({}, cur || { id, created: now() }, { first: p.first, last: p.last, mobile: p.mobile, email: p.email, role: p.role });
     if (!force && cur && ["first", "last", "mobile", "role"].every(k => (cur[k] || "") === (u[k] || ""))) return; u.mod = now();   // (force: held back until we could save, so save it now)
     if (cur) Object.assign(cur, u); else S.users.users.push(u);
+    S.users.users.filter(x => x.nameOnly && !x.del && fullName(x).toLowerCase() === fullName(u).toLowerCase()).forEach(x => { x.del = true; x.mod = now(); });   // (a name typed in before they signed up)
     if (S.edit){ S.dirty.add("users"); stash(); saveSoon(); } else lsSet("adPendUser", p); }
   /* ---------- change history: who changed what on each action, and when (a.hist, newest last, the last 400) ---------- */
   const HSKIP = new Set(["mod", "by", "byE", "_p", "hist", "rank", "stageAt", "doneAt", "prevStage", "prevHold", "hold", "isolNo", "am", "u", "no", "created"]);
@@ -296,5 +306,5 @@ const Store = (() => {
     const i = c.fields.findIndex(f => f.id === "complete"); if (i >= 0 && i !== c.fields.length - 1) c.fields.push(c.fields.splice(i, 1)[0]); }
 
   return { S, copyInfo, clearCopy, enter, stages, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, deleted, find, findRef, actId, ranked, priority,
-    stashNow: () => stash.flush ? stash.flush() : stash(), vendors: () => S.vendors, owner, procurement, sparesAvail, eta, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
+    stashNow: () => stash.flush ? stash.flush() : stash(), vendors: () => S.vendors, owner, people, fullName, addPerson, procurement, sparesAvail, eta, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();

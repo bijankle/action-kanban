@@ -1,22 +1,24 @@
 /* The Filters panel on the left of the Actions and Organizer tabs: the search box, then pills for the things many
-   actions share (Status, Action owner, Date modified, WBS code), each with a live count; a pill with no actions isn't
+   actions share (Status, Action owner, WBS code), each with a live count; a pill with no actions isn't
    shown. Status is one stage at a time; in the other groups pills add together (Jack or Bijan), and groups narrow
    each other (Jack's, in F12). The stage pills are App.pills. When the
    panel is hidden, what's filtering shows as removable chips above the list. */
 "use strict";
 const Filters = (() => {
-  const NS = "Not set", AGES = ["Today", "Last 7 days", "Last 30 days", "Older"];
-  const saved = lsGet("adF", {}), sel = { ow: new Set(saved.ow || []), md: new Set(saved.md || []), wbs: new Set(saved.wbs || []) };
+  const NS = "Not set";
+  const saved = lsGet("adF", {}), sel = { ow: new Set(saved.ow || []), wbs: new Set(saved.wbs || []) };
   const all = () => Object.assign({ st: App.pills }, sel);
-  const keep = () => lsSet("adF", { ow: [...sel.ow], md: [...sel.md], wbs: [...sel.wbs] });
-  const age = t => { if (!t) return "Older"; const d = Math.floor((new Date(new Date().toDateString()) - new Date(new Date(t).toDateString())) / 864e5); return d < 1 ? "Today" : d <= 7 ? "Last 7 days" : d <= 30 ? "Last 30 days" : "Older"; };
+  const keep = () => lsSet("adF", { ow: [...sel.ow], wbs: [...sel.wbs] });
+  /* the date filter at the top left, for every list: by the date created or modified, from and to (either can be blank) */
+  const D = Object.assign({ by: "created", from: "", to: "", last: "" }, lsGet("adDate", {}));
+  const day = t => { const d = new Date(t); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  const dateOk = a => { if (!D.from && !D.to) return true; const t = D.by === "modified" ? a.mod || a.created : a.created; if (!t) return false; const d = day(t); return (!D.from || d >= D.from) && (!D.to || d <= D.to); };
   /* an action's value in each group */
   function val(a, k){ if (k === "st") return a.del ? "_del" : a.stage;
-    if (k === "ow") return (a.owner && a.owner.n) || NS;
-    if (k === "md") return age(a.mod || a.created);
+    if (k === "ow") return Store.owner(a).n || NS;
     if (k === "wbs"){ const m = String(a.f.location || "").trim().match(/^([A-Z]\d{2,3})\b/i); return m ? m[1].toUpperCase() : NS; } }
   /* does it pass every group (but skip, so a group's own counts show what picking another pill there would add) */
-  function match(a, skip, noStage){ const q = (App.q || "").trim(); if (q && !Store.matches(a, q)) return false;
+  function match(a, skip, noStage){ const q = (App.q || "").trim(); if (q && !Store.matches(a, q)) return false; if (!dateOk(a)) return false;
     const S = all();
     /* with no Status pill picked, the list is the open actions: done and deleted ones show only when their pill is picked */
     if (!noStage && skip !== "st" && !S.st.size && (a.del || Store.stage(a.stage).kind === "done")) return false;
@@ -28,7 +30,6 @@ const Filters = (() => {
     const vals = k => [...new Set(list.map(a => val(a, k)))].sort((x, y) => x === NS ? 1 : y === NS ? -1 : x.localeCompare(y));
     return [["st", "Status", Store.stages().map(s => ({ v: s.id, t: s.name, c: s.color })).concat({ v: "_del", t: "Deleted", c: "#9aa3ad" })],
       ["ow", "Action owner", vals("ow").map(v => ({ v, t: v }))],
-      ["md", "Date modified", AGES.map(v => ({ v, t: v }))],
       ["wbs", "WBS code", vals("wbs").map(v => ({ v, t: v }))]]; }
   /* the panel's body (the search box is moved in by the app, so it keeps its focus and value) */
   function render(el){ const list = Store.visible().concat(Store.deleted()), S = all();
@@ -54,5 +55,20 @@ const Filters = (() => {
       if (e.target.closest(".fchip-all")) clear(); }; }
   function clear(){ App.q = ""; for (const k in all()) all()[k].clear(); changed(); }
   function changed(){ keep(); App.render(); }
-  return { render, apply, match, active, count, chipsHtml, wireChips, clear, val };
+  /* the date bar: Date created or Date modified, from, to, then 1 day, 1 week, 1 month or All time. A length counts
+     on from the From date when that was set last, back from the To date when that was, or back from today */
+  const SPANS = [["1d", "1 day", 1], ["1w", "1 week", 7], ["1m", "1 month", 0], ["all", "All time", -1]];
+  function dateBar(el){ const draw = () => { el.innerHTML = '<select class="in sm gd-by" aria-label="Which date"><option value="created"' + (D.by === "created" ? " selected" : "") + '>Date created</option><option value="modified"' + (D.by === "modified" ? " selected" : "") + '>Date modified</option></select>'
+        + '<input class="in sm gd-d" type="date" data-k="from" aria-label="From date" title="From" value="' + esc(D.from) + '"><span class="dim">to</span><input class="in sm gd-d" type="date" data-k="to" aria-label="To date" title="To" value="' + esc(D.to) + '">'
+        + '<div class="gd-sp" role="group" aria-label="How long">' + SPANS.map(([k, n]) => '<button type="button" class="btn ghost sm" data-sp="' + k + '">' + n + '</button>').join("") + '</div>';
+      $(".gd-by", el).onchange = e => { D.by = e.target.value; save(); };
+      $$(".gd-d", el).forEach(i => i.onchange = () => { D[i.dataset.k] = i.value; D.last = i.value ? i.dataset.k : ""; save(); });
+      $$("[data-sp]", el).forEach(b => b.onclick = () => { const sp = SPANS.find(x => x[0] === b.dataset.sp);
+        if (sp[2] < 0){ D.from = D.to = D.last = ""; return save(true); }
+        const move = (iso, sign) => { const d = new Date(iso + "T12:00:00"); if (sp[2]) d.setDate(d.getDate() + sign * sp[2]); else d.setMonth(d.getMonth() + sign); return day(d); };
+        if (D.last === "from" && D.from) D.to = move(D.from, 1); else if (D.last === "to" && D.to) D.from = move(D.to, -1); else { D.to = day(now()); D.from = move(D.to, -1); D.last = ""; }
+        save(true); }); };
+    const save = redraw => { lsSet("adDate", D); if (redraw) draw(); App.render(); }; draw(); }
+  const dateOn = () => !!(D.from || D.to);
+  return { render, apply, match, active, count, chipsHtml, wireChips, clear, val, dateBar, dateOn };
 })();

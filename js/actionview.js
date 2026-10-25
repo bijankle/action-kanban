@@ -48,12 +48,24 @@ const ActionView = (() => {
     av.ondrop = e => { av.classList.remove("drop"); if (sub === "overview" && Media.hasDrop(e)){ e.preventDefault(); e.stopPropagation(); Media.dropOn(a, e); } }; }
 
   /* the action owner: anyone signed in (or any name typed); their name, role, mobile and email go on the work pack */
-  function ownerBox(box, a, ro){ const cur = Store.owner(a), names = [...new Set(Store.users().map(u => [u.first, u.last].filter(Boolean).join(" ")).concat(Store.all().map(x => (x.owner || {}).n)).filter(Boolean))].sort();
+  /* (the names come from the people who've signed up; a new name typed in is tidied to capitals and joins that list) */
+  function ownerBox(box, a, ro){ const cur = Store.owner(a);
     if (ro){ box.innerHTML = '<b>' + esc(cur.n || "–") + '</b>'; return; }
-    box.innerHTML = '<input class="in sm" list="ownL" value="' + esc(cur.n || "") + '" placeholder="Who owns it" autocomplete="off"><datalist id="ownL">' + names.map(n => '<option value="' + esc(n) + '"></option>').join("") + '</datalist>';
-    const i = $("input", box); i.onchange = () => { const n = i.value.trim(); if (n === (cur.n || "")) return; const u = Store.users().find(x => [x.first, x.last].filter(Boolean).join(" ").toLowerCase() === n.toLowerCase());
-      Store.mutate("a:" + a._p, () => { if (n) a.owner = u ? { n: [u.first, u.last].filter(Boolean).join(" "), e: u.id } : { n }; else delete a.owner; Store.touch(a); }); Store.log("Changed the owner of " + Store.actId(a)); };
-    i.onkeydown = e => { if (e.key === "Enter") i.blur(); }; }
+    box.innerHTML = '<input class="in sm" value="' + esc(cur.n || "") + '" placeholder="Who owns it" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false">';
+    const i = $("input", box); let dd = null, res = [], hi = 0;
+    const close = () => { if (dd){ dd.remove(); dd = null; } i.setAttribute("aria-expanded", "false"); };
+    const draw = () => { const w = qWords(i.value); res = Store.people().filter(u => !w.length || smartHit(Store.fullName(u) + " " + (u.role || ""), w)).sort((x, y) => Store.fullName(x).localeCompare(Store.fullName(y))).slice(0, 30);
+      if (!res.length){ close(); return; } hi = Math.min(hi, res.length - 1);
+      if (!dd){ dd = h('<div class="tg-dd" role="listbox"></div>'); document.body.appendChild(dd); }
+      dd.innerHTML = res.map((u, k) => '<div class="tg-o' + (k === hi ? " on" : "") + '" role="option" data-k="' + k + '"><span class="tg-x"><b>' + esc(Store.fullName(u)) + '</b><span>' + esc(u.nameOnly ? "Not signed up yet" : [u.role, u.company].filter(Boolean).join(" · ") || u.email || u.id) + '</span></span></div>').join("");
+      const r = i.getBoundingClientRect(); Object.assign(dd.style, { left: r.left + "px", top: r.bottom + 3 + "px", width: Math.max(r.width, 260) + "px" }); i.setAttribute("aria-expanded", "true");
+      $$(".tg-o", dd).forEach(o => o.onmousedown = e => { e.preventDefault(); i.value = Store.fullName(res[+o.dataset.k]); close(); i.blur(); }); };
+    const save = () => { close(); const n = properName(i.value); i.value = n; if (n === (cur.n || "")) return; const u = Store.people().find(x => Store.fullName(x).toLowerCase() === n.toLowerCase());
+      if (n && !u) Store.addPerson(n);
+      Store.mutate("a:" + a._p, () => { if (n) a.owner = u && !u.nameOnly ? { n: Store.fullName(u), e: u.id } : { n }; else delete a.owner; Store.touch(a); }); Store.log("Changed the owner of " + Store.actId(a)); };
+    i.onfocus = () => { i.select(); hi = 0; draw(); }; i.oninput = () => { hi = 0; draw(); }; i.onblur = save;
+    i.onkeydown = e => { if (dd && (e.key === "ArrowDown" || e.key === "ArrowUp")){ e.preventDefault(); hi = (hi + (e.key === "ArrowDown" ? 1 : -1) + res.length) % res.length; draw(); }
+      else if (e.key === "Enter"){ if (dd && res[hi]) i.value = Store.fullName(res[hi]); i.blur(); } else if (e.key === "Escape"){ i.value = cur.n || ""; close(); i.blur(); } }; }
   /* the change history: who changed what, and when, newest first (opened from the small link at the foot of Overview) */
   function history(a){ const hs = (a.hist || []).slice().reverse();
     const when = t => new Date(t).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });

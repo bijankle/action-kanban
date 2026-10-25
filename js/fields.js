@@ -48,9 +48,9 @@ const Fields = (() => {
          still waiting: past that stage, and past any later stage already ticked (a contractor booked early), stopping at
          the first one still to do, never into Done by itself. A box ticked ahead of time just records it: the action
          stays where it is until the earlier box is ticked. Unticking a box takes the action back to that stage. On hold
-         and done actions just keep the tick */
-      if (f.stage && f.type === "check" && !Hold.on(a) && !done(a)){ const order = Store.stages().filter(s => s.kind !== "hold"), at = id => order.findIndex(s => s.id === id), k = at(f.stage), cur = at(a.stage);
-        const box = st => Store.fields().find(x => x.stage === st.id && x.type === "check"), ticked = st => { const x = box(st); return !!x && !!a.f[x.id]; };
+         and done actions just keep the tick. A choice with a stage counts once it's picked: Category moves it on from Categorize Issue */
+      if (f.stage && (f.type === "check" || f.type === "choice") && !Hold.on(a) && !done(a)){ const order = Store.stages().filter(s => s.kind !== "hold"), at = id => order.findIndex(s => s.id === id), k = at(f.stage), cur = at(a.stage);
+        const box = st => Store.fields().find(x => x.stage === st.id && (x.type === "check" || x.type === "choice")), ticked = st => { const x = box(st); return !!x && !!a.f[x.id]; };
         if (k >= 0 && cur >= 0){
           if (v && cur <= k && order.slice(cur, k).every(st => !box(st) || ticked(st))){ let n = k + 1; while (order[n] && order[n].kind !== "done" && ticked(order[n])) n++;
             const next = order[n]; if (next && next.kind !== "done" && n !== cur){ Store.place(a, next.id); Store.log("Moved " + Store.actId(a) + " to " + Store.todo(next)); } }

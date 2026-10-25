@@ -999,3 +999,36 @@ input[type=checkbox]{width:18px;height:18px}
 .cnt.bump{display:inline-block;animation:cbump .5s}@keyframes cbump{40%{transform:scale(1.5);color:#1f8a58}}
 .att-add{display:flex;align-items:center;width:100%;height:var(--ctl-h,28px);margin-top:6px;padding:0 10px;border:1.5px dashed var(--line2);border-radius:8px;background:transparent;color:var(--muted);font:600 13px var(--font);cursor:pointer}
 .att-add:hover,.att-add.drop{border-color:var(--th);color:var(--ink)}.att-add:focus-visible{outline:2px solid var(--th);outline-offset:1px}
+/* the date filter, top left */
+.gdate{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}.gdate[hidden]{display:none}
+.gdate .in{height:var(--ctl-h,28px);width:auto}.gdate .gd-d{width:136px}.gdate .gd-by{padding-right:24px}
+.gd-sp{display:flex;gap:4px}.gd-sp .btn{height:var(--ctl-h,28px)}
+/* the tabs: a light grey box with a firmer edge, the open tab raised in white */
+.tabs{background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:2px}
+.tab:hover{background:var(--panel)}.tab.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18),0 0 0 1px var(--line2)}
+/* the Organizer: On Hold and Done as rows on top, the stages as columns under them */
+.kbw{display:flex;flex-direction:column;height:100%;min-height:0}
+.kb-rows{flex:none;display:flex;flex-direction:column;gap:10px;padding:14px 14px 0}
+.kbw .kb{flex:1;min-height:0}
+.kb-row{flex:none;max-height:none}
+.kb-row .kb-h{border-radius:12px 12px 0 0}
+.kb-row .kb-cards{flex-direction:row;flex-wrap:wrap;overflow:hidden;gap:8px;padding:8px;max-height:calc(var(--rows) * 106px + (var(--rows) - 1) * 8px + 16px);min-height:0}
+.kb-row .kc{flex:0 0 272px;height:106px}
+.kb-0{font-size:13px;padding:4px 2px}
+.kb-rb{display:flex;gap:14px;justify-content:center;padding:0 8px 6px}.kb-rb:not(:has(button:not([hidden]))){display:none}
+.kb-more,.kb-less{font-size:12.5px;font-weight:600}
+/* a card: ID and title on the left, the main photo large on the right, the bin top right */
+.kc{display:flex;gap:10px;align-items:flex-start;padding:9px 10px 9px 11px}
+.kc-b{flex:1;min-width:0}
+.kc img{float:none;flex:none;width:74px;height:74px;object-fit:cover;border-radius:7px;margin:0}
+.kc-t{margin:3px 0 0}.kc-t .mc{display:block;position:relative}
+.kc-t .mc-t{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;white-space:normal;overflow:hidden;text-overflow:clip}
+.kc-t .mc.cut .mc-more{position:absolute;right:0;bottom:0;background:var(--panel);padding-left:4px;box-shadow:-10px 0 8px -2px var(--panel)}
+.kc-del{position:absolute;top:5px;right:5px;width:24px;height:24px;display:grid;place-items:center;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--dim);cursor:pointer;opacity:.75;padding:0}
+.kc-del svg{width:14px;height:14px}.kc-del:hover{opacity:1;color:#c0392b;border-color:#c0392b}.kc-del:focus-visible{opacity:1;outline:2px solid var(--th)}
+.kc.kc-wp .kc-del{top:6px;right:6px}
+.kc:not(.kc-wp) .kc-top{padding-right:26px}
+.kb .kb-cards>.kc{flex:none}
+/* the save button: a dot on its corner for the save state */
+.sv .sv-d{position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;border:1.5px solid var(--panel);background:var(--faint)}
+.sv.ok .sv-d{background:#2FB463}.sv.busy .sv-d{background:#F2B03D;animation:pulse 1s infinite}.sv.bad .sv-d{background:var(--bad)}.sv.bad{border-color:var(--bad);color:var(--bad)}

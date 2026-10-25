@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.84";
+const APP_VERSION = "1.10.85";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -20,7 +20,7 @@ const App = (() => {
     /* the list (Actions table or Organizer) stays on the left; the open action is in the panel on the right (or, with the
        panel switched off in View, in a pop up over the list) */
     const sideTab = A.tab === "actions" || A.tab === "kanban", panel = A.tab === "actions" && lsGet("adPanel", true),   /* (the Organizer has no Details panel: a card opens as a pop up) */ sel = sideTab && !!act(A.selRef), inAct = false, list = A.tab === "actions";
-    $$("#xlsB,#printB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid" || A.tab === "contacts";
+    $$("#xlsB,#printB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid" || A.tab === "contacts"; $("#gdate").hidden = !(A.tab === "actions" || A.tab === "kanban");
     $("#q").placeholder = inAct ? "Search actions (back to the list)" : { actions: "Search actions", kanban: "Search, filters every stage", contacts: "Search people, companies, numbers", valid: "Search fields and stages" }[A.tab] || "Search";
     if ($("#q").value !== A.q) $("#q").value = A.q; panels(sideTab, panel);
     const v = $("#view"); v.dataset.tab = A.tab;
@@ -49,13 +49,16 @@ const App = (() => {
   function pills(){ const all = Store.visible(), el = $("#pills");
     el.innerHTML = '<button type="button" class="pill' + (!A.pills.size ? " on" : "") + '" data-s="">All <b>' + all.length + '</b></button>' + Store.stages().map(s => '<button type="button" class="pill' + (A.pills.has(s.id) ? " on" : "") + '" data-s="' + s.id + '" style="--c:' + esc(s.color) + '" title="Click to show only this stage, Ctrl+click to add it"><i class="dot"></i>' + esc(s.name) + ' <b>' + all.filter(a => a.stage === s.id).length + '</b></button>').join("");
     $$(".pill", el).forEach(b => b.onclick = e => { const s = b.dataset.s; if (!s) A.pills.clear(); else if (e.ctrlKey || e.metaKey){ A.pills.has(s) ? A.pills.delete(s) : A.pills.add(s); } else if (A.pills.size === 1 && A.pills.has(s)) A.pills.clear(); else { A.pills.clear(); A.pills.add(s); } render(); }); }
-  function renderStatus(){ const s = $("#status"); if (!s) return; const S = Store.S; let cls, t;
+  /* the save button beside refresh: its corner dot is green when saved, amber while there are changes to save, red
+     when a save failed (click it to save now, or try again) */
+  function renderStatus(){ const s = $("#saveB"); if (!s) return; const S = Store.S; let cls, t;
     if (!S.edit){ cls = "ro"; t = GH.cfg().token ? "View only (key can't write)" : "View only"; }
     else if (S.status === "saving") { cls = "busy"; t = "Saving…"; }
     else if (S.status === "error"){ cls = "bad"; t = "Not saved: " + (S.statusMsg || "retrying"); }
-    else if (S.dirty.size || S.blobs.length){ cls = "busy"; t = "Unsaved changes"; }
-    else { cls = "ok"; t = "Saved"; }
-    s.className = "status " + cls; s.innerHTML = '<i></i><span>' + esc(t) + '</span>';
+    else if (S.dirty.size || S.blobs.length){ cls = "busy"; t = "Unsaved changes: click to save now"; }
+    else { cls = "ok"; t = "Everything is saved"; }
+    if (cls === "bad") t += ". Click to try again"; else if (cls === "ro") t += ". Click for Settings";
+    s.className = "pj-up sv " + cls; s.title = t; s.setAttribute("aria-label", t);
     }
   /* an action in a pop up over the list (when the side panel is switched off in View) */
   let popEl = null;
@@ -369,8 +372,8 @@ const App = (() => {
       $("#newB").onclick = () => newAction(); $("#pasteB").onclick = () => Intake.open(null, "");
       $$("#vt button").forEach(b => b.onclick = () => { A.view = b.dataset.v; lsSet("adViewType", A.view); render(); }); $("#sizeB").onclick = e => { e.stopPropagation(); Table.sizePop(e.currentTarget); };
       $("#printB").onclick = () => Print.dialog(); $("#xlsB").onclick = () => Print.excelDialog();
-      $("#updB").onclick = update;
-      $("#status").onclick = () => { if (!Store.S.edit) settings(); else if (Store.S.status === "error") Store.save(); };
+      $("#updB").onclick = update; Filters.dateBar($("#gdate"));
+      $("#saveB").onclick = () => { if (!Store.S.edit) settings(); else if (Store.S.status !== "saving" && (Store.S.dirty.size || Store.S.blobs.length || Store.S.status === "error")) Store.save(); };
       $("#profB").onclick = e => { e.stopPropagation(); if ($(".profpop")) return Fields.closePop(); Profile.name() ? profMenu(e.currentTarget) : signIn(); }; drawProf();
       }
     await Local.init();
