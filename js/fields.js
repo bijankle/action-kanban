@@ -125,7 +125,7 @@ const Fields = (() => {
   /* the dropdown of candidates on a tags box, used by every tags box (the list, an action, the New action window):
      typing shows the matching candidates under the box, the plant equipment and instruments for tags (spaces and
      dashes don't matter, so cv 402 finds F12-CV-402), the list's own options otherwise. Arrows move, Enter, Tab or a
-     click picks, Escape closes. A picked tag ends the box; the next letter typed starts a new tag after a comma */
+     click picks, Escape closes. A picked tag is followed by a comma, so the next tag can be typed straight away */
   function suggest(i, f){ const eq = f.id === "equipment";
     const pool = () => eq ? [] : optLabels(f).concat(...Store.all().map(x => Array.isArray(x.f[f.id]) ? x.f[f.id] : []));
     let dd = null, res = [], hi = 0;
@@ -143,15 +143,12 @@ const Fields = (() => {
       const r = i.getBoundingClientRect(), below = innerHeight - r.bottom > 260; Object.assign(dd.style, { left: Math.max(8, Math.min(r.left, innerWidth - 428)) + "px", width: Math.max(r.width, 420) + "px", top: (below ? r.bottom + 3 : Math.max(8, r.top - 263)) + "px" });
       i.setAttribute("aria-expanded", "true"); paint();
       $$(".tg-o", dd).forEach(o => { o.onmousedown = e => { e.preventDefault(); pick(res[+o.dataset.k]); }; o.onmousemove = () => { if (hi !== +o.dataset.k){ hi = +o.dataset.k; paint(); } }; }); };
-    let sep = false;
-    const pick = x => { const { head } = seg(); i.value = head + x.t; const n = i.value.length; i.setSelectionRange(n, n); closeDD(); i.focus(); sep = true; };
+    const pick = x => { const { head } = seg(); i.value = head + x.t + ", "; const n = i.value.length; i.setSelectionRange(n, n); closeDD(); i.focus(); };
     i.setAttribute("role", "combobox"); i.setAttribute("aria-autocomplete", "list"); i.setAttribute("aria-expanded", "false"); i.autocomplete = "off"; i.spellcheck = false;
-    i.addEventListener("focus", () => { if (eq) Equip.load().catch(() => {}); sep = !!i.value.trim() && !/,\s*$/.test(i.value); const n0 = i.value.length; setTimeout(() => { if (i.value.length === n0) i.setSelectionRange(n0, n0); }, 0); });
+    i.addEventListener("focus", () => { if (eq) Equip.load().catch(() => {}); if (i.value.trim() && !/,\s*$/.test(i.value)) i.value += ", "; const n0 = i.value.length; setTimeout(() => { if (i.value.length === n0) i.setSelectionRange(n0, n0); }, 0); });
     i.addEventListener("input", () => { if (eq && !Equip.count) Equip.load().then(() => document.activeElement === i && draw()).catch(() => {}); draw(); });
     i.addEventListener("blur", closeDD);
-    i.addEventListener("beforeinput", e => { if (!sep) return; if (e.inputType !== "insertText"){ if (/^delete/.test(e.inputType)) sep = false; return; }
-      sep = false; if (i.selectionStart !== i.value.length || /^[,\s]/.test(e.data || "")) return; e.preventDefault(); i.value += ", " + e.data; const n = i.value.length; i.setSelectionRange(n, n); i.dispatchEvent(new Event("input")); });
-    i.addEventListener("keydown", e => { if (e.key === ","){ sep = false; return; } if (!dd) return;
+    i.addEventListener("keydown", e => { if (!dd) return;
       if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); hi = (hi + (e.key === "ArrowDown" ? 1 : -1) + res.length) % res.length; paint(); }
       else if ((e.key === "Enter" || e.key === "Tab") && res[hi]){ e.preventDefault(); pick(res[hi]); }
       else if (e.key === "Escape"){ e.stopPropagation(); closeDD(); }
