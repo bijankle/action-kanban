@@ -1,15 +1,15 @@
 /* The Drawings tab of an action (desktop): the drawings and documents of its equipment, sub equipment included (a
    ball mill's lube units, motors and fans). Two rows of pills narrow the list: the equipment (All or one tag), then the
-   kind (All, P&ID, PFD, SLD, Schematic, Datasheet, IOM…). Each document is a bar: its number opens the controlled
-   copy in SharePoint, ⓘ shows its title, PDF downloads a copy, and when there is a copy the arrow opens it in place
-   with the essentials (pages, zoom, fit, drag to pan). Bars start closed. A tick marks a document as needed for the
-   job (a.dwgPick, the ticked numbers, kept with the action); Download ticked saves each ticked one with a copy as its
-   own PDF, to print separately, and says at the top which didn't download and why. The work pack lists the register. */
+   kind (All, P&ID, PFD, SLD, Schematic, Datasheet, IOM…). Each document is a line: its number and rev as one link that
+   opens the controlled copy in SharePoint to view online, its title, ⓘ for where it comes from, and the download
+   button for its PDF copy. A tick includes it in the work pack (a.dwgPick, the ticked numbers, kept with the action),
+   and the box above the ticks ticks them all or clears them. Download ticked saves the ticked ones' PDF copies in one
+   zip file, and says at the top which didn't download and why. */
 "use strict";
 const Drawings = (() => {
   const KORD = ["P&ID", "PFD", "SLD", "TLD", "Schematic", "Block diagram", "Datasheet", "IOM"];
   const GROUP = { "P&ID": "process", "PFD": "process", "SLD": "electrical", "TLD": "electrical", "Schematic": "electrical", "Block diagram": "electrical", "Datasheet": "docs", "IOM": "docs" };
-  const st = new Map(), open = new Set(), views = new Map();   // per action: { eq, kind }; open bars; live viewers by key
+  const st = new Map();   // per action: { eq, kind }
   const words = s => String(s || "").toUpperCase().replace(/[^A-Z0-9 ]+/g, " ").split(/\s+/).filter(Boolean);
   const tagsOf = a => Array.isArray(a.f.equipment) ? [...new Set(a.f.equipment.filter(Boolean))] : [];
   /* a tag's sub equipment: same area, and a name that starts with the main one's (BALL MILL → BALL MILL LUBE UNIT), or the
@@ -38,11 +38,13 @@ const Drawings = (() => {
     const total = new Set(), all = new Map(); m.forEach(l => l.forEach(d => { total.add(d.n); if (!all.has(d.n)) all.set(d.n, d); })); const had = cnt.get(ref); cnt.set(ref, total.size); if (had !== total.size) setTimeout(() => { const b = $('.av-tab[data-sub="drawings"]'); if (b) b.innerHTML = 'Drawings' + (total.size ? ' <b>' + total.size + '</b>' : ""); }, 0);
     const kinds = KORD.filter(k => rows.some(([, d]) => d.kind === k)); if (s.kind !== "all" && !kinds.includes(s.kind)) s.kind = "all";
     const shown = rows.filter(([, d]) => s.kind === "all" || d.kind === s.kind), seen = new Set(), list = shown.filter(([t, d]) => s.eq !== "all" || (!seen.has(d.n) && seen.add(d.n)));
+    const anyOn = list.some(([, d]) => (a.dwgPick || []).includes(d.n));
     const pill = (k, v, label, n, on) => '<button type="button" class="pill' + (on ? " on" : "") + '" data-' + k + '="' + esc(v) + '">' + esc(label) + ' <b>' + n + '</b></button>';
     el.innerHTML = '<div class="dw"><div class="dw-p">' + pill("eq", "all", "All equipment", total.size, s.eq === "all") + tags.map(t => pill("eq", t, t, m.get(t).length, s.eq === t)).join("") + '</div>'
       + '<div class="dw-p dw-p2">' + pill("kind", "all", "All kinds", new Set(rows.map(([, d]) => d.n)).size, s.kind === "all") + kinds.map(k => pill("kind", k, k, new Set(rows.filter(([, d]) => d.kind === k).map(([, d]) => d.n)).size, s.kind === k)).join("") + '</div>'
       + (fails.get(ref) ? '<div class="dw-f"><div class="dw-fh"><b>' + fails.get(ref).length + ' of the ticked didn\'t download</b><button type="button" class="ic-b sm" data-k="fx" title="Dismiss">✕</button></div>' + fails.get(ref).map(f => '<div>' + (f.d.url ? '<a href="' + esc(f.d.url) + '" target="_blank" rel="noopener">' + esc(f.d.n) + '</a>' : esc(f.d.n)) + ': ' + esc(f.why) + '</div>').join("") + '</div>' : "")
-      + '<div class="dw-s">' + ((a.dwgPick || []).length ? '<b>' + a.dwgPick.length + '</b> ticked for this job <button type="button" class="btn sm" data-k="dl">Download ticked (' + a.dwgPick.filter(n => (all.get(n) || {}).pdf).length + ')</button>' + (Store.S.edit ? ' <button type="button" class="link" data-k="clr">Clear ticks</button>' : "") : "") + tipI("Tick the drawings and documents this job needs. The ticks are kept with the action, and Download ticked saves each one as its own PDF to print.\n\nNumbers open the controlled copy in SharePoint. PDF downloads a copy for anyone without SharePoint access: check its revision before use. Sub equipment (lube units, motors, fans) is included with its main equipment.") + '</div>'
+      + '<div class="dw-s">' + (list.length && Store.S.edit ? '<label class="dw-ck dw-all" title="' + (anyOn ? "Untick all" : "Tick all") + '"><input type="checkbox" data-k="all"' + (anyOn ? " checked" : "") + ' aria-label="' + (anyOn ? "Untick all" : "Tick all") + '"></label>' : "")
+        + ((a.dwgPick || []).length ? '<button type="button" class="btn sm" data-k="dl">Download ticked (' + a.dwgPick.filter(n => (all.get(n) || {}).pdf).length + ')</button>' : "") + '<span class="dim">Ticked items append to the workpack automatically</span></div>'
       + (list.length ? '<div class="dw-l">' + list.map(([t, d]) => bar(t, d, a)).join("") + '</div>' : '<p class="dim">No drawings or documents found' + (s.eq !== "all" ? " for " + esc(s.eq) : "") + '.</p>')
       + '</div>';
     $$("[data-eq]", el).forEach(b => b.onclick = () => { s.eq = b.dataset.eq; draw(el, a); });
@@ -51,67 +53,53 @@ const Drawings = (() => {
     $$(".dw-ck input", el).forEach(c => c.onchange = () => pick(c.dataset.n, c.checked));
     const dl = $("[data-k=dl]", el); if (dl) dl.onclick = () => download(el, a, all, dl);
     const fx = $("[data-k=fx]", el); if (fx) fx.onclick = () => { fails.delete(ref); draw(el, a); };
-    const clr = $("[data-k=clr]", el); if (clr) clr.onclick = () => Store.mutate("a:" + a._p, () => { a.dwgPick = []; Store.touch(a); });
+    /* the box above the ticks: clears them all if any are ticked, else ticks every one shown */
+    const ta = $("[data-k=all]", el); if (ta) ta.onchange = () => Store.mutate("a:" + a._p, () => { a.dwgPick = anyOn ? [] : [...new Set((a.dwgPick || []).concat(list.map(([, d]) => d.n)))]; Store.touch(a); });
     $$(".dw-b", el).forEach(r => { const k = r.dataset.key, [t, d] = list.find(([t, d]) => key(t, d) === k) || [];
-      const tg = $(".dw-tg", r); if (tg) tg.onclick = () => { if (open.has(k)) open.delete(k); else open.add(k); r.classList.toggle("on", open.has(k)); show(r, d, k); };
-      $(".dw-i", r).onclick = e => { e.stopPropagation(); info(e.currentTarget, t, d); };
-      if (open.has(k)) show(r, d, k); }); }
-  function bar(t, d, a){ const k = key(t, d), e = Equip.get(d.of) || {}, on = (a.dwgPick || []).includes(d.n);
-    return '<div class="dw-b' + (open.has(k) ? " on" : "") + (on ? " pk" : "") + '" data-key="' + esc(k) + '"><div class="dw-h">'
-      + '<label class="dw-ck" title="' + (d.pdf ? "Needed for this job" : "Needed for this job (no PDF copy: open it in SharePoint)") + '"><input type="checkbox" data-n="' + esc(d.n) + '"' + (on ? " checked" : "") + (Store.S.edit ? "" : " disabled") + '></label>'
-      + (d.pdf ? '<button type="button" class="dw-tg" title="Show the drawing here" aria-label="Show the drawing">▸</button>' : '<span class="dw-tg0"></span>')
-      + '<span class="dw-k">' + esc(d.kind) + '</span>' + (d.url ? '<a class="dw-a" href="' + esc(d.url) + '" target="_blank" rel="noopener" title="Open in SharePoint">' + esc(d.n) + '</a>' : '<span class="dw-a">' + esc(d.n) + '</span>')
-      + (d.rev ? '<span class="dw-r">Rev ' + esc(d.rev) + '</span>' : "") + '<button type="button" class="dw-i" title="What is this?" aria-label="Document title">i</button>'
-      + (!d.own ? '<span class="dw-of" title="' + esc(e.n || "") + '">' + esc(d.of) + '</span>' : "") + '<span class="grow"></span>'
-      + (d.pdf ? '<a class="dc-pdf" href="' + esc(d.pdf.split("#")[0]) + '" target="_blank" rel="noopener" download title="Download a PDF copy (no SharePoint needed)' + (d.pdfRev ? ", rev " + esc(d.pdfRev) : "") + '">PDF</a>' : "") + '</div><div class="dw-v"></div></div>'; }
-  /* Download ticked: each ticked document with a copy saved as its own PDF (number and title as the name), one after
-     another; the ones that couldn't be saved are listed at the top of the tab, with why and their SharePoint link */
+      $(".dw-i", r).onclick = e => { e.stopPropagation(); info(e.currentTarget, t, d); }; }); }
+  /* a document's line: the tick, its number and rev as one link to SharePoint, its title, ⓘ, the sub equipment it's
+     for (when not the tag itself), and the download button for the PDF copy */
+  function bar(t, d, a){ const k = key(t, d), e = Equip.get(d.of) || {}, on = (a.dwgPick || []).includes(d.n), nr = esc(d.n + (d.rev ? "_" + d.rev : ""));
+    return '<div class="dw-b' + (on ? " pk" : "") + '" data-key="' + esc(k) + '"><div class="dw-h">'
+      + '<label class="dw-ck" title="Include in the work pack"><input type="checkbox" data-n="' + esc(d.n) + '"' + (on ? " checked" : "") + (Store.S.edit ? "" : " disabled") + ' aria-label="Include ' + esc(d.n) + ' in the work pack"></label>'
+      + (d.url ? '<a class="dw-a" href="' + esc(d.url) + '" target="_blank" rel="noopener" title="View it in SharePoint">' + nr + '</a>' : '<span class="dw-a dw-a0" title="Not in SharePoint">' + nr + '</span>')
+      + '<span class="dw-t">' + esc(d.t || "") + '</span><button type="button" class="dw-i" title="Where it comes from" aria-label="About ' + esc(d.n) + '">i</button>'
+      + (!d.own ? '<span class="dw-of" title="' + esc(e.n || "") + '">' + esc(d.of) + '</span>' : "")
+      + (d.pdf ? '<a class="dw-dl" href="' + esc(d.pdf.split("#")[0]) + '" target="_blank" rel="noopener" download title="Download the PDF copy' + (d.pdfRev ? ", rev " + esc(d.pdfRev) : "") + ' (no SharePoint needed)" aria-label="Download the PDF copy of ' + esc(d.n) + '">' + DLI + '</a>' : '<span class="dw-dl0"></span>') + '</div></div>'; }
+  /* the download button's symbol: a cloud with an arrow, SHARE in SharePoint teal underneath */
+  const DLI = '<svg viewBox="0 0 24 26" aria-hidden="true"><path d="M7.2 14.5a3.6 3.6 0 01-.4-7.2 4.8 4.8 0 019.2-1.2 3.4 3.4 0 011.2 6.6 2.3 2.3 0 01-.8.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 9V15.8M9.6 13.4L12 15.8l2.4-2.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><text class="fsp" x="12" y="24.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="6.4" letter-spacing=".1">SHARE</text></svg>';
+  /* Download ticked: the ticked documents' PDF copies (number and title as each file's name) in one zip file named
+     after the action; the ones that couldn't be had are listed at the top of the tab, with why and their SharePoint link */
   const fails = new Map();
-  async function download(el, a, all, btn){ const ref = a._p + ":" + a.u, ns = a.dwgPick || [], bad = []; let ok = 0;
+  async function download(el, a, all, btn){ const ref = a._p + ":" + a.u, ns = a.dwgPick || [], bad = [], files = [];
     btn.disabled = true; const lbl = btn.textContent;
-    for (const [i, n] of ns.entries()){ const d = all.get(n); btn.textContent = "Downloading " + (i + 1) + " of " + ns.length + "…";
+    for (const [i, n] of ns.entries()){ const d = all.get(n); btn.textContent = "Getting " + (i + 1) + " of " + ns.length + "…";
       if (!d){ bad.push({ d: { n }, why: "no longer listed for this equipment" }); continue; }
       if (!d.pdf){ bad.push({ d, why: "no PDF copy, open it in SharePoint" }); continue; }
       try { const r = await fetch(d.pdf.split("#")[0]); if (!r.ok) throw new Error(r.status === 404 ? "the PDF copy is missing" : "the copy didn't load (" + r.status + ")");
         const b = await r.blob(); if (!/pdf/i.test(b.type) && b.size < 2000) throw new Error("the copy isn't a PDF");
-        Excel.save(new Blob([b], { type: "application/pdf" }), (d.n + (d.t ? " " + d.t : "")).replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120) + ".pdf"); ok++;
-        await new Promise(res => setTimeout(res, 350)); }   // (a pause between, so the browser takes each one)
+        files.push([(d.n + (d.rev ? "_" + d.rev : "") + (d.t ? " " + d.t : "")).replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120) + ".pdf", new Uint8Array(await b.arrayBuffer())]); }
       catch (e){ bad.push({ d, why: /fetch|network/i.test(e.message) ? "no connection to the drawing copies" : e.message }); } }
+    if (files.length) Excel.save(zip(files), Store.actId(a) + " drawings.zip");
     if (bad.length) fails.set(ref, bad); else fails.delete(ref);
-    note(ok + " downloaded" + (bad.length ? ", " + bad.length + " didn't (listed at the top)" : ""), 5000); btn.textContent = lbl; btn.disabled = false; if (el.isConnected) draw(el, a); }
+    note(files.length + " in the zip" + (bad.length ? ", " + bad.length + " couldn't be added (listed at the top)" : ""), 5000); btn.textContent = lbl; btn.disabled = false; if (el.isConnected) draw(el, a); }
+  /* a zip of [name, bytes] files, stored as they are (PDFs don't shrink further) */
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = b => { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  function zip(files){ const enc = new TextEncoder(), parts = [], cen = []; let off = 0; const used = new Set();
+    const le = (n, w) => { const a = new Uint8Array(w); for (let i = 0; i < w; i++) a[i] = (n >>> (8 * i)) & 255; return a; };
+    files.forEach(([name, data]) => { let nm = name, k = 2; while (used.has(nm)) nm = name.replace(/\.pdf$/, "") + " (" + k++ + ").pdf"; used.add(nm);
+      const nb = enc.encode(nm), c = crc32(data), head = [le(0x04034b50, 4), le(20, 2), le(0x0800, 2), le(0, 2), le(0, 4), le(c, 4), le(data.length, 4), le(data.length, 4), le(nb.length, 2), le(0, 2), nb];
+      const hl = head.reduce((t, x) => t + x.length, 0); parts.push(...head, data);
+      cen.push(le(0x02014b50, 4), le(20, 2), le(20, 2), le(0x0800, 2), le(0, 2), le(0, 4), le(c, 4), le(data.length, 4), le(data.length, 4), le(nb.length, 2), le(0, 2), le(0, 2), le(0, 2), le(0, 2), le(0, 4), le(off, 4), nb);
+      off += hl + data.length; });
+    const cl = cen.reduce((t, x) => t + x.length, 0);
+    return new Blob([...parts, ...cen, le(0x06054b50, 4), le(0, 2), le(0, 2), le(files.length, 2), le(files.length, 2), le(cl, 4), le(off, 4), le(0, 2)], { type: "application/zip" }); }
   /* the ⓘ callout: the title, which equipment it's for and why it's listed */
   function info(btn, t, d){ Fields.closePop(); const e = Equip.get(d.of) || {}, why = { tag: "names the tag", parent: "is its main equipment's", model: "is for its model", package: "is from its supply package" }[d.why];
     const p = h('<div class="pop dw-pop"><b>' + esc(d.n) + '</b><div>' + esc(d.t || "No title in the register") + '</div><div class="dim">' + esc(d.kind) + (d.rev ? ", rev " + esc(d.rev) : "") + (d.pdfRev ? " (PDF copy rev " + esc(d.pdfRev) + ")" : "")
       + '</div><div class="dim">For ' + esc(d.of) + (e.n ? " " + esc(e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())) : "") + (d.of !== t ? ", sub equipment of " + esc(t) : "") + (why ? "; it " + why : "") + (d.page ? "; the tag is on page " + d.page : "") + '</div></div>');
     document.body.appendChild(p); const r = btn.getBoundingClientRect(); p.style.left = Math.min(innerWidth - p.offsetWidth - 8, r.left) + "px"; p.style.top = (r.bottom + 6) + "px";
     setTimeout(() => document.addEventListener("mousedown", function off(ev){ if (!p.contains(ev.target)){ p.remove(); document.removeEventListener("mousedown", off); } }), 0); }
-  /* ---------- the viewer: pdf.js, one page at a time, sharp at any zoom ---------- */
-  let libP = null;
-  const lib = () => libP || (libP = new Promise((res, rej) => { const s = document.createElement("script"); s.src = "js/lib/pdfjs/pdf.min.js"; s.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = "js/lib/pdfjs/pdf.worker.min.js"; res(pdfjsLib); }; s.onerror = () => { libP = null; rej(new Error("PDF viewer")); }; document.head.appendChild(s); }));
-  const docs = new Map();   // pdf url → loading document
-  function show(r, d, k){ const v = $(".dw-v", r); if (!open.has(k)){ v.innerHTML = ""; return; }
-    let w = views.get(k); if (w && w.el){ v.appendChild(w.el); return; }   // (kept across redraws: same page and zoom)
-    const el = h('<div class="pv"><div class="pv-t"><button type="button" data-p="-1" title="Previous page">‹</button><span class="pv-n">…</span><button type="button" data-p="1" title="Next page">›</button><span class="pv-s"></span>'
-      + '<button type="button" data-z="-1" title="Zoom out">−</button><span class="pv-z">Fit</span><button type="button" data-z="1" title="Zoom in">+</button><button type="button" data-z="0" title="Fit the page width">Fit</button><span class="grow"></span>'
-      + (d.url ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener">SharePoint ↗</a>' : "") + '<a href="' + esc(d.pdf.split("#")[0]) + '" target="_blank" rel="noopener">Open PDF ↗</a></div><div class="pv-c"><canvas></canvas><div class="pv-m dim">Loading the drawing…</div></div></div>');
-    v.appendChild(el); w = { el, page: d.page || 1, zoom: 1, n: 0 }; views.set(k, w);
-    const c = $(".pv-c", el), cv = $("canvas", el), msg = $(".pv-m", el), url = d.pdf.split("#")[0];
-    let pdf = null, task = null;
-    const paint = async () => { if (!pdf) return; const pg = await pdf.getPage(w.page), base = pg.getViewport({ scale: 1 }), fit = (c.clientWidth - 2) / base.width, sc = fit * w.zoom, dpr = Math.min(3, (devicePixelRatio || 1) * 1.5);
-      const vp = pg.getViewport({ scale: sc * dpr }); if (task) task.cancel(); cv.width = vp.width; cv.height = vp.height; cv.style.width = (vp.width / dpr) + "px"; cv.style.height = (vp.height / dpr) + "px";
-      task = pg.render({ canvasContext: cv.getContext("2d"), viewport: vp }); await task.promise.catch(() => {}); task = null;
-      $(".pv-n", el).textContent = "Page " + w.page + " of " + w.n; $(".pv-z", el).textContent = w.zoom === 1 ? "Fit" : Math.round(w.zoom * 100) + "%"; };
-    const zoomTo = (z, cx, cy) => { const ox = (c.scrollLeft + (cx == null ? c.clientWidth / 2 : cx)) / (cv.offsetWidth || 1), oy = (c.scrollTop + (cy == null ? c.clientHeight / 2 : cy)) / (cv.offsetHeight || 1);
-      w.zoom = Math.max(1, Math.min(8, z)); paint().then(() => { c.scrollLeft = ox * cv.offsetWidth - (cx == null ? c.clientWidth / 2 : cx); c.scrollTop = oy * cv.offsetHeight - (cy == null ? c.clientHeight / 2 : cy); }); };
-    $$("[data-p]", el).forEach(b => b.onclick = () => { const p = w.page + +b.dataset.p; if (p >= 1 && p <= w.n){ w.page = p; c.scrollTop = 0; paint(); } });
-    $$("[data-z]", el).forEach(b => b.onclick = () => { const z = +b.dataset.z; zoomTo(z ? w.zoom * (z > 0 ? 1.5 : 1 / 1.5) : 1); });
-    c.addEventListener("wheel", e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); const r = c.getBoundingClientRect(); zoomTo(w.zoom * (e.deltaY < 0 ? 1.25 : 0.8), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
-    let drag = null; c.onpointerdown = e => { if (w.zoom === 1) return; drag = [e.clientX, e.clientY, c.scrollLeft, c.scrollTop]; c.setPointerCapture(e.pointerId); c.classList.add("grab"); };
-    c.onpointermove = e => { if (drag){ c.scrollLeft = drag[2] - (e.clientX - drag[0]); c.scrollTop = drag[3] - (e.clientY - drag[1]); } };
-    c.onpointerup = c.onpointercancel = () => { drag = null; c.classList.remove("grab"); };
-    c.ondblclick = e => { const r = c.getBoundingClientRect(); zoomTo(w.zoom === 1 ? 3 : 1, e.clientX - r.left, e.clientY - r.top); };
-    lib().then(L => { if (!docs.has(url)) docs.set(url, L.getDocument({ url }).promise.catch(e => { docs.delete(url); throw e; })); return docs.get(url); })
-      .then(p => { pdf = p; w.n = p.numPages; w.page = Math.min(w.page, w.n); msg.remove(); $(".pv-s", el).textContent = d.page && w.n > 1 ? "(the tag is on page " + d.page + ")" : ""; return paint(); })
-      .catch(e => { console.warn("drawing", e); msg.textContent = "Couldn't show this one here. Use Open PDF or SharePoint above."; }); }
   return { renderFor, collect, count, GROUP };
 })();

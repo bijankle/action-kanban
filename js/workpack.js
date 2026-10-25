@@ -31,7 +31,7 @@ const Workpack = (() => {
     /* what goes in: the equipment's documents */
     await Equip.load().catch(() => {});
     const tags = Array.isArray(a.f.equipment) ? a.f.equipment.filter(Boolean) : [];
-    let dm = new Map(); if (tags.length && typeof Docs !== "undefined"){ try { await Docs.load(); dm = Drawings.collect(a); } catch (e){ console.warn("documents", e); } }
+    let dm = new Map(); if (tags.length && typeof Docs !== "undefined"){ try { await Docs.load(); dm = Drawings.collect(a); const pick = new Set(a.dwgPick || []); dm = new Map([...dm].map(([t, l]) => [t, l.filter(d => pick.has(d.n))]));   /* (only the drawings ticked on the Drawings tab) */ } catch (e){ console.warn("documents", e); } }
     const all = new Map(); dm.forEach(l => l.forEach(d => { if (!all.has(d.n)) all.set(d.n, d); }));
     /* the parts, in reading order; each one present gets a line in the contents and starts a page */
     const parts = (a.mto || []).map(it => Object.assign({ src: "New" }, it)).concat((a.spares || []).map(it => Object.assign({ src: "Site spares" }, it)));
@@ -102,7 +102,7 @@ const Workpack = (() => {
     for (let i = 1; i <= P; i++){ doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(140); doc.text("Job " + Store.actId(a) + " work pack" + (who ? "   Queries: " + (ow.n ? [ow.n, ow.mobile, ow.e] : [Profile.name(), Profile.get().mobile, Profile.get().email]).filter(Boolean).join(", ") : "") + "   Page " + i + " of " + N, W / 2, 291, { align: "center" });
       if (i > 1){ doc.setTextColor(31, 95, 191); doc.textWithLink("Contents", W - M, 291, { align: "right", pageNumber: 1 }); } }
     return doc.output("blob"); }
-  /* the register: one line per document, under a heading per equipment tag: kind, number (opens SharePoint), title, and
+  /* the register: the ticked drawings, one line per document, under a heading per equipment tag: kind, number (opens SharePoint), title, and
      a PDF badge linked to the copy */
   function register(doc, P, tags, dm){ const body = [], meta = new Map();
     tags.forEach(t => { const ds = dm.get(t) || []; if (!ds.length) return; const e = Equip.get(t) || {}, nm = e.n ? "  " + e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "";

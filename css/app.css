@@ -965,3 +965,9 @@ input[type=checkbox]{width:18px;height:18px}
 .ov-g h4.det-h2{margin-top:18px}
 /* Overview headings: a faint line under each, like the PDF export */
 .ov-g h4{border-bottom:1px solid var(--line);padding-bottom:4px}
+/* Drawings tab lines: the number and rev as a link, the title, the Cloud download button; the tick all box above */
+.dw-h .dw-a{color:var(--link,#1f5fbf);font-weight:700;text-decoration:underline;text-underline-offset:2px;white-space:nowrap;flex:none}.dw-h .dw-a0{color:var(--ink);text-decoration:none}
+.dw-h .dw-t{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.dw-dl{flex:none;width:34px;height:var(--ctl-h);border:1px solid var(--line2);border-radius:8px;background:var(--panel);display:grid;place-items:center;color:var(--muted)}.dw-dl:hover{border-color:var(--th)}
+.dw-dl svg{width:22px;height:24px}.dw-dl .fsp{fill:#038387}html.dark .dw-dl .fsp{fill:#2ec4c9}.dw-dl0{width:34px;flex:none}
+.dw-s .dw-all{margin-left:1px}
