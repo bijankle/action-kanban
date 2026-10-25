@@ -16,8 +16,11 @@ const Table = (() => {
   /* (once: the headings now wrap a word at a time and the i sits underneath, so column widths saved before that are
      dropped and every column takes its new default; a title width someone set is kept) */
   if (lsGet("adColWv", 0) < 2){ const w = widths(), keep = {}; if (w.title) keep.title = w.title; lsSet("adColW", keep); lsSet("adColWv", 2); }
-  function cols(){ const c = [{ id: "_act", label: "", type: "act" }, { id: "_id", label: "ID", type: "id" }]; if (Store.selected().length > 1) c.push({ id: "_proj", label: "Project", type: "proj" });
-    return c.concat(Store.fields().filter(f => f.table)); }
+  /* the ID and title always lead; the Status column goes after title until it's dragged elsewhere (config.actAfter is
+     the column it follows, shared like the field order) */
+  function cols(){ const t = Store.field("title"), rest = (Store.selected().length > 1 ? [{ id: "_proj", label: "Project", type: "proj" }] : []).concat(Store.fields().filter(f => f.table && f.id !== "title"));
+    const at = Store.S.config.actAfter; rest.splice(at && at !== "title" ? rest.findIndex(f => f.id === at) + 1 : 0, 0, { id: "_act", label: "", type: "act" });
+    return [{ id: "_id", label: "ID", type: "id" }].concat(t && t.table !== false ? [t] : [], rest); }
   /* what's on show: the projects ticked, the stage pills, the search */
   /* the order sticks while you work: ticking Done or Hold, or changing a status, leaves the row where it is (so you
      can carry on with it) until the list is opened again, sorted, filtered or searched */
@@ -43,14 +46,14 @@ const Table = (() => {
     del: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>' };
   function rowBtns(a){ const dn = Store.stage(a.stage).kind === "done", hd = Hold.on(a), id = esc(Store.actId(a)), dis = Store.S.edit ? "" : " disabled";
     const b = (k, on, tip) => '<button type="button" class="rb rb-' + k + (on ? " on" : "") + '" data-rb="' + k + '" aria-pressed="' + on + '" title="' + tip + '" aria-label="' + tip + '"' + dis + '>' + IC[k] + '</button>';
-    /* complete, delete, then on hold furthest right, with its i (who it's waiting on, red while details are missing) after it */
-    return '<span class="rbs">' + b("done", dn, dn ? "Complete: click to reopen " + id : "Mark " + id + " complete") + b("del", !!a.del, a.del ? "Deleted: click to bring " + id + " back" : "Delete " + id) + b("hold", hd, hd ? "On hold: click to take " + id + " off hold" : "Put " + id + " on hold") + '<span class="rb-hi">' + Hold.btn(a) + '</span></span>'; }
-  /* the ID in a box with its copy and PDF buttons, in the list and the Details header alike */
+    /* the hold i first (who it's waiting on, red while details are missing), then on hold, complete and delete */
+    return '<span class="rbs"><span class="rb-hi">' + Hold.btn(a) + '</span>' + b("hold", hd, hd ? "On hold: click to take " + id + " off hold" : "Put " + id + " on hold") + b("done", dn, dn ? "Complete: click to reopen " + id : "Mark " + id + " complete") + b("del", !!a.del, a.del ? "Deleted: click to bring " + id + " back" : "Delete " + id) + '</span>'; }
+  /* the ID in a box; in the Details header it carries the PDF button too (the list shows just the ID) */
   const IDI = { copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>',
     tick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5 9.5-10"/></svg>',
     dn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>' };
   function idBox(a, big){ const id = esc(Store.actId(a));
-    return '<span class="idw' + (big ? " big" : "") + '"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + id + '</span><button type="button" class="pj" data-idk="pdf" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares" aria-label="Download the PDF of ' + id + '">' + fileIco("PDF") + '</button></span>'; }
+    return '<span class="idw' + (big ? " big" : "") + '"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + id + '</span>' + (big ? '<button type="button" class="pj" data-idk="pdf" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares" aria-label="Download the PDF of ' + id + '">' + fileIco("PDF") + '</button>' : "") + '</span>'; }
   document.addEventListener("click", async e => { const b = e.target.closest("[data-idk]"); if (!b) return; e.stopPropagation(); const r = b.closest("[data-ref]"), a = r && App.act(r.dataset.ref); if (!a) return;
     if (b.dataset.idk === "pdf") return Workpack.run(a); }, true);
   /* a picture of the action on the clipboard (Sheet, from the copy button by Photos: problem, solution and photos);
@@ -92,7 +95,7 @@ const Table = (() => {
     const lp = c => (["sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
     /* the least each column can be; when they don't all fit, the tick columns go first, then the dates and numbers,
        so a title never gets squeezed to one letter per line (and the list scrolls sideways only if even that's not enough) */
-    const fw = c => c.type === "id" ? idW : ws[c.id] || Math.min(px(c), 150);   // (the ID column fits its box: ID, copy, PDF)   // (a width someone set is kept as it is)
+    const fw = c => c.type === "id" ? idW : ws[c.id] || Math.min(px(c), 150);   // (the ID column fits its box)   // (a width someone set is kept as it is)
     const least = c => fix(c) ? fw(c) : c.id === "title" ? 260 : 110;
     const lv = c => lp(c) === " lp1" ? 1 : lp(c) === " lp2" ? 2 : 3, need = n => all.filter(c => lv(c) > n).reduce((t, c) => t + least(c), 0);
     const w = el.clientWidth || 9999, level = need(0) <= w ? 0 : need(1) <= w ? 1 : 2, cs = all.filter(c => lv(c) > level); lastLv = level; levelOf = w2 => need(0) <= w2 ? 0 : need(1) <= w2 ? 1 : 2;
@@ -102,7 +105,7 @@ const Table = (() => {
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? 260 : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
-    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" aria-label="Complete, delete, on hold" style="width:' + NEED.act + 'px">Status</th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + wid(c) + '">'
+    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" draggable="' + !!Store.S.edit + '" aria-label="Status: on hold, complete, delete" style="width:' + NEED.act + 'px">Status</th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_" && c.id !== "title") + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + esc(head(c)) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">i</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '><button type="button" class="addc" aria-haspopup="true">+ Add column</button></th>' : "");
     const minW = cs.reduce((t, c) => t + least(c), 0) + ADD;
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
@@ -186,13 +189,24 @@ const Table = (() => {
       r.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); if (e.detail > 1) return; const x0 = e.clientX, w0 = th.offsetWidth; r.setPointerCapture(e.pointerId);
         let moved = false; r.onpointermove = ev => { if (Math.abs(ev.clientX - x0) > 2) moved = true; if (moved) th.style.width = Math.max(50, w0 + ev.clientX - x0) + "px"; };
         r.onpointerup = () => { r.onpointermove = null; if (!moved) return; const ws = widths(); ws[id] = Math.round(parseFloat(th.style.width) || th.offsetWidth); lsSet("adColW", ws); App.render(); }; };   // (only the column dragged)
-      /* reorder (the field order is shared, it's also the order in the side panel) */
-      th.ondragstart = e => { if (id[0] === "_") return e.preventDefault(); e.dataTransfer.setData("text/col", id); th.classList.add("drag"); };
+    }); dragHead(el, cs); }
+  /* reorder by dragging a heading (the field order is shared, it's also the order in the side panel); ID and title stay
+     first, Status can go anywhere after them */
+  function dragHead(el){ const ids = cols().map(c => c.id), movable = id => id === "_act" ? !!Store.S.edit : id[0] !== "_" && id !== "title";
+    $$("th[data-c]", el).forEach(th => { const id = th.dataset.c;
+      th.ondragstart = e => { if (!movable(id)) return e.preventDefault(); e.dataTransfer.setData("text/col", id); th.classList.add("drag"); };
       th.ondragend = () => th.classList.remove("drag");
-      th.ondragover = e => { if ([...e.dataTransfer.types].includes("text/col")){ e.preventDefault(); th.classList.add("dover"); } };
+      th.ondragover = e => { if ([...e.dataTransfer.types].includes("text/col") && (movable(id) || id === "title" || id === "_proj")){ e.preventDefault(); th.classList.add("dover"); } };
       th.ondragleave = () => th.classList.remove("dover");
       th.ondrop = e => { th.classList.remove("dover"); const from = e.dataTransfer.getData("text/col"); if (!from || from === id) return; e.preventDefault();
-        Store.mutate("config", () => { const fs = Store.S.config.fields; const a = fs.findIndex(f => f.id === from); const b0 = fs.findIndex(f => f.id === id), item = fs.splice(a, 1)[0]; let b = fs.findIndex(f => f.id === id); if (b < 0) b = 0; fs.splice(a < b0 ? b + 1 : b, 0, item); Store.S.config.mod = now(); Store.touch(item); }); }; }); }
+        /* the new order of all the columns: the dragged one takes the dropped on one's place (after it going right, before it going left) */
+        const o = ids.slice(), a = o.indexOf(from), b0 = o.indexOf(id); o.splice(a, 1); let b = o.indexOf(id); b = a < b0 ? b + 1 : b;
+        if (b <= o.indexOf("title")) b = o.indexOf("title") + 1; if (b < 1) b = 1; o.splice(b, 0, from);
+        Store.mutate("config", () => { const C = Store.S.config, fs = C.fields, i = o.indexOf("_act");
+          if (from === "_act" || ids.indexOf("_act") !== i) C.actAfter = o[i - 1] === "_id" ? "title" : o[i - 1];
+          /* the shown fields keep the slots they had in the field list, refilled in their new order */
+          const shown = o.filter(x => x[0] !== "_" && x !== "title"), slots = fs.map((f, n) => shown.includes(f.id) ? n : -1).filter(n => n >= 0), by = new Map(fs.map(f => [f.id, f]));
+          slots.forEach((n, k) => { fs[n] = by.get(shown[k]); }); C.mod = now(); const it = Store.field(from); if (it) Store.touch(it); }); }; }); }
   /* tiles view (like SharePoint or Google Drive): the main photo fills the tile, the title over it; the
      arrows on a tile step through its photos. The tile size is set from the Size callout. */
   const tileIx = new Map();
