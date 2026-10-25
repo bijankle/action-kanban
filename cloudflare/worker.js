@@ -117,6 +117,16 @@ export default {
       const res = new Response(r.body, { headers: fileHeaders(path.split("/").pop(), r, fixed ? "private, max-age=31536000, immutable" : "no-store") });
       if (fixed) ctx.waitUntil(cache.put(key, withHeaders(res.clone(), { "Cache-Control": "public, max-age=31536000, immutable" }))); return res; }
 
+    /* the colour site map: four Google satellite pictures (2 by 2) of the plant, fetched with the GMAPS_KEY secret so the
+       key never reaches the browser; the app joins them. Only this one fixed view can be asked for */
+    if (p === "/api/gmap" && m === "GET"){
+      if (!env.GMAPS_KEY) return json({ message: "No Google Maps key on the site" }, 404);
+      const c = +url.searchParams.get("c"), rr = +url.searchParams.get("r"); if (![0, 1].includes(c) || ![0, 1].includes(rr)) return json({ message: "Not a map part" }, 400);
+      const cache = caches.default, key = new Request(url.origin + "/__gmap/" + GMAP.z + "/" + c + "/" + rr); const hit = await cache.match(key); if (hit) return hit;
+      const [lat, lng] = gmapCentre(c, rr), g = await fetch("https://maps.googleapis.com/maps/api/staticmap?center=" + lat.toFixed(7) + "," + lng.toFixed(7) + "&zoom=" + GMAP.z + "&size=640x640&scale=2&maptype=satellite&format=jpg&key=" + encodeURIComponent(env.GMAPS_KEY));
+      if (!g.ok) return json({ message: "Google said " + g.status }, 502);
+      const res = new Response(g.body, { headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=86400" } }); ctx.waitUntil(cache.put(key, res.clone())); return res; }
+
     /* links to attachments for a PDF: { items: [{ p: path, n: file name }] } gives { urls: [...] }, each good for a year */
     if (p === "/api/share" && m === "POST"){ let q = {}; try { q = await req.json(); } catch (e){}
       const items = (Array.isArray(q.items) ? q.items : []).slice(0, 500), x = Date.now() + 365 * DAY;
@@ -150,6 +160,12 @@ export default {
   }
 };
 const HIDDEN_IN = body => { try { return (JSON.parse(body).tree || []).some(e => HIDDEN.has(e.path)); } catch (e){ return true; } };
+/* the colour site map's fixed view: the middle of the plant, Google zoom 17, four 640 px pictures 2 by 2 (the rows
+   overlap 36 px so the top row's Google logo is hidden under the bottom row). js/sitemap.js uses the same numbers */
+const GMAP = { lat: -30.766534, lng: 121.509103, z: 17, step: [640, 604] };
+function gmapCentre(c, r){ const n = 256 * 2 ** GMAP.z, wx = (GMAP.lng + 180) / 360 * n, s = Math.sin(GMAP.lat * Math.PI / 180), wy = (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n;
+  const x = wx + (c - 0.5) * GMAP.step[0], y = wy + (r - 0.5) * GMAP.step[1];
+  return [Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n))) * 180 / Math.PI, x / n * 360 - 180]; }
 /* the files a share link may name: an action's attachments, photos, RFQs and quotes */
 const SHARE_OK = /^data\/p\/[\w\-]+\/(files|img|thumb|rfq|quotes)\/[^\/]+(\/[^\/]+)?$/;
 /* a file's type from its name, so a phone opens a Word or Excel file as itself (not as text), and its name for saving */

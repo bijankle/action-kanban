@@ -21,6 +21,7 @@ Passwords are kept only as salted hashes in `data/auth.json` in the data reposit
    * `GH_TOKEN`, type Secret: the GitHub key.
    * `RESEND_KEY`, type Secret: the Resend key.
    * `ADMIN_EMAIL`, type Text: the email that approves sign ins (the same one you used for Resend).
+   * `GMAPS_KEY`, type Secret, optional: a Google Maps Platform key with the Maps Static API turned on. With it, an action's expected location is shown on colour Google satellite imagery of the plant instead of the black and white map.
 5. **Open the site and make your account first.** The address looks like `https://action-database.<your-name>.workers.dev`. Sign in with the admin email. Your account is approved straight away.
 6. **Send the address to Claude.** It gets built into the app, so the old GitHub Pages address sends everyone to the site.
 7. **Make the data repository private.** On github.com open `bijankle/action-kanban-data`, Settings, scroll to Danger Zone, Change visibility, Make private. Do this after step 5 works.

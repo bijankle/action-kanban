@@ -41,9 +41,41 @@ const SiteMap = (() => {
   /* the placements grouped: tags within 25 m of each other share one callout */
   function groups(locs){ const gs = []; locs.forEach(l => { const g = gs.find(g => metres(g.ll, l.ll) < 25); if (g){ g.tags.push(l.tag); } else gs.push({ ll: l.ll, tags: [l.tag] }); }); return gs; }
   const img = () => imgP || (imgP = new Promise((res, rej) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => { imgP = null; rej(new Error("site map")); }; i.src = src("map/site.webp"); }));
+  /* the colour site map, on the Cloudflare site: four Google satellite pictures from the worker (cloudflare/worker.js,
+     the same numbers as its GMAP), joined 2 by 2 into one picture of the plant, about half a metre a pixel. Null when
+     it can't be had (off the site, no Google key there yet), and the black and white map is used */
+  const GMAP = { lat: -30.766534, lng: 121.509103, z: 17, step: [640, 604] }, WN = 256 * 2 ** GMAP.z;
+  const merc = ll => { const s = Math.sin(ll[0] * Math.PI / 180); return [(ll[1] + 180) / 360 * WN, (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * WN]; };
+  let gP = null;
+  const gmap = () => gP || (gP = (async () => { if (!GH.site()) return null;
+      const parts = await Promise.all([[0, 0], [1, 0], [0, 1], [1, 1]].map(async ([c, r]) => { const res = await fetch(location.origin + "/api/gmap?c=" + c + "&r=" + r); if (!res.ok) throw new Error("map " + res.status); return [c, r, await createImageBitmap(await res.blob())]; }));
+      const k = parts[0][2].width / 640, Wl = 640 + GMAP.step[0], Hl = 640 + GMAP.step[1], cv = document.createElement("canvas"); cv.width = Wl * k; cv.height = Hl * k; const g = cv.getContext("2d");
+      parts.sort((p, q) => p[1] - q[1]).forEach(([c, r, b]) => g.drawImage(b, c * GMAP.step[0] * k, r * GMAP.step[1] * k));   // (the bottom row over the top row's logo)
+      const [cx, cy] = merc([GMAP.lat, GMAP.lng]); return { cv, k, x0: cx - Wl / 2, y0: cy - Hl / 2, Wl, Hl }; })().catch(e => { console.warn("colour map", e); return null; }));
+  /* the whole site, the same view every time: the colour map if there is one (north up, edge to edge), else the black
+     and white one cut to the plant outline. Each spot is a large soft red circle, as the positions are only a guide to
+     the area, with its tags on a label beside it */
+  async function renderWhole(locs, w){ const gm = await gmap(), gs = groups(locs); let c, g, W, H, at;
+    if (gm){ W = Math.min(w || 2400, gm.cv.width); H = Math.round(W * gm.Hl / gm.Wl); c = document.createElement("canvas"); c.width = W; c.height = H; g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(gm.cv, 0, 0, W, H);
+      at = ll => { const [x, y] = merc(ll); return [(x - gm.x0) * W / gm.Wl, (y - gm.y0) * H / gm.Hl]; }; }
+    else { const im = await img(), q = im.naturalWidth / 3101, sx = VIEW.x * q, sy = VIEW.y * q, sw = VIEW.w * q, sh = VIEW.h * q; W = Math.min(w || 1200, 1400); H = Math.round(W * VIEW.h / VIEW.w); const k = W / sw;
+      c = document.createElement("canvas"); c.width = W; c.height = H; g = c.getContext("2d"); g.fillStyle = "#ebe8e1"; g.fillRect(0, 0, W, H); g.imageSmoothingQuality = "high"; g.drawImage(im, sx, sy, sw, sh, 0, 0, W, H);
+      const P = POLY.map(([px, py]) => [(px * q - sx) * k, (py * q - sy) * k]), path = () => { g.beginPath(); P.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py)); g.closePath(); };
+      g.beginPath(); g.rect(0, 0, W, H); P.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py)); g.closePath(); g.fillStyle = "#ebe8e1"; g.fill("evenodd"); path(); g.strokeStyle = "rgba(29,36,48,.45)"; g.lineWidth = Math.max(1.5, W / 600); g.stroke();
+      at = ll => [(((ll[1] - BOUNDS.w) / (BOUNDS.e - BOUNDS.w)) * im.naturalWidth - sx) * k, (((BOUNDS.n - ll[0]) / (BOUNDS.n - BOUNDS.s)) * im.naturalHeight - sy) * k]; }
+    const R = Math.round(W * 0.08), fs = Math.round(W / 42);
+    gs.forEach(grp => { const [x, y] = at(grp.ll);
+      g.lineWidth = Math.max(2, W / 300); g.strokeStyle = "rgba(255,255,255,.9)"; g.beginPath(); g.arc(x, y, R + g.lineWidth, 0, 7); g.stroke();
+      g.fillStyle = "rgba(212,42,30,.28)"; g.strokeStyle = "#d42a1e"; g.lineWidth = Math.max(3, W / 220); g.beginPath(); g.arc(x, y, R, 0, 7); g.fill(); g.stroke();
+      const t = grp.tags.length > 2 ? grp.tags[0] + " +" + (grp.tags.length - 1) : grp.tags.join(", "); g.font = "bold " + fs + "px Arial"; const tw = g.measureText(t).width, bw = tw + fs, bh = fs * 1.5;
+      const bx = x + R + 10 + bw < W - 4 ? x + R + 10 : Math.max(4, x - R - 10 - bw), by = Math.max(4, Math.min(H - bh - 4, y - bh / 2));
+      g.fillStyle = "rgba(255,255,255,.95)"; g.fillRect(bx, by, bw, bh); g.strokeStyle = "rgba(29,36,48,.5)"; g.lineWidth = 1; g.strokeRect(bx, by, bw, bh); g.fillStyle = "#1d2430"; g.fillText(t, bx + fs / 2, by + fs * 1.08); });
+    /* north is straight up on both maps */
+    const n = Math.round(W / 50); g.fillStyle = "rgba(255,255,255,.92)"; g.beginPath(); g.arc(W - n * 1.8, n * 1.8, n, 0, 7); g.fill(); g.fillStyle = "#1d2430"; g.beginPath(); g.moveTo(W - n * 1.8, n * 1.1); g.lineTo(W - n * 2.15, n * 2.3); g.lineTo(W - n * 1.8, n * 2.05); g.lineTo(W - n * 1.45, n * 2.3); g.closePath(); g.fill();
+    return c.toDataURL("image/jpeg", gm ? 0.86 : 0.85); }
   /* a picture of the site showing every placement, with one callout per group: a JPEG data URL, 16:9 zoomed to the
      placements, or with whole set the whole site at its own shape, the same view every time */
-  async function render(locs, w, whole){ const im = await img(), W = w || 1200, H = Math.round(whole ? W * VIEW.h / VIEW.w : W * 9 / 16), c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+  async function render(locs, w, whole){ if (whole) return renderWhole(locs, w); const im = await img(), W = w || 1200, H = Math.round(whole ? W * VIEW.h / VIEW.w : W * 9 / 16), c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
     const gs = groups(locs), toPx = ll => [((ll[1] - BOUNDS.w) / (BOUNDS.e - BOUNDS.w)) * im.naturalWidth, ((BOUNDS.n - ll[0]) / (BOUNDS.n - BOUNDS.s)) * im.naturalHeight];
     const pts = gs.map(x => toPx(x.ll)), xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
     let sw = Math.max(420, (Math.max(...xs) - Math.min(...xs)) * 1.5 + 160), sh = sw * H / W; if ((Math.max(...ys) - Math.min(...ys)) * 1.5 + 140 > sh){ sh = (Math.max(...ys) - Math.min(...ys)) * 1.5 + 140; sw = sh * W / H; }
@@ -55,21 +87,7 @@ const SiteMap = (() => {
     const r = Math.max(12, 20 * W / 1200) * (whole ? 2 : 1), fs = Math.round(r * 0.95);
     const boxes = [], hit = (b) => boxes.some(o => b.x < o.x + o.w + 6 && b.x + b.w + 6 > o.x && b.y < o.y + o.h + 6 && b.y + b.h + 6 > o.y);
     const r0 = r; pts.forEach(p => { const x = (p[0] - sx) * k, y = (p[1] - sy) * k; boxes.push({ x: x - r0 * 1.8, y: y - r0 * 1.8, w: r0 * 3.6, h: r0 * 3.6 }); });   // callouts keep clear of the markers too
-    /* the whole site view with one spot: a small pin, and a square close up of it in the bottom left corner (outside the
-       plant outline, so it hides nothing), joined to the pin by a line, with the tag in its top left corner */
-    const mag = whole && gs.length === 1;
-    if (mag){ const x = (pts[0][0] - sx) * k, y = (pts[0][1] - sy) * k, R = Math.round(W * 0.19), z = 3.5, rp = W / 130;
-      const bx = R + 10, by = H - R - 10;
-      const dx = bx - x, dy = by - y, d = Math.hypot(dx, dy) || 1, e = 1 - R / Math.max(Math.abs(dx), Math.abs(dy), R + 1);
-      g.strokeStyle = "rgba(29,36,48,.7)"; g.lineWidth = Math.max(2, W / 400); g.beginPath(); g.moveTo(x + dx / d * rp * 2.6, y + dy / d * rp * 2.6); g.lineTo(x + dx * e, y + dy * e); g.stroke();
-      const ss = 2 * R / k / z; g.fillStyle = "#d9d4c7"; g.fillRect(bx - R, by - R, 2 * R, 2 * R); g.drawImage(im, pts[0][0] - ss / 2, pts[0][1] - ss / 2, ss, ss, bx - R, by - R, 2 * R, 2 * R);
-      g.lineWidth = rp * 1.1; g.strokeStyle = "#fff"; g.strokeRect(bx - R, by - R, 2 * R, 2 * R); g.lineWidth = rp * 0.5; g.strokeStyle = "#d42a1e"; g.strokeRect(bx - R, by - R, 2 * R, 2 * R);
-      [[x, y, rp], [bx, by, rp * 1.15]].forEach(([px, py, pr]) => { g.lineWidth = pr * 0.6; g.strokeStyle = "#fff"; g.beginPath(); g.arc(px, py, pr * 2.2, 0, 7); g.stroke(); g.strokeStyle = "#d42a1e"; g.lineWidth = pr * 0.35; g.beginPath(); g.arc(px, py, pr * 2.2, 0, 7); g.stroke(); g.fillStyle = "#d42a1e"; g.strokeStyle = "#fff"; g.lineWidth = pr * 0.4; g.beginPath(); g.arc(px, py, pr, 0, 7); g.fill(); g.stroke(); });
-      /* the tag in the top left corner, made smaller if it would run past the right edge */
-      const t = gs[0].tags.length > 1 ? gs[0].tags[0] + " +" + (gs[0].tags.length - 1) : gs[0].tags[0], lx = bx - R + rp * 0.3, ly = by - R + rp * 0.3, room = 2 * R - rp * 0.6 - 12;
-      let f2 = Math.round(W / 38); g.font = "bold " + f2 + "px Arial"; const w0 = g.measureText(t).width; if (w0 > room){ f2 = Math.max(9, Math.floor(f2 * room / w0)); g.font = "bold " + f2 + "px Arial"; }
-      const tw = g.measureText(t).width, bh = f2 * 1.45; g.fillStyle = "#d42a1e"; g.fillRect(lx, ly, tw + 12, bh); g.fillStyle = "#fff"; g.fillText(t, lx + 6, ly + bh / 2 + f2 * 0.36); }
-    (mag ? [] : gs).forEach((grp, gi) => { const x = (pts[gi][0] - sx) * k, y = (pts[gi][1] - sy) * k;
+    gs.forEach((grp, gi) => { const x = (pts[gi][0] - sx) * k, y = (pts[gi][1] - sy) * k;
       g.lineWidth = r * 0.28; g.strokeStyle = "#fff"; g.beginPath(); g.arc(x, y, r * 1.6, 0, 7); g.stroke(); g.strokeStyle = "#d42a1e"; g.lineWidth = r * 0.16; g.beginPath(); g.arc(x, y, r * 1.6, 0, 7); g.stroke();
       g.fillStyle = "#d42a1e"; g.strokeStyle = "#fff"; g.lineWidth = r * 0.2; g.beginPath(); g.arc(x, y, r * 0.5, 0, 7); g.fill(); g.stroke();
       /* the callout: one line per tag (a few, then "+n more") */
@@ -91,7 +109,7 @@ const SiteMap = (() => {
   const note = locs => "Auto generated location, check it on site before relying on it. " + locs.map(l => l.tag + " is placed from " + l.how + ".").join(" ");
   /* for an action: { url, locs, note } (cached while its tags stay the same), or null if nothing can be placed */
   function forAction(a, whole){ const tags = tagsOf(a), key = tags.join("|") + (whole ? "|whole" : ""); if (!tags.length) return Promise.resolve(null);
-    if (!shots.has(key)) shots.set(key, locateAll(tags).then(async locs => { const r = locs.length ? { url: await render(locs, 1200, whole), locs, note: note(locs) } : null; done.set(key, r); return r; }).catch(e => { shots.delete(key); throw e; }));
+    if (!shots.has(key)) shots.set(key, locateAll(tags).then(async locs => { const r = locs.length ? { url: await render(locs, whole ? 2400 : 1200, whole), locs, note: note(locs) } : null; done.set(key, r); return r; }).catch(e => { shots.delete(key); throw e; }));
     return shots.get(key); }
   /* the picture already made for an action (undefined if not yet), so a redraw can show it straight away */
   const ready = (a, whole) => done.get(tagsOf(a).join("|") + (whole ? "|whole" : ""));
