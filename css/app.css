@@ -776,3 +776,8 @@ html.dark .idw .pj b{color:#ff6b5b}
 .idw.big{height:32px}.idw.big .aid{font-size:16px}
 .av-head{flex-wrap:nowrap}.av-head .rbs{flex:none}
 .pr-dt{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pr-dt label{display:inline-flex;align-items:center;gap:6px}.pr-dt .in{width:auto}.pr-win .lbl{margin:4px 0 2px}
+/* a column heading's ▾ menu button: faint until you point at the heading */
+.tbl th .th-m{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:18px;height:18px;border:0;border-radius:4px;background:transparent;color:#fff;opacity:.45;font-size:10px;line-height:18px;padding:0;cursor:pointer;z-index:2}
+.tbl th:hover .th-m,.tbl th .th-m:focus-visible,.tbl th .th-m[aria-expanded="true"]{opacity:1}.tbl th .th-m:hover{background:rgba(255,255,255,.2)}
+.tbl th[data-c]:not(.actc) .th-l{padding-right:24px}
+.colm{width:200px;padding:4px;display:flex;flex-direction:column}.colm button{text-align:left;border:0;background:none;padding:7px 10px;border-radius:6px;font:13.5px var(--font);color:var(--ink);cursor:pointer}.colm button:hover{background:var(--panel2)}.colm .bad{color:#c0392b}.colm .msep{margin:4px 0}

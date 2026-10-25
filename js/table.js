@@ -87,7 +87,7 @@ const Table = (() => {
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? 260 : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
     const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" aria-label="Complete, delete, on hold" style="width:' + NEED.act + 'px">Status</th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_") + '" style="width:' + wid(c) + '">'
-      + '<span class="th-l">' + esc(head(c)) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">i</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '><button type="button" class="addc" aria-haspopup="true">+ Add column</button></th>' : "");
+      + '<span class="th-l">' + esc(head(c)) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">i</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true">▾</button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '><button type="button" class="addc" aria-haspopup="true">+ Add column</button></th>' : "");
     const minW = cs.reduce((t, c) => t + least(c), 0) + ADD;
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
       + (list.length ? "" : '<div class="empty">' + (Store.visible().length ? "No actions match the filter." : "No actions yet. Click <b>+ New action</b>, or <b>Paste text</b> to make one from an email.") + '</div>') + '</div>';
@@ -112,6 +112,14 @@ const Table = (() => {
     tb.ondrop = e => { const tr = e.target.closest("tr"); $$("tr.drop", tb).forEach(x => x.classList.remove("drop")); if (!tr || !Media.hasDrop(e)) return; e.preventDefault(); e.stopPropagation(); const a = App.act(tr.dataset.ref); Media.dropOn(a, e); };
     const ab = $(".addc", el); if (ab) ab.onclick = e => { e.stopPropagation(); addPop(ab); };
     wireHead(el, cs); }
+  /* a column heading's ▾: sort it either way, fit it to its contents, or take it out of the list (+ Add column brings it back) */
+  function colMenu(anchor, id, fit){ Fields.closePop(); const f = Store.field(id), keep = id[0] === "_" || id === "title";
+    const p = h('<div class="pop colm"><button type="button" data-m="asc">Sort A to Z</button><button type="button" data-m="desc">Sort Z to A</button>' + (App.sort && App.sort.id === id ? '<button type="button" data-m="off">Clear the sort</button>' : "")
+      + '<button type="button" data-m="fit">Fit to its contents</button>' + (keep || !f || !Store.S.edit ? "" : '<div class="msep"></div><button type="button" data-m="rm" class="bad">Remove this column</button>') + '</div>');
+    document.body.appendChild(p); const rc = anchor.getBoundingClientRect(); p.style.top = rc.bottom + 4 + "px"; p.style.left = Math.max(8, Math.min(rc.right - 200, innerWidth - 208)) + "px";
+    $$("[data-m]", p).forEach(b => b.onclick = () => { const m = b.dataset.m; Fields.closePop();
+      if (m === "asc" || m === "desc"){ App.sort = { id, dir: m === "asc" ? 1 : -1 }; App.render(); } else if (m === "off"){ App.sort = null; App.render(); } else if (m === "fit") fit();
+      else if (m === "rm"){ Store.mutate("config", () => { f.table = false; Store.S.config.mod = now(); Store.touch(f); }); Store.log("Removed the " + f.label + " column"); note("Removed the " + f.label + " column. + Add column brings it back."); } }); }
   /* + Add column: the columns not in the list, A to Z, with a search; picking one adds it at the end */
   function addPop(anchor){ Fields.closePop(); const hid = Store.fields().filter(f => !f.table && f.id !== "title").sort((x, y) => x.label.localeCompare(y.label));
     const p = h('<div class="pop addpop"><div class="pop-h">Add a column</div>' + (hid.length ? '<input class="in" type="search" placeholder="Search columns" aria-label="Search columns"><div class="ap-l">' + hid.map(f => '<button type="button" data-f="' + esc(f.id) + '">' + esc(f.label) + '</button>').join("") + '</div>' : '<p class="dim">Every column is already in the list.</p>') + '</div>');
@@ -123,6 +131,7 @@ const Table = (() => {
       $(".th-l", th).onclick = () => { App.sort = App.sort && App.sort.id === id ? (App.sort.dir > 0 ? { id, dir: -1 } : null) : { id, dir: 1 }; App.render(); };
       /* resize */
       const r = $(".th-r", th); r.onclick = e => e.stopPropagation();
+      const mb = $(".th-m", th); if (mb) mb.onclick = e => { e.stopPropagation(); colMenu(mb, id, () => r.ondblclick(new MouseEvent("dblclick"))); };
       /* double click the edge: fit the column to its heading's longest word and its widest cell (as in Excel) */
       r.ondblclick = e => { e.stopPropagation(); const i = [...th.parentNode.children].indexOf(th), l = $(".th-l", th);
         let w = headW(cs[i] ? cs[i].label : l.textContent, getComputedStyle(l).font);
