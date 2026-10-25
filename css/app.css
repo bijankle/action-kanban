@@ -907,3 +907,4 @@ input[type=checkbox]{width:18px;height:18px}
 .ph-c.ph-l::before,.ph-c.ph-r::before{content:"";position:absolute;top:0;bottom:0;width:3px;border-radius:2px;background:var(--focus,#2f6fd1);z-index:2}
 .ph-c.ph-l::before{left:-5px}.ph-c.ph-r::before{right:-5px}
 .ph-g>.ph-add{display:grid;place-items:center;text-align:center}
+.ph-c .ph-t{cursor:grab}.ph-c .ph-t:active{cursor:grabbing}
