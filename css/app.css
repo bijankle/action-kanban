@@ -813,3 +813,7 @@ html.dark .fpill[style*="--stb"].on{background:color-mix(in srgb,var(--c) 26%,va
 .tbl td.has-eta{padding-right:28px}
 /* the tick headings sit on the bottom edge so their (i) line up along the bottom */
 .tbl th.tk{vertical-align:bottom}.tbl th.tk .th-l{padding-bottom:6px}
+/* the parts ETA i, option 2: a pale tinted circle with a deep coloured i */
+.eta-i{width:20px;height:20px;font-size:12.5px;line-height:20px;color:#1f7a4f;background:#e3f3ea}
+.eta-i.ok{background:#e3f3ea;color:#1f7a4f}.eta-i.late{background:#fbe7e5;color:#b3261e}.eta-i.unk{background:#eef0f3;color:#5d6875}
+html.dark .eta-i.ok{background:#173326;color:#5fd39a}html.dark .eta-i.late{background:#3a1a18;color:#ff8a80}html.dark .eta-i.unk{background:#262a30;color:#b8c0ca}
