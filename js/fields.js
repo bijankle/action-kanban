@@ -140,7 +140,7 @@ const Fields = (() => {
         .filter(x => !have.has(x.t.toLowerCase()) || x.t.toLowerCase() === q.trim().toLowerCase()).slice(0, 40);
       if (!res.length){ closeDD(); return; } hi = 0;
       if (!dd){ dd = h('<div class="tg-dd" role="listbox"></div>'); document.body.appendChild(dd); }
-      dd.innerHTML = res.map((x, k) => '<div class="tg-o" role="option" data-k="' + k + '"><b>' + mark(x.t, w) + '</b>' + (x.n ? '<span>' + mark(x.n, w) + '</span>' : "") + (x.k ? '<i>' + esc(x.k) + '</i>' : "") + '</div>').join("");
+      dd.innerHTML = res.map((x, k) => '<div class="tg-o' + (x.k ? " kd" : "") + '" role="option" data-k="' + k + '">' + (x.k ? kindSym(x.k) : "") + '<span class="tg-x"><b>' + mark(x.t, w) + '</b>' + (x.n ? '<span>' + mark(x.n, w) + '</span>' : "") + '</span></div>').join("");   // (a tag: its kind's symbol, the number, and its name under it)
       const r = i.getBoundingClientRect(), below = innerHeight - r.bottom > 260; Object.assign(dd.style, { left: Math.max(8, Math.min(r.left, innerWidth - 428)) + "px", width: Math.max(r.width, 420) + "px", top: (below ? r.bottom + 3 : Math.max(8, r.top - 263)) + "px" });
       i.setAttribute("aria-expanded", "true"); paint();
       $$(".tg-o", dd).forEach(o => { o.onmousedown = e => { e.preventDefault(); pick(res[+o.dataset.k]); }; o.onmousemove = () => { if (hi !== +o.dataset.k){ hi = +o.dataset.k; paint(); } }; }); };

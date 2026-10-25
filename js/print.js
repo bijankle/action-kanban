@@ -63,7 +63,7 @@ const Print = (() => {
         + tbl("MTO", ["Item", "Description", "Part / tag no.", "Qty", "Unit", "Notes"], (a.mto || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes]))
         + tbl("From spares", ["Item", "Description", "Part / tag no.", "Qty", "Unit", "Store location / notes", "Secured"], (a.spares || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes, it.secured ? "Yes" : ""]))
         + (a.files.length ? '<div class="pa-b"><h5>Attachments</h5>' + a.files.map(f => '<div class="pa-file">📎 <a href="' + esc(links.get(f) || Media.fileUrlOnline(a, f)) + '">' + esc(f.name) + '</a> <span class="dim">' + fmtSize(f.size || 0) + '</span></div>').join("") + '</div>' : "") + '</div>'
-        + (o.photos && a.photos.length ? '<div class="pa-r"><h5>Photos</h5><div class="pa-ph" style="--per:' + Math.max(1, o.per - 1) + '">' + a.photos.map(ph => '<figure><img src="' + esc(Media.src(a, ph)) + '" alt=""><figcaption>' + esc(ph.name || "") + '</figcaption></figure>').join("") + '</div></div>' : "") + '</div></section>')); });
+        + (o.photos && a.photos.length ? '<div class="pa-r"><h5>Photos</h5><div class="pa-ph" style="--per:' + Math.max(1, o.per - 1) + '">' + a.photos.map(ph => '<figure><img src="' + esc(Media.src(a, ph)) + '" alt="' + esc(ph.name || "") + '"></figure>').join("") + '</div></div>' : "") + '</div></section>')); });
     document.body.appendChild(root); note("Getting the photos ready to print…", 8000);
     await Promise.race([Promise.all($$("img", root).map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))), new Promise(r => setTimeout(r, 20000))]);
     balance(root); if (o.pages > 0) fit(root, o);

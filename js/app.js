@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.82";
+const APP_VERSION = "1.10.83";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -342,7 +342,8 @@ const App = (() => {
   /* files dropped anywhere but an action go to the tray too */
   document.addEventListener("dragover", e => { if ([...e.dataTransfer.types].includes("Files")) e.preventDefault(); });
   document.addEventListener("drop", e => { if (!e.dataTransfer.files.length) return; e.preventDefault(); if (!Store.S.edit) return viewOnly(); Media.toTray([...e.dataTransfer.files]); });
-  function setTab(t){ A.tab = t; lsSet("adTab", t); render(); }
+  /* the Organizer always opens laid out in full: an action open on the Actions tab doesn't pop up over it */
+  function setTab(t){ const was = A.tab; A.tab = t; lsSet("adTab", t); if (t === "kanban" && was !== "kanban" && A.selRef) return select(null); render(); }
 
   /* ---------- start ---------- */
   async function boot(){ applyView();
