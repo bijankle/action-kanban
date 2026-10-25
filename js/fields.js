@@ -193,11 +193,14 @@ const Fields = (() => {
     const below = innerHeight - r.bottom > 300; p.style.top = (below ? r.bottom + 4 : Math.max(8, r.top - 304)) + "px"; }
   /* a text field opened over its box in full to read and edit: Enter or clicking away saves it and closes it, Shift+Enter
      starts a new line (not in one line fields like the title), Esc leaves it as it was */
-  function textPop(anchor, a, f){ closePop(); const r = anchor.getBoundingClientRect(), one = f.type !== "longtext";
-    const p = h('<div class="pop ltpop"><div class="ltpop-h"><b>' + esc(Store.actId(a)) + '</b> ' + esc(f.label) + '</div><textarea class="in ta" rows="' + (one ? 2 : 5) + '"></textarea><div class="dim sm-t">Enter to save' + (one ? "" : ", Shift+Enter for a new line") + '. Esc to cancel.</div></div>');
+  function textPop(anchor, a, f, inline){ closePop(); const r = anchor.getBoundingClientRect(), one = f.type !== "longtext";
+    /* inline: the box itself turns into the editor, the same size, and grows down a line at a time as the text needs */
+    const p = inline ? h('<div class="pop ltpop lt-inl"><textarea class="in ta" rows="1" aria-label="' + esc(f.label) + ' of ' + esc(Store.actId(a)) + '" title="Enter to save, Shift+Enter for a new line, Esc to cancel"></textarea></div>')
+      : h('<div class="pop ltpop"><div class="ltpop-h"><b>' + esc(Store.actId(a)) + '</b> ' + esc(f.label) + '</div><textarea class="in ta" rows="' + (one ? 2 : 5) + '"></textarea><div class="dim sm-t">Enter to save' + (one ? "" : ", Shift+Enter for a new line") + '. Esc to cancel.</div></div>');
     const ta = $("textarea", p), was = String(a.f[f.id] || ""); ta.value = was; document.body.appendChild(p);
-    const w = Math.max(r.width, 340); p.style.width = Math.min(w, innerWidth - 16) + "px"; p.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + "px"; p.style.top = Math.max(8, Math.min(r.top, innerHeight - p.offsetHeight - 8)) + "px";
-    const grow = () => { ta.style.height = "auto"; ta.style.height = Math.min(innerHeight * 0.6, ta.scrollHeight + 2) + "px"; }; ta.oninput = grow; grow();
+    const w = inline ? r.width : Math.max(r.width, 340); p.style.width = Math.min(w, innerWidth - 16) + "px"; p.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + "px";
+    const grow = () => { ta.style.height = "auto"; ta.style.height = Math.min(innerHeight * 0.6, Math.max(inline ? r.height : 0, ta.scrollHeight + 2)) + "px"; if (!inline) p.style.top = Math.max(8, Math.min(r.top, innerHeight - p.offsetHeight - 8)) + "px"; };
+    if (inline) p.style.top = r.top + "px"; ta.oninput = grow; grow();
     let keep = true; p._done = () => { const v = one ? ta.value.replace(/\s*\n\s*/g, " ").trim() : ta.value; if (keep && v !== was) set(a, f, v); };
     ta.onkeydown = ev => { if (ev.key === "Escape"){ ev.stopPropagation(); keep = false; closePop(); } else if (ev.key === "Enter" && (one || !ev.shiftKey)){ ev.preventDefault(); closePop(); } };
     ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); return p; }

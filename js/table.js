@@ -71,7 +71,7 @@ const Table = (() => {
   /* long text (notes and the like) in the list: click the box, or its more…, and it opens over the cell in full to edit,
      saved when you click away or press Ctrl+Enter, Esc to leave it as it was */
   document.addEventListener("click", e => { const b = e.target.closest("[data-lt]"); if (!b || !b.closest(".tbl")) return; e.stopPropagation(); Fields.closePop();
-    const tr = b.closest("tr"), a = tr && App.act(tr.dataset.ref), f = a && Store.field(b.dataset.lt); if (f) Fields.textPop(b.closest("td"), a, f); }, true);
+    const tr = b.closest("tr"), a = tr && App.act(tr.dataset.ref), f = a && Store.field(b.dataset.lt); if (f) Fields.textPop($(".lt-b", b.closest("td")), a, f, true); }, true);
   document.addEventListener("click", e => { const b = e.target.closest(".tt-more"); if (!b) return; e.stopPropagation(); Fields.closePop(); const tr = b.closest("tr"), a = tr && App.act(tr.dataset.ref); if (!a) return;
     const p = h('<div class="pop ttpop"><div class="ttpop-id">' + esc(Store.actId(a)) + '</div><div class="ttpop-t">' + esc(a.f.title || "") + '</div><button type="button" class="link">Open the action</button></div>');
     document.body.appendChild(p); Fields.place(p, b); $(".link", p).onclick = () => { Fields.closePop(); App.select(tr.dataset.ref); }; }, true);

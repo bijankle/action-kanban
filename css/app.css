@@ -929,3 +929,6 @@ input[type=checkbox]{width:18px;height:18px}
 .gal-th{width:72px;height:54px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);opacity:1}
 .gal-th:hover{border-color:var(--th)}.gal-th.on{border-color:var(--line);outline:2px solid var(--focus);outline-offset:1px}
 :root{--stage:#e9ecf0}html.dark{--stage:#101215}
+/* the Notes box in the list turned editor: no frame round it, the box itself with its focus edge, one line per row of text */
+.ltpop.lt-inl{min-width:0;max-width:none;padding:0;border:0;background:none;box-shadow:none;border-radius:var(--ctl-r)}
+.lt-inl textarea{display:block;width:100%;resize:none;overflow-y:auto;box-sizing:border-box;font-size:13px;line-height:20px;padding:3px 8px;min-height:0;box-shadow:0 0 0 1px var(--focus),0 6px 18px rgba(0,0,0,.14)}
