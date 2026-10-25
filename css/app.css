@@ -881,3 +881,5 @@ input[type=checkbox]{width:18px;height:18px}
 .lt-more{display:none;flex:none;border:0;background:none;padding:0;color:var(--th);font:600 12px var(--font);cursor:pointer;text-decoration:underline}.lt-more:hover{color:var(--ink)}td.ltc.cut .lt-more{display:inline}
 .ltpop{display:flex;flex-direction:column;gap:6px;padding:10px 12px}.ltpop-h{font-size:12px;color:var(--dim)}.ltpop-h b{color:var(--ink)}.ltpop textarea{width:100%;resize:vertical;font-size:13.5px;line-height:1.45}
 .tbl td.ed .lt-b{border-color:var(--line2);background:var(--panel)}.tbl td.ed .lt-b:hover{border-color:var(--th)}
+/* every ID the same width (equal width digits, and room for the widest), so the copy and PDF buttons line up down the list */
+.idw .aid{font-variant-numeric:tabular-nums;display:inline-block;min-width:var(--aid-w,0)}
