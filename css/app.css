@@ -888,3 +888,4 @@ input[type=checkbox]{width:18px;height:18px}
 .tbl td.actc{padding:0}.tbl td.actc .rbs{display:flex;width:100%;gap:0;justify-content:space-evenly}.tbl td.actc .rb-hi{flex:none;width:22px}
 /* the ID box in the middle of its column, with the same gap either side of the ID inside the box */
 .tbl td.idc{padding:0;text-align:center}.idw .aid{margin-right:8px}
+.fico .fa{fill:#6d4fd8}html.dark .fico .fa{fill:#a993ff}

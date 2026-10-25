@@ -126,6 +126,10 @@ const properTitle = (() => {
     return low.charAt(0).toUpperCase() + low.slice(1); });
   return s => String(s || "").replace(/\s+/g, " ").trim().split(" ").map((w, i) => word(w, i === 0)).join(" "); })();
 
+/* the upload with AI symbol (option 2): the same small page as the file buttons with an up arrow in it, and AI in bold
+   purple letters underneath */
+const aiIco = () => '<svg class="fico" viewBox="0 0 24 26" aria-hidden="true"><path d="M13 1.5H7.5a1.6 1.6 0 00-1.6 1.6v10.8a1.6 1.6 0 001.6 1.6h9a1.6 1.6 0 001.6-1.6V6.6z M13 1.5v5.1h5.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
+  + '<path d="M12 13V7.6M9.7 9.8L12 7.5l2.3 2.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><text class="fa" x="12" y="24.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="8.6" letter-spacing=".2">AI</text></svg>';
 /* the file symbol on export buttons: a page with its type on a coloured label (red for PDF, green for Excel) */
 const fileIco = (label, cls) => { let t = String(label).toUpperCase(); if (t === "XLSX") t = "XLS"; const xl = /XLS|CSV/.test(t);
   /* (option 1: a small page with the type in bold letters underneath, red for PDF, green for Excel) */
