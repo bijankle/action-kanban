@@ -41,7 +41,11 @@ const Equip = (() => {
     const best = new Map(); cnt.forEach((c, k) => { const [code, n] = k.split("|"); if (!best.has(code) || best.get(code)[1] < c) best.set(code, [n, c]); });
     areaM = new Map([...best.entries()].sort().map(([c, [n]]) => [c, c + " " + n])); return areaM; }
   /* a tag's WBS area, as "F13 Milling & Classification" */
-  const areaOf = t => { const c = (String(t || "").match(/^([A-Z]\d{2,3})-?/) || [])[1]; return c ? areas().get(c) || "" : ""; };
+  /* a tag's WBS area: from the tag itself (F12-CV-402), or for a tag without one (an instrument like ZT12005A) from the
+     first WBS code in its description (F12-BN-401 ROM BIN …) */
+  const areaOf = t => { const at = c => c ? areas().get(c) || "" : "";
+    const own = at((String(t || "").match(/^([A-Z]\d{2,3})-?/) || [])[1]); if (own) return own;
+    const e = get(String(t || "")) || get(String(t || "").toUpperCase()); const m = e && String(e.n || "").toUpperCase().match(/\b([A-Z]\d{2,3})-[A-Z]/); return m ? at(m[1]) : ""; };
   return { load, find, get, areas, areaOf, raw: () => raw, list: () => list || [], get count(){ return (list || []).length; } };
 })();
 

@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.50";
+const APP_VERSION = "1.10.51";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -292,6 +292,9 @@ const App = (() => {
       + sec("Data validation", ["Set the type of every field (text, choice, tags, date, tick box, contact…), its allowed values and colours, whether it offers TBC and N/A, and whether it's a table column. Contacts hold names, companies and mobiles; picking a name fills in the number."])
       + sec("Printing and Excel", ["File, Print: tick the stages to print (Completed starts unticked). The board prints first, then each action's details and photos. File, Export to Excel exports the table as filtered, with a Photos link that opens the photos online."])
       + '<div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>', { cls: "guide-win" }); $(".yn-yes", m).onclick = () => m.close(); }
+  /* actions with tags but no location get their tags' WBS area once the plant lists are in (as a new tag would) */
+  function fillLocations(){ if (!Store.S.edit) return; Store.all().forEach(a => { const tags = Array.isArray(a.f.equipment) ? a.f.equipment : []; if (a.f.location || !tags.length) return;
+      const area = tags.map(t => Equip.areaOf(t)).find(Boolean); if (area) Store.mutate("a:" + a._p, () => { a.f.location = area; (a.auto = a.auto || {}).location = true; Store.touch(a); }); }); }
   function keys(){ const m = modal('<h3>Keyboard shortcuts</h3><table class="keys">' + [["Ctrl+Z", "Undo"], ["Ctrl+Y or Ctrl+Shift+Z", "Redo"], ["N", "New action"], ["Ctrl+V", "Paste a photo (it waits bottom left, drag it onto an action), or pasted text into a new action"], ["Ctrl+F or /", "Search"], ["Ctrl+P", "Print"], ["Esc", "Close full screen or menus, or go back from an action to the list"], ["↑ ↓", "Previous or next action, in an open action"], ["1 2 3", "Actions, Organizer, Data validation tabs"]].map(([k, d]) => '<tr><td><kbd>' + k + '</kbd></td><td>' + d + '</td></tr>').join("") + '</table><div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>');
     $(".yn-yes", m).onclick = () => m.close(); }
   function about(){ const c = GH.cfg(); const m = modal('<h3>About</h3><table class="keys"><tr><td>Version</td><td>' + APP_VERSION + '</td></tr><tr><td>Data</td><td>' + esc(c.repo) + ', data folder</td></tr><tr><td>Access</td><td>' + (Store.S.edit ? "Can edit" : "View only") + '</td></tr><tr><td>Local folder</td><td>' + esc(Local.name() || "None") + '</td></tr><tr><td>Projects</td><td>' + Store.projects().length + ', ' + Store.all().length + ' actions</td></tr></table><div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>');
@@ -343,7 +346,7 @@ const App = (() => {
     const site = GH.site(); if (site){ const p = { first: site.first, last: site.last, role: site.role, mobile: site.mobile, email: site.email }, had = Profile.get();
       if (had.email !== site.email || !had.first) Profile.set(p); lsSet("adUser", site.email); lsSet("adSetup", 1); drawProf(); }
     const qs = new URLSearchParams(location.search);
-    if (!A.mobile) Equip.load().then(() => render()).catch(() => {});   // (the plant tags and WBS areas, for picking equipment and locations)
+    if (!A.mobile) Equip.load().then(() => { fillLocations(); render(); }).catch(() => {});   // (the plant tags and WBS areas, for picking equipment and locations)
     try { await Promise.all([Store.load(), checkEdit()]); } catch (e){ $("#boot .bt").textContent = "Couldn't load the actions: " + e.message; return; }
     if (qs.get("p") && Store.project(qs.get("p"))) Store.setSelected([qs.get("p")]);
     const ar = qs.get("a"); if (ar){ const a = Store.findRef(ar); if (a){ if (!Store.selected().includes(a._p)) Store.setSelected(Store.selected().concat(a._p)); A.selRef = a._p + ":" + a.u;
