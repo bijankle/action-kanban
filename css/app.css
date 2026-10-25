@@ -883,3 +883,6 @@ input[type=checkbox]{width:18px;height:18px}
 .tbl td.ed .lt-b{border-color:var(--line2);background:var(--panel)}.tbl td.ed .lt-b:hover{border-color:var(--th)}
 /* every ID the same width (equal width digits, and room for the widest), so the copy and PDF buttons line up down the list */
 .idw .aid{font-variant-numeric:tabular-nums;display:inline-block;min-width:var(--aid-w,0)}
+/* in the list the tick, bin, pause and On hold (i) are evenly spaced: the same gap at both edges of the cell and between
+   each of them. The (i)'s space is kept on rows without one, so the buttons line up down the list */
+.tbl td.actc{padding:0}.tbl td.actc .rbs{display:flex;width:100%;gap:0;justify-content:space-evenly}.tbl td.actc .rb-hi{flex:none;width:22px}
