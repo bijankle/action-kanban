@@ -7,7 +7,7 @@
 const SiteMap = (() => {
   const BASE = "https://raw.githubusercontent.com/bijankle/ProjectLibrary/HEAD/";   // where the plant layout data lives
   const BOUNDS = { n: -30.7542, s: -30.7782, w: 121.4955, e: 121.5279 };   // the site map picture, north up
-  const VIEW = { x: 795, y: 750, w: 1100, h: 1090 };   // the whole site view: the plant area of the 3101 px wide picture, as the user marked it
+  const VIEW = { x: 736, y: 690, w: 1224, h: 1234 };   // the whole site view: the plant area of the 3101 px wide picture, as the user marked it
   let dataP = null, imgP = null; const shots = new Map();
   const src = f => (lsGet("adPlBase", "") || BASE) + f;
   const grab = (t, name) => { const i = t.indexOf("const " + name + " = "); if (i < 0) return null; const a = t.indexOf("=", i) + 1; let j = t.indexOf(";\nconst ", a); if (j < 0) j = t.lastIndexOf(";"); return JSON.parse(t.slice(a, j)); };
@@ -50,7 +50,20 @@ const SiteMap = (() => {
     const r = Math.max(12, 20 * W / 1200) * (whole ? 2 : 1), fs = Math.round(r * 0.95);
     const boxes = [], hit = (b) => boxes.some(o => b.x < o.x + o.w + 6 && b.x + b.w + 6 > o.x && b.y < o.y + o.h + 6 && b.y + b.h + 6 > o.y);
     const r0 = r; pts.forEach(p => { const x = (p[0] - sx) * k, y = (p[1] - sy) * k; boxes.push({ x: x - r0 * 1.8, y: y - r0 * 1.8, w: r0 * 3.6, h: r0 * 3.6 }); });   // callouts keep clear of the markers too
-    gs.forEach((grp, gi) => { const x = (pts[gi][0] - sx) * k, y = (pts[gi][1] - sy) * k;
+    /* the whole site view with one spot: a small pin, and a round close up of it beside the pin (below it in the top
+       half, above it in the bottom half), joined by a line, with the tags along its bottom edge */
+    const mag = whole && gs.length === 1;
+    if (mag){ const x = (pts[0][0] - sx) * k, y = (pts[0][1] - sy) * k, R = Math.round(W * 0.19), z = 3.5, rp = W / 130;
+      const bx = Math.max(R + 12, Math.min(W - R - 12, x)), by = Math.max(R + 12, Math.min(H - R - 12, y < H / 2 ? y + R + r * 2.5 : y - R - r * 2.5));
+      const d = Math.hypot(bx - x, by - y) || 1; g.strokeStyle = "rgba(29,36,48,.7)"; g.lineWidth = Math.max(2, W / 400); g.beginPath(); g.moveTo(x + (bx - x) / d * rp * 2.6, y + (by - y) / d * rp * 2.6); g.lineTo(bx - (bx - x) / d * R, by - (by - y) / d * R); g.stroke();
+      const ss = 2 * R / k / z; g.save(); g.beginPath(); g.arc(bx, by, R, 0, 7); g.clip(); g.fillStyle = "#d9d4c7"; g.fillRect(bx - R, by - R, 2 * R, 2 * R); g.drawImage(im, pts[0][0] - ss / 2, pts[0][1] - ss / 2, ss, ss, bx - R, by - R, 2 * R, 2 * R); g.restore();
+      g.lineWidth = rp * 1.1; g.strokeStyle = "#fff"; g.beginPath(); g.arc(bx, by, R, 0, 7); g.stroke(); g.lineWidth = rp * 0.5; g.strokeStyle = "#d42a1e"; g.beginPath(); g.arc(bx, by, R, 0, 7); g.stroke();
+      [[x, y, rp], [bx, by, rp * 1.15]].forEach(([px, py, pr]) => { g.lineWidth = pr * 0.6; g.strokeStyle = "#fff"; g.beginPath(); g.arc(px, py, pr * 2.2, 0, 7); g.stroke(); g.strokeStyle = "#d42a1e"; g.lineWidth = pr * 0.35; g.beginPath(); g.arc(px, py, pr * 2.2, 0, 7); g.stroke(); g.fillStyle = "#d42a1e"; g.strokeStyle = "#fff"; g.lineWidth = pr * 0.4; g.beginPath(); g.arc(px, py, pr, 0, 7); g.fill(); g.stroke(); });
+      /* the tag inside the bubble, right of its pin, the text made smaller if it would run past the edge */
+      const t = gs[0].tags.length > 1 ? gs[0].tags[0] + " +" + (gs[0].tags.length - 1) : gs[0].tags[0], lx = bx + rp * 1.15 * 2.2 + rp * 1.2, room = bx + R * 0.84 - lx - 12;
+      let f2 = Math.round(W / 38); g.font = "bold " + f2 + "px Arial"; const w0 = g.measureText(t).width; if (w0 > room){ f2 = Math.max(9, Math.floor(fs * room / w0)); g.font = "bold " + f2 + "px Arial"; }
+      const tw = g.measureText(t).width, bh = f2 * 1.45; g.fillStyle = "rgba(255,255,255,.95)"; g.fillRect(lx, by - bh / 2, tw + 12, bh); g.strokeStyle = "rgba(29,36,48,.5)"; g.lineWidth = 1; g.strokeRect(lx, by - bh / 2, tw + 12, bh); g.fillStyle = "#1d2430"; g.fillText(t, lx + 6, by + f2 * 0.36); }
+    (mag ? [] : gs).forEach((grp, gi) => { const x = (pts[gi][0] - sx) * k, y = (pts[gi][1] - sy) * k;
       g.lineWidth = r * 0.28; g.strokeStyle = "#fff"; g.beginPath(); g.arc(x, y, r * 1.6, 0, 7); g.stroke(); g.strokeStyle = "#d42a1e"; g.lineWidth = r * 0.16; g.beginPath(); g.arc(x, y, r * 1.6, 0, 7); g.stroke();
       g.fillStyle = "#d42a1e"; g.strokeStyle = "#fff"; g.lineWidth = r * 0.2; g.beginPath(); g.arc(x, y, r * 0.5, 0, 7); g.fill(); g.stroke();
       /* the callout: one line per tag (a few, then "+n more") */
