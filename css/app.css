@@ -837,3 +837,5 @@ html.dark .tg-o mark{background:#5a4a12}
 /* a box you're typing in (option 1): a thin blue edge, no glow */
 :root{--focus:#2f6fd1}html.dark{--focus:#7fa8e0}
 .in:focus,.tbl td.ed .in:focus,.ct .in:focus,.mt-tbl .pt-in:focus,.cb input:focus{border-color:var(--focus);box-shadow:0 0 0 1px var(--focus);background:var(--panel)}
+.fico .fp{fill:#c0392b}.fico .fx{fill:#1d6f42}html.dark .fico .fp{fill:#ff6b5b}html.dark .fico .fx{fill:#3fbf78}
+.dl .fico{width:24px;height:26px}.idw .pj .fico{width:18px;height:20px}

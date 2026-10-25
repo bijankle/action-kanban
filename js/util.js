@@ -127,6 +127,7 @@ const properTitle = (() => {
   return s => String(s || "").replace(/\s+/g, " ").trim().split(" ").map((w, i) => word(w, i === 0)).join(" "); })();
 
 /* the file symbol on export buttons: a page with its type on a coloured label (red for PDF, green for Excel) */
-const fileIco = (label, cls) => { const t = String(label).toUpperCase(), xl = /XLS|CSV/.test(t), w = t.length > 3 ? 17 : 15, fs = t.length > 3 ? 5.2 : 6.2;
-  return '<svg class="fico' + (cls ? " " + cls : "") + '" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2.5H6.5a2 2 0 00-2 2v15a2 2 0 002 2h11a2 2 0 002-2V8z M14 2.5v5.5h5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'
-    + '<rect x="' + (12 - w / 2 - 2) + '" y="12" width="' + w + '" height="7.5" rx="1.5" fill="' + (xl ? "#1d6f42" : "#c0392b") + '"/><text x="' + (10) + '" y="17.9" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="' + fs + '" fill="#fff">' + esc(t) + '</text></svg>'; };
+const fileIco = (label, cls) => { let t = String(label).toUpperCase(); if (t === "XLSX") t = "XLS"; const xl = /XLS|CSV/.test(t);
+  /* (option 1: a small page with the type in bold letters underneath, red for PDF, green for Excel) */
+  return '<svg class="fico' + (cls ? " " + cls : "") + '" viewBox="0 0 24 26" aria-hidden="true"><path d="M13 1.5H7.5a1.6 1.6 0 00-1.6 1.6v10.8a1.6 1.6 0 001.6 1.6h9a1.6 1.6 0 001.6-1.6V6.6z M13 1.5v5.1h5.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
+    + '<text class="' + (xl ? "fx" : "fp") + '" x="12" y="24.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="' + (t.length > 3 ? 7.2 : 8.6) + '" letter-spacing=".2">' + esc(t) + '</text></svg>'; };
