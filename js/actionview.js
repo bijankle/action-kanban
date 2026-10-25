@@ -92,6 +92,16 @@ const ActionView = (() => {
     g.innerHTML = a.photos.map((p, i) => '<div class="ph-c"><button type="button" class="ph-t" data-i="' + i + '" title="View photo ' + (i + 1) + '"><img alt="Photo ' + (i + 1) + '" loading="lazy"></button>' + (ro ? "" : '<button type="button" class="ph-del" data-i="' + i + '" title="Remove this photo" aria-label="Remove photo ' + (i + 1) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg></button>') + '</div>').join("")
       + (ro ? "" : '<button type="button" class="ph-add" title="Upload photos, or drop or paste them anywhere on the action">+ Add photos</button>');
     $$(".ph-t", g).forEach(b => { const p = a.photos[+b.dataset.i], im = $("img", b); im.src = Media.src(a, p, true); im.onerror = () => { if (!im.dataset.r){ im.dataset.r = 1; im.src = Media.src(a, p); } }; b.onclick = () => Media.view(a, +b.dataset.i); });
+    /* drag a tile onto another to move it there; the tile under it gets a line on the side it will go */
+    if (!ro) $$(".ph-c", g).forEach((c, i) => { c.draggable = true;
+      c.addEventListener("dragstart", e => { e.dataTransfer.setData("x-ph", String(i)); e.dataTransfer.effectAllowed = "move"; c.classList.add("ph-drag"); });
+      c.addEventListener("dragend", () => { c.classList.remove("ph-drag"); $$(".ph-c", g).forEach(x => x.classList.remove("ph-l", "ph-r")); });
+      const side = e => { const r = c.getBoundingClientRect(); return e.clientX < r.left + r.width / 2 ? "l" : "r"; };
+      c.addEventListener("dragover", e => { if (!e.dataTransfer.types.includes("x-ph")) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move"; const sd = side(e); c.classList.toggle("ph-l", sd === "l"); c.classList.toggle("ph-r", sd === "r"); });
+      c.addEventListener("dragleave", () => c.classList.remove("ph-l", "ph-r"));
+      c.addEventListener("drop", e => { if (!e.dataTransfer.types.includes("x-ph")) return; e.preventDefault(); e.stopPropagation(); c.classList.remove("ph-l", "ph-r");
+        const from = +e.dataTransfer.getData("x-ph"); let to = i + (side(e) === "r" ? 1 : 0); if (from < to) to--; if (to === from || !a.photos[from]) return;
+        Store.mutate("a:" + a._p, () => { const [p] = a.photos.splice(from, 1); a.photos.splice(to, 0, p); Store.touch(a); }); Store.log("Reordered the photos of " + Store.actId(a)); }); });
     $$(".ph-del", g).forEach(b => b.onclick = async () => { const i = +b.dataset.i, p = a.photos[i];
       if (p && await confirmBox("Remove photo " + (i + 1) + " from " + Store.actId(a) + "? You can undo with Ctrl+Z.", "Remove", true)){ Store.mutate("a:" + a._p, () => { const k = a.photos.indexOf(p); if (k >= 0) a.photos.splice(k, 1); Store.touch(a); }); Store.log("Removed a photo from " + Store.actId(a)); } });
     const ad = $(".ph-add", g); if (ad) ad.onclick = () => Media.pickFiles(a, "image/*");
