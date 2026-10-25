@@ -844,3 +844,12 @@ html.dark .tg-o mark{background:#5a4a12}
 .ov-g .det-r .dt .btn,.ov-g .det-r .dt button{height:30px;padding:0 8px}
 .ov-g .det-r .fv{min-height:30px;line-height:30px;font-size:13px}
 .ov-g .det-r label{min-height:16px;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Overview photos: even tiles filling the rest of the left column, sized in js */
+.ov-l{display:flex;flex-direction:column}.ov-l>h4{flex:none}
+.ph-fill{flex:1 1 0;min-height:0;position:relative}
+.ph-g{position:absolute;inset:0 0 auto 0;display:grid;gap:6px}
+.ph-t{padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel2);cursor:zoom-in}
+.ph-t img{width:100%;height:100%;object-fit:cover;display:block}.ph-t:hover{border-color:var(--th)}
+.ph-t:focus-visible,.ph-add:focus-visible{outline:2px solid var(--th);outline-offset:1px}
+.ph-add{border:1.5px dashed var(--line2);border-radius:8px;background:transparent;color:var(--muted);font:600 13px var(--font);cursor:pointer;padding:4px}
+.ph-add:hover{border-color:var(--th);color:var(--ink)}

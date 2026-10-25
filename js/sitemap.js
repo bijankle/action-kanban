@@ -7,6 +7,7 @@
 const SiteMap = (() => {
   const BASE = "https://raw.githubusercontent.com/bijankle/ProjectLibrary/HEAD/";   // where the plant layout data lives
   const BOUNDS = { n: -30.7542, s: -30.7782, w: 121.4955, e: 121.5279 };   // the site map picture, north up
+  const VIEW = { x: 795, y: 750, w: 1100, h: 1090 };   // the whole site view: the plant area of the 3101 px wide picture, as the user marked it
   let dataP = null, imgP = null; const shots = new Map();
   const src = f => (lsGet("adPlBase", "") || BASE) + f;
   const grab = (t, name) => { const i = t.indexOf("const " + name + " = "); if (i < 0) return null; const a = t.indexOf("=", i) + 1; let j = t.indexOf(";\nconst ", a); if (j < 0) j = t.lastIndexOf(";"); return JSON.parse(t.slice(a, j)); };
@@ -37,17 +38,18 @@ const SiteMap = (() => {
   /* the placements grouped: tags within 25 m of each other share one callout */
   function groups(locs){ const gs = []; locs.forEach(l => { const g = gs.find(g => metres(g.ll, l.ll) < 25); if (g){ g.tags.push(l.tag); } else gs.push({ ll: l.ll, tags: [l.tag] }); }); return gs; }
   const img = () => imgP || (imgP = new Promise((res, rej) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => { imgP = null; rej(new Error("site map")); }; i.src = src("map/site.webp"); }));
-  /* a picture of the site showing every placement, with one callout per group: a JPEG data URL, 16:9 */
-  async function render(locs, w){ const im = await img(), W = w || 1200, H = Math.round(W * 9 / 16), c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
+  /* a picture of the site showing every placement, with one callout per group: a JPEG data URL, 16:9 zoomed to the
+     placements, or with whole set the whole site at its own shape, the same view every time */
+  async function render(locs, w, whole){ const im = await img(), W = w || 1200, H = Math.round(whole ? W * VIEW.h / VIEW.w : W * 9 / 16), c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d");
     const gs = groups(locs), toPx = ll => [((ll[1] - BOUNDS.w) / (BOUNDS.e - BOUNDS.w)) * im.naturalWidth, ((BOUNDS.n - ll[0]) / (BOUNDS.n - BOUNDS.s)) * im.naturalHeight];
     const pts = gs.map(x => toPx(x.ll)), xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
     let sw = Math.max(420, (Math.max(...xs) - Math.min(...xs)) * 1.5 + 160), sh = sw * H / W; if ((Math.max(...ys) - Math.min(...ys)) * 1.5 + 140 > sh){ sh = (Math.max(...ys) - Math.min(...ys)) * 1.5 + 140; sw = sh * W / H; }
-    sw = Math.min(sw, im.naturalWidth); sh = sw * H / W;
-    const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2, sx = Math.max(0, Math.min(im.naturalWidth - sw, cx - sw / 2)), sy = Math.max(0, Math.min(im.naturalHeight - sh, cy - sh / 2)), k = W / sw;
+    sw = Math.min(sw, im.naturalWidth); sh = sw * H / W; const q = im.naturalWidth / 3101; if (whole){ sw = VIEW.w * q; sh = VIEW.h * q; }
+    const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2, sx = whole ? VIEW.x * q : Math.max(0, Math.min(im.naturalWidth - sw, cx - sw / 2)), sy = whole ? VIEW.y * q : Math.max(0, Math.min(im.naturalHeight - sh, cy - sh / 2)), k = W / sw;
     g.fillStyle = "#d9d4c7"; g.fillRect(0, 0, W, H); g.imageSmoothingQuality = "high"; g.drawImage(im, sx, sy, sw, sh, 0, 0, W, H);
-    const r = Math.max(12, 20 * W / 1200), fs = Math.round(r * 0.95);
+    const r = Math.max(12, 20 * W / 1200) * (whole ? 2 : 1), fs = Math.round(r * 0.95);
     const boxes = [], hit = (b) => boxes.some(o => b.x < o.x + o.w + 6 && b.x + b.w + 6 > o.x && b.y < o.y + o.h + 6 && b.y + b.h + 6 > o.y);
-    const r0 = Math.max(12, 20 * W / 1200); pts.forEach(p => { const x = (p[0] - sx) * k, y = (p[1] - sy) * k; boxes.push({ x: x - r0 * 1.8, y: y - r0 * 1.8, w: r0 * 3.6, h: r0 * 3.6 }); });   // callouts keep clear of the markers too
+    const r0 = r; pts.forEach(p => { const x = (p[0] - sx) * k, y = (p[1] - sy) * k; boxes.push({ x: x - r0 * 1.8, y: y - r0 * 1.8, w: r0 * 3.6, h: r0 * 3.6 }); });   // callouts keep clear of the markers too
     gs.forEach((grp, gi) => { const x = (pts[gi][0] - sx) * k, y = (pts[gi][1] - sy) * k;
       g.lineWidth = r * 0.28; g.strokeStyle = "#fff"; g.beginPath(); g.arc(x, y, r * 1.6, 0, 7); g.stroke(); g.strokeStyle = "#d42a1e"; g.lineWidth = r * 0.16; g.beginPath(); g.arc(x, y, r * 1.6, 0, 7); g.stroke();
       g.fillStyle = "#d42a1e"; g.strokeStyle = "#fff"; g.lineWidth = r * 0.2; g.beginPath(); g.arc(x, y, r * 0.5, 0, 7); g.fill(); g.stroke();
@@ -63,14 +65,14 @@ const SiteMap = (() => {
       g.fillStyle = "rgba(255,255,255,.94)"; g.fillRect(bx, by, tw + 16, bh); g.fillStyle = "#1d2430"; lines.forEach((t, i) => g.fillText(t, bx + 8, by + fs * 1.05 + i * fs * 1.25)); });
     /* north arrow and a scale bar (the site map is about 1 m a pixel) */
     const mpp = ((BOUNDS.e - BOUNDS.w) * 111320 * Math.cos(locs[0].ll[0] * Math.PI / 180)) / im.naturalWidth, m = sw * mpp > 900 ? 200 : sw * mpp > 450 ? 100 : 50, bar = m / mpp * k;
-    g.fillStyle = "rgba(255,255,255,.9)"; g.fillRect(16, H - 48, bar + 20, 32); g.fillStyle = "#1d2430"; g.fillRect(26, H - 26, bar, 5); g.font = "bold " + Math.round(r * 0.8) + "px Arial"; g.fillText(m + " m", 26, H - 32);
+    g.fillStyle = "rgba(255,255,255,.9)"; g.fillRect(16, H - 48, bar + 20, 32); g.fillStyle = "#1d2430"; g.fillRect(26, H - 26, bar, 5); g.font = "bold " + Math.round(Math.min(r, 24) * 0.8) + "px Arial"; g.fillText(m + " m", 26, H - 32);
     g.fillStyle = "rgba(255,255,255,.9)"; g.beginPath(); g.arc(W - 36, 38, 24, 0, 7); g.fill(); g.fillStyle = "#1d2430"; g.beginPath(); g.moveTo(W - 36, 18); g.lineTo(W - 44, 42); g.lineTo(W - 36, 37); g.lineTo(W - 28, 42); g.closePath(); g.fill(); g.font = "bold 12px Arial"; g.fillText("N", W - 40, 56);
     return c.toDataURL("image/jpeg", 0.85); }
   /* the note under the map: how each tag was placed, and to check it */
   const note = locs => "Auto generated location, check it on site before relying on it. " + locs.map(l => l.tag + " is placed from " + l.how + ".").join(" ");
   /* for an action: { url, locs, note } (cached while its tags stay the same), or null if nothing can be placed */
-  function forAction(a){ const tags = tagsOf(a), key = tags.join("|"); if (!tags.length) return Promise.resolve(null);
-    if (!shots.has(key)) shots.set(key, locateAll(tags).then(async locs => locs.length ? { url: await render(locs, 1200), locs, note: note(locs) } : null).catch(e => { shots.delete(key); throw e; }));
+  function forAction(a, whole){ const tags = tagsOf(a), key = tags.join("|") + (whole ? "|whole" : ""); if (!tags.length) return Promise.resolve(null);
+    if (!shots.has(key)) shots.set(key, locateAll(tags).then(async locs => locs.length ? { url: await render(locs, 1200, whole), locs, note: note(locs) } : null).catch(e => { shots.delete(key); throw e; }));
     return shots.get(key); }
   return { locate, locateAll, render, forAction, tagsOf, note };
 })();

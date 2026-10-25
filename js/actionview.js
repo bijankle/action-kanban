@@ -56,16 +56,16 @@ const ActionView = (() => {
   function overview(el, a, ro){
     el.innerHTML = (!Store.mine(a) && a.mod && now() - a.mod < 15 * 60000 ? '<div class="sd-warn">⚠ <b>' + esc(App.who(a)) + '</b> edited this action ' + esc(App.ago(a.mod)) + ' and may still be working on it. Changes to different fields are both kept; if you both change the same field you\'ll both be warned.</div>' : "")
       + '<div class="ov-g"><div class="ov-l"><h4>Problem</h4><div data-f="problem"></div><h4>Solution</h4><div data-f="solution"></div><h4>Notes</h4><div data-f="notes"></div>'
-      + '<h4>Attachments <span class="cnt">' + (a.files.length || "") + '</span>' + (ro ? "" : '<button type="button" class="link" data-k="addf">Attach file</button>') + '</h4><div class="att-l"></div></div>'
-      + '<div class="ov-r"><h4>' + (a.photos.length ? '<button type="button" class="hl" data-k="viewall" title="Open the photos">Photos' + GO + '</button>' : "Photos") + ' <span class="cnt">' + (a.photos.length || "") + '</span></h4><div class="ph-block">' + (a.photos.length ? '<button type="button" class="ph-cover" data-k="viewall" title="Open the photos"><img alt=""><span class="ph-badge">📷 ' + a.photos.length + '</span></button>' : "")
-      + '<div class="ph-btns"><button type="button" class="btn sm" data-k="viewall"' + (a.photos.length ? "" : " disabled") + '>Photos' + (a.photos.length ? " (" + a.photos.length + ")" : "") + '</button>' + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="addph">Upload photos</button><span class="dim">or drop photos and files anywhere on the action</span>') + '</div></div>'
+      + '<h4>Attachments <span class="cnt">' + (a.files.length || "") + '</span>' + (ro ? "" : '<button type="button" class="link" data-k="addf">Attach file</button>') + '</h4><div class="att-l"></div>'
+      + '<h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span></h4><div class="ph-fill"><div class="ph-g"></div></div></div>'
+      + '<div class="ov-r">'
       + '<div class="ov-map" hidden><h4>Expected location</h4><img alt="Expected location of the equipment"><p class="dim"></p></div>'
       + '<h4>Details</h4><div class="det"></div><div class="sd-foot">' + (a.by ? "Last edited by " + esc(a.by) + " " + esc(fmtDate(a.mod)) + " · " : "") + '<button type="button" class="link ch-ln" data-k="hist">Change history</button>' + (a.gps ? ' · <a target="_blank" rel="noopener" href="https://maps.google.com/?q=' + a.gps.lat + "," + a.gps.lng + '">Map pin</a>' : "") + '</div></div></div>';
     $$("[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     $$("[data-f=problem] textarea,[data-f=solution] textarea,[data-f=notes] textarea", el).forEach(t => t.rows = 4);
-    const cv = $(".ph-cover img", el); if (cv){ cv.src = Media.src(a, a.photos[0], true); cv.onerror = () => { if (!cv.dataset.r){ cv.dataset.r = 1; cv.src = Media.src(a, a.photos[0]); } }; }
+    photos(a, $(".ph-fill", el), ro);
     files(a, $(".att-l", el), ro);
-    const mp = $(".ov-map", el); SiteMap.forAction(a).then(sm => { if (!sm || !mp.isConnected) return; mp.hidden = false; $("img", mp).src = sm.url; $("p", mp).textContent = sm.note; }).catch(() => {});
+    const mp = $(".ov-map", el); SiteMap.forAction(a, true).then(sm => { if (!sm || !mp.isConnected) return; mp.hidden = false; $("img", mp).src = sm.url; $("p", mp).textContent = sm.note; }).catch(() => {});
     const det = $(".det", el);
     /* the action owner leads the details: their name and contact details go on the workpack */
     const ow = h('<div class="det-r det-own"><label>Action owner</label><span class="own"></span></div>'); det.appendChild(ow); ownerBox($(".own", ow), a, ro);
@@ -81,6 +81,24 @@ const ActionView = (() => {
     else if (k === "addph") Media.pickFiles(a, "image/*");
     else if (k === "addf") Media.pickFiles(a);
     else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Store.mutate("a:" + a._p, () => { a.del = true; Store.touch(a); }); Store.log("Deleted " + Store.actId(a)); App.select(null); } } }
+  /* every photo as an even tile under the attachments, click one to view it. The tiles fill the width, in the fewest
+     columns (at least 2) whose rows still fit the height left beside the map and details; if none fit, the smallest
+     tiles and the box grows */
+  function photos(a, box, ro){ const g = $(".ph-g", box), n = a.photos.length + (ro ? 0 : 1), GAP = 6, MIN = 64;
+    g.innerHTML = a.photos.map((p, i) => '<button type="button" class="ph-t" data-i="' + i + '" title="View photo ' + (i + 1) + '"><img alt="Photo ' + (i + 1) + '" loading="lazy"></button>').join("")
+      + (ro ? "" : '<button type="button" class="ph-add" title="Upload photos, or drop or paste them anywhere on the action">+ Add photos</button>');
+    $$(".ph-t", g).forEach(b => { const p = a.photos[+b.dataset.i], im = $("img", b); im.src = Media.src(a, p, true); im.onerror = () => { if (!im.dataset.r){ im.dataset.r = 1; im.src = Media.src(a, p); } }; b.onclick = () => Media.view(a, +b.dataset.i); });
+    const ad = $(".ph-add", g); if (ad) ad.onclick = () => Media.pickFiles(a, "image/*");
+    if (!n) return;
+    let last = "";
+    const fit = () => { if (!box.isConnected){ ro2.disconnect(); return; } box.style.minHeight = ""; const W = box.clientWidth, H = box.clientHeight; if (!W) return;
+      const one = getComputedStyle(box.closest(".ov-g")).gridTemplateColumns.split(" ").length < 2, size = c => (W - GAP * (c - 1)) / c, tall = c => { const r = Math.ceil(n / c); return r * size(c) + GAP * (r - 1); };
+      let c = one ? 3 : 2;   // stacked under the details there's no height to fill, so three across
+      if (!one) while (tall(c) > H && c < n && size(c + 1) >= MIN) c++;   // never more columns than tiles
+      const s = Math.floor(size(c)), need = Math.ceil(tall(c)), k = c + "," + s;
+      box.style.minHeight = need > H ? need + "px" : "";
+      if (k === last) return; last = k; g.style.gridTemplateColumns = "repeat(" + c + "," + s + "px)"; g.style.gridAutoRows = s + "px"; };
+    const ro2 = new ResizeObserver(() => requestAnimationFrame(fit)); ro2.observe(box.closest(".ov-g") || box); requestAnimationFrame(fit); }
   function files(a, l, ro){ l.innerHTML = a.files.length ? "" : '<div class="dim">No attachments.' + tipI("Drop a PDF, Excel or any file on the action to attach it.") + '</div>';
     a.files.forEach(f => { const r = h('<div class="att"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : /docx?$/i.test(f.name) ? "DOC" : "FILE") + '</span><button type="button" class="link att-n">' + esc(f.name) + '</button><span class="dim">' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" title="Remove">✕</button>') + '</div>');
       $(".att-n", r).onclick = () => Media.openFile(a, f);
