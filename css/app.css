@@ -805,3 +805,9 @@ html.dark .fpill[style*="--stb"].on{background:color-mix(in srgb,var(--c) 26%,va
 /* the ▾ sits tucked into the bottom right corner of its heading */
 .tbl th .th-m{top:auto;bottom:2px;right:2px;transform:none;width:16px;height:16px;line-height:16px}
 .tbl th.tk .th-m{right:1px;bottom:1px}
+/* the parts ETA i beside the Parts Arrived box */
+.tbl td.has-eta{position:relative}
+.eta-i{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;border:0;color:#fff;font:italic 800 11px/18px Georgia,serif;padding:0;cursor:pointer}
+.eta-i.ok{background:#1f8a58}.eta-i.late{background:#c0392b}.eta-i.unk{background:#8a939e}.eta-i:hover{filter:brightness(1.12)}
+.etapop{min-width:240px;max-width:340px;padding:10px 12px;display:flex;flex-direction:column;gap:5px;font-size:13px}.ep-r{display:flex;justify-content:space-between;gap:10px}.ep-r span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.etapop .link{align-self:flex-start}
+.tbl td.has-eta{padding-right:28px}

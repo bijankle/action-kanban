@@ -73,7 +73,7 @@ const Table = (() => {
        their heading (headings wrap onto two lines), or what their contents need if that's wider */
     const tickF = "700 11.5px " + getComputedStyle(document.body).fontFamily;
     /* a column nobody has sized is as wide as the longest word in its heading (the heading wraps a word at a line) or its widest entry */
-    const tickOf = c => Math.max(44, headW(head(c), tickF) - 14);   // (the i sits under the heading, so only the longest word and a little padding count)
+    const tickOf = c => Math.max(44 + (c.id === "parts" ? 26 : 0), headW(head(c), tickF) - 14 + (c.id === "parts" ? 26 : 0));   // (Parts Arrived has room for its ETA i)   // (the i sits under the heading, so only the longest word and a little padding count)
     const px = c => ws[c.id] || (c.id === "equipment" ? Math.max(headW("F12-CV-402", "600 13px " + getComputedStyle(document.body).fontFamily) + 34, headW(head(c))) : TICK.has(c.type) ? tickOf(c) : fix(c) ? Math.max(headW(head(c)), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
     const FIX = new Set(["act", "id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || c.id === "equipment" || (c.type === "choice" && (c.options || []).length <= 3) || !!ws[c.id];   // (a column someone has sized keeps that width; the rest share what's left)
     /* when space runs out, the counts and dates go first, then the location; the tick boxes stay */
@@ -105,6 +105,7 @@ const Table = (() => {
         else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi", "choice"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.classList.add("ed"); td.appendChild(Fields.editor(a, c)); if (c.id === "onhold"){ const hb = Hold.btn(a); if (hb){ td.classList.add("has-hold"); td.insertAdjacentHTML("beforeend", hb); } } }
         else if (c.id === "title"){ td.classList.add("ttl"); td.innerHTML = '<div class="tt-w"><span class="tt">' + (esc(a.f.title || "") || '<span class="dim">No title</span>') + '</span><button type="button" class="tt-more" title="Show the full title">more…</button></div>'; }
         else td.innerHTML = Fields.show(a, c);
+        if (c.id === "parts"){ td.classList.add("has-eta"); td.insertAdjacentHTML("beforeend", etaI(a)); }   // (the space is kept on every row so the boxes line up)
         tr.appendChild(td); });
       if (ADD){ const td = document.createElement("td"); td.className = "addcol"; tr.appendChild(td); }
       frag.appendChild(tr); });
@@ -127,6 +128,18 @@ const Table = (() => {
     const mb = $(".tg-more", td); if (mb) mb.onclick = e => { e.stopPropagation(); Fields.closePop();
       const p = h('<div class="pop tgpop"><div class="pop-h">' + tags.length + ' tags on ' + esc(Store.actId(a)) + '</div>' + tags.map(t => { const it = Equip.get(t); return '<div class="tgp-r"><b>' + esc(t) + '</b>' + (it && it.n ? '<span class="dim">' + esc(it.n) + '</span>' : "") + '</div>'; }).join("") + (ro ? "" : '<button type="button" class="link">Edit the tags</button>') + '</div>');
       document.body.appendChild(p); Fields.place(p, mb); const l = $(".link", p); if (l) l.onclick = () => { Fields.closePop(); edit(); }; }; }
+  /* beside the Parts Arrived box, until it's ticked: an i for the parts ETA (the latest ETA on the MTO), green while
+     it's still to come, red once it's past, grey while it's TBC. Click it for the date and the MTO items */
+  function etaI(a){ if (a.f.parts) return ""; const e = Store.eta(a); if (!e) return "";
+    const late = e !== "TBC" && e < new Date().toISOString().slice(0, 10), cls = e === "TBC" ? "unk" : late ? "late" : "ok";
+    const tip = e === "TBC" ? "Parts ETA to be confirmed" : (late ? "Parts overdue: ETA was " : "Parts ETA ") + fmtDate(e);
+    return '<button type="button" class="eta-i ' + cls + '" data-eta title="' + esc(tip) + '" aria-label="' + esc(tip) + '">i</button>'; }
+  document.addEventListener("click", e => { const b = e.target.closest("[data-eta]"); if (!b) return; e.stopPropagation(); Fields.closePop(); const a = App.act(b.closest("[data-ref]").dataset.ref); if (!a) return;
+    const e0 = Store.eta(a), rows = (a.mto || []).filter(it => it.desc || it.part);
+    const p = h('<div class="pop etapop"><b>' + (e0 === "TBC" ? "Parts ETA to be confirmed" : (b.classList.contains("late") ? "Parts overdue, ETA was " : "Parts ETA ") + esc(fmtDate(e0))) + '</b>'
+      + (rows.length ? '<div class="dim">From the MTO:</div>' + rows.map(it => '<div class="ep-r"><span>' + esc(it.desc || it.part) + '</span><span class="' + (it.eta && it.eta !== "TBC" && it.eta < new Date().toISOString().slice(0, 10) ? "bad" : "dim") + '">' + esc(it.eta ? (it.eta === "TBC" ? "TBC" : fmtDate(it.eta)) : "no ETA") + '</span></div>').join("") : "")
+      + '<button type="button" class="link">Open the MTO</button></div>');
+    document.body.appendChild(p); Fields.place(p, b); $(".link", p).onclick = () => { Fields.closePop(); App.openParts(a._p + ":" + a.u, "mto"); }; }, true);
   /* a column heading's ▾: sort it either way, fit it to its contents, or take it out of the list (+ Add column brings it back) */
   function colMenu(anchor, id, fit){ Fields.closePop(); const f = Store.field(id), keep = id[0] === "_" || id === "title";
     const p = h('<div class="pop colm"><button type="button" data-m="asc">Sort A to Z</button><button type="button" data-m="desc">Sort Z to A</button>' + (App.sort && App.sort.id === id ? '<button type="button" data-m="off">Clear the sort</button>' : "")
