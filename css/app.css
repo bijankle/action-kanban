@@ -932,3 +932,6 @@ input[type=checkbox]{width:18px;height:18px}
 /* the Notes box in the list turned editor: no frame round it, the box itself with its focus edge, one line per row of text */
 .ltpop.lt-inl{min-width:0;max-width:none;padding:0;border:0;background:none;box-shadow:none;border-radius:var(--ctl-r)}
 .lt-inl textarea{display:block;width:100%;resize:none;overflow-y:auto;box-sizing:border-box;font-size:13px;line-height:20px;padding:3px 8px;min-height:0;box-shadow:0 0 0 1px var(--focus),0 6px 18px rgba(0,0,0,.14)}
+/* the copy button by the Photos heading: the same square as the ID box's copy button */
+.ph-cp{width:24px;height:24px;flex:none;border:1px solid var(--line2);border-radius:6px;background:var(--panel);color:var(--dim);display:inline-grid;place-items:center;padding:0;cursor:pointer;text-transform:none}
+.ph-cp svg{width:14px;height:14px}.ph-cp:hover{color:var(--ink);border-color:var(--th)}.ph-cp.ok{color:#1f8a58;border-color:#1f8a58}.ph-cp:focus-visible{outline:2px solid var(--focus);outline-offset:1px}

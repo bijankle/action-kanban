@@ -193,7 +193,13 @@ const Fields = (() => {
     const below = innerHeight - r.bottom > 300; p.style.top = (below ? r.bottom + 4 : Math.max(8, r.top - 304)) + "px"; }
   /* a text field opened over its box in full to read and edit: Enter or clicking away saves it and closes it, Shift+Enter
      starts a new line (not in one line fields like the title), Esc leaves it as it was */
-  function textPop(anchor, a, f, inline){ closePop(); const r = anchor.getBoundingClientRect(), one = f.type !== "longtext";
+  function textPop(anchor, a, f, inline){ closePop(); const one = f.type !== "longtext";
+    /* (the part of the box you can see: a column can run on behind the panel beside the list, so it's scrolled into
+       view first, then the editor is cut to what shows, at least 160px wide) */
+    if (inline) anchor.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const r0 = anchor.getBoundingClientRect(); let left = r0.left, right = r0.right;
+    if (inline) for (let e = anchor.parentElement; e && e !== document.body; e = e.parentElement){ if (!/(auto|scroll|hidden)/.test(getComputedStyle(e).overflowX)) continue; const c = e.getBoundingClientRect(); if (c.width < 160) continue; left = Math.max(left, c.left + 4); right = Math.min(right, c.right - 4); }
+    if (right - left < 160) left = right - 160; const r = { left, top: r0.top, width: right - left, height: r0.height };
     /* inline: the box itself turns into the editor, the same size, and grows down a line at a time as the text needs */
     const p = inline ? h('<div class="pop ltpop lt-inl"><textarea class="in ta" rows="1" aria-label="' + esc(f.label) + ' of ' + esc(Store.actId(a)) + '" title="Enter to save, Shift+Enter for a new line, Esc to cancel"></textarea></div>')
       : h('<div class="pop ltpop"><div class="ltpop-h"><b>' + esc(Store.actId(a)) + '</b> ' + esc(f.label) + '</div><textarea class="in ta" rows="' + (one ? 2 : 5) + '"></textarea><div class="dim sm-t">Enter to save' + (one ? "" : ", Shift+Enter for a new line") + '. Esc to cancel.</div></div>');

@@ -50,11 +50,15 @@ const Table = (() => {
     tick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5 9.5-10"/></svg>',
     dn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>' };
   function idBox(a, big){ const id = esc(Store.actId(a));
-    return '<span class="idw' + (big ? " big" : "") + '"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + id + '</span><button type="button" class="cp" data-idk="copy" title="Copy ' + id + ' to the clipboard" aria-label="Copy ' + id + '">' + IDI.copy + '</button><button type="button" class="pj" data-idk="pdf" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares" aria-label="Download the PDF of ' + id + '">' + fileIco("PDF") + '</button></span>'; }
+    return '<span class="idw' + (big ? " big" : "") + '"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + id + '</span><button type="button" class="cp" data-idk="copy" title="Copy ' + id + ' as a picture: problem, solution, photos and status" aria-label="Copy ' + id + ' as a picture">' + IDI.copy + '</button><button type="button" class="pj" data-idk="pdf" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares" aria-label="Download the PDF of ' + id + '">' + fileIco("PDF") + '</button></span>'; }
   document.addEventListener("click", async e => { const b = e.target.closest("[data-idk]"); if (!b) return; e.stopPropagation(); const r = b.closest("[data-ref]"), a = r && App.act(r.dataset.ref); if (!a) return;
     if (b.dataset.idk === "pdf") return Workpack.run(a);
-    const t = Store.actId(a) + " " + (a.f.title || ""); let ok = true; try { await navigator.clipboard.writeText(t); } catch (err){ ok = false; }
-    if (!ok) return note("Couldn't copy here: " + t); b.classList.add("ok"); b.innerHTML = IDI.tick; note("Copied " + Store.actId(a)); setTimeout(() => { b.classList.remove("ok"); b.innerHTML = IDI.copy; }, 1400); }, true);
+    copySheet(b, a, false); }, true);
+  /* a picture of the action on the clipboard (Sheet: the full sheet, or the simple one from the Photos copy button);
+     the button shows a tick when it's there */
+  async function copySheet(b, a, simple){ note("Copying " + Store.actId(a) + " as a picture…", 8000); const ok = await Sheet.copy(a, simple);
+    if (!ok) return note("Couldn't copy the picture here. Try again in Chrome or Edge.");
+    b.classList.add("ok"); const was = b.innerHTML; b.innerHTML = IDI.tick; note("Copied " + Store.actId(a) + " as a picture. Paste it into an email or Teams."); setTimeout(() => { b.classList.remove("ok"); b.innerHTML = was; }, 1400); }
   document.addEventListener("click", async e => { const b = e.target.closest("[data-rb]"); if (!b) return; e.stopPropagation(); const tr = b.closest("[data-ref]"), a = tr && App.act(tr.dataset.ref); if (!a) return;
     if (!Store.S.edit) return App.viewOnly(); const k = b.dataset.rb;
     if (k === "done"){ const f = Store.field("complete"); if (f) Fields.set(a, f, Store.stage(a.stage).kind !== "done"); }
@@ -219,5 +223,5 @@ const Table = (() => {
   function columnsPop(anchor){ Fields.closePop(); const p = h('<div class="pop colpop"><div class="pop-h">Columns in the table</div>' + Store.fields().filter(f => f.id !== "title").map(f => '<label class="tp-o"><input type="checkbox" data-f="' + f.id + '"' + (f.table ? " checked" : "") + '><span>' + esc(f.label) + '</span></label>').join("") + '<div class="pop-n">Drag the column headers to reorder them.</div></div>');
     document.body.appendChild(p); Fields.place(p, anchor);
     $$("input", p).forEach(c => c.onchange = () => Store.mutate("config", () => { const f = Store.field(c.dataset.f); f.table = c.checked; Store.touch(f); })); }
-  return { render, rows, forget, columnsPop, sizePop, rowBtns, idBox };
+  return { render, rows, forget, columnsPop, sizePop, rowBtns, idBox, copySheet, IDI };
 })();
