@@ -908,3 +908,24 @@ input[type=checkbox]{width:18px;height:18px}
 .ph-c.ph-l::before{left:-5px}.ph-c.ph-r::before{right:-5px}
 .ph-g>.ph-add{display:grid;place-items:center;text-align:center}
 .ph-c .ph-t{cursor:grab}.ph-c .ph-t:active{cursor:grabbing}
+/* photo viewer, option A: a light window like the Details panel. ID box, title and count on the left, the app's square
+   buttons on the right, the photo on a pale grey stage, thumbnails along the bottom; follows light and dark mode */
+.gal{background:color-mix(in srgb,var(--ink) 45%,transparent)}
+.gal-win{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.gal-top{padding:0 12px;height:48px;gap:8px;border-bottom:1px solid var(--line)}
+.gal-top .aid{color:var(--ink)}.gal-t{font-size:16px;font-weight:800}.gal-n{color:var(--dim)}
+.gal-top .btn.ghost{background:var(--panel);color:var(--ink);border:1px solid var(--line2)}.gal-top .btn.ghost:hover{border-color:var(--th)}
+.gal-b{width:var(--ctl-h);height:var(--ctl-h);flex:none;border:1px solid var(--line2);border-radius:7px;background:var(--panel2);color:var(--muted);display:inline-grid;place-items:center;cursor:pointer;padding:0}
+.gal-b svg{width:16px;height:16px}.gal-b:hover{background:color-mix(in srgb,var(--ink) 9%,var(--panel));color:var(--ink)}
+.gal-del:hover{background:color-mix(in srgb,#c0392b 12%,var(--panel));border-color:color-mix(in srgb,#c0392b 55%,var(--panel));color:#c0392b}
+.gal-b:focus-visible,.gal-arr:focus-visible,.gal-th:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.gal-stage{background:var(--stage,#e9ecf0);padding:12px 56px}.gal-vp{inset:12px 56px}
+.gal-sl img{border-radius:6px}
+.gal-arr{width:var(--ctl-h);height:var(--ctl-h);border:1px solid var(--line2);border-radius:7px;background:var(--panel);color:var(--muted);display:grid;place-items:center;padding:0;font-size:0}
+.gal-arr svg{width:16px;height:16px}.gal-arr:hover{background:var(--panel);color:var(--ink);border-color:var(--th)}.gal-prev{left:14px}.gal-next{right:14px}
+.gal-none{color:var(--dim)}
+.gal-cap{color:var(--dim);background:var(--stage,#e9ecf0);padding:0 10px 6px;margin:0}
+.gal-strip{background:var(--panel);border-top:1px solid var(--line);padding:10px 12px}
+.gal-th{width:72px;height:54px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);opacity:1}
+.gal-th:hover{border-color:var(--th)}.gal-th.on{border-color:var(--line);outline:2px solid var(--focus);outline-offset:1px}
+:root{--stage:#e9ecf0}html.dark{--stage:#101215}

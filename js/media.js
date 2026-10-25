@@ -46,11 +46,14 @@ const Media = (() => {
      On a touch screen the photo follows the finger with the ones either side peeking in, and glides on or back
      when let go; a drag down closes it. ---------- */
   let V = null;
+  /* the viewer's line symbols, the same as the app's other buttons */
+  const GI = Object.fromEntries(Object.entries({ bin: "M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3", fs: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5", x: "M6 6l12 12M18 6L6 18", l: "M15 5l-7 7 7 7", r: "M9 5l7 7-7 7" })
+    .map(([k, d]) => [k, '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"/></svg>']));
   function view(a, i){ close(); if (!a) return; i = Math.max(0, Math.min(i || 0, a.photos.length - 1)); const ro = !Store.S.edit;
-    V = h('<div class="gal" tabindex="-1"><div class="gal-win"><div class="gal-top"><span class="aid">' + esc(Store.actId(a)) + '</span><span class="gal-t">' + esc(a.f.title || "") + '</span><span class="gal-n"></span><span class="grow"></span>'
-      + (ro ? "" : '<button class="btn ghost sm" type="button" data-k="add">+ Upload photos</button><button class="ic-b" type="button" data-k="del" title="Remove this photo">🗑</button>')
-      + '<button class="ic-b" type="button" data-k="fs" title="Full screen (or double click the photo)">⛶</button><button class="ic-b" type="button" data-k="x" title="Close (Esc)">✕</button></div>'
-      + '<div class="gal-stage"><button class="gal-arr gal-prev" type="button" aria-label="Previous">‹</button><div class="gal-vp"><div class="gal-track"><div class="gal-sl" style="--j:-1"><img alt=""></div><div class="gal-sl" style="--j:0"><img alt=""></div><div class="gal-sl" style="--j:1"><img alt=""></div></div></div><div class="gal-none">No photos yet.' + (ro ? "" : " Upload some, or drop them here.") + '</div><button class="gal-arr gal-next" type="button" aria-label="Next">›</button></div>'
+    V = h('<div class="gal" tabindex="-1"><div class="gal-win"><div class="gal-top"><span class="idw"><span class="aid">' + esc(Store.actId(a)) + '</span></span><span class="gal-t">' + esc(a.f.title || "") + '</span><span class="gal-n"></span><span class="grow"></span>'
+      + (ro ? "" : '<button class="btn ghost sm" type="button" data-k="add">+ Upload photos</button><button class="gal-b gal-del" type="button" data-k="del" title="Remove this photo" aria-label="Remove this photo">' + GI.bin + '</button>')
+      + '<button class="gal-b" type="button" data-k="fs" title="Full screen (or double click the photo)" aria-label="Full screen">' + GI.fs + '</button><button class="gal-b" type="button" data-k="x" title="Close (Esc)" aria-label="Close">' + GI.x + '</button></div>'
+      + '<div class="gal-stage"><button class="gal-arr gal-prev" type="button" aria-label="Previous">' + GI.l + '</button><div class="gal-vp"><div class="gal-track"><div class="gal-sl" style="--j:-1"><img alt=""></div><div class="gal-sl" style="--j:0"><img alt=""></div><div class="gal-sl" style="--j:1"><img alt=""></div></div></div><div class="gal-none">No photos yet.' + (ro ? "" : " Upload some, or drop them here.") + '</div><button class="gal-arr gal-next" type="button" aria-label="Next">' + GI.r + '</button></div>'
       + '<div class="gal-cap"></div><div class="gal-strip"></div></div></div>');
     document.body.appendChild(V); V.focus(); let cur = i;
     const vp = $(".gal-vp", V), track = $(".gal-track", V), [imP, img, imN] = $$(".gal-sl img", V), strip = $(".gal-strip", V), GAP = 24;
@@ -73,7 +76,7 @@ const Media = (() => {
     V.querySelectorAll("[data-k]").forEach(b => b.onclick = async () => { const k = b.dataset.k;
       if (k === "x") closeUi(); else if (k === "fs") fs();
       else if (k === "add") pickFiles(a);
-      else if (k === "del" && a.photos.length && await confirmBox("Remove this photo from " + Store.actId(a) + "? You can undo with Ctrl+Z.", "Remove", true)){
+      else if (k === "del" && a.photos.length && await confirmBox("Remove this photo from " + Store.actId(a) + "? You can undo with Ctrl+Z.", "Remove", true).then(ok => { V && V.focus(); return ok; })){
         const i0 = cur; Store.mutate("a:" + a._p, () => { a.photos.splice(i0, 1); Store.touch(a); }); Store.log("Removed a photo from " + Store.actId(a)); V && (V.focus(), drawStrip(), show(Math.min(i0, a.photos.length - 1))); } });
     img.ondblclick = fs;
     $(".gal-prev", V).onclick = () => go(cur - 1); $(".gal-next", V).onclick = () => go(cur + 1);
