@@ -948,3 +948,5 @@ input[type=checkbox]{width:18px;height:18px}
 /* photos stacked in columns, each straight under the one above, so there are no gaps under the shorter ones */
 #printRoot .pa-ph{display:block;column-count:var(--per);column-gap:6px}
 #printRoot .pa-ph figure{display:block;width:auto;margin:0 0 6px;break-inside:avoid}
+/* the save status keeps one width, so "Saving…" and "Saved" don't shift the buttons beside it */
+#status{min-width:150px;justify-content:flex-start}

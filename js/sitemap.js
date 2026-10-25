@@ -11,7 +11,7 @@ const SiteMap = (() => {
      outline is left plain so the ragged edges of the photo don't show */
   const POLY = [[884, 998], [1330, 820], [1645, 1024], [1849, 1209], [1849, 1451], [1432, 1893], [1392, 1882], [864, 1206], [848, 1140]];
   const VIEW = { x: 740, y: 805, w: 1125, h: 1125 };
-  let dataP = null, imgP = null; const shots = new Map();
+  let dataP = null, imgP = null; const shots = new Map(), done = new Map();
   const src = f => (lsGet("adPlBase", "") || BASE) + f;
   const grab = (t, name) => { const i = t.indexOf("const " + name + " = "); if (i < 0) return null; const a = t.indexOf("=", i) + 1; let j = t.indexOf(";\nconst ", a); if (j < 0) j = t.lastIndexOf(";"); return JSON.parse(t.slice(a, j)); };
   /* tag → { ll, est, name, pid } for every equipment item with a layout position */
@@ -91,7 +91,9 @@ const SiteMap = (() => {
   const note = locs => "Auto generated location, check it on site before relying on it. " + locs.map(l => l.tag + " is placed from " + l.how + ".").join(" ");
   /* for an action: { url, locs, note } (cached while its tags stay the same), or null if nothing can be placed */
   function forAction(a, whole){ const tags = tagsOf(a), key = tags.join("|") + (whole ? "|whole" : ""); if (!tags.length) return Promise.resolve(null);
-    if (!shots.has(key)) shots.set(key, locateAll(tags).then(async locs => locs.length ? { url: await render(locs, 1200, whole), locs, note: note(locs) } : null).catch(e => { shots.delete(key); throw e; }));
+    if (!shots.has(key)) shots.set(key, locateAll(tags).then(async locs => { const r = locs.length ? { url: await render(locs, 1200, whole), locs, note: note(locs) } : null; done.set(key, r); return r; }).catch(e => { shots.delete(key); throw e; }));
     return shots.get(key); }
-  return { locate, locateAll, render, forAction, tagsOf, note };
+  /* the picture already made for an action (undefined if not yet), so a redraw can show it straight away */
+  const ready = (a, whole) => done.get(tagsOf(a).join("|") + (whole ? "|whole" : ""));
+  return { locate, locateAll, render, forAction, ready, tagsOf, note };
 })();

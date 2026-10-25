@@ -12,12 +12,18 @@ const ActionView = (() => {
   const GO = '<svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 16 16 8"/><path d="M9 8h7v7"/></svg>';
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
   let last = null;
+  /* (the same action with its keys in another order, as after a save, reads the same) */
+  const stable = o => Array.isArray(o) ? o.map(stable) : o && typeof o === "object" ? Object.keys(o).filter(k => k[0] !== "_").sort().map(k => [k, stable(o[k])]) : o;
   function render(el){ const a = App.act(App.selRef); if (!a) return; const ro = !Store.S.edit, p = Store.project(a._p) || {}, sub = App.sub || "overview";
     /* keep the cursor and scroll where they were when the view redraws */
     const ae = document.activeElement, keep = ae && el.contains(ae) && ae.closest("[data-f]") ? { f: ae.closest("[data-f]").dataset.f, s: ae.selectionStart, e: ae.selectionEnd, v: ae.value, tag: ae.tagName } : null;
     const keepP = ae && el.contains(ae) && ae.dataset.c ? { r: ae.dataset.r, c: ae.dataset.c, cut: ae.dataset.cut, s: ae.selectionStart, v: ae.value } : null;
     const same = last === App.selRef + sub, sc = same && $(".av-body", el) ? $(".av-body", el).scrollTop : 0; last = App.selRef + sub;
     const list = Table.rows(), i = list.indexOf(a), n = k => (a[k] || []).length;
+    /* nothing about this action, its tab or the settings has changed (a save finishing, a redraw for something else):
+       leave the panel as it is, so its photos and map don't flash */
+    const sig = JSON.stringify([stable(a), sub, ro, i, list.length, Store.S.config.mod, (Store.S.config.contacts || []).length, Store.S.vendors && Store.S.vendors.mod, Equip.count, Store.projects().length]);
+    if (el.__sig === sig && el.isConnected && $(".av", el)) return; el.__sig = sig;
     /* the header repeats the list row: complete, delete and on hold, then the ID with its copy and PDF buttons; the arrows and close sit at the right */
     el.innerHTML = '<div class="av"><div class="av-head" data-ref="' + esc(a._p + ":" + a.u) + '">' + Table.rowBtns(a) + Table.idBox(a, true) + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "") + '<span class="grow"></span>'
       + '<span class="av-nav"><button type="button" class="ic-b" data-k="prev" title="Previous action"' + (i > 0 ? "" : " disabled") + '>‹</button><span class="dim">' + (i >= 0 ? (i + 1) + " of " + list.length : "") + '</span><button type="button" class="ic-b" data-k="next" title="Next action"' + (i >= 0 && i < list.length - 1 ? "" : " disabled") + '>›</button></span>'
@@ -69,7 +75,8 @@ const ActionView = (() => {
     $$("[data-f=problem] textarea,[data-f=solution] textarea,[data-f=notes] textarea", el).forEach(t => t.rows = 4);
     photos(a, $(".ph-fill", el), ro);
     files(a, $(".att-l", el), ro);
-    const mp = $(".ov-map", el); SiteMap.forAction(a, true).then(sm => { if (!sm || !mp.isConnected) return; mp.hidden = false; $("img", mp).src = sm.url; $("p", mp).textContent = sm.note; }).catch(() => {});
+    const mp = $(".ov-map", el), showMap = sm => { if (!sm || !mp.isConnected) return; mp.hidden = false; $("img", mp).src = sm.url; $("p", mp).textContent = sm.note; };
+    const sm0 = SiteMap.ready(a, true); if (sm0 !== undefined) showMap(sm0); else SiteMap.forAction(a, true).then(showMap).catch(() => {});   // (straight away when it's been made before, so it doesn't pop in)
     const det = $(".det", el);
     /* the action owner leads the details: their name and contact details go on the workpack */
     const ow = h('<div class="det-r det-own"><label>Action owner</label><span class="own"></span></div>'); det.appendChild(ow); ownerBox($(".own", ow), a, ro);
@@ -89,6 +96,7 @@ const ActionView = (() => {
   /* every photo as an even tile under the attachments, click one to view it. The tiles fill the width, in the fewest
      columns (at least 2) whose rows still fit the height left beside the map and details; if none fit, the smallest
      tiles and the box grows */
+  const GRID = new Map();
   function photos(a, box, ro){ const g = $(".ph-g", box), n = a.photos.length + (ro ? 0 : 1), GAP = 6, MIN = 64;
     g.innerHTML = a.photos.map((p, i) => '<div class="ph-c"><button type="button" class="ph-t" data-i="' + i + '" title="View photo ' + (i + 1) + '"><img alt="Photo ' + (i + 1) + '" loading="lazy"></button>' + (ro ? "" : '<button type="button" class="ph-del" data-i="' + i + '" title="Remove this photo" aria-label="Remove photo ' + (i + 1) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg></button>') + '</div>').join("")
       + (ro ? "" : '<button type="button" class="ph-add" title="Upload photos, or drop or paste them anywhere on the action">+ Add photos</button>');
@@ -107,14 +115,14 @@ const ActionView = (() => {
       if (p && await confirmBox("Remove photo " + (i + 1) + " from " + Store.actId(a) + "? You can undo with Ctrl+Z.", "Remove", true)){ Store.mutate("a:" + a._p, () => { const k = a.photos.indexOf(p); if (k >= 0) a.photos.splice(k, 1); Store.touch(a); }); Store.log("Removed a photo from " + Store.actId(a)); } });
     const ad = $(".ph-add", g); if (ad) ad.onclick = () => Media.pickFiles(a, "image/*");
     if (!n) return;
-    let last = "";
+    let last = ""; const was = GRID.get(a.u); if (was){ g.style.gridTemplateColumns = was[0]; g.style.gridAutoRows = was[1]; box.style.minHeight = was[2]; }   // (the last sizes straight away, so a redraw doesn't jump)
     const fit = () => { if (!box.isConnected){ ro2.disconnect(); return; } box.style.minHeight = ""; const W = box.clientWidth, H = box.clientHeight; if (!W) return;
       const one = getComputedStyle(box.closest(".ov-g")).gridTemplateColumns.split(" ").length < 2, size = c => (W - GAP * (c - 1)) / c, tall = c => { const r = Math.ceil(n / c); return r * size(c) + GAP * (r - 1); };
       let c = one ? 3 : 2;   // stacked under the details there's no height to fill, so three across
       if (!one) while (tall(c) > H && c < n && size(c + 1) >= MIN) c++;   // never more columns than tiles
       const s = Math.floor(size(c)), need = Math.ceil(tall(c)), k = c + "," + s;
       box.style.minHeight = need > H ? need + "px" : "";
-      if (k === last) return; last = k; g.style.gridTemplateColumns = "repeat(" + c + "," + s + "px)"; g.style.gridAutoRows = s + "px"; };
+      if (k === last) return; last = k; g.style.gridTemplateColumns = "repeat(" + c + "," + s + "px)"; g.style.gridAutoRows = s + "px"; GRID.set(a.u, [g.style.gridTemplateColumns, g.style.gridAutoRows, box.style.minHeight]); };
     const ro2 = new ResizeObserver(() => requestAnimationFrame(fit)); ro2.observe(box.closest(".ov-g") || box); requestAnimationFrame(fit); }
   function files(a, l, ro){ l.innerHTML = a.files.length ? "" : '<div class="dim">No attachments.' + tipI("Drop a PDF, Excel or any file on the action to attach it.") + '</div>';
     a.files.forEach(f => { const r = h('<div class="att"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : /docx?$/i.test(f.name) ? "DOC" : "FILE") + '</span><button type="button" class="link att-n">' + esc(f.name) + '</button><span class="dim">' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" title="Remove">✕</button>') + '</div>');
