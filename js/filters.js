@@ -49,7 +49,7 @@ const Filters = (() => {
     return out; }
   function chipsHtml(shown, total){ const c = chips();
     return (c.length ? '<span class="dim">Filtered by</span>' + c.map(([k, v, t]) => '<button type="button" class="fchip" data-k="' + k + '" data-v="' + esc(v) + '" title="Remove this filter">' + esc(t) + ' ✕</button>').join("") + '<button type="button" class="link fchip-all">Clear all</button>'
-      : '<span class="dim">All actions</span>') + '<span class="fcount">' + shown + " of " + total + '</span>'; }
+      : ''); }
   function wireChips(el){ el.onclick = e => { const b = e.target.closest(".fchip"); if (b){ const k = b.dataset.k; if (k === "q"){ App.q = ""; } else all()[k].delete(b.dataset.v); changed(); }
       if (e.target.closest(".fchip-all")) clear(); }; }
   function clear(){ App.q = ""; for (const k in all()) all()[k].clear(); changed(); }

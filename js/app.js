@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.81";
+const APP_VERSION = "1.10.82";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -22,7 +22,7 @@ const App = (() => {
     const sideTab = A.tab === "actions" || A.tab === "kanban", panel = A.tab === "actions" && lsGet("adPanel", true),   /* (the Organizer has no Details panel: a card opens as a pop up) */ sel = sideTab && !!act(A.selRef), inAct = false, list = A.tab === "actions";
     $$("#xlsB,#printB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid" || A.tab === "contacts";
     $("#q").placeholder = inAct ? "Search actions (back to the list)" : { actions: "Search actions", kanban: "Search, filters every stage", contacts: "Search people, companies, numbers", valid: "Search fields and stages" }[A.tab] || "Search";
-    if ($("#q").value !== A.q) $("#q").value = A.q; panels(sideTab, panel); $("#undoB").disabled = !Store.S.undo.length; $("#redoB").disabled = !Store.S.redo.length;
+    if ($("#q").value !== A.q) $("#q").value = A.q; panels(sideTab, panel);
     const v = $("#view"); v.dataset.tab = A.tab;
     v.classList.toggle("in-act", inAct);
     if (A.tab !== "actions") Table.forget();
@@ -43,7 +43,9 @@ const App = (() => {
     const qHome = fopen ? $("#fbody") : $("#slotL"); if (q.parentNode !== qHome){ const had = document.activeElement === $("#q"); qHome.insertBefore(q, qHome === $("#fbody") ? qHome.firstChild : null); if (had) $("#q").focus(); }
     (panel ? $("#hxR") : $("#slotR")).appendChild(phR); phR.hidden = A.tab !== "actions"; phR.setAttribute("aria-expanded", !!panel); $(".chev", phR).textContent = panel ? "›" : "‹"; phR.title = panel ? "Hide the details. Actions then open as a pop up" : "Show the details panel";
     if (fopen) Filters.render($("#fbody"));
-    const ac = $("#achips"); ac.hidden = !sideTab; if (sideTab){ const all = Store.visible(); ac.innerHTML = Filters.chipsHtml(Filters.apply(all).length, all.length); Filters.wireChips(ac); } }
+    const ac = $("#achips"); ac.hidden = !sideTab; if (sideTab){ const all = Store.visible(); ac.innerHTML = Filters.chipsHtml(Filters.apply(all).length, all.length); Filters.wireChips(ac); }
+    /* the strip over the list only shows when it holds something (filter chips, or the buttons of a closed side panel) */
+    const vis = el => [...el.children].some(x => !x.hidden); $("#mid .hx3").hidden = !(sideTab && ac.innerHTML.trim()) && !vis($("#slotL")) && !vis($("#slotR")); }
   function pills(){ const all = Store.visible(), el = $("#pills");
     el.innerHTML = '<button type="button" class="pill' + (!A.pills.size ? " on" : "") + '" data-s="">All <b>' + all.length + '</b></button>' + Store.stages().map(s => '<button type="button" class="pill' + (A.pills.has(s.id) ? " on" : "") + '" data-s="' + s.id + '" style="--c:' + esc(s.color) + '" title="Click to show only this stage, Ctrl+click to add it"><i class="dot"></i>' + esc(s.name) + ' <b>' + all.filter(a => a.stage === s.id).length + '</b></button>').join("");
     $$(".pill", el).forEach(b => b.onclick = e => { const s = b.dataset.s; if (!s) A.pills.clear(); else if (e.ctrlKey || e.metaKey){ A.pills.has(s) ? A.pills.delete(s) : A.pills.add(s); } else if (A.pills.size === 1 && A.pills.has(s)) A.pills.clear(); else { A.pills.clear(); A.pills.add(s); } render(); }); }
@@ -54,7 +56,7 @@ const App = (() => {
     else if (S.dirty.size || S.blobs.length){ cls = "busy"; t = "Unsaved changes"; }
     else { cls = "ok"; t = "Saved"; }
     s.className = "status " + cls; s.innerHTML = '<i></i><span>' + esc(t) + '</span>';
-    const lf = Local.state(); $("#folderB").hidden = !(S.edit && (lf === "locked" || lf === "none")); $("#folderB").textContent = lf === "locked" ? "Reconnect folder" : "Local folder"; }
+    }
   /* an action in a pop up over the list (when the side panel is switched off in View) */
   let popEl = null;
   function popup(on){ if (!on){ if (popEl){ popEl.remove(); popEl = null; } return; }
@@ -79,7 +81,7 @@ const App = (() => {
   /* the MTO link in the table (or the action view or a callout): that action, on its MTO, Spares or Isolations tab */
   const openParts = (ref, kind) => select(ref, kind);
   document.addEventListener("click", e => { const l = e.target.closest(".av [data-parts], .kcall [data-parts]"); if (l){ e.preventDefault(); Fields.closePop(); openParts(l.dataset.ref, l.dataset.parts); } });
-  const viewOnly = () => note(GH.cfg().token ? "This GitHub key can't save to " + GH.cfg().repo + ". View only." : "View only. Add your GitHub key in File, Settings to make changes.", 4500);
+  const viewOnly = () => note(GH.cfg().token ? "This GitHub key can't save to " + GH.cfg().repo + ". View only." : "View only. Add your GitHub key in Help, Settings to make changes.", 4500);
   function newAction(stageId){ Intake.open(stageId); }
 
   /* ---------- project box: tick one or several projects ---------- */
@@ -120,31 +122,41 @@ const App = (() => {
       Store.mutate("projects", () => { p.del = true; Store.touch(p); }); m.close(); after && after(); }; }
 
   /* ---------- settings and first time setup ---------- */
-  function settings(first){ const c = GH.cfg(), lf = Local.state();
-    const m = modal('<h3>' + (first ? "Welcome to Action Database" : "Settings") + '</h3>' + (first ? '<p class="dim">Set this computer up once.' + tipI("You can change any of it later in File, Settings.") + '</p>' : "")
+  /* who can change the settings that are the same for everyone (photo quality): the admins in the config */
+  const admins = () => (Store.S.config && Store.S.config.admins || ["bkhadembashi@nsrltd.com"]).map(x => String(x).toLowerCase());
+  const isAdmin = () => admins().includes(String(lsGet("adUser", "") || Profile.get().email || "").toLowerCase());
+  function settings(first){ const c = GH.cfg(), lf = Local.state(), adm = isAdmin();
+    const m = modal('<h3>' + (first ? "Welcome to Action Database" : "Settings") + '</h3>' + (first ? '<p class="dim">Set this computer up once.' + tipI("You can change any of it later in Help, Settings.") + '</p>' : "")
+      + '<div class="set-sec"><div class="set-h">This computer <span class="dim">only affects you, here</span></div>'
       + '<div class="fl"><span class="fl-h">Your profile' + tipI("Signs your edits, prints, workpacks and RFQs.") + '</span>' + '<div class="in-row"><b class="pfn">' + esc(Profile.name() || "Not set") + '</b><span class="dim">' + esc(Profile.get().role) + '</span><span class="grow"></span><button type="button" class="btn ghost sm" data-k="prof">Edit profile…</button></div></div>'
+      + (first ? "" : '<div class="fl"><span class="fl-h">Faster start' + tipI("Opens with the copy on this computer straight away, then checks GitHub for anything newer and updates in place.") + '</span><label class="set-ck"><input type="checkbox" data-k="fast"' + (lsGet("adFast", true) ? " checked" : "") + '> Keep a copy of the actions on this computer</label><div class="dim sm-t fs-st">Checking…</div><div class="in-row"><button type="button" class="btn ghost sm" data-k="fsr">Refresh now</button><button type="button" class="btn ghost sm" data-k="fsc">Clear the copy</button></div></div>')
+      + '<div class="fl"><span class="fl-h">Local folder' + tipI("Full quality photos and a backup of the data are saved here.") + '</span>' + '<div class="in-row"><b class="lfn">' + esc(Local.name() || (lf === "unsupported" ? "Needs Chrome or Edge" : "Not chosen")) + '</b>' + (lf === "locked" ? ' <span class="dim">(click Reconnect)</span>' : "") + '<span class="grow"></span>' + (Local.supported ? '<button type="button" class="btn ghost sm" data-k="pick">' + (lf === "locked" ? "Reconnect" : "Choose folder…") + '</button>' : "") + '</div></div>'
+      + '<label class="fl"><span class="fl-h">Google Gemini key <span class="dim">optional</span>' + tipI("For turning pasted text into an action. Free from aistudio.google.com.") + '</span>' + '<input class="in secret" data-k="gem" autocomplete="off" spellcheck="false" value="' + esc(lsGet("adGemKey", "")) + '" placeholder="Free from aistudio.google.com"></label>'
       + (GH.relay() ? '<div class="fl"><span class="fl-h">Saving' + tipI("Through the team's save server: anyone signed in can edit, no GitHub key needed.") + '</span>' + '</div>' : "")
       + '<details class="fl adv"' + (GH.relay() ? "" : " open") + '><summary>' + (GH.relay() ? "Advanced: save server address, GitHub key" : "Save server or GitHub key") + '</summary>'
       + '<label class="fl"><span class="fl-h">Save server' + tipI("The team relay's address. With it nobody needs a GitHub key.") + '</span>' + '<input class="in" data-k="relay" autocomplete="off" spellcheck="false" value="' + esc(lsGet("adRelay", "")) + '" placeholder="' + esc(GH.relay() || "https://….workers.dev") + '"></label>'
       + '<label class="fl"><span class="fl-h">GitHub key' + tipI("Only without a save server: needed to edit, else the app is view only.") + '</span>' + '<input class="in secret" data-k="key" autocomplete="off" spellcheck="false" value="' + esc(c.token) + '" placeholder="github_pat_…"></label><div class="dim sm-t">Make one at <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com, Settings, Developer settings, Fine grained tokens</a>: Repository access “Only select repositories”, pick the data repository <b>' + esc(c.repo) + '</b>, then Permissions, Contents, Read and write. It stays on this computer only. <span class="ks"></span></div>'
       + '</details>'
       + '<label class="fl"><span class="fl-h">Data repository' + tipI("Where the actions and photos are saved.") + '</span>' + '<input class="in" data-k="repo" value="' + esc(c.repo) + '"></label>'
-      + '<div class="fl"><span class="fl-h">Local folder' + tipI("Full quality photos and a backup of the data are saved here.") + '</span>' + '<div class="in-row"><b class="lfn">' + esc(Local.name() || (lf === "unsupported" ? "Needs Chrome or Edge" : "Not chosen")) + '</b>' + (lf === "locked" ? ' <span class="dim">(click Reconnect)</span>' : "") + '<span class="grow"></span>' + (Local.supported ? '<button type="button" class="btn ghost sm" data-k="pick">' + (lf === "locked" ? "Reconnect" : "Choose folder…") + '</button>' : "") + '</div></div>'
-      + '<label class="fl"><span class="fl-h">Google Gemini key <span class="dim">optional</span>' + tipI("For turning pasted text into an action. Free from aistudio.google.com.") + '</span>' + '<input class="in secret" data-k="gem" autocomplete="off" spellcheck="false" value="' + esc(lsGet("adGemKey", "")) + '" placeholder="Free from aistudio.google.com"></label>'
-      + '<div class="fl"><span class="fl-h">Photo quality online' + tipI("The original is always kept in the local folder.") + '</span>' + '<div class="seg" data-k="q">' + [["low", "Low, 1024 px"], ["medium", "Medium, 1600 px"]].map(([k, n]) => '<button type="button" data-v="' + k + '"' + ((Store.S.config && Store.S.config.quality || "medium") === k ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</div></div>'
+      + '</div><div class="set-sec"><div class="set-h">For everyone <span class="dim">the same on every computer</span></div>'
+      + '<div class="fl"><span class="fl-h">Photo quality online</span>' + '<div class="seg" data-k="q">' + [["low", "Low, 850 px"], ["medium", "Medium, 1100 px"], ["high", "High, 1600 px"]].map(([k, n]) => '<button type="button" data-v="' + k + '"' + ((Store.S.config && Store.S.config.quality || "medium") === k ? ' class="on"' : "") + (adm ? "" : " disabled") + '>' + n + '</button>').join("") + '</div><div class="dim sm-t">Applies to photos added from now on, by anyone. The full size original stays in the local folder of the computer that added it.' + (adm ? "" : " Only the admin (" + esc(admins().join(", ")) + ") changes this.") + '</div></div>'
       + (first ? "" : '<div class="fl"><span class="fl-h">Cutting lists' + tipI("For the MTO pieces: the saw cut between pieces, and the shortest offcut worth keeping. The same for everyone.") + '</span>' + '<div class="in-row"><label class="dim">Saw cut <input class="in sm-n" data-k="kerf" inputmode="decimal" value="' + esc(((Store.S.config || {}).cut || {}).kerf ?? 3) + '"> mm</label><label class="dim">Keep offcuts from <input class="in sm-n" data-k="keep" inputmode="decimal" value="' + esc(((Store.S.config || {}).cut || {}).keep ?? 300) + '"> mm</label></div></div>')
+      + '</div>'
       + '<div class="yn-btns">' + (first ? '<button class="yn-no" type="button" data-k="x">Skip for now</button>' : '<button class="yn-no" type="button" data-k="x">Cancel</button>') + '<button class="yn-yes" type="button" data-k="ok">' + (first ? "Finish" : "Save") + '</button></div>', { cls: "set-win", sticky: first });
     const ks = $(".ks", m); const check = async () => { const k = $("[data-k=key]", m).value.trim(); if (!k){ ks.textContent = ""; return; } ks.textContent = "Checking…";
       const old = lsGet("adGhKey", ""), oldR = lsGet("adRepo2", ""); lsSet("adGhKey", k); lsSet("adRepo2", $("[data-k=repo]", m).value.trim()); GH.reset(); const ok = await GH.canEdit(); lsSet("adGhKey", old); lsSet("adRepo2", oldR); GH.reset();
       ks.innerHTML = ok ? '<b class="good">✓ This key can edit.</b>' : ok === null ? "Couldn't check (offline?)" : '<b class="bad">This key can\'t write to that repository.</b>'; };
     $("[data-k=key]", m).onchange = check; if (c.token) check();
+    const fs = $(".fs-st", m); if (fs){ const show = async () => { const i = await Store.copyInfo(); fs.innerHTML = i ? '<b class="good">✓ Up to date</b> ' + (i.bytes / 1048576).toFixed(1) + " MB · refreshed " + ago(i.at) + " · " + i.n + " actions, " + i.ph + " photos" : "No copy on this computer yet"; }; show();
+      $("[data-k=fsr]", m).onclick = async () => { fs.textContent = "Refreshing…"; await reload(); show(); };
+      $("[data-k=fsc]", m).onclick = async () => { if (!await Store.clearCopy()) return note("There are unsaved changes, so the copy is kept until they're saved"); fs.textContent = "Cleared. A new copy is made next time the app loads."; }; }
     $$("[data-k=q] button", m).forEach(b => b.onclick = () => { $$("[data-k=q] button", m).forEach(x => x.classList.toggle("on", x === b)); });
     const pk = $("[data-k=pick]", m); if (pk) pk.onclick = async () => { if (await (Local.state() === "locked" ? Local.reconnect() : Local.pick())){ $(".lfn", m).textContent = Local.name(); pk.textContent = "Change folder…"; } };
     $("[data-k=x]", m).onclick = () => { lsSet("adSetup", 1); m.close(); };
     $("[data-k=prof]", m).onclick = () => profile(() => { $(".pfn", m).textContent = Profile.name() || "Not set"; });
-    $("[data-k=ok]", m).onclick = async () => { lsSet("adGhKey", $("[data-k=key]", m).value.trim()); lsSet("adRelay", $("[data-k=relay]", m).value.trim()); lsSet("adRepo2", $("[data-k=repo]", m).value.trim() === GH.DATA_REPO ? "" : $("[data-k=repo]", m).value.trim()); lsSet("adGemKey", $("[data-k=gem]", m).value.trim()); lsSet("adSetup", 1);
+    $("[data-k=ok]", m).onclick = async () => { lsSet("adGhKey", $("[data-k=key]", m).value.trim()); lsSet("adRelay", $("[data-k=relay]", m).value.trim()); lsSet("adRepo2", $("[data-k=repo]", m).value.trim() === GH.DATA_REPO ? "" : $("[data-k=repo]", m).value.trim()); lsSet("adGemKey", $("[data-k=gem]", m).value.trim()); lsSet("adSetup", 1); const fk = $("[data-k=fast]", m); if (fk) lsSet("adFast", fk.checked);
       const q = ($("[data-k=q] .on", m) || {}).dataset, kf = $("[data-k=kerf]", m), kp = $("[data-k=keep]", m), cut = kf && kf.value.trim() !== "" && +kf.value >= 0 && +kp.value >= 0 ? { kerf: +kf.value, keep: +kp.value } : null; m.close(); GH.reset(); await checkEdit();
-      if (q && Store.S.config && q.v !== (Store.S.config.quality || "medium") && Store.S.edit) Store.mutate("config", () => { Store.S.config.quality = q.v; Store.S.config.mod = now(); });
+      if (adm && q && Store.S.config && q.v !== (Store.S.config.quality || "medium") && Store.S.edit) Store.mutate("config", () => { Store.S.config.quality = q.v; Store.S.config.mod = now(); });
       const ck = cut && Store.S.config && Store.S.edit && Object.assign({ kerf: 3, keep: 300 }, Store.S.config.cut || {}); if (ck && (cut.kerf !== ck.kerf || cut.keep !== ck.keep)) Store.mutate("config", () => { Store.S.config.cut = cut; Store.S.config.mod = now(); });
       reload(); }; }
   /* the profile window, from the round button top right */
@@ -267,10 +279,10 @@ const App = (() => {
 
   /* ---------- menus ---------- */
   const MENUS = {
-    File: [["New action", "N", () => newAction()], ["New action from pasted text…", "", () => Intake.open(null, "")], "-", ["Projects…", "", projectsWin], ["New project…", "", () => editProject(null)], "-", ["Export to PDF or print…", "Ctrl+P", () => Print.dialog()], ["Export to Excel…", "", () => Print.excelDialog()], "-", ["Your profile…", "", () => profile()], ["Settings…", "", () => settings()]],
+    File: [["New action", "N", () => newAction()], ["New action from pasted text…", "", () => Intake.open(null, "")], "-", ["Projects…", "", projectsWin], ["New project…", "", () => editProject(null)], "-", ["Export to PDF or print…", "Ctrl+P", () => Print.dialog()], ["Export to Excel…", "", () => Print.excelDialog()], "-", ["Your profile…", "", () => profile()]],
     Edit: [["Undo", "Ctrl+Z", () => Store.undo()], ["Redo", "Ctrl+Y", () => Store.redo()], "-", ["Delete selected action", "", () => { const a = act(A.selRef); if (a) $(".av [data-k=del]") && $(".av [data-k=del]").click(); }]],
     View: null,
-    Help: [["How to use", "", guide], ["Keyboard shortcuts", "", keys], "-", ["Update app", "", update], ["About", "", about]] };
+    Help: [["How to use", "", guide], ["Keyboard shortcuts", "", keys], "-", ["Settings…", "", () => settings()], "-", ["Update app", "", update], ["About", "", about]] };
   function menus(){ const bar = $("#menubar"); bar.innerHTML = Object.keys(MENUS).map(k => '<div class="mb"><button type="button" class="mb-btn">' + k + '</button><div class="mb-drop"></div></div>').join("");
     $$(".mb", bar).forEach((mb, i) => { const k = Object.keys(MENUS)[i], drop = $(".mb-drop", mb);
       const fill = () => { if (!MENUS[k]) return viewMenu(drop); drop.innerHTML = MENUS[k].map((x, j) => x === "-" ? '<div class="msep"></div>' : '<button type="button" class="mi" data-j="' + j + '">' + esc(x[0]) + (x[1] ? '<span class="mk">' + x[1] + '</span>' : "") + '</button>').join("");
@@ -283,11 +295,11 @@ const App = (() => {
 
   function guide(){ const sec = (t, x) => '<h4>' + t + '</h4><p>' + x.join("</p><p>") + '</p>';
     const m = modal('<h3>How to use Action Database</h3>'
-      + sec("Getting started", ["File, Settings: enter your GitHub key once to edit (without it everything is view only), choose the local folder for full quality photos, and add a Gemini key if you want pasted text turned into actions.", "The project box at the top ticks which projects show. Tick several to see all their actions together. All projects… makes, edits and shares projects."])
+      + sec("Getting started", ["Help, Settings: enter your GitHub key once to edit (without it everything is view only), choose the local folder for full quality photos, and add a Gemini key if you want pasted text turned into actions.", "The project box at the top ticks which projects show. Tick several to see all their actions together. All projects… makes, edits and shares projects."])
       + sec("Actions", ["+ New action (or N) makes one. Type it, or paste an email into the Paste text tab (or use the upload with AI button beside + New action) and Gemini fills in the fields. Fields it can't find are left empty.", "Click an action to open it. Its header has everything for that action: back to the list (Esc), previous and next (or ↑ ↓), the stage, the priority, the workpack PDF and delete. Below are its tabs: Overview, MTO, Spares and Isolations.", "Any value set to TBC shows in red. The status and priority dropdowns in the table move the card on the Organizer board too."])
       + sec("Photos and files", ["Drop photos and files onto an action's row or tile, or anywhere on the open action, or use Upload photos on its Overview. A pasted photo (Ctrl+V) waits at the bottom left until you drag it onto an action. PDFs, Excel files and anything else are kept as attachments.", "The Photos button opens a big view with thumbnails of the photos before and after. Arrows step through, ⛶ or a double click goes full screen, Esc closes.", "The ☰ and ▦ buttons switch the list between rows and tiles; Size sets the tile size."])
       + sec("Organizer", ["The board is kept simple: drag cards between stages (and up or down within one), and click a card for its problem, solution and photos. Edit on the Actions tab. Double click a stage name to rename it; drag a stage's header to move it; ⋯ for its colour, type (normal, on hold, completed) and whether it prints. + Add a stage at the end."])
-      + sec("MTO and spares", ["Open an action and pick its MTO tab. Choose a type for each row (pipe, plate, UB, SHS, flanges, bolts and so on), then its standard (Australian, Chinese or international), size, material and rating; Other is a free text row for motors, bearings and vendor parts. For lengths and plate, ▸ opens the pieces the job needs: the row's quantity becomes the stock lengths or sheets to buy, packed with a saw cut between pieces (File, Settings). The i button says how a total was worked out and holds longer notes. When anything needs more than one length or sheet, the RFQ export also downloads a cutting list for the trades, and Cut list downloads it any time.", "→ Spares moves a row to its Spares tab (and → MTO moves it back), so parts coming from site spares stay off the RFQ. The MTO column in the list says how many items each action has; click it to go straight there.", "Upload quotes at the top of the MTO (several, if they get revised) and download them any time. The PDF button there exports the RFQ: each export takes the next rev letter, A, B, C…, and every rev is kept in RFQ revisions for download. XLSX exports the list to Excel. Paste text lets Gemini fill in the rows from an email or quote; you check them before they're added."])
+      + sec("MTO and spares", ["Open an action and pick its MTO tab. Choose a type for each row (pipe, plate, UB, SHS, flanges, bolts and so on), then its standard (Australian, Chinese or international), size, material and rating; Other is a free text row for motors, bearings and vendor parts. For lengths and plate, ▸ opens the pieces the job needs: the row's quantity becomes the stock lengths or sheets to buy, packed with a saw cut between pieces (Help, Settings). The i button says how a total was worked out and holds longer notes. When anything needs more than one length or sheet, the RFQ export also downloads a cutting list for the trades, and Cut list downloads it any time.", "→ Spares moves a row to its Spares tab (and → MTO moves it back), so parts coming from site spares stay off the RFQ. The MTO column in the list says how many items each action has; click it to go straight there.", "Upload quotes at the top of the MTO (several, if they get revised) and download them any time. The PDF button there exports the RFQ: each export takes the next rev letter, A, B, C…, and every rev is kept in RFQ revisions for download. XLSX exports the list to Excel. Paste text lets Gemini fill in the rows from an email or quote; you check them before they're added."])
       + sec("Isolations", ["Open an action and pick its Isolations tab; its equipment tags show above the list (click one to add it). Type an equipment number or name and pick from the suggestions (the plant equipment, valves and instruments, plus the Equipment tags list): picking fills in both. You can still edit them, which doesn't change any list. Add a note on each row. The isolations go in the workpack PDF and the print."])
       + sec("Data validation", ["Set the type of every field (text, choice, tags, date, tick box, contact…), its allowed values and colours, whether it offers TBC and N/A, and whether it's a table column. Contacts hold names, companies and mobiles; picking a name fills in the number."])
       + sec("Printing and Excel", ["File, Print: tick the stages to print (Completed starts unticked). The board prints first, then each action's details and photos. File, Export to Excel exports the table as filtered, with a Photos link that opens the photos online."])
@@ -344,24 +356,25 @@ const App = (() => {
       $("#newB").onclick = () => newAction(); $("#pasteB").onclick = () => Intake.open(null, "");
       $$("#vt button").forEach(b => b.onclick = () => { A.view = b.dataset.v; lsSet("adViewType", A.view); render(); }); $("#sizeB").onclick = e => { e.stopPropagation(); Table.sizePop(e.currentTarget); };
       $("#printB").onclick = () => Print.dialog(); $("#xlsB").onclick = () => Print.excelDialog();
-      $("#undoB").onclick = () => Store.undo(); $("#redoB").onclick = () => Store.redo(); $("#updB").onclick = update;
+      $("#updB").onclick = update;
       $("#status").onclick = () => { if (!Store.S.edit) settings(); else if (Store.S.status === "error") Store.save(); };
       $("#profB").onclick = e => { e.stopPropagation(); if ($(".profpop")) return Fields.closePop(); Profile.name() ? profMenu(e.currentTarget) : signIn(); }; drawProf();
-      $("#folderB").onclick = () => Local.state() === "locked" ? Local.reconnect() : Local.pick(); }
+      }
     await Local.init();
     /* on the Cloudflare site, the site's sign in says who this is */
     const site = GH.site(); if (site){ const p = { first: site.first, last: site.last, role: site.role, mobile: site.mobile, email: site.email }, had = Profile.get();
       if (had.email !== site.email || !had.first) Profile.set(p); lsSet("adUser", site.email); lsSet("adSetup", 1); drawProf(); }
     const qs = new URLSearchParams(location.search);
     if (!A.mobile) Equip.load().then(() => { fillLocations(); renderIdle(); }).catch(() => {});   // (the plant tags and WBS areas, for picking equipment and locations)
-    try { await Promise.all([Store.load(), checkEdit()]); } catch (e){ $("#boot .bt").textContent = "Couldn't load the actions: " + e.message; return; }
+    /* (with the copy on this computer the app opens straight away; who can edit, and what's newer on GitHub, follow) */
+    const ce = checkEdit().catch(() => {}); try { await Store.load(); if (!Store.S.fromCopy) await ce; } catch (e){ $("#boot .bt").textContent = "Couldn't load the actions: " + e.message; return; }
     if (qs.get("p") && Store.project(qs.get("p"))) Store.setSelected([qs.get("p")]);
     const ar = qs.get("a"); if (ar){ const a = Store.findRef(ar); if (a){ if (!Store.selected().includes(a._p)) Store.setSelected(Store.selected().concat(a._p)); A.selRef = a._p + ":" + a.u;
         if (A.mobile) Mobile.show(A.selRef); const ph = +qs.get("photo"); if (ph && a.photos.length) setTimeout(() => Media.view(a, ph - 1), 300); } }
     $("#boot").remove(); draw();
-    if (site && Store.S.edit && !Store.user(site.email)) Store.saveUser(Profile.get(), true);   // (into the people list, for owners and edits)
+    ce.then(() => { if (site && Store.S.edit && !Store.user(site.email)) Store.saveUser(Profile.get(), true); });   // (into the people list, for owners and edits)
     /* a private data repo can't be read without a key */
-    if (!GH.cfg().token && !Store.projects().length) GH.isPublic().then(pub => { if (pub === false) note("The actions are in a private repository (" + GH.cfg().repo + "). Add a GitHub key in File, Settings to see them.", 12000); });
+    if (!GH.cfg().token && !Store.projects().length) GH.isPublic().then(pub => { if (pub === false) note("The actions are in a private repository (" + GH.cfg().repo + "). Add a GitHub key in Help, Settings to see them.", 12000); });
     const setup = () => { if (!lsGet("adSetup", 0)) settings(true); };
     if (!A.mobile && !lsGet("adUser", null)) signIn(setup); else if (!A.mobile) setup();
     /* look for other people's changes: every 20 s while an action is open, else every 45 s */

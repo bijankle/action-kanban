@@ -1,7 +1,7 @@
 /* The smart MTO rows. A row picks from the parts library (MTOLIB, js/mtolib.js): item type, standard (Australian,
    Chinese or international), size, material, rating (schedule, class, SDR or finish), stock length or sheet size, unit
    and quantity. Lengths and plate open a list of the pieces the job needs (▸): the app packs them onto the fewest
-   stock lengths or sheets (saw cut and offcut rules in File, Settings) and the row's quantity is that total. The i
+   stock lengths or sheets (saw cut and offcut rules in Help, Settings) and the row's quantity is that total. The i
    button explains how a total was worked out and holds anything too long for a column. A row of type Other is the
    old free text row, for motors, bearings and vendor parts. The description, quantity and unit are kept on the row
    too, so the RFQ, Excel, print and search read it like any other row. If any item needs more than one length or

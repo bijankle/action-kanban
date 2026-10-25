@@ -1,7 +1,7 @@
 /* Photos and attachments: the full quality original goes to the local folder, a compressed copy and a
    thumbnail go online. Also the full screen photo viewer. */
 "use strict";
-const QUALITY = { low: [1024, 0.72], medium: [1600, 0.8] };
+const QUALITY = { low: [850, 0.72], medium: [1100, 0.78], high: [1600, 0.8] };
 const Media = (() => {
   const mem = new Map();   // photos added this session, shown at once while they upload
   async function compress(blob, maxW, q){ const bmp = await createImageBitmap(blob, { imageOrientation: "from-image" });

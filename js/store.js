@@ -255,11 +255,18 @@ const Store = (() => {
   async function addBlob(path, b64){ const sha = await GH.blob(b64); S.blobs.push({ path, sha }); stash(); saveSoon(); }
 
   /* ---------- loading ---------- */
+  /* faster start: the copy kept on this computer shows straight away and GitHub is checked behind it (with Faster
+     start off in Settings the app waits for GitHub; the copy is still kept so unsaved work is never lost) */
   async function load(){ const cached = await IDB.get("state");
-    if (cached && cached.c){ S.config = cached.c; S.projects = cached.p; S.acts = cached.a || {}; S.users = cached.us || S.users; S.vendors = cached.vd || S.vendors; S.base = cached.base || {}; (cached.dirty || []).forEach(k => S.dirty.add(k)); S.blobs = cached.blobs || []; S.loaded = true; App.render(); }
-    try { await refresh(true); } catch (e){ console.error(e); if (!S.loaded) throw e; note("Couldn't reach GitHub, showing the copy saved on this device"); }
-    if (!S.config){ S.config = defaultConfig(); S.dirty.add("config"); }
-    S.loaded = true; App.render(); if (S.dirty.size || S.blobs.length) saveSoon(); }
+    if (cached && cached.c){ S.config = cached.c; S.projects = cached.p; S.acts = cached.a || {}; S.users = cached.us || S.users; S.vendors = cached.vd || S.vendors; S.base = cached.base || {}; (cached.dirty || []).forEach(k => S.dirty.add(k)); S.blobs = cached.blobs || []; S.fetched = lsGet("adFetched", 0) || cached.at || 0; S.loaded = true; S.fromCopy = lsGet("adFast", true); App.render(); }
+    const fin = async () => { try { await refresh(true); } catch (e){ console.error(e); if (!S.loaded) throw e; note("Couldn't reach GitHub, showing the copy saved on this device"); }
+      if (!S.config){ S.config = defaultConfig(); S.dirty.add("config"); }
+      S.loaded = true; S.fromCopy = false; App.render(); if (S.dirty.size || S.blobs.length) saveSoon(); };
+    if (S.fromCopy){ fin().catch(() => {}); return; } await fin(); }
+  /* what the copy on this computer holds, for Settings */
+  async function copyInfo(){ const c = await IDB.get("state"); if (!c) return null; const acts = Object.values(c.a || {}).flatMap(x => x.actions || []);
+    return { bytes: JSON.stringify(c).length, at: S.fetched || c.at, n: acts.filter(a => !a.del).length, ph: acts.reduce((t, a) => t + (a.photos || []).length, 0) }; }
+  async function clearCopy(){ if (S.dirty.size || S.blobs.length) return false; await IDB.del("state"); return true; }
   async function refresh(first){ const held = () => S.edit && S.dirty.size && !first; if (saving || held()) return false;
     const [c, p, us, vd] = await Promise.all([GH.readJson(P_CONFIG), GH.readJson(P_PROJECTS), GH.readJson(P_USERS), GH.readJson(P_VENDORS)]);
     const allP = p && p.projects || [], acts = {}; const list = live(allP); await Promise.all(list.map(async x => { acts[x.id] = await GH.readJson(pActs(x.id)) || { v: 1, nextNo: 1, actions: [] }; }));
@@ -271,7 +278,7 @@ const Store = (() => {
     else { if (c) adoptConfig(c); S.projects.projects = adoptList(S.projects.projects, allP, "id"); list.forEach(x => { setBase(x.id, acts[x.id]); adopt(x.id, acts[x.id]); }); Object.keys(S.acts).forEach(pid => { if (!acts[pid]) delete S.acts[pid]; }); }
     /* someone else changed actions while we looked: tell the app which (it warns if one is open) */
     if (!first){ const ch = []; list.forEach(x => (S.acts[x.id].actions || []).forEach(a => { const o = ((prev[x.id] || {}).actions || []).find(y => y.u === a.u); if (o && (o.mod || 0) < (a.mod || 0) && !mine(a)) ch.push(x.id + ":" + a.u); })); if (ch.length && App.othersChanged) App.othersChanged(ch); }
-    if (S.config) fixConfig(S.config);
+    if (S.config) fixConfig(S.config); S.fetched = now(); lsSet("adFetched", S.fetched);
     if (snap() !== before){ stash(); return true; } return false; }
   /* unsaved edits to a list that's since been merged away (the actions moved into another project): carry each edited
      action's changes over to where it now lives, by its id, and stop saving the old list (it would come back) */
@@ -288,6 +295,6 @@ const Store = (() => {
     /* Action complete stays the very last field */
     const i = c.fields.findIndex(f => f.id === "complete"); if (i >= 0 && i !== c.fields.length - 1) c.fields.push(c.fields.splice(i, 1)[0]); }
 
-  return { S, enter, stages, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, deleted, find, findRef, actId, ranked, priority,
+  return { S, copyInfo, clearCopy, enter, stages, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, deleted, find, findRef, actId, ranked, priority,
     stashNow: () => stash.flush ? stash.flush() : stash(), vendors: () => S.vendors, owner, procurement, sparesAvail, eta, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();
