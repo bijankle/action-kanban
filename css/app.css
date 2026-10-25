@@ -374,15 +374,13 @@ html.dark .ap-r input[type=range]{background:linear-gradient(var(--accent),var(-
 .mi-fo button.on{border-color:var(--th);background:var(--th-t);box-shadow:inset 0 0 0 1px var(--th)}
 .m-f{display:block;margin:6px 0;text-align:left}
 
-/* print: the board on A4 landscape, then each action */
+/* print: A4 landscape, the board then each action */
 #printRoot{display:none}
-@page{size:A4 portrait;margin:12mm}
-@page board{size:A4 landscape;margin:10mm}
+@page{size:A4 landscape;margin:10mm}   /* (every page the same size: a print job that mixes portrait and landscape gets stretched by some printers) */
 @media print{
   body{overflow:visible;background:#fff;color:#111}
   body>*:not(#printRoot){display:none!important}
   #printRoot{display:block;font:10.5pt/1.4 var(--font);color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .pr-board{page:board}
 }
 /* the printed actions' layout, also used off screen to measure them when the pages per action is set */
 #printRoot a{color:#1f5fbf}
@@ -406,7 +404,7 @@ html.dark .ap-r input[type=range]{background:linear-gradient(var(--accent),var(-
 #printRoot .pa-ph figcaption{font-size:7.5pt;color:#777}
 #printRoot .pa-step{margin:1px 0}#printRoot .pa-file{margin:2px 0}
 #printRoot .chip{font-size:8.5pt}#printRoot .tbc{color:#d42a1e!important}
-#printRoot.measure{display:block;position:absolute;left:-10000px;top:0;width:186mm;font:10.5pt/1.4 var(--font);color:#111;background:#fff}
+#printRoot.measure{display:block;position:absolute;left:-10000px;top:0;width:277mm;font:10.5pt/1.4 var(--font);color:#111;background:#fff}
 
 /* narrower screens */
 @media (max-width:1250px){ .bn{display:none} .tab{padding:6px 10px} }
