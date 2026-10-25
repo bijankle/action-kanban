@@ -3,7 +3,7 @@
    unticked to start with. Print to PDF keeps the attachment links clickable. */
 "use strict";
 const Print = (() => {
-  const prefs = () => Object.assign({ photos: true, per: 2, board: true, newPage: true }, lsGet("adPrint", {}));
+  const prefs = () => Object.assign({ photos: true, per: 2, board: true, newPage: true, pages: 0 }, lsGet("adPrint", {}));
   /* what goes into an export (the list's PDF and Excel buttons): which statuses, Deleted included, and a date range
      on the date created, last modified or completed (blank is all time). The search and the other Filters panel pills
      still apply. Done and Deleted are unticked to start with; the choice is remembered per export. */
@@ -24,6 +24,7 @@ const Print = (() => {
     const m = modal('<h3>Export to PDF or print' + tipI("Pick “Save as PDF” as the printer for a PDF. Only the projects ticked in the project box are included, and only what the search and the other filters show.") + '</h3>' + pickHtml("adPrintPick")
       + '<div class="msep"></div><label class="tp-o"><input type="checkbox" data-o="board"' + (pf.board ? " checked" : "") + '><span>Organizer overview first</span></label>'
       + '<label class="tp-o"><input type="checkbox" data-o="photos"' + (pf.photos ? " checked" : "") + '><span>Photos</span></label><label class="fl in-row">Photos per row <select class="in sm" data-o="per">' + [1, 2, 3, 4].map(n => '<option' + (n === pf.per ? " selected" : "") + '>' + n + '</option>').join("") + '</select></label>'
+      + '<label class="fl in-row">Pages per action <select class="in sm" data-o="pages">' + [[0, "No limit"], [1, "1"], [2, "2"], [3, "3"], [4, "4"]].map(([v, n]) => '<option value="' + v + '"' + (v === (pf.pages || 0) ? " selected" : "") + '>' + n + '</option>').join("") + '</select>' + tipI("The photos are made smaller, and more go on each row, until each action fits this many pages.") + '</label>'
       + '<label class="tp-o"><input type="checkbox" data-o="newPage"' + (pf.newPage ? " checked" : "") + '><span>Each action on a new page</span></label>'
       + '<div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Export</button></div>', { cls: "pr-win" });
     $(".yn-no", m).onclick = () => m.close();
@@ -44,20 +45,30 @@ const Print = (() => {
         + list.filter(a => a.stage === s.id).map(a => '<div class="pb-card"><b>' + esc(Store.actId(a)) + '</b> ' + esc(a.f.title || "") + (Store.eta(a) ? '<i class="' + (Store.eta(a) === "TBC" ? "tbc" : "") + '">ETA ' + esc(fmtDate(Store.eta(a))) + '</i>' : "") + '</div>').join("") + '</div>').join("") + '</div></section>')); }
     const skip = new Set(["title", "problem", "solution", "notes"]);
     list.forEach((a, i) => { const s = Store.stage(a.stage), p = Store.project(a._p) || {};
-      const det = Store.fields().filter(f => !skip.has(f.id)).map(f => '<tr><th>' + esc(f.label) + '</th><td>' + (Fields.show(a, f) || '<span class="dim">–</span>') + '</td></tr>').join("");
+      /* only what has something in it: blank boxes, unticked ticks and empty columns are left out to save the space */
+      const det = Store.fields().filter(f => !skip.has(f.id)).map(f => [f, Fields.show(a, f)]).filter(([, v]) => { const t = String(v || "").replace(/<[^>]*>/g, "").trim(); return t && !/^(none|–|-|0 items?)$/i.test(t); }).map(([f, v]) => '<tr><th>' + esc(f.label) + '</th><td>' + v + '</td></tr>').join("");
+      const tbl = (title, cols, rows) => { const keep = cols.map((c, k) => k === 0 || rows.some(r => String(r[k] == null ? "" : r[k]).trim())); return rows.length ? '<h5>' + title + '</h5><table class="pa-mto"><tr>' + cols.filter((c, k) => keep[k]).map(c => '<th>' + c + '</th>').join("") + '</tr>' + rows.map(r => '<tr>' + r.filter((c, k) => keep[k]).map(c => '<td>' + esc(c == null ? "" : c) + '</td>').join("") + '</tr>').join("") + '</table>' : ""; };
+      const txt = [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([, v]) => String(v || "").trim()).map(([k, v]) => '<h5>' + k + '</h5><div class="pa-tx">' + esc(v) + '</div>').join("");
       const link = GH.appUrl() + "?a=" + encodeURIComponent(a._p + ":" + a.no);
       root.appendChild(h('<section class="pr-act' + (o.newPage || (!o.board && i === 0) ? " np" : "") + '">' + (!o.board && i === 0 ? head : "") + '<div class="pa-h" style="--c:' + esc(s.color) + '"><b>' + esc(Store.actId(a)) + '</b><span class="pa-t">' + esc(a.f.title || "") + '</span><span class="stg">' + esc(s.name) + '</span></div>'
         + '<div class="pa-sub">' + esc(p.name || "") + ' · <a href="' + esc(link) + '">Open online</a></div>'
-        + '<div class="pa-grid"><div><h5>Problem</h5><div class="pa-tx">' + (esc(a.f.problem) || '<span class="dim">–</span>') + '</div><h5>Solution</h5><div class="pa-tx">' + (esc(a.f.solution) || '<span class="dim">–</span>') + '</div>'
-        + (a.f.notes ? '<h5>Notes</h5><div class="pa-tx">' + esc(a.f.notes) + '</div>' : "") + '</div><table class="pa-det">' + det + '</table></div>'
-        + ((a.isol || []).length ? '<h5>Isolations</h5><table class="pa-mto"><tr><th>No.</th><th>Equipment number</th><th>Equipment name</th><th>Note</th></tr>' + a.isol.map((it, k) => '<tr><td>' + (k + 1) + '</td><td>' + esc(it.tag || "") + '</td><td>' + esc(it.name || "") + '</td><td>' + esc(it.note || "") + '</td></tr>').join("") + '</table>' : "")
-        + ((a.mto || []).length ? '<h5>MTO</h5><table class="pa-mto"><tr><th>Item</th><th>Description</th><th>Part / tag no.</th><th>Qty</th><th>Unit</th><th>Notes</th></tr>' + a.mto.map((it, k) => '<tr><td>' + (k + 1) + '</td><td>' + esc(it.desc || "") + '</td><td>' + esc(it.part || "") + '</td><td>' + esc(it.qty || "") + '</td><td>' + esc(it.unit || "") + '</td><td>' + esc(it.notes || "") + '</td></tr>').join("") + '</table>' : "")
-        + ((a.spares || []).length ? '<h5>From spares</h5><table class="pa-mto"><tr><th>Item</th><th>Description</th><th>Part / tag no.</th><th>Qty</th><th>Unit</th><th>Store location / notes</th><th>Secured</th></tr>' + a.spares.map((it, k) => '<tr><td>' + (k + 1) + '</td><td>' + esc(it.desc || "") + '</td><td>' + esc(it.part || "") + '</td><td>' + esc(it.qty || "") + '</td><td>' + esc(it.unit || "") + '</td><td>' + esc(it.notes || "") + '</td><td>' + (it.secured ? "Yes" : "No") + '</td></tr>').join("") + '</table>' : "")
+        + (txt || det ? '<div class="pa-grid' + (txt && det ? "" : " one") + '">' + (txt ? '<div>' + txt + '</div>' : "") + (det ? '<table class="pa-det">' + det + '</table>' : "") + '</div>' : "")
+        + tbl("Isolations", ["No.", "Equipment number", "Equipment name", "Note"], (a.isol || []).map((it, k) => [k + 1, it.tag, it.name, it.note]))
+        + tbl("MTO", ["Item", "Description", "Part / tag no.", "Qty", "Unit", "Notes"], (a.mto || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes]))
+        + tbl("From spares", ["Item", "Description", "Part / tag no.", "Qty", "Unit", "Store location / notes", "Secured"], (a.spares || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes, it.secured ? "Yes" : ""]))
         + (a.files.length ? '<h5>Attachments</h5>' + a.files.map(f => '<div class="pa-file">📎 <a href="' + esc(Media.fileUrlOnline(a, f)) + '">' + esc(f.name) + '</a> <span class="dim">' + fmtSize(f.size || 0) + '</span></div>').join("") : "")
         + (o.photos && a.photos.length ? '<h5>Photos</h5><div class="pa-ph" style="--per:' + o.per + '">' + a.photos.map(ph => '<figure><img src="' + esc(Media.src(a, ph)) + '" alt=""><figcaption>' + esc(ph.name || "") + '</figcaption></figure>').join("") + '</div>' : "") + '</section>')); });
     document.body.appendChild(root); note("Getting the photos ready to print…", 8000);
     await Promise.race([Promise.all($$("img", root).map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))), new Promise(r => setTimeout(r, 20000))]);
+    if (o.pages > 0) fit(root, o);
     const done = () => { root.remove(); removeEventListener("afterprint", done); }; addEventListener("afterprint", done);
     window.print(); }
+  /* pages per action: each action is laid out off screen at the printed width, and while it's taller than its pages its
+     photos get more to a row and then a lower height, until it fits (or the photos are as small as they go) */
+  function fit(root, o){ const mm = 96 / 25.4, page = 273 * mm, room = o.pages * page - 8 * mm; root.classList.add("measure");
+    $$(".pr-act", root).forEach(sec => { const ph = $(".pa-ph", sec); if (!ph || sec.offsetHeight <= room) return; const imgs = $$("img", ph);
+      const tries = []; for (let per = o.per; per <= 6; per++) tries.push([per, 120]); [100, 80, 65, 50, 40, 32, 25].forEach(hh => tries.push([6, hh]));
+      for (const [per, hh] of tries){ ph.style.setProperty("--per", per); imgs.forEach(im => im.style.maxHeight = hh + "mm"); if (sec.offsetHeight <= room) break; } });
+    root.classList.remove("measure"); }
   return { excelDialog, dialog, run };
 })();

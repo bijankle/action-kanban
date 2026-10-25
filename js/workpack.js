@@ -23,7 +23,10 @@ const Workpack = (() => {
     let y = 0; const need = n => { if (y + n > BOT){ doc.addPage(); y = 18; } };
     const head = t => { need(24); y += 4;   /* (a heading keeps a couple of lines of what follows with it) */  doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.setTextColor(...rgb); doc.text(t.toUpperCase(), M, y); doc.setDrawColor(...rgb); doc.setLineWidth(0.4); doc.line(M, y + 1.5, W - M, y + 1.5); y += 7; doc.setTextColor(30); };
     const para = t => { doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(30); doc.splitTextToSize(t || "–", CW).forEach(l => { need(5.2); doc.text(l, M, y); y += 5; }); y += 2; };
-    const table = (hd, body, cols) => { doc.autoTable({ startY: y, head: [hd], body, margin: { top: 16, left: M, right: M, bottom: 16 }, styles: { font: "helvetica", fontSize: 9, cellPadding: 1.8, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" },
+    /* a table without its empty columns (the first, the item number, always stays) */
+    const table = (hd0, body0, cols0) => { const keep = hd0.map((c, k) => k === 0 || body0.some(r => String(r[k] == null ? "" : r[k]).trim())), ix = hd0.map((c, k) => k).filter(k => keep[k]);
+      const hd = ix.map(k => hd0[k]), body = body0.map(r => ix.map(k => r[k])), cols = {}; ix.forEach((k, j) => { if (cols0 && cols0[k]) cols[j] = cols0[k]; });
+      doc.autoTable({ startY: y, head: [hd], body, margin: { top: 16, left: M, right: M, bottom: 16 }, styles: { font: "helvetica", fontSize: 9, cellPadding: 1.8, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" },
       headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" }, alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: cols || {} }); y = doc.lastAutoTable.finalY + 6; };
     /* what goes in: the equipment's documents */
     await Equip.load().catch(() => {});
@@ -73,7 +76,7 @@ const Workpack = (() => {
           y = Math.max(y, top + mh) + 2;
           if (sm){ doc.setFontSize(8); doc.setTextColor(110); doc.setFont("helvetica", "italic"); doc.splitTextToSize(sm.note, CW).forEach(l => { doc.text(l, M, y + 2.5); y += 3.6; }); doc.setFont("helvetica", "normal"); }
           y += 5; }
-        head("Problem"); para(a.f.problem); head("Work required"); para(a.f.solution); if (a.f.notes){ head("Notes"); para(a.f.notes); } }
+        [["Problem", a.f.problem], ["Work required", a.f.solution], ["Notes", a.f.notes]].forEach(([k, v]) => { if (String(v || "").trim()){ head(k); para(v); } }); }   // (anything blank is left out)
       if (id === "isol"){ head("Isolations"); table(["No.", "Equipment number", "Equipment name", "Note"], a.isol.map((it, i) => [i + 1, it.tag || "", it.name || "", it.note || ""]), { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 40 }, 2: { cellWidth: 62 } }); }
       if (id === "parts"){ head("Parts"); table(["Item", "Description", "Part / tag no.", "Qty", "Unit", "Supplied from", "Notes"], parts.map((it, i) => [i + 1, it.desc || "", it.part || "", it.qty || "", it.unit || "", it.src, it.notes || ""]),
         { 0: { cellWidth: 11, halign: "center" }, 1: { cellWidth: 50 }, 3: { cellWidth: 12, halign: "right" }, 4: { cellWidth: 13 }, 5: { cellWidth: 22 } }); }
