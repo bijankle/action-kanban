@@ -62,7 +62,10 @@ const Table = (() => {
     else if (k === "del" && a.del){ Store.mutate("a:" + a._p, () => { a.del = false; Store.touch(a); }); Store.log("Brought back " + Store.actId(a)); note("Brought back " + Store.actId(a)); }
     else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Store.mutate("a:" + a._p, () => { a.del = true; Store.touch(a); }); Store.log("Deleted " + Store.actId(a)); if (App.selRef === tr.dataset.ref) App.select(null); } } }, true);
   /* titles are one line: a title too long for its column ends in … with a more… that shows it in full */
+  /* the ID column is just wide enough for its box with an 8px margin each side, like the Status buttons */
+  let idW = NEED.id;
   function cut(el){ const ids = $$(".idw .aid", el); el.style.removeProperty("--aid-w"); if (ids.length) el.style.setProperty("--aid-w", Math.ceil(Math.max(...ids.map(x => x.getBoundingClientRect().width))) + "px");
+    const bx = $$("td.idc .idw", el); if (bx.length){ const want = Math.ceil(Math.max(...bx.map(x => x.getBoundingClientRect().width))) + 16 + 1; if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
     $$("td.ttl", el).forEach(td => { const t = $(".tt", td); if (t) td.classList.toggle("cut", t.scrollWidth > t.clientWidth + 1); });
     $$("td.ltc", el).forEach(td => { const t = $(".lt-b", td), v = String((App.act(td.closest("tr").dataset.ref) || { f: {} }).f[t.dataset.lt] || ""); td.classList.toggle("cut", v.includes("\n") || t.scrollWidth > t.clientWidth + 1); }); }
   /* long text (notes and the like) in the list: click the box, or its more…, and it opens over the cell in full to edit,
@@ -93,7 +96,7 @@ const Table = (() => {
     const lp = c => (["sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
     /* the least each column can be; when they don't all fit, the tick columns go first, then the dates and numbers,
        so a title never gets squeezed to one letter per line (and the list scrolls sideways only if even that's not enough) */
-    const fw = c => c.type === "id" ? Math.max(ws[c.id] || 0, NEED.id) : ws[c.id] || Math.min(px(c), 150);   // (the ID column fits its box: ID, copy, PDF)   // (a width someone set is kept as it is)
+    const fw = c => c.type === "id" ? idW : ws[c.id] || Math.min(px(c), 150);   // (the ID column fits its box: ID, copy, PDF)   // (a width someone set is kept as it is)
     const least = c => fix(c) ? fw(c) : c.id === "title" ? 260 : 110;
     const lv = c => lp(c) === " lp1" ? 1 : lp(c) === " lp2" ? 2 : 3, need = n => all.filter(c => lv(c) > n).reduce((t, c) => t + least(c), 0);
     const w = el.clientWidth || 9999, level = need(0) <= w ? 0 : need(1) <= w ? 1 : 2, cs = all.filter(c => lv(c) > level); lastLv = level; levelOf = w2 => need(0) <= w2 ? 0 : need(1) <= w2 ? 1 : 2;

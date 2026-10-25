@@ -886,3 +886,5 @@ input[type=checkbox]{width:18px;height:18px}
 /* in the list the tick, bin, pause and On hold (i) are evenly spaced: the same gap at both edges of the cell and between
    each of them. The (i)'s space is kept on rows without one, so the buttons line up down the list */
 .tbl td.actc{padding:0}.tbl td.actc .rbs{display:flex;width:100%;gap:0;justify-content:space-evenly}.tbl td.actc .rb-hi{flex:none;width:22px}
+/* the ID box in the middle of its column, with the same gap either side of the ID inside the box */
+.tbl td.idc{padding:0;text-align:center}.idw .aid{margin-right:8px}
