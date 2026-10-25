@@ -146,9 +146,10 @@ const Fields = (() => {
       const r = i.getBoundingClientRect(), below = innerHeight - r.bottom > 260; Object.assign(dd.style, { left: Math.max(8, Math.min(r.left, innerWidth - 428)) + "px", width: Math.max(r.width, 420) + "px", top: (below ? r.bottom + 3 : Math.max(8, r.top - 263)) + "px" });
       i.setAttribute("aria-expanded", "true"); paint();
       $$(".tg-o", dd).forEach(o => { o.onmousedown = e => { e.preventDefault(); pick(res[+o.dataset.k]); }; o.onmousemove = () => { if (hi !== +o.dataset.k){ hi = +o.dataset.k; paint(); } }; }); };
-    const pick = x => { const { head } = seg(); i.value = head + x.t + ", "; const n = i.value.length; i.setSelectionRange(n, n); closeDD(); i.focus(); };
+    let sep = false;   // (a tag is complete at the end of the box: the next letter typed starts a new tag after a comma)
+    const pick = x => { const { head } = seg(); i.value = head + x.t; const n = i.value.length; i.setSelectionRange(n, n); closeDD(); i.focus(); sep = true; };
     i.setAttribute("role", "combobox"); i.setAttribute("aria-autocomplete", "list"); i.setAttribute("aria-expanded", "false");
-    i.onfocus = () => { if (eq) Equip.load().catch(() => {}); if (i.value && !/,\s*$/.test(i.value)) i.value += ", "; const n = i.value.length; setTimeout(() => i.setSelectionRange(n, n), 0); };
+    i.onfocus = () => { if (eq) Equip.load().catch(() => {}); sep = !!i.value.trim() && !/,\s*$/.test(i.value); const n = i.value.length; setTimeout(() => i.setSelectionRange(n, n), 0); };
     i.oninput = () => { if (eq && !Equip.count) Equip.load().then(() => document.activeElement === i && draw()).catch(() => {}); draw(); };
     const commit = () => { let tags = i.value.split(",").map(t => t.trim()).filter(Boolean);
       tags = tags.map(t => { if (eq){ const hit = (Equip.find(t, "t") || []).find(x => x.t.toLowerCase() === t.toLowerCase()); return hit ? hit.t : t.toUpperCase(); } return optLabels(f).find(x => x.toLowerCase() === t.toLowerCase()) || t; });
@@ -156,9 +157,12 @@ const Fields = (() => {
       if (!eq){ const fresh = tags.filter(t => !optLabels(f).includes(t)); if (fresh.length) Store.mutate("config", () => { f.options = f.options || []; fresh.forEach(t => f.options.push({ id: uid(), label: t, color: "" })); Store.touch(f); }); }
       if (JSON.stringify(tags) !== JSON.stringify(v)) set(a, f, tags); else show(); };
     i.onblur = () => { closeDD(); commit(); };
+    i.addEventListener("beforeinput", e => { if (!sep) return; if (e.inputType !== "insertText"){ if (/^delete/.test(e.inputType)) sep = false; return; }
+      sep = false; if (i.selectionStart !== i.value.length || /^[,\s]/.test(e.data || "")) return; e.preventDefault(); i.value += ", " + e.data; const n = i.value.length; i.setSelectionRange(n, n); i.dispatchEvent(new Event("input")); });
     i.onkeydown = e => { if (dd && (e.key === "ArrowDown" || e.key === "ArrowUp")){ e.preventDefault(); hi = (hi + (e.key === "ArrowDown" ? 1 : -1) + res.length) % res.length; paint(); return; }
       if (e.key === "Enter"){ e.preventDefault(); if (dd && res[hi]) return pick(res[hi]); i.blur(); }
       else if (e.key === "Tab" && dd && res[hi]){ e.preventDefault(); pick(res[hi]); }
+      else if (e.key === ","){ sep = false; }
       else if (e.key === "Escape"){ if (dd){ e.stopPropagation(); closeDD(); return; } show(); i.blur(); } };
     return w; }
   function openTags(anchor, a, f){ closePop(); let cur = (Array.isArray(a.f[f.id]) ? a.f[f.id] : []).slice();
