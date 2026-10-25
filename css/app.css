@@ -955,3 +955,7 @@ input[type=checkbox]{width:18px;height:18px}
 #status{min-width:150px;justify-content:flex-start}
 /* details labels only as wide as the longest one, the values take the rest */
 #printRoot .pa-det th{width:1%;white-space:nowrap;padding-right:14px}
+/* on hold strip (option A): symbols for who, mobile, email and since on one row, the notes underneath */
+#printRoot .pa-hold{display:flex;flex-direction:column;gap:3px}#printRoot .pa-hr{display:flex;flex-wrap:wrap;gap:3px 18px;align-items:baseline}#printRoot .pa-hn{color:#5b4a26}
+#printRoot .pa-hr b{color:inherit;margin:0}
+#printRoot .pa-ic{width:12px;height:12px;margin-right:5px;vertical-align:-1.5px;fill:none;stroke:#1d2430;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}

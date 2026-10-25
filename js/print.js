@@ -43,7 +43,7 @@ const Print = (() => {
     if (o.board){ const ss = Store.stages().filter(s => list.some(a => a.stage === s.id));
       root.appendChild(h('<section class="pr-board">' + head + '<div class="pb-cols" style="--n:' + ss.length + '">' + ss.map(s => '<div class="pb-col" style="--c:' + esc(s.color) + '"><div class="pb-h">' + esc(Store.todo(s)) + ' <span>' + list.filter(a => a.stage === s.id).length + '</span></div>'
         + list.filter(a => a.stage === s.id).map(a => '<div class="pb-card"><b>' + esc(Store.actId(a)) + '</b> ' + esc(a.f.title || "") + (Store.eta(a) ? '<i class="' + (Store.eta(a) === "TBC" ? "tbc" : "") + '">ETA ' + esc(fmtDate(Store.eta(a))) + '</i>' : "") + '</div>').join("") + '</div>').join("") + '</div></section>')); }
-    const skip = new Set(["title", "problem", "solution", "notes", "modified"])   /* (last modified is only for filtering in the app) */, links = await Media.shareLinks(list);   // (attachment links anyone can open)
+    const skip = new Set(["title", "problem", "solution", "notes", "modified", "status"])   /* (last modified is only for filtering in the app) */, links = await Media.shareLinks(list);   // (attachment links anyone can open)
     list.forEach((a, i) => { const s = Store.stage(a.stage);
       /* only what has something in it: blank boxes, unticked ticks and empty columns are left out to save the space */
       /* the ticked boxes together in one row, each with a tick (unticked ones are left out) */
@@ -51,8 +51,11 @@ const Print = (() => {
       const det = (ticks ? '<tr><th>Done</th><td class="pa-tks">' + ticks + '</td></tr>' : "") + Store.fields().filter(f => !skip.has(f.id) && f.type !== "check").map(f => [f, Fields.show(a, f)]).filter(([, v]) => { const t = String(v || "").replace(/<[^>]*>/g, "").trim(); return t && !/^(none|–|-|0 items?)$/i.test(t); }).map(([f, v]) => '<tr><th>' + esc(f.label) + '</th><td>' + v + '</td></tr>').join("");
       const tbl = (title, cols, rows) => { const keep = cols.map((c, k) => k === 0 || rows.some(r => String(r[k] == null ? "" : r[k]).trim())); return rows.length ? '<div class="pa-b"><h5>' + title + '</h5><table class="pa-mto"><tr>' + cols.filter((c, k) => keep[k]).map(c => '<th>' + c + '</th>').join("") + '</tr>' + rows.map(r => '<tr>' + r.filter((c, k) => keep[k]).map(c => '<td>' + esc(c == null ? "" : c) + '</td>').join("") + '</tr>').join("") + '</table></div>' : ""; };
       const txt = [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([, v]) => String(v || "").trim()).map(([k, v]) => '<div class="pa-b"><h5>' + k + '</h5><div class="pa-tx">' + esc(v) + '</div></div>').join("");
-      root.appendChild(h('<section class="pr-act' + (o.newPage || (!o.board && i === 0) ? " np" : "") + '">' + (!o.board && i === 0 ? head : "") + '<div class="pa-h" style="--c:' + esc(s.color) + '"><b>' + esc(Store.actId(a)) + '</b><span class="pa-t">' + esc(a.f.title || "") + '</span></div>'
-        + (Hold.lines(a).length ? '<div class="pa-hold"><b>On hold</b>' + Hold.lines(a).map(([k, v]) => '<span><i>' + esc(k) + '</i> ' + (k === "Mobile" ? '<a href="tel:' + esc(String(v).replace(/\s/g, "")) + '">' + esc(v) + '</a>' : k === "Email" ? '<a href="mailto:' + esc(v) + '">' + esc(v) + '</a>' : esc(v)) + '</span>').join("") + '</div>' : "")
+      root.appendChild(h('<section class="pr-act' + (o.newPage || (!o.board && i === 0) ? " np" : "") + '">' + (!o.board && i === 0 ? head : "") + '<div class="pa-h" style="--c:' + esc(s.color) + '"><b>' + esc(Store.actId(a)) + '</b><span class="pa-t">' + esc(a.f.title || "") + '</span><span class="stg">' + esc(s.name) + '</span></div>'
+        /* on hold: who it's waiting on and how to reach them on one row (symbols, not labels), the notes underneath */
+        + (Hold.lines(a).length ? (() => { const L = Object.fromEntries(Hold.lines(a)), it = (e, lab, v) => v ? '<span><svg class="pa-ic" viewBox="0 0 24 24" role="img" aria-label="' + lab + '"><path d="' + HI[e] + '"/></svg>' + v + '</span>' : "";
+            return '<div class="pa-hold"><div class="pa-hr">' + it("who", "Waiting on", L["Waiting on"] && esc(L["Waiting on"]).replace(/^([^,]+)/, "<b>$1</b>")) + it("tel", "Mobile", L.Mobile && '<a href="tel:' + esc(String(L.Mobile).replace(/\s/g, "")) + '">' + esc(L.Mobile) + '</a>')
+              + it("mail", "Email", L.Email && '<a href="mailto:' + esc(L.Email) + '">' + esc(L.Email) + '</a>') + it("cal", "On hold since", L["On hold since"] && "Since " + esc(L["On hold since"])) + '</div>' + (L.Notes ? '<div class="pa-hn">' + it("note", "Notes", esc(L.Notes)) + '</div>' : "") + '</div>'; })() : "")
         /* the text down the left column, the photos down the right; text that runs longer than the photos moves across
            under them (balance, below) */
         + '<div class="pa-cols' + (o.photos && a.photos.length ? "" : " one") + '"><div class="pa-l">' + (det ? '<div class="pa-b"><table class="pa-det">' + det + '</table></div>' : "") + txt
@@ -66,6 +69,10 @@ const Print = (() => {
     balance(root); if (o.pages > 0) fit(root, o);
     const done = () => { root.remove(); removeEventListener("afterprint", done); }; addEventListener("afterprint", done);
     window.print(); }
+  /* the on hold strip's small black line symbols: a person, an old style telephone handset, an envelope, a calendar, a
+     speech bubble */
+  const HI = { who: "M12 12a4 4 0 100-8 4 4 0 000 8zM4.5 21a7.5 7.5 0 0115 0", tel: "M5 4.5c2-1.5 3.5-1 4.5 1l1 2.5c.4 1-.1 1.8-1 2.3l-1 .6c.9 2.3 2.4 3.8 4.6 4.6l.6-1c.5-.9 1.3-1.4 2.3-1l2.5 1c2 1 2.5 2.5 1 4.5-1.6 2-4 2.3-7 .7-3.4-1.8-6-4.4-7.8-7.8-1.6-3-1.3-5.4.3-6.9z",
+    mail: "M3.5 6h17v12h-17zM3.5 6.5l8.5 6.5 8.5-6.5", cal: "M4 6h16v14H4zM4 10h16M8.5 3.5v4M15.5 3.5v4", note: "M4 5h16v11H9l-5 4z" };
   /* when the text column runs well past the photos, its last blocks (tables, attachments, then notes) move across under
      the photos, one at a time while that evens the two columns up */
   function balance(root){ root.classList.add("measure"); $$(".pa-cols", root).forEach(bal); root.classList.remove("measure"); }
