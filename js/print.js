@@ -65,7 +65,7 @@ const Print = (() => {
     window.print(); }
   /* pages per action: each action is laid out off screen at the printed width, and while it's taller than its pages its
      photos get more to a row and then a lower height, until it fits (or the photos are as small as they go) */
-  function fit(root, o){ const mm = 96 / 25.4, page = 190 * mm, room = o.pages * page - 8 * mm; root.classList.add("measure");
+  function fit(root, o){ const mm = 96 / 25.4, page = 273 * mm, room = o.pages * page - 8 * mm; root.classList.add("measure");
     $$(".pr-act", root).forEach(sec => { const ph = $(".pa-ph", sec); if (!ph || sec.offsetHeight <= room) return; const imgs = $$("img", ph);
       const tries = []; for (let per = o.per; per <= 6; per++) tries.push([per, 120]); [100, 80, 65, 50, 40, 32, 25].forEach(hh => tries.push([6, hh]));
       for (const [per, hh] of tries){ ph.style.setProperty("--per", per); imgs.forEach(im => im.style.maxHeight = hh + "mm"); if (sec.offsetHeight <= room) break; } });
