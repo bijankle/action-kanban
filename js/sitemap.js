@@ -23,14 +23,18 @@ const SiteMap = (() => {
   /* one tag: its position and how it was found, or null */
   async function locate(tag){ const at = await data(); await Equip.load(); const p = at.get(tag);
     if (p) return { tag, ll: p.ll, how: p.est ? "its approximate layout position" : "its layout position" };
-    const e = Equip.get(tag) || {}, nw = words(e.n), area = (tag.match(/^([A-Z]\d{2,3})-/) || [])[1];
+    const e = Equip.get(tag) || {}, nw = words(e.n); let area = (tag.match(/^([A-Z]\d{2,3})-/) || [])[1];
     const placed = [...at.entries()].map(([t, v]) => Object.assign({ t }, v));
     /* the main equipment: the placed item whose name is the longest run of words this name starts with */
     let best = null; placed.forEach(x => { const xw = words(x.name); if (xw.length < 2 && !(xw.length === 1 && xw[0].length > 6)) return; if (xw.length > nw.length || !xw.every((w, i) => nw[i] === w)) return;
       const sc = xw.length * 10 + (area && x.t.startsWith(area + "-") ? 5 : 0); if (!best || sc > best.sc) best = { x, sc }; });
     if (best) return { tag, ll: best.x.ll, how: "the position of " + best.x.t + " " + best.x.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) + ", the main equipment it belongs to" };
     const avg = list => [list.reduce((s, x) => s + x.ll[0], 0) / list.length, list.reduce((s, x) => s + x.ll[1], 0) / list.length];
+    /* an instrument whose description starts with the equipment it's on (ZT12005A: "F12-BN-401 ROM BIN …"): that equipment's place */
+    const ref = (String(e.n || "").toUpperCase().match(/\b([A-Z]\d{2,3}-[A-Z]{1,4}-\d{2,4}[A-Z]?)\b/) || [])[1];
+    if (ref && ref !== tag && !locate.depth){ locate.depth = 1; try { const l = await locate(ref); if (l && !/^the middle of plant area/.test(l.how)) return { tag, ll: l.ll, how: "the position of " + ref + ", the main equipment it belongs to" }; } finally { locate.depth = 0; } }
     const same = e.p && placed.filter(x => x.pid === e.p); if (same && same.length) return { tag, ll: avg(same), how: "equipment on the same P&ID (" + e.p + ")" };
+    if (!area && ref) area = ref.split("-")[0];   // (else the plant area of the equipment in its description)
     const inArea = area && placed.filter(x => x.t.startsWith(area + "-")); if (inArea && inArea.length) return { tag, ll: avg(inArea), how: "the middle of plant area " + area + ", so it's only rough" };
     return null; }
   async function locateAll(tags){ const out = []; for (const t of [...new Set((tags || []).filter(Boolean))]){ const l = await locate(t).catch(() => null); if (l) out.push(l); } return out; }
