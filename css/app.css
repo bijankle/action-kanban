@@ -945,3 +945,6 @@ input[type=checkbox]{width:18px;height:18px}
 #printRoot .pa-mto{font-size:8.5pt}
 #printRoot h5{break-after:avoid}#printRoot .pa-ph img{max-height:85mm}
 #printRoot .pa-ph2{margin-top:8px}
+/* photos stacked in columns, each straight under the one above, so there are no gaps under the shorter ones */
+#printRoot .pa-ph{display:block;column-count:var(--per);column-gap:6px}
+#printRoot .pa-ph figure{display:block;width:auto;margin:0 0 6px;break-inside:avoid}
