@@ -69,14 +69,12 @@ const ActionView = (() => {
       + '<h4>Attachments <span class="cnt">' + (a.files.length || "") + '</span>' + (ro ? "" : '<button type="button" class="link" data-k="addf">Attach file</button>') + '</h4><div class="att-l"></div>'
       + '<h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span><button type="button" class="ph-cp" data-k="phcopy" title="Copy a picture of this action: ID and title, problem, solution and every photo" aria-label="Copy a picture of the problem, solution and photos">' + Table.IDI.copy + '</button></h4><div class="ph-fill"><div class="ph-g"></div></div></div>'
       + '<div class="ov-r">'
-      + '<div class="ov-map" hidden><h4>Expected location</h4><img alt="Expected location of the equipment"><p class="dim"></p></div>'
       + '<h4>Details</h4><div class="det"></div><h4 class="det-h2" hidden>Contractor</h4><div class="det det-c"></div><h4 class="det-h2">Record</h4><div class="det det-m"></div><div class="sd-foot">' + (a.by ? "Last edited by " + esc(a.by) + " " + esc(fmtDate(a.mod)) + " · " : "") + '<button type="button" class="link ch-ln" data-k="hist">Change history</button>' + (a.gps ? ' · <a target="_blank" rel="noopener" href="https://maps.google.com/?q=' + a.gps.lat + "," + a.gps.lng + '">Map pin</a>' : "") + '</div></div></div>';
     $$("[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     $$("[data-f=problem] textarea,[data-f=solution] textarea,[data-f=notes] textarea", el).forEach(t => t.rows = 4);
     photos(a, $(".ph-fill", el), ro);
     files(a, $(".att-l", el), ro);
-    const mp = $(".ov-map", el), showMap = sm => { if (!sm || !mp.isConnected) return; mp.hidden = false; $("img", mp).src = sm.url; $("p", mp).textContent = sm.note; };
-    const sm0 = SiteMap.ready(a, true); if (sm0 !== undefined) showMap(sm0); else SiteMap.forAction(a, true).then(showMap).catch(() => {});   // (straight away when it's been made before, so it doesn't pop in)
+    /* (the expected location map is for the work pack only, not shown here) */
     const det = $(".det", el);
     /* the action owner leads the details: their name and contact details go on the workpack */
     const ow = h('<div class="det-r det-own"><label>Action owner</label><span class="own"></span></div>'); det.appendChild(ow); ownerBox($(".own", ow), a, ro);

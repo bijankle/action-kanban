@@ -135,3 +135,11 @@ const fileIco = (label, cls) => { let t = String(label).toUpperCase(); if (t ===
   /* (option 1: a small page with the type in bold letters underneath, red for PDF, green for Excel) */
   return '<svg class="fico' + (cls ? " " + cls : "") + '" viewBox="0 0 24 26" aria-hidden="true"><path d="M13 1.5H7.5a1.6 1.6 0 00-1.6 1.6v10.8a1.6 1.6 0 001.6 1.6h9a1.6 1.6 0 001.6-1.6V6.6z M13 1.5v5.1h5.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
     + '<text class="' + (xl ? "fx" : "fp") + '" x="12" y="24.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="' + (t.length > 3 ? 7.2 : 8.6) + '" letter-spacing=".2">' + esc(t) + '</text></svg>'; };
+
+/* the browser's own autofill (saved names, phone numbers, addresses) is turned off for every box in the app, so only
+   the app's own dropdowns show. Browsers ignore autocomplete="off" on boxes that look like a name or phone number, but
+   leave alone a box whose autocomplete is a word they don't know. The sign in page is separate and keeps its autofill */
+const noAutofill = root => (root.matches && root.matches(AF_SEL) ? [root] : []).concat(root.querySelectorAll ? [...root.querySelectorAll(AF_SEL)] : []).forEach(i => { i.dataset.af = 1; i.setAttribute("autocomplete", "ad-" + Math.random().toString(36).slice(2, 8)); });
+const AF_SEL = "input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=password]):not([data-af]), textarea:not([data-af])";
+new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && noAutofill(n)))).observe(document.documentElement, { childList: true, subtree: true });
+document.addEventListener("DOMContentLoaded", () => noAutofill(document.body));
