@@ -376,7 +376,10 @@ html.dark .ap-r input[type=range]{background:linear-gradient(var(--accent),var(-
 
 /* print: A4 portrait, the board then each action */
 #printRoot{display:none}
-@page{size:A4 portrait;margin:12mm}   /* (every page the same size: a print job that mixes portrait and landscape gets stretched by some printers) */
+@page{size:A4 portrait;margin:12mm;
+  /* (the page's own corners: these replace the date, title and web address the browser would print) */
+  @top-left{content:""}@top-center{content:""}@top-right{content:""}@bottom-left{content:""}@bottom-center{content:""}
+  @bottom-right{content:counter(page) " / " counter(pages);font:8pt Arial,sans-serif;color:#888}}   /* (every page the same size: a print job that mixes portrait and landscape gets stretched by some printers) */
 @media print{
   body{overflow:visible;background:#fff;color:#111}
   body>*:not(#printRoot){display:none!important}
