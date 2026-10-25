@@ -853,3 +853,31 @@ html.dark .tg-o mark{background:#5a4a12}
 .ph-t:focus-visible,.ph-add:focus-visible{outline:2px solid var(--th);outline-offset:1px}
 .ph-add{border:1.5px dashed var(--line2);border-radius:8px;background:transparent;color:var(--muted);font:600 13px var(--font);cursor:pointer;padding:4px}
 .ph-add:hover{border-color:var(--th);color:var(--ink)}
+/* one height for every control: the ID box's 28px. Buttons, boxes, dropdowns, pills and toolbar buttons all match,
+   so anything side by side lines up. Text areas keep their own height */
+:root{--ctl-h:28px}
+.btn,.btn.sm,.btn.ghost{height:var(--ctl-h);padding:0 11px;font-size:13px}
+input.in,select.in,.in.sm,.hsearch .in,.sd-own .in,.tbl td.ed .tagin,.tbl td.ed input.in,.tbl td.ed select.in,.tg1,
+.ov-g .det-r .in,.ov-g .det-r select.in{height:var(--ctl-h);min-height:var(--ctl-h);padding-top:0;padding-bottom:0;font-size:13px}
+.tg1{line-height:calc(var(--ctl-h) - 2px)}
+.tb-show,.ov-g .det-r .tb-show{min-height:var(--ctl-h)}
+.ov-g .det-r .dt .btn,.ov-g .det-r .dt button,.dt .mini,.dt button{height:var(--ctl-h)}
+.ov-g .det-r .fv{min-height:var(--ctl-h);line-height:var(--ctl-h)}
+.pj-b,.status,.pill,.mb-btn,.mi-seg button,.seg button,.addc{height:var(--ctl-h);padding-top:0;padding-bottom:0}
+.pj-up,.ic-b,.prof-b,.rb{width:var(--ctl-h);height:var(--ctl-h)}
+.dl,.sd-head .dl{width:30px;height:var(--ctl-h);flex:0 0 30px}
+.rb svg{width:16px;height:16px}.rb svg.big{width:19px;height:19px}
+.idw,.idw.big{height:var(--ctl-h)}
+.opt input[type=color],.str input[type=color]{width:var(--ctl-h);height:var(--ctl-h)}
+.vt button{height:var(--ctl-h)}
+/* tick boxes grow with the new controls */
+input[type=checkbox]{width:18px;height:18px}
+/* the tab bars at the top are one 28px control too: 2px of the bar round 24px tabs */
+.tabs{height:var(--ctl-h);padding:2px;align-items:center}.tab{height:calc(var(--ctl-h) - 4px);padding-top:0;padding-bottom:0}
+.ph-g>button{margin:0;width:100%;height:100%;min-height:0}
+/* long text in the list: a box like Tags with the first lines, a more… when it's cut short, and the editor over the cell */
+.tbl td.ltc{overflow:hidden}.lt-w{display:flex;align-items:center;gap:6px;min-width:0}
+.lt-b{height:var(--ctl-h);padding:0 8px;font-size:13px;flex:1;min-width:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:text;display:block;line-height:calc(var(--ctl-h) - 3px)}
+.lt-more{display:none;flex:none;border:0;background:none;padding:0;color:var(--th);font:600 12px var(--font);cursor:pointer;text-decoration:underline}.lt-more:hover{color:var(--ink)}td.ltc.cut .lt-more{display:inline}
+.ltpop{display:flex;flex-direction:column;gap:6px;padding:10px 12px}.ltpop-h{font-size:12px;color:var(--dim)}.ltpop-h b{color:var(--ink)}.ltpop textarea{width:100%;resize:vertical;font-size:13.5px;line-height:1.45}
+.tbl td.ed .lt-b{border-color:var(--line2);background:var(--panel)}.tbl td.ed .lt-b:hover{border-color:var(--th)}

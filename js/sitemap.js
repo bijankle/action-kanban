@@ -7,7 +7,10 @@
 const SiteMap = (() => {
   const BASE = "https://raw.githubusercontent.com/bijankle/ProjectLibrary/HEAD/";   // where the plant layout data lives
   const BOUNDS = { n: -30.7542, s: -30.7782, w: 121.4955, e: 121.5279 };   // the site map picture, north up
-  const VIEW = { x: 736, y: 690, w: 1224, h: 1234 };   // the whole site view: the plant area of the 3101 px wide picture, as the user marked it
+  /* the whole site view: the plant area the user outlined on the 3101 px wide picture, and the box round it. Outside the
+     outline is left plain so the ragged edges of the photo don't show */
+  const POLY = [[884, 998], [1330, 820], [1645, 1024], [1849, 1209], [1849, 1451], [1432, 1893], [1392, 1882], [864, 1206], [848, 1140]];
+  const VIEW = { x: 740, y: 805, w: 1125, h: 1125 };
   let dataP = null, imgP = null; const shots = new Map();
   const src = f => (lsGet("adPlBase", "") || BASE) + f;
   const grab = (t, name) => { const i = t.indexOf("const " + name + " = "); if (i < 0) return null; const a = t.indexOf("=", i) + 1; let j = t.indexOf(";\nconst ", a); if (j < 0) j = t.lastIndexOf(";"); return JSON.parse(t.slice(a, j)); };
@@ -46,15 +49,17 @@ const SiteMap = (() => {
     let sw = Math.max(420, (Math.max(...xs) - Math.min(...xs)) * 1.5 + 160), sh = sw * H / W; if ((Math.max(...ys) - Math.min(...ys)) * 1.5 + 140 > sh){ sh = (Math.max(...ys) - Math.min(...ys)) * 1.5 + 140; sw = sh * W / H; }
     sw = Math.min(sw, im.naturalWidth); sh = sw * H / W; const q = im.naturalWidth / 3101; if (whole){ sw = VIEW.w * q; sh = VIEW.h * q; }
     const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2, sx = whole ? VIEW.x * q : Math.max(0, Math.min(im.naturalWidth - sw, cx - sw / 2)), sy = whole ? VIEW.y * q : Math.max(0, Math.min(im.naturalHeight - sh, cy - sh / 2)), k = W / sw;
-    g.fillStyle = "#d9d4c7"; g.fillRect(0, 0, W, H); g.imageSmoothingQuality = "high"; g.drawImage(im, sx, sy, sw, sh, 0, 0, W, H);
+    g.fillStyle = whole ? "#ebe8e1" : "#d9d4c7"; g.fillRect(0, 0, W, H); g.imageSmoothingQuality = "high"; g.drawImage(im, sx, sy, sw, sh, 0, 0, W, H);
+    if (whole){ const P = POLY.map(([px, py]) => [(px * q - sx) * k, (py * q - sy) * k]); g.beginPath(); g.rect(0, 0, W, H); P.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py)); g.closePath();
+      g.fillStyle = "#ebe8e1"; g.fill("evenodd"); g.beginPath(); P.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py)); g.closePath(); g.strokeStyle = "rgba(29,36,48,.45)"; g.lineWidth = Math.max(1.5, W / 600); g.stroke(); }
     const r = Math.max(12, 20 * W / 1200) * (whole ? 2 : 1), fs = Math.round(r * 0.95);
     const boxes = [], hit = (b) => boxes.some(o => b.x < o.x + o.w + 6 && b.x + b.w + 6 > o.x && b.y < o.y + o.h + 6 && b.y + b.h + 6 > o.y);
     const r0 = r; pts.forEach(p => { const x = (p[0] - sx) * k, y = (p[1] - sy) * k; boxes.push({ x: x - r0 * 1.8, y: y - r0 * 1.8, w: r0 * 3.6, h: r0 * 3.6 }); });   // callouts keep clear of the markers too
-    /* the whole site view with one spot: a small pin, and a square close up of it beside the pin (below it in the top
-       half, above it in the bottom half), joined by a line, with the tag in its top left corner */
+    /* the whole site view with one spot: a small pin, and a square close up of it in the bottom left corner (outside the
+       plant outline, so it hides nothing), joined to the pin by a line, with the tag in its top left corner */
     const mag = whole && gs.length === 1;
     if (mag){ const x = (pts[0][0] - sx) * k, y = (pts[0][1] - sy) * k, R = Math.round(W * 0.19), z = 3.5, rp = W / 130;
-      const bx = Math.max(R + 12, Math.min(W - R - 12, x)), by = Math.max(R + 12, Math.min(H - R - 12, y < H / 2 ? y + R + r * 2.5 : y - R - r * 2.5));
+      const bx = R + 10, by = H - R - 10;
       const dx = bx - x, dy = by - y, d = Math.hypot(dx, dy) || 1, e = 1 - R / Math.max(Math.abs(dx), Math.abs(dy), R + 1);
       g.strokeStyle = "rgba(29,36,48,.7)"; g.lineWidth = Math.max(2, W / 400); g.beginPath(); g.moveTo(x + dx / d * rp * 2.6, y + dy / d * rp * 2.6); g.lineTo(x + dx * e, y + dy * e); g.stroke();
       const ss = 2 * R / k / z; g.fillStyle = "#d9d4c7"; g.fillRect(bx - R, by - R, 2 * R, 2 * R); g.drawImage(im, pts[0][0] - ss / 2, pts[0][1] - ss / 2, ss, ss, bx - R, by - R, 2 * R, 2 * R);
@@ -77,9 +82,9 @@ const SiteMap = (() => {
       if (!bx){ bx = right ? x + r * 2.2 : x - r * 2.2 - tw - 16; by = Math.max(4, Math.min(H - bh - 4, y - bh / 2)); } boxes.push({ x: bx, y: by, w: tw + 16, h: bh });
       g.strokeStyle = "rgba(29,36,48,.6)"; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x + (right ? r * 1.6 : -r * 1.6), y); g.lineTo(right ? bx : bx + tw + 16, by + bh / 2); g.stroke();
       g.fillStyle = "rgba(255,255,255,.94)"; g.fillRect(bx, by, tw + 16, bh); g.fillStyle = "#1d2430"; lines.forEach((t, i) => g.fillText(t, bx + 8, by + fs * 1.05 + i * fs * 1.25)); });
-    /* north arrow and a scale bar (the site map is about 1 m a pixel) */
+    /* north arrow, and a scale bar on the zoomed views (the site map is about 1 m a pixel) */
     const mpp = ((BOUNDS.e - BOUNDS.w) * 111320 * Math.cos(locs[0].ll[0] * Math.PI / 180)) / im.naturalWidth, m = sw * mpp > 900 ? 200 : sw * mpp > 450 ? 100 : 50, bar = m / mpp * k;
-    g.fillStyle = "rgba(255,255,255,.9)"; g.fillRect(16, H - 48, bar + 20, 32); g.fillStyle = "#1d2430"; g.fillRect(26, H - 26, bar, 5); g.font = "bold " + Math.round(Math.min(r, 24) * 0.8) + "px Arial"; g.fillText(m + " m", 26, H - 32);
+    if (!whole){ g.fillStyle = "rgba(255,255,255,.9)"; g.fillRect(16, H - 48, bar + 20, 32); g.fillStyle = "#1d2430"; g.fillRect(26, H - 26, bar, 5); g.font = "bold " + Math.round(Math.min(r, 24) * 0.8) + "px Arial"; g.fillText(m + " m", 26, H - 32); }
     g.fillStyle = "rgba(255,255,255,.9)"; g.beginPath(); g.arc(W - 36, 38, 24, 0, 7); g.fill(); g.fillStyle = "#1d2430"; g.beginPath(); g.moveTo(W - 36, 18); g.lineTo(W - 44, 42); g.lineTo(W - 36, 37); g.lineTo(W - 28, 42); g.closePath(); g.fill(); g.font = "bold 12px Arial"; g.fillText("N", W - 40, 56);
     return c.toDataURL("image/jpeg", 0.85); }
   /* the note under the map: how each tag was placed, and to check it */
