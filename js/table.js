@@ -50,13 +50,12 @@ const Table = (() => {
     tick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5 9.5-10"/></svg>',
     dn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>' };
   function idBox(a, big){ const id = esc(Store.actId(a));
-    return '<span class="idw' + (big ? " big" : "") + '"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + id + '</span><button type="button" class="cp" data-idk="copy" title="Copy ' + id + ' as a picture: problem, solution, photos and status" aria-label="Copy ' + id + ' as a picture">' + IDI.copy + '</button><button type="button" class="pj" data-idk="pdf" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares" aria-label="Download the PDF of ' + id + '">' + fileIco("PDF") + '</button></span>'; }
+    return '<span class="idw' + (big ? " big" : "") + '"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + id + '</span><button type="button" class="pj" data-idk="pdf" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares" aria-label="Download the PDF of ' + id + '">' + fileIco("PDF") + '</button></span>'; }
   document.addEventListener("click", async e => { const b = e.target.closest("[data-idk]"); if (!b) return; e.stopPropagation(); const r = b.closest("[data-ref]"), a = r && App.act(r.dataset.ref); if (!a) return;
-    if (b.dataset.idk === "pdf") return Workpack.run(a);
-    copySheet(b, a, false); }, true);
-  /* a picture of the action on the clipboard (Sheet: the full sheet, or the simple one from the Photos copy button);
+    if (b.dataset.idk === "pdf") return Workpack.run(a); }, true);
+  /* a picture of the action on the clipboard (Sheet, from the copy button by Photos: problem, solution and photos);
      the button shows a tick when it's there */
-  async function copySheet(b, a, simple){ note("Copying " + Store.actId(a) + " as a picture…", 8000); const ok = await Sheet.copy(a, simple);
+  async function copySheet(b, a){ note("Copying " + Store.actId(a) + " as a picture…", 8000); const ok = await Sheet.copy(a);
     if (!ok) return note("Couldn't copy the picture here. Try again in Chrome or Edge.");
     b.classList.add("ok"); const was = b.innerHTML; b.innerHTML = IDI.tick; note("Copied " + Store.actId(a) + " as a picture. Paste it into an email or Teams."); setTimeout(() => { b.classList.remove("ok"); b.innerHTML = was; }, 1400); }
   document.addEventListener("click", async e => { const b = e.target.closest("[data-rb]"); if (!b) return; e.stopPropagation(); const tr = b.closest("[data-ref]"), a = tr && App.act(tr.dataset.ref); if (!a) return;

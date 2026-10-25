@@ -88,7 +88,7 @@ const ActionView = (() => {
     else if (k === "prev" || k === "next"){ const b = list[i + (k === "next" ? 1 : -1)]; if (b) App.select(b._p + ":" + b.u); }
     else if (k === "wp") Workpack.run(a);
     else if (k === "hist") history(a);
-    else if (k === "phcopy") Table.copySheet($("[data-k=phcopy]"), a, true);
+    else if (k === "phcopy") Table.copySheet($("[data-k=phcopy]"), a);
     else if (k === "done"){ const f = Store.field("complete"); if (f) Fields.set(a, f, Store.stage(a.stage).kind !== "done"); }
     else if (k === "viewall") Media.view(a, 0);
     else if (k === "addph") Media.pickFiles(a, "image/*");
