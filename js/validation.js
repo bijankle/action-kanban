@@ -1,15 +1,16 @@
 /* The Data validation tab: the allowable data for each column (its type and its list of choices),
-   the Organizer stages, and the contacts used by the contractor fields. */
+   the Organizer stages, the equipment and vendor lists, and the contacts (people, their companies and what they have outstanding). */
 "use strict";
 const Valid = (() => {
-  let sec = "fields", cur = "title";
+  let sec = lsGet("adTab", "") === "contacts" ? "contacts" : ["fields", "stages", "equip", "vendors", "contacts"].includes(lsGet("adDvSec", "")) ? lsGet("adDvSec", "") : "fields", cur = "title";
   function render(el){ const ro = !Store.S.edit;
     const ae = document.activeElement, row = ae && el.contains(ae) && ae.closest("[data-id], .ct-new, .dv-ed"), keep = row ? { id: row.dataset.id || (row.classList.contains("ct-new") ? "_new" : "_ed"), i: $$("input,select", row).indexOf(ae), s: ae.selectionStart, v: ae.value } : null;
-    el.innerHTML = '<div class="dv"><nav class="dv-nav">' + [["fields", "Fields and choices"], ["stages", "Stages"], ["equip", "Equipment"], ["vendors", "Vendors"]].map(([k, n]) => '<button type="button" data-s="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</nav><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
-    $$(".dv-nav button", el).forEach(b => b.onclick = () => { sec = b.dataset.s; App.render(); });
-    const body = $(".dv-body", el); if (sec === "contacts") sec = "fields";     /* the fields and the stages are the admin's to change; anyone editing can keep the equipment and vendor lists */
+    el.innerHTML = '<div class="dv"><nav class="dv-nav">' + [["fields", "Fields and choices"], ["stages", "Stages"], ["equip", "Equipment"], ["vendors", "Vendors"], ["contacts", "Contacts"]].map(([k, n]) => '<button type="button" data-s="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</nav><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
+    $$(".dv-nav button", el).forEach(b => b.onclick = () => { sec = b.dataset.s; lsSet("adDvSec", sec); App.render(); });
+    const body = $(".dv-body", el);     /* the fields and the stages are the admin's to change; anyone editing can keep the equipment and vendor lists */
     const lock = ro || ((sec === "fields" || sec === "stages") && !App.isAdmin());
-    ({ fields, stages, equip, vendors: Vendors.page })[sec](body, lock);   // (Contacts has its own tab now)
+    if (sec === "contacts") return Contacts.render(body);   // (the contacts keep their own rules: anyone editing can change them)
+    ({ fields, stages, equip, vendors: Vendors.page })[sec](body, lock);
     if (lock){ $$("input,select,button:not(.dv-f)", body).forEach(x => x.disabled = true); if (!ro) body.insertAdjacentHTML("afterbegin", '<p class="dim dv-lock">Only the admin changes the fields and stages.</p>'); }
     if (keep){ const r = keep.id === "_new" ? $(".ct-new", el) : keep.id === "_ed" ? $(".dv-ed", el) : $('[data-id="' + keep.id + '"]', el), t = r && $$("input,select", r)[keep.i];
       if (t){ if (t.tagName === "INPUT" && t.type !== "checkbox" && t.type !== "color" && t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
@@ -93,5 +94,6 @@ const Valid = (() => {
       Store.mutate("config", () => Store.S.config.contacts.push(Store.touch({ id: uid(), name: v("name"), company: v("company"), mobile: v("mobile"), email: v("email") }))); };
     $("button", nr).onclick = add; $$("input", nr).forEach(i => i.onkeydown = e => e.key === "Enter" && add()); }
   const section = () => sec;
-  return { section, render };
+  const open = k => { sec = k; lsSet("adDvSec", k); };
+  return { section, open, render };
 })();

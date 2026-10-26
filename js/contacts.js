@@ -1,4 +1,4 @@
-/* The Contacts tab: everyone the team deals with (first name, last name, company, mobile, email), in the settings with
+/* The Contacts section of the Data validation tab: everyone the team deals with (first name, last name, company, mobile, email), in the settings with
    the actions (config.contacts), so every computer has the same list. It grows by itself: a contractor contact or the
    person an action on hold is waiting on is added when they're first typed in. Click a person to see everything
    outstanding on them: the actions on hold waiting on them, with since when and when it's due, and the open actions
