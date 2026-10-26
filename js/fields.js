@@ -15,7 +15,7 @@ const Fields = (() => {
   /* the MTO and spares counts: a link to that action on the MTO or Spares tab */
   const partsLink = (a, f) => { const n = val(a, f); return '<a href="#" class="mto-l' + (n ? "" : " none") + '" data-parts="' + ({ mto: "mto", sparelist: "spares", isollist: "isol" })[f.type] + '" data-ref="' + a._p + ":" + a.u + '">' + (n ? n + (f.type === "isollist" ? " isolation" : " x item") + (n > 1 ? "s" : "") : "None") + '</a>'; };
   /* plain text for search, export and Gemini */
-  function text(a, f){ const v = val(a, f); if (f.type === "meta") return v ? fmtDate(v) : ""; if (f.type === "complete") return v ? "Yes" : "No"; if (f.type === "mto" || f.type === "sparelist" || f.type === "isollist") return v ? v + (f.type === "isollist" ? " isolations" : " items") : ""; if (f.type === "stage") return Store.stage(v).name; if (f.type === "check") return v ? "Yes" : "No";
+  function text(a, f){ const v = val(a, f); if (f.type === "check" && v === Flow.NA) return "Not needed"; if (f.type === "meta") return v ? fmtDate(v) : ""; if (f.type === "complete") return v ? "Yes" : "No"; if (f.type === "mto" || f.type === "sparelist" || f.type === "isollist") return v ? v + (f.type === "isollist" ? " isolations" : " items") : ""; if (f.type === "stage") return Store.stage(v).name; if (f.type === "check") return v ? "Yes" : "No";
     if (f.type === "date") return fmtDate(v); if (Array.isArray(v)) return v.join(", "); return v == null ? "" : String(v); }
   function chip(label, color){ return '<span class="chip' + (tbc(label) ? " tbc" : "") + '"' + (color && !tbc(label) ? ' style="--c:' + esc(color) + '"' : "") + '>' + esc(label) + '</span>'; }
   /* read only display (table cells, mobile, print) */
@@ -26,7 +26,7 @@ const Fields = (() => {
       case "mto": case "sparelist": case "isollist": return partsLink(a, f);
       case "meta": return v ? '<span class="meta-d" title="' + esc(new Date(v).toLocaleString()) + '">' + esc(fmtDate(v)) + '</span>' : "";
       case "complete": return v ? '<span class="tick">✓</span>' : "";
-      case "check": return v ? '<span class="tick">✓</span>' : "";
+      case "check": return v === Flow.NA ? '<span class="tick na" title="Not needed">–</span>' : v ? '<span class="tick">✓</span>' : "";
       case "multi": { const arr = Array.isArray(v) ? v : []; return arr.map(x => chip(x, optColor(f, x))).join(" "); }
       case "choice": return v ? chip(v, optColor(f, v)) : "";
       case "date": return v ? '<span class="' + (tbc(v) ? "tbc" : "") + '">' + esc(fmtDate(v)) + '</span>' : "";
@@ -34,27 +34,18 @@ const Fields = (() => {
       default: return v == null || v === "" ? "" : '<span class="' + (tbc(v) ? "tbc" : "") + '">' + esc(v) + '</span>'; } }
 
   function set(a, f, v){ if (f.id === "title" && typeof v === "string") v = properTitle(v);   // (titles in proper case)
+    if (f.id === "status"){ if (a.stage !== v) Flow.moveTo(a, v); return; }   // (picking a stage is like dragging the card there: it asks which steps change)
     if (!["stage", "rank", "complete"].includes(f.type) && JSON.stringify(a.f[f.id] == null ? "" : a.f[f.id]) === JSON.stringify(v == null ? "" : v)) return;   // nothing changed
     Store.mutate("a:" + a._p, () => {
-      if (f.id === "status"){ if (a.stage !== v) Store.place(a, v); Store.log("Moved " + Store.actId(a) + " to " + Store.stage(v).name); return; }
-      if (f.type === "complete"){ const fin = Store.stages().find(s => s.kind === "done"), ret = Store.stages().find(s => s.id === a.prevStage && s.kind !== "done") || Store.stages().find(s => s.kind !== "done");
+      if (f.type === "complete"){ const fin = Store.stages().find(s => s.kind === "done"), ret = Flow.where(a);   // (reopened, it goes to the step its ticks say)
         if (v && !done(a) && fin){ Store.place(a, fin.id, 0); Store.log("Completed " + Store.actId(a)); } else if (!v && done(a) && ret){ Store.place(a, ret.id); Store.log("Reopened " + Store.actId(a)); } return; }
-      /* the On hold tick: ticking it puts the action on hold (the i beside it then asks who it's waiting on); unticking takes it back to where it came from */
-      if (f.id === "onhold"){ const hold = Store.stages().find(s => s.kind === "hold"), back = Store.stages().find(s => s.id === a.prevHold && s.kind !== "hold") || Store.stages()[0];
+      /* the On hold tick: ticking it puts the action on hold (the i beside it then asks who it's waiting on); unticking takes it to the step its ticks say */
+      if (f.id === "onhold"){ const hold = Store.stages().find(s => s.kind === "hold"), back = Flow.where(a) || Store.stages()[0];
         if (v && hold && !Hold.on(a)){ Store.place(a, hold.id); Store.log("Put " + Store.actId(a) + " on hold"); } else if (!v && Hold.on(a)){ Store.place(a, back.id); Store.log("Took " + Store.actId(a) + " off hold"); } return; }
       if (f.id === "priority"){ Store.place(a, a.stage, v - 1); Store.log("Reordered " + Store.actId(a)); return; }
       a.f[f.id] = v; Store.touch(a); Store.log("Edited " + Store.actId(a));
-      /* a stage's tick box moves the action on the Organizer. Ticking it moves the action on when nothing before it is
-         still waiting: past that stage, and past any later stage already ticked (a contractor booked early), stopping at
-         the first one still to do, never into Done by itself. A box ticked ahead of time just records it: the action
-         stays where it is until the earlier box is ticked. Unticking a box takes the action back to that stage. On hold
-         and done actions just keep the tick. A choice with a stage counts once it's picked: Category moves it on from Categorize Issue */
-      if (f.stage && (f.type === "check" || f.type === "choice") && !Hold.on(a) && !done(a)){ const order = Store.stages().filter(s => s.kind !== "hold"), at = id => order.findIndex(s => s.id === id), k = at(f.stage), cur = at(a.stage);
-        const box = st => Store.fields().find(x => x.stage === st.id && (x.type === "check" || x.type === "choice")), ticked = st => { const x = box(st); return !!x && !!a.f[x.id]; };
-        if (k >= 0 && cur >= 0){
-          if (v && cur <= k && order.slice(cur, k).every(st => !box(st) || ticked(st))){ let n = k + 1; while (order[n] && order[n].kind !== "done" && ticked(order[n])) n++;
-            const next = order[n]; if (next && next.kind !== "done" && n !== cur){ Store.place(a, next.id); Store.log("Moved " + Store.actId(a) + " to " + Store.todo(next)); } }
-          else if (!v && cur > k){ Store.place(a, f.stage); Store.log("Moved " + Store.actId(a) + " back to " + Store.todo(Store.stage(f.stage))); } } }
+      /* a stage's step (its tick, or the Category choice): the card goes where the ticks now say (see Flow) */
+      if (f.stage && (f.type === "check" || f.type === "choice")){ Flow.mark(a, f, v); Flow.sync(a); }
       const auto = a.auto = a.auto || {}; delete auto[f.id]; if (f.id === "location") delete a.locAuto;
       const fill = (id, val) => { if (a.f[id] && !auto[id] && !(id === "location" && a.locAuto)) return; if (val){ a.f[id] = val; auto[id] = true; } else if (auto[id]){ a.f[id] = ""; delete auto[id]; } };
       /* the location follows the equipment's WBS area until someone types their own */
@@ -88,7 +79,10 @@ const Fields = (() => {
         s.style.setProperty("--c", Store.stage(v).color); s.onchange = () => set(a, f, s.value); return s; }
       case "rank": { const n = Store.ranked(a.stage).length; const s = h('<select class="in">' + Array.from({ length: n }, (_, i) => '<option' + (i + 1 === v ? " selected" : "") + '>' + (i + 1) + '</option>').join("") + '</select>');
         s.onchange = () => set(a, f, +s.value); return s; }
-      case "check": { const c = h('<label class="ck"><input type="checkbox"' + (v ? " checked" : "") + '><span></span></label>'); $("input", c).onchange = e => set(a, f, e.target.checked); return c; }
+      case "check": { const step = !!f.stage, na = v === Flow.NA, c = h('<label class="ck' + (na ? " na" : "") + '"' + (step ? ' title="' + esc((Flow.who(a, f) ? Flow.who(a, f) + ". " : "") + "Click: done. Click again: not needed. Again: clear") + '"' : "") + '><input type="checkbox"' + (v === true ? " checked" : "") + '><span></span></label>');
+        const i = $("input", c); i.indeterminate = na;
+        /* a stage's step has three states, round in turn: empty, done (✓), not needed (–) */
+        i.onchange = () => set(a, f, step ? (v === true ? Flow.NA : na ? false : true) : i.checked); return c; }
       /* choices suggest, they don't restrict: pick one of the list or type your own (which isn't added to the list) */
       case "choice": return combo(a, f, optLabels(f).map(o => ({ v: o, c: optColor(f, o) })).concat(extra(f).map(x => ({ v: x }))), true);
       case "multi": return tagBox(a, f);

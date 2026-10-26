@@ -1032,3 +1032,8 @@ input[type=checkbox]{width:18px;height:18px}
 /* the save button: a dot on its corner for the save state */
 .sv .sv-d{position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;border:1.5px solid var(--panel);background:var(--faint)}
 .sv.ok .sv-d{background:#2FB463}.sv.busy .sv-d{background:#F2B03D;animation:pulse 1s infinite}.sv.bad .sv-d{background:var(--bad)}.sv.bad{border-color:var(--bad);color:var(--bad)}
+/* a step marked not needed: the box shows a grey dash */
+.ck.na input{accent-color:#9aa3ad}.tick.na{color:var(--faint);font-weight:700}
+/* the confirm box when a card is dragged to another stage */
+.fw-win{width:min(460px,94vw)}.fw-h{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin:14px 0 4px}.fw-h .dim{text-transform:none;letter-spacing:0;font-weight:400}
+.fw-r{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:var(--ctl-h,28px);padding:3px 0;border-bottom:1px solid var(--line)}.fw-r .in{width:auto}
