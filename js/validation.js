@@ -5,7 +5,7 @@ const Valid = (() => {
   let sec = lsGet("adTab", "") === "contacts" ? "contacts" : ["fields", "stages", "equip", "vendors", "contacts"].includes(lsGet("adDvSec", "")) ? lsGet("adDvSec", "") : "fields", cur = "title";
   function render(el){ const ro = !Store.S.edit;
     const ae = document.activeElement, row = ae && el.contains(ae) && ae.closest("[data-id], .ct-new, .dv-ed"), keep = row ? { id: row.dataset.id || (row.classList.contains("ct-new") ? "_new" : "_ed"), i: $$("input,select", row).indexOf(ae), s: ae.selectionStart, v: ae.value } : null;
-    el.innerHTML = '<div class="dv"><nav class="dv-nav">' + [["fields", "Fields and choices"], ["stages", "Stages"], ["equip", "Equipment"], ["vendors", "Vendors"], ["contacts", "Contacts"]].map(([k, n]) => '<button type="button" data-s="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</nav><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
+    el.innerHTML = '<div class="dv"><nav class="dv-nav">' + [["fields", "Columns"], ["stages", "Stages"], ["equip", "Equipment"], ["vendors", "Vendors"], ["contacts", "Contacts"]].map(([k, n]) => '<button type="button" data-s="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</nav><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
     $$(".dv-nav button", el).forEach(b => b.onclick = () => { sec = b.dataset.s; lsSet("adDvSec", sec); App.render(); });
     const body = $(".dv-body", el);     /* the fields and the stages are the admin's to change; anyone editing can keep the equipment and vendor lists */
     const lock = ro || ((sec === "fields" || sec === "stages") && !App.isAdmin());
