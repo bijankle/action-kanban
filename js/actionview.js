@@ -97,7 +97,7 @@ const ActionView = (() => {
     $$("[data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a)); }
   async function act(k, a, list, i){
     if (k === "x") App.select(null);
-    else if (k === "prev" || k === "next"){ const b = list[i + (k === "next" ? 1 : -1)]; if (b) App.select(b._p + ":" + b.u); }
+    else if (k === "prev" || k === "next"){ const b = list[i + (k === "next" ? 1 : -1)]; if (b) App.select(b._p + ":" + b.u, App.sub); }   // (stays on the tab you were on: Materials, Isolations, Drawings)
     else if (k === "wp") Workpack.run(a);
     else if (k === "hist") history(a);
     else if (k === "phcopy") Table.copySheet($("[data-k=phcopy]"), a);

@@ -1,13 +1,11 @@
 /* The MTO and Spares tabs of the action view: the action's list of parts as a simple table, ready to fill in. Each row can move across (MTO to spares, spares to MTO). The MTO also holds the
-   quotes and the RFQ revisions: every RFQ PDF export takes the next rev letter and is kept for download. */
+   quotes, and exports the RFQ as a PDF. */
 "use strict";
 const Parts = (() => {
   const COLS = { mto: [["desc", "Description"], ["part", "Part / tag no."], ["qty", "Qty"], ["unit", "Unit"], ["eta", "ETA"], ["notes", "Notes"]],
     spares: [["desc", "Description"], ["part", "Part / tag no."], ["qty", "Qty"], ["unit", "Unit"], ["notes", "Store location / notes"]] };
   const NAME = { mto: "MTO", spares: "Spares" }, OTHER = { mto: "spares", spares: "mto" };
   const list = (a, k) => a[k] || (a[k] = []);
-  const rev = n => { let s = ""; n++; while (n > 0){ const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };   // 0 → A, 25 → Z, 26 → AA
-  const pRfq = (pid, name) => "data/p/" + pid + "/rfq/" + safeName(name);
   const created = new Map();   // a blank row that became an item: keep the cursor in it
 
   /* one action's list, drawn into its action view tab; keep is where the cursor was before the redraw */
@@ -26,15 +24,14 @@ const Parts = (() => {
       + (ro ? "" : '<button type="button" class="dl dl-ai" data-k="gem" title="Paste a parts list, quote or email. Gemini splits it into rows, and you check them before they are added." aria-label="Make rows from text with AI">' + aiIco() + '</button>')
       + (kind === "mto" && Mto.needsCut(a) ? '<button type="button" class="dl dl-pdf" data-k="cut" title="The cutting list for the trades: which pieces come out of which length or sheet, and the offcuts. It also comes with each RFQ export.">' + fileIco("Cut") + '</button>' : "")
       + '<button type="button" class="dl dl-xl" data-k="xls" title="Export this ' + NAME[kind] + ' to Excel">' + fileIco("XLSX") + '</button>'
-      + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF. Each export is the next rev (A, B, C…) and is kept below." : "Export the spares list as a PDF") + '">' + fileIco(kind === "mto" ? "RFQ" : "PDF") + '</button></div>'
+      + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF" : "Export the spares list as a PDF") + '">' + fileIco(kind === "mto" ? "RFQ" : "PDF") + '</button></div>'
       + (kind === "mto" ? Vendors.box(a, ro) : "")
       + (kind === "mto" ? '<div class="pt-docs"><div class="pt-box pt-quotes"><div class="pt-bh"><b>Quotes</b><span class="dim">' + (a.quotes || []).length + '</span><span class="grow"></span>' + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="quote">Upload quotes</button>') + '</div>'
           + ((a.quotes || []).length ? (a.quotes || []).slice().reverse().map(f => '<div class="pt-file"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : "FILE") + '</span><button type="button" class="link" data-q="' + f.h + '">' + esc(f.name) + '</button><span class="dim">' + esc(fmtDate(f.added)) + ' · ' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" data-qx="' + f.h + '" title="Remove">✕</button>') + '</div>').join("") : '<div class="dim pt-drop">No quotes yet.' + (ro ? "" : tipI("Upload them, or drop them here.")) + '</div>') + '</div>'
-        + '<div class="pt-box"><div class="pt-bh"><b>RFQ revisions</b><span class="dim">' + (a.rfq || []).length + '</span><span class="grow"></span><span class="dim">next export: Rev ' + rev((a.rfq || []).length) + '</span></div>'
-          + ((a.rfq || []).length ? (a.rfq || []).slice().reverse().map(r => '<div class="pt-file"><span class="pt-rev">Rev ' + esc(r.rev) + '</span><button type="button" class="link" data-rfq="' + esc(r.rev) + '">' + esc(r.name) + '</button><span class="dim">' + esc(fmtDate(r.at)) + (r.by ? " · " + esc(r.by) : "") + ' · ' + r.n + ' item' + (r.n === 1 ? "" : "s") + '</span></div>').join("") : '<div class="dim">None yet. Export to PDF makes Rev A.</div>') + '</div></div>' : "")
+        + '</div>' : "")
       + (kind === "mto" ? Mto.table(a, ro) : '<table class="tbl pt-tbl"><thead><tr><th class="pt-no">Item</th>' + cols.map(([k, n]) => '<th class="pt-' + k + '">' + esc(n) + '</th>').join("") + (kind === "spares" ? '<th class="pt-sec">Secured</th>' : "") + '<th class="pt-act"></th></tr></thead><tbody>'
       + items.map(row).join("") + Array.from({ length: blanks }, (_, k) => blank(k)).join("") + '</tbody></table>')
-      + '<div class="dim pt-foot">' + (items.length ? items.length + " item" + (items.length > 1 ? "s" : "") : "Empty") + (kind === "mto" && (a.spares || []).length ? " · " + a.spares.length + " more from spares, not on the RFQ" : "") + (kind === "spares" && items.length ? " · " + items.filter(x => x.secured).length + " of " + items.length + " secured" : "") + '</div>'; }
+      + '<div class="dim pt-foot">' + (items.length ? items.length + " item" + (items.length > 1 ? "s" : "") : "") + (kind === "mto" && (a.spares || []).length ? " · " + a.spares.length + " more from spares, not on the RFQ" : "") + (kind === "spares" && items.length ? " · " + items.filter(x => x.secured).length + " of " + items.length + " secured" : "") + '</div>'; }
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
 
   function wire(el, a, kind, ro){ const key = "a:" + a._p, items = list(a, kind); if (kind === "mto"){ Vendors.wire(el, a, ro); Mto.wire(el, a, ro); }
@@ -50,7 +47,6 @@ const Parts = (() => {
     $$(".pt-x", el).forEach(b => b.onclick = () => { const id = b.closest("tr").dataset.id; Store.mutate(key, () => { const i = items.findIndex(x => x.id === id); items.splice(i, 1); Store.touch(a); }); });
     $$("[data-q]", el).forEach(b => b.onclick = () => Media.openFile(a, a.quotes.find(f => f.h === b.dataset.q)));
     $$("[data-qx]", el).forEach(b => b.onclick = () => Store.mutate(key, () => { a.quotes = a.quotes.filter(f => f.h !== b.dataset.qx); Store.touch(a); }));
-    $$("[data-rfq]", el).forEach(b => b.onclick = () => openRfq(a, a.rfq.find(r => r.rev === b.dataset.rfq)));
     $$("[data-k]", el).forEach(b => b.onclick = () => { const k = b.dataset.k;
       if (k === "quote") pickFile("", true, fs => quotes(a, fs));
       else if (k === "xls") excel(a, kind); else if (k === "pdf") pdf(a, kind); else if (k === "gem") gemini(a, kind); else if (k === "cut") Mto.cutList(a); });
@@ -66,7 +62,7 @@ const Parts = (() => {
       } catch (e){ alert("Couldn't add " + f.name + ": " + e.message); } } }
 
   /* ---------- exports ---------- */
-  const fname = (a, kind, r) => Store.actId(a) + " " + (kind === "mto" ? "RFQ Rev " + r : "Spares") + ".pdf";
+  const fname = (a, kind) => Store.actId(a) + " " + (kind === "mto" ? "RFQ" : "Spares") + " " + new Date().toISOString().slice(0, 10) + ".pdf";
   function excel(a, kind){ const items = list(a, kind); if (!items.length) return alert("Nothing to export yet.");
     const sec = kind === "spares", head = ["Item"].concat(COLS[kind].map(c => c[1]), sec ? ["Secured"] : []), rows = items.map((it, i) => [String(i + 1)].concat(COLS[kind].map(([k]) => it[k] || ""), sec ? [it.secured ? "Yes" : "No"] : []));
     Excel.save(Excel.book(head, rows, Store.actId(a) + " " + NAME[kind]), Store.actId(a) + " " + NAME[kind] + " " + new Date().toISOString().slice(0, 10) + ".xlsx"); }
@@ -77,7 +73,6 @@ const Parts = (() => {
     const thb = (getComputedStyle(document.documentElement).getPropertyValue("--thb") || "#475569").trim(), rgb = /^#[0-9a-f]{6}$/i.test(thb) ? [1, 3, 5].map(i => parseInt(thb.substr(i, 2), 16)) : [71, 85, 105];
     doc.setFillColor(...rgb); doc.rect(0, 0, 210, 26, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(17);
     doc.text(kind === "mto" ? "Request for Quotation" : "Spares list", 14, 13); doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.text(Store.actId(a) + "   " + (p.name || ""), 14, 20);
-    if (r){ doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("Rev " + r, 196, 14, { align: "right" }); }
     doc.setTextColor(30); doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text(doc.splitTextToSize(a.f.title || "", 182), 14, 36);
     doc.setFont("helvetica", "normal"); doc.setTextColor(90);
     const pf = Profile.get(), tl = doc.splitTextToSize(a.f.title || "", 182).length;
@@ -98,26 +93,19 @@ const Parts = (() => {
       alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 62 }, 3: { cellWidth: 14, halign: "right" }, 4: { cellWidth: 16 } }, margin: { left: 14, right: 14 } });
     let y = doc.lastAutoTable.finalY + 8; doc.setFontSize(9); doc.setTextColor(110);
     if (kind === "mto" && (a.spares || []).length) { doc.text((a.spares.length) + " further item" + (a.spares.length > 1 ? "s come" : " comes") + " from site spares and " + (a.spares.length > 1 ? "are" : "is") + " not part of this request.", 14, y); y += 6; }
-    if (kind === "mto" && (a.rfq || []).length){ doc.text("Previous revisions: " + a.rfq.map(x => "Rev " + x.rev + " (" + fmtDate(x.at) + ")").join(", "), 14, y); }
-    const pages = doc.getNumberOfPages(); for (let i = 1; i <= pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(fname(a, kind, r).replace(/\.pdf$/, "") + "   Page " + i + " of " + pages, 105, 290, { align: "center" }); }
+    const pages = doc.getNumberOfPages(); for (let i = 1; i <= pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(fname(a, kind).replace(/\.pdf$/, "") + "   Page " + i + " of " + pages, 105, 290, { align: "center" }); }
     return doc.output("blob"); }
   let exporting = false;
   async function pdf(a, kind){ const items = list(a, kind); if (!items.length) return alert("Nothing to export yet."); if (exporting) return; exporting = true;
     try { if (kind !== "mto"){ Excel.save(await build(a, kind), fname(a, kind)); return; }
       if (!Store.S.edit) return App.viewOnly();
-      const r = rev((a.rfq || []).length), pf = Profile.get(), miss = [!Profile.name() && "your name", !pf.mobile && "your mobile", !pf.email && "your email"].filter(Boolean), noTo = !(a.rfqTo || []).length, bare = (a.rfqTo || []).filter(n => { const v = Vendors.byName(n) || {}; return !(v.contact || v.email || v.phone); });
-      const warn = (miss.length ? " Your profile has no " + miss.join(", ") + " (File, Your profile)." : "") + (noTo ? " No vendor is picked in Send RFQ to." : bare.length ? " No contact details for " + bare.join(", ") + " (click the vendor in Send RFQ to)." : "");
-      if (!await confirmBox("Export the RFQ as Rev " + r + "? It's kept in the RFQ revisions for traceability." + (warn ? " Missing on the RFQ:" + warn : ""), "Export Rev " + r)) return;
-      const blob = await build(a, kind, r), name = fname(a, kind, r), path = pRfq(a._p, Store.actId(a) + "-rev-" + r + ".pdf");
-      /* the rev is recorded first, so its letter is never handed out twice */
-      Store.mutate("a:" + a._p, () => { (a.rfq = a.rfq || []).push({ rev: r, at: now(), by: Profile.name(), n: items.length, name, path, items: clone(items) }); Store.touch(a); }); Store.log("Exported " + name);
-      Media.mem.set("rfq:" + path, URL.createObjectURL(blob)); Excel.save(blob, name); Local.saveOriginal(a, name, blob);
-      if (Mto.needsCut(a)) await Mto.cutList(a, r);   // (the trades' cutting list comes too, only when something needs more than one length or sheet)
-      try { await Store.addBlob(path, bufToB64(await blob.arrayBuffer())); note("Exported " + name + ", saved in the RFQ revisions"); }
-      catch (e){ alert(name + " is downloaded and recorded as Rev " + r + ", but its copy couldn't be uploaded (" + e.message + "). Keep the downloaded file."); } }
+      const pf = Profile.get(), miss = [!Profile.name() && "your name", !pf.mobile && "your mobile", !pf.email && "your email"].filter(Boolean), noTo = !(a.rfqTo || []).length, bare = (a.rfqTo || []).filter(n => { const v = Vendors.byName(n) || {}; return !(v.contact || v.email || v.phone); });
+      const warn = (miss.length ? " Your profile has no " + miss.join(", ") + " (File, Your profile)." : "") + (noTo ? " No vendor is picked." : bare.length ? " No contact details for " + bare.join(", ") + " (click the vendor to add them)." : "");
+      if (warn && !await confirmBox("Missing on the RFQ:" + warn + " Export it anyway?", "Export")) return;
+      const blob = await build(a, kind), name = fname(a, kind); Excel.save(blob, name); Local.saveOriginal(a, name, blob); Store.log("Exported " + name);
+      if (Mto.needsCut(a)) await Mto.cutList(a);   // (the trades' cutting list comes too, only when something needs more than one length or sheet)
+    }
     catch (e){ console.error(e); alert("Couldn't make the PDF: " + e.message); } finally { exporting = false; } }
-  async function openRfq(a, r){ const loc = Local.ok && await Local.original(a, r.name); const url = loc ? URL.createObjectURL(loc) : Media.mem.get("rfq:" + r.path) || GH.fileUrl(r.path);
-    const l = document.createElement("a"); l.href = url; l.download = r.name; l.target = "_blank"; l.rel = "noopener"; l.click(); }
 
   /* ---------- Gemini: paste a list of parts, check the rows, then add them ---------- */
   function gemini(a, kind){ if (!Store.S.edit) return App.viewOnly(); const cols = COLS[kind];
@@ -136,5 +124,5 @@ const Parts = (() => {
     $(".yn-no", m).onclick = () => m.close();
     add.onclick = () => { const take = rows.filter(r => r._on).map(r => { const o = { id: uid() }; cols.forEach(([k]) => { if (r[k]) o[k] = r[k]; }); return o; }); if (!take.length) return;
       Store.mutate("a:" + a._p, () => { list(a, kind).push(...take); Store.touch(a); }); Store.log("Added " + take.length + " parts to the " + NAME[kind] + " of " + Store.actId(a)); m.close(); }; }
-  return { renderFor, rev, NAME, loadPdf, created };
+  return { renderFor, NAME, loadPdf, created };
 })();
