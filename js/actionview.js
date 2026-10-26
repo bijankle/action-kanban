@@ -107,7 +107,7 @@ const ActionView = (() => {
     else if (k === "viewall") Media.view(a, 0);
     else if (k === "addph") Media.pickFiles(a, "image/*");
     else if (k === "addf") Media.pickFiles(a);
-    else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Store.mutate("a:" + a._p, () => { a.del = true; Store.touch(a); }); Store.log("Deleted " + Store.actId(a)); App.select(null); } } }
+    else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Flow.remove(a); App.select(null); } } }
   /* every photo as an even tile under the attachments, click one to view it. The tiles fill the width, in the fewest
      columns (at least 2) whose rows still fit the height left beside the map and details; if none fit, the smallest
      tiles and the box grows */

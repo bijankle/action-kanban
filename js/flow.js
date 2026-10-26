@@ -53,5 +53,8 @@ const Flow = (() => {
     $(".yn-yes", m).onclick = () => { const r = { close: {}, later: {} };
       $$("[data-c]", m).forEach(x => r.close[x.dataset.c] = x.tagName === "SELECT" ? x.value : ($(".on", x) || {}).dataset.v);
       $$("[data-l]", m).forEach(x => r.later[x.dataset.l] = x.checked); m.close(); res(r); }; }); }
-  return { NA, where, sync, mark, who, moveTo, stepOf, state, leave };
+  /* deleting an action: it goes to the Deleted pill, off hold and out of complete (to the step its ticks say), so
+     bringing it back carries on from there */
+  function remove(a){ Store.mutate("a:" + a._p, () => { const k = Store.stage(a.stage).kind; if (k === "hold" || k === "done"){ const to = where(a); leave(a, Store.stage(a.stage), to); Store.place(a, to.id); } a.del = true; Store.touch(a); }); Store.log("Deleted " + Store.actId(a)); }
+  return { NA, remove, where, sync, mark, who, moveTo, stepOf, state, leave };
 })();

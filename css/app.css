@@ -1141,3 +1141,4 @@ html.dark .menubar{box-shadow:none}
 .kbw .kb{align-items:flex-start}.kb .kb-col{max-height:100%;height:auto}.kb .kb-cards{flex:0 1 auto;min-height:106px}
 .kb-new{align-self:flex-start;height:calc(42px + 106px + 10px)}
 .kb-rows{align-items:flex-start}.kb-row{width:fit-content;max-width:100%;min-width:300px}.kb-row .kb-cards{min-height:calc(106px + 16px)}
+.rb-del.on,.rb-del.on:hover{background:color-mix(in srgb,#c0392b 14%,var(--panel));border-color:color-mix(in srgb,#c0392b 55%,var(--panel));color:#c0392b}html.dark .rb-del.on{color:#ff6b5b}.rb:disabled{opacity:.45;cursor:not-allowed}

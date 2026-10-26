@@ -39,6 +39,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     check("unticking PCCR takes it back", /Send PCCR$/.test(s3), s3);
     await p.evaluate(() => { const a = Store.all().find(x => x.no === 3); Fields.set(a, Store.field("defect"), true); });
     check("Defect emailed sets the Category to Defect", await p.evaluate(() => Store.all().find(x => x.no === 3).f.category === "Defect"));
+    /* deleting takes it off hold */
+    const dl = await p.evaluate(() => { const a = Store.all().find(x => x.no === 4); Fields.set(a, Store.field("onhold"), true); const held = Hold.on(a); Flow.remove(a); return held + " " + !!a.del + " " + Hold.on(a) + " " + Store.stage(a.stage).kind; });
+    check("deleting an action takes it off hold", dl === "true true false open", dl);
+    await p.evaluate(() => { const a = Store.all().concat(Store.deleted()).find(x => x.no === 4); Store.mutate("a:" + a._p, () => { a.del = false; Store.touch(a); }); });
     /* dates and times save, 24 hour */
     const dt = await p.evaluate(() => { const f = Store.fields().find(x => x.time); if (!f) return "no time field"; const a = Store.all().find(x => x.no === 4); const el = Fields.editor(a, f); document.body.appendChild(el);
       const [d, t] = el.querySelectorAll(".dchip"); d.value = "2026-11-03"; d.dispatchEvent(new Event("change", { bubbles: true })); const i = t.querySelector("input"); i.value = "1930"; i.dispatchEvent(new Event("blur"));

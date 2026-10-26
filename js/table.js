@@ -50,10 +50,11 @@ const Table = (() => {
   const IC = { done: '<svg class="big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.5l5 5 10-11"/></svg>',
     hold: '<svg class="big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M8.75 7.25v9.5M15.25 7.25v9.5"/></svg>',
     del: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>' };
-  function rowBtns(a){ const dn = Store.stage(a.stage).kind === "done", hd = Hold.on(a), id = esc(Store.actId(a)), dis = Store.S.edit ? "" : " disabled";
-    const b = (k, on, tip) => '<button type="button" class="rb rb-' + k + (on ? " on" : "") + '" data-rb="' + k + '" aria-pressed="' + on + '" title="' + tip + '" aria-label="' + tip + '"' + dis + '>' + IC[k] + '</button>';
+  /* (a deleted action is neither on hold nor complete: those two stay off, and only its red bin, to bring it back, works) */
+  function rowBtns(a){ const gone = !!a.del, dn = !gone && Store.stage(a.stage).kind === "done", hd = !gone && Hold.on(a), id = esc(Store.actId(a)), dis = Store.S.edit ? "" : " disabled";
+    const b = (k, on, tip) => '<button type="button" class="rb rb-' + k + (on ? " on" : "") + '" data-rb="' + k + '" aria-pressed="' + on + '" title="' + (gone && k !== "del" ? "Deleted: bring it back with the red bin first" : tip) + '" aria-label="' + tip + '"' + (gone && k !== "del" ? " disabled" : dis) + '>' + IC[k] + '</button>';
     /* the hold i first (who it's waiting on, red while details are missing), then on hold, complete and delete */
-    return '<span class="rbs"><span class="rb-hi">' + Hold.btn(a) + '</span>' + b("hold", hd, hd ? "On hold: click to take " + id + " off hold" : "Put " + id + " on hold") + b("done", dn, dn ? "Complete: click to reopen " + id : "Mark " + id + " complete") + b("del", !!a.del, a.del ? "Deleted: click to bring " + id + " back" : "Delete " + id) + '</span>'; }
+    return '<span class="rbs"><span class="rb-hi">' + (gone ? "" : Hold.btn(a)) + '</span>' + b("hold", hd, hd ? "On hold: click to take " + id + " off hold" : "Put " + id + " on hold") + b("done", dn, dn ? "Complete: click to reopen " + id : "Mark " + id + " complete") + b("del", !!a.del, a.del ? "Deleted: click to bring " + id + " back" : "Delete " + id) + '</span>'; }
   /* the ID in a box; in the Details header it carries the PDF button too (the list shows just the ID) */
   const IDI = { copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>',
     tick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5 9.5-10"/></svg>',
@@ -72,7 +73,7 @@ const Table = (() => {
     if (k === "done"){ const f = Store.field("complete"); if (f) Fields.set(a, f, Store.stage(a.stage).kind !== "done"); }
     else if (k === "hold"){ const f = Store.field("onhold") || { id: "onhold", type: "check" }; Fields.set(a, f, !Hold.on(a)); }
     else if (k === "del" && a.del){ Store.mutate("a:" + a._p, () => { a.del = false; Store.touch(a); }); Store.log("Brought back " + Store.actId(a)); note("Brought back " + Store.actId(a)); }
-    else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Store.mutate("a:" + a._p, () => { a.del = true; Store.touch(a); }); Store.log("Deleted " + Store.actId(a)); if (App.selRef === tr.dataset.ref) App.select(null); } } }, true);
+    else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Flow.remove(a); if (App.selRef === tr.dataset.ref) App.select(null); } } }, true);
   /* titles are one line: a title too long for its column ends in … with a more… that shows it in full */
   /* the ID column is just wide enough for its box with an 8px margin each side, like the Status buttons */
   let idW = NEED.id;
