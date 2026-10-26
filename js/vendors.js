@@ -59,12 +59,9 @@ const Vendors = (() => {
   /* ---------- the Vendors page on the Data validation tab ---------- */
   function page(body, ro){ const hit = v => smartHit(v.name + " " + v.cat + " " + v.ordered + " " + v.type, App.q);
     const list = all().filter(hit).sort((a, b) => a.cat.localeCompare(b.cat) || (b.po || 0) - (a.po || 0));
-    body.innerHTML = '<div class="dv-h">Approved vendors <span class="dim">' + all().length + ' vendors in ' + cats().length + ' categories' + (V().source ? ", from " + esc(V().source) : "") + (V().updated ? ", " + esc(fmtDate(V().updated)) : "") + '</span></div>'
-      + '<p class="dim">The vendors offered on an action\'s MTO tab.' + tipI("To update them, import the latest Approved Vendor List spreadsheet. It replaces the list for everyone, and keeps the contact details already entered.") + '</p>'
-      + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="imp">Import approved vendor list (Excel)…</button>')
-      + '<table class="tbl ct vd-tbl"><thead><tr><th>Vendor</th><th>Category</th><th>Supply type</th><th>What we have ordered from them</th><th>POs</th><th>Last PO</th><th>Contact <span class="dim">(on the RFQ)</span></th></tr></thead><tbody>'
-      + list.slice(0, 600).map(v => '<tr><td><b>' + esc(v.name) + '</b></td><td>' + esc(v.cat) + '</td><td>' + esc(v.type) + '</td><td>' + esc(v.ordered) + '</td><td>' + (v.po || "") + '</td><td>' + esc(fmtDate(v.last)) + '</td><td><button type="button" class="link vd-det' + (v.contact || v.email || v.phone ? "" : " dim") + '" data-vd="' + esc(v.name) + '">' + esc([v.contact, v.phone, v.email].filter(Boolean).join(", ") || (ro ? "" : "Add")) + '</button></td></tr>').join("") + '</tbody></table>';
-    const b = $("[data-k=imp]", body); if (b) b.onclick = () => pickFile(".xlsx", false, importFile);
+    /* (just the list: the import is the upload symbol in the toolbar above) */
+    body.innerHTML = '<div class="tw-wrap"><table class="tbl ct vd-tbl"><thead><tr><th>Vendor</th><th>Category</th><th>Supply type</th><th>What we have ordered from them</th><th data-col="po">POs</th><th data-col="last">Last PO</th><th data-col="ct">Contact</th></tr></thead><tbody>'
+      + list.slice(0, 600).map(v => '<tr><td><b>' + esc(v.name) + '</b></td><td>' + esc(v.cat) + '</td><td>' + esc(v.type) + '</td><td>' + esc(v.ordered) + '</td><td>' + (v.po || "") + '</td><td>' + esc(fmtDate(v.last)) + '</td><td><button type="button" class="link vd-det' + (v.contact || v.email || v.phone ? "" : " dim") + '" data-vd="' + esc(v.name) + '">' + esc([v.contact, v.phone, v.email].filter(Boolean).join(", ") || (ro ? "" : "Add")) + '</button></td></tr>').join("") + '</tbody></table></div>'; gridCols($(".vd-tbl", body), "vendors", { fixed: { po: 60, last: 110 } });
     $$("[data-vd]", body).forEach(x => x.onclick = () => details(x.dataset.vd, x)); }
   /* a vendor's contact details, which go on the RFQ: who to send it to, their phone, email and address */
   const DET = [["contact", "Contact person"], ["phone", "Phone"], ["email", "Email"], ["address", "Address"]];
@@ -98,5 +95,6 @@ const Vendors = (() => {
       Store.mutate("vendors", () => { Store.S.vendors = { v: 1, source: file.name, updated: new Date().toISOString().slice(0, 10), categories, vendors }; }); Store.log("Imported the approved vendor list " + file.name);
       note("Imported " + vendors.length + " approved vendors"); }
     catch (e){ console.error(e); alert("Couldn't import the vendor list: " + e.message); } }
-  return { box, wire, suggest, page, importFile, byName, lines, details };
+  const pickImport = () => { if (!Store.S.edit) return App.viewOnly(); pickFile(".xlsx", false, importFile); };
+  return { pickImport, box, wire, suggest, page, importFile, byName, lines, details };
 })();

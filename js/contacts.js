@@ -7,6 +7,22 @@
 "use strict";
 const Contacts = (() => {
   let sort = { k: "first", dir: 1 };
+  /* the Filters panel on this tab: companies (pick one or more) and whether anything is outstanding on them */
+  const F = (() => { const s = lsGet("adCtF", {}) || {}; return { co: new Set(s.co || []), ow: new Set(s.ow || []) }; })();
+  const keepF = () => lsSet("adCtF", { co: [...F.co], ow: [...F.ow] }), NOCO = "No company";
+  const coOf = c => String(c.company || "").trim() || NOCO, owOf = c => owed(c).n ? "Something outstanding" : "Nothing outstanding";
+  const pass = (c, skip) => (skip === "co" || !F.co.size || F.co.has(coOf(c))) && (skip === "ow" || !F.ow.size || F.ow.has(owOf(c)));
+  const searched = () => list().filter(c => smartHit([c.first, c.last, c.company, c.mobile, c.email].join(" "), App.q));
+  function filters(el){ const base = searched(), cnt = (k, v) => base.filter(c => pass(c, k) && (k === "co" ? coOf(c) : owOf(c)) === v).length;
+    const cos = [...new Set(list().map(coOf))].sort((a, b) => a === NOCO ? 1 : b === NOCO ? -1 : a.localeCompare(b));
+    const grp = (k, name, vals) => '<div class="fg2" data-k="' + k + '"><div class="fgh"><span>' + name + '</span>' + (F[k].size ? '<button type="button" class="link fclr">Clear</button>' : "") + '</div>'
+      + vals.map(v => { const n = cnt(k, v), on = F[k].has(v); if (!n && !on) return ""; return '<button type="button" class="pill fpill' + (on ? " on" : "") + (v === NOCO ? " ns" : "") + '" data-v="' + esc(v) + '" aria-pressed="' + on + '">' + esc(v) + ' <b>' + n + '</b></button>'; }).join("") + '</div>';
+    let body = $(".fp-groups", el); if (!body){ body = document.createElement("div"); body.className = "fp-groups"; el.appendChild(body); }
+    const shown = base.filter(c => pass(c)).length;
+    body.innerHTML = grp("ow", "Outstanding", ["Something outstanding", "Nothing outstanding"]) + grp("co", "Company", cos) + '<p class="dim fshown">' + shown + " of " + list().length + " people shown" + (F.co.size || F.ow.size ? ' <button type="button" class="link fall">Clear all</button>' : "") + '</p>';
+    $$(".fg2", body).forEach(g => { const k = g.dataset.k; g.onclick = e => { const b = e.target.closest(".fpill"); if (b){ const v = b.dataset.v; F[k].has(v) ? F[k].delete(v) : F[k].add(v); keepF(); App.render(); } if (e.target.closest(".fclr")){ F[k].clear(); keepF(); App.render(); } }; });
+    const fa = $(".fall", body); if (fa) fa.onclick = () => { F.co.clear(); F.ow.clear(); keepF(); App.render(); }; }
+  const fcount = () => F.co.size + F.ow.size + ((App.q || "").trim() ? 1 : 0);
   const split = n => { const p = String(n || "").trim().split(/\s+/); return { first: p.shift() || "", last: p.join(" ") }; };
   const full = c => [c.first, c.last].filter(Boolean).join(" ") || c.name || "";
   /* (contacts from before had one name; they show as first and last) */
@@ -20,17 +36,16 @@ const Contacts = (() => {
     const con = Store.visible().filter(a => open(a) && !hold.includes(a) && same(a.f.contractorContact, n));
     return { hold, con, n: hold.length + con.length }; }
   function render(el){ const ro = !Store.S.edit;
-    const all = list(), cs = all.filter(c => { return smartHit([c.first, c.last, c.company, c.mobile, c.email].join(" "), App.q); })
+    const all = list(), cs = searched().filter(c => pass(c))
       .sort((a, b) => String(a[sort.k] || "").localeCompare(String(b[sort.k] || ""), undefined, { sensitivity: "base", numeric: true }) * sort.dir || full(a).localeCompare(full(b)));
     const COLS = [["first", "First name"], ["last", "Last name"], ["company", "Company"], ["mobile", "Mobile"], ["email", "Email"]];
-    el.innerHTML = '<div class="cts"><div class="cts-h"><b>Contacts</b><span class="dim">' + cs.length + (cs.length !== all.length ? " of " + all.length : "") + ' people</span>' + tipI("Click a name to see what's outstanding on them.") + '<span class="grow"></span>'
-      + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="imp">Import contact list (Excel)…</button>') + '</div>'
-      + '<table class="tbl cts-t"><thead><tr>' + COLS.map(([k, n]) => '<th data-s="' + k + '"><span class="th-l">' + n + (sort.k === k ? (sort.dir > 0 ? " ▲" : " ▼") : "") + '</span></th>').join("") + '<th class="cts-o"><span class="th-l">Outstanding</span></th><th class="cts-x"></th></tr></thead><tbody>'
+    el.innerHTML = '<div class="cts"><table class="tbl cts-t"><thead><tr>' + COLS.map(([k, n]) => '<th data-s="' + k + '" data-col="' + k + '"><span class="th-l">' + n + (sort.k === k ? (sort.dir > 0 ? " ▲" : " ▼") : "") + '</span></th>').join("") + '<th class="cts-o" data-col="ow"><span class="th-l">Outstanding</span></th><th class="cts-x" data-col="x"></th></tr></thead><tbody>'
       + (ro ? "" : '<tr class="ct-new">' + COLS.map(([k, n]) => '<td><input class="in" data-k="' + k + '" placeholder="' + (k === "first" ? "+ New person" : n) + '"></td>').join("") + '<td></td><td><button type="button" class="btn sm" data-k="add">Add</button></td></tr>')
       + cs.map(c => { const o = owed(c); return '<tr data-id="' + esc(c.id) + '">' + COLS.map(([k]) => '<td>' + (ro ? (k === "first" || k === "last" ? '<button type="button" class="link ct-who">' + esc(c[k] || "") + '</button>' : esc(c[k] || "")) : '<input class="in" data-k="' + k + '" value="' + esc(c[k] || "") + '">') + '</td>').join("")
         + '<td class="cts-o"><button type="button" class="ct-n' + (o.n ? " on" : "") + '" title="See what\'s outstanding on ' + esc(full(c)) + '">' + (o.n ? o.n + " action" + (o.n === 1 ? "" : "s") : "None") + '</button></td>'
         + '<td class="cts-x">' + (ro ? "" : '<button type="button" class="ic-b sm" data-k="del" title="Remove ' + esc(full(c)) + ' from the list">✕</button>') + '</td></tr>'; }).join("")
       + '</tbody></table>' + (cs.length ? "" : '<div class="empty">' + (all.length ? "No one matches the search." : "No contacts yet. Add someone above, or import a contact list.") + '</div>') + '</div>';
+    gridCols($(".cts-t", el), "contacts", { fixed: { x: 52 } });   // (columns fill the width, drag or double click to size)
     $$("th[data-s]", el).forEach(th => th.onclick = () => { const k = th.dataset.s; sort = sort.k === k ? { k, dir: -sort.dir } : { k, dir: 1 }; render(el); });
     $$("tr[data-id]", el).forEach(r => { const c = Store.S.config.contacts.find(x => x.id === r.dataset.id); if (!c) return;
       $$("input", r).forEach(i => i.onchange = () => up(c, () => { c[i.dataset.k] = i.value.trim(); c.name = full(c); }));
@@ -40,7 +55,8 @@ const Contacts = (() => {
     const nr = $(".ct-new", el); if (nr){ const add = () => { const v = k => $("[data-k=" + k + "]", nr).value.trim(); if (!v("first") && !v("last")) return;
         Store.mutate("config", () => { const c = { id: uid(), first: v("first"), last: v("last"), company: v("company"), mobile: v("mobile"), email: v("email") }; c.name = full(c); Store.S.config.contacts.push(Store.touch(c)); }); };
       $("[data-k=add]", nr).onclick = add; $$("input", nr).forEach(i => i.onkeydown = e => { if (e.key === "Enter") add(); }); }
-    const imp = $("[data-k=imp]", el); if (imp) imp.onclick = () => pickFile(".xlsx", false, importFile); }
+    }
+  const pickImport = () => { if (!Store.S.edit) return App.viewOnly(); pickFile(".xlsx", false, importFile); };
   const up = (c, fn) => { if (!Store.S.edit) return App.viewOnly(); Store.mutate("config", () => { fn(); Store.touch(c); }); };
   /* everything outstanding on one person */
   function person(c){ norm(c); const o = owed(c), due = d => d && d < today();
@@ -71,5 +87,5 @@ const Contacts = (() => {
         Store.log("Imported the contact list " + file.name); });
       note("Imported " + rows.length + " contacts: " + added + " new, " + updated + " filled in"); }
     catch (e){ console.error(e); alert("Couldn't import the contact list: " + e.message); } }
-  return { render, person, importFile, full, owed };
+  return { render, person, importFile, full, owed, filters, fcount, pickImport };
 })();

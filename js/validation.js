@@ -6,7 +6,7 @@ const Valid = (() => {
   function render(el){ const ro = !Store.S.edit;
     const ae = document.activeElement, row = ae && el.contains(ae) && ae.closest("[data-id], .ct-new, .dv-ed"), keep = row ? { id: row.dataset.id || (row.classList.contains("ct-new") ? "_new" : "_ed"), i: $$("input,select", row).indexOf(ae), s: ae.selectionStart, v: ae.value } : null;
     el.innerHTML = '<div class="dv"><nav class="dv-nav">' + [["fields", "Fields and choices"], ["stages", "Stages"], ["equip", "Equipment"], ["vendors", "Vendors"]].map(([k, n]) => '<button type="button" data-s="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</nav><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
-    $$(".dv-nav button", el).forEach(b => b.onclick = () => { sec = b.dataset.s; render(el); });
+    $$(".dv-nav button", el).forEach(b => b.onclick = () => { sec = b.dataset.s; App.render(); });
     const body = $(".dv-body", el); if (sec === "contacts") sec = "fields";     /* the fields and the stages are the admin's to change; anyone editing can keep the equipment and vendor lists */
     const lock = ro || ((sec === "fields" || sec === "stages") && !App.isAdmin());
     ({ fields, stages, equip, vendors: Vendors.page })[sec](body, lock);   // (Contacts has its own tab now)
@@ -92,5 +92,6 @@ const Valid = (() => {
     const nr = $(".ct-new", body), add = () => { const v = k => $("[data-k=" + k + "]", nr).value.trim(); if (!v("name")) return;
       Store.mutate("config", () => Store.S.config.contacts.push(Store.touch({ id: uid(), name: v("name"), company: v("company"), mobile: v("mobile"), email: v("email") }))); };
     $("button", nr).onclick = add; $$("input", nr).forEach(i => i.onkeydown = e => e.key === "Enter" && add()); }
-  return { render };
+  const section = () => sec;
+  return { section, render };
 })();

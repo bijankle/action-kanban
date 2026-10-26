@@ -132,6 +132,9 @@ const properTitle = (() => {
    purple letters underneath */
 const aiIco = () => '<svg class="fico" viewBox="0 0 24 26" aria-hidden="true"><path d="M13 1.5H7.5a1.6 1.6 0 00-1.6 1.6v10.8a1.6 1.6 0 001.6 1.6h9a1.6 1.6 0 001.6-1.6V6.6z M13 1.5v5.1h5.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
   + '<path d="M12 13V7.6M9.7 9.8L12 7.5l2.3 2.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><text class="fa" x="12" y="24.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="8.6" letter-spacing=".2">AI</text></svg>';
+/* the import (upload) symbol: a page with an up arrow in it and its type in coloured letters, like the upload with AI button */
+const upIco = label => '<svg class="fico" viewBox="0 0 24 26" aria-hidden="true"><path d="M13 1.5H7.5a1.6 1.6 0 00-1.6 1.6v10.8a1.6 1.6 0 001.6 1.6h9a1.6 1.6 0 001.6-1.6V6.6z M13 1.5v5.1h5.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
+  + '<path d="M12 13V7.6M9.7 9.8L12 7.5l2.3 2.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><text class="' + (/XLS|CSV/i.test(label) ? "fx" : "fp") + '" x="12" y="24.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="8.6" letter-spacing=".2">' + esc(label) + '</text></svg>';
 /* the file symbol on export (download) buttons: a page with a down arrow in it, its type in coloured letters under it
    (red for PDF, green for Excel, blue for Word), like the up arrow on the upload with AI button */
 const fileIco = (label, cls) => { let t = String(label).toUpperCase(); if (t === "XLSX") t = "XLS"; if (t === "DOCX") t = "DOC"; const xl = /XLS|CSV/.test(t), wd = t === "DOC";
@@ -224,3 +227,39 @@ const pref = k => { const src = TEAM_RULES.has(k) ? ((typeof Store !== "undefine
 const panelIco = (side, way) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2.2"/>'
   + (side === "l" ? '<path d="M9 4.5v15"/><path d="M3.8 5.3h4.4v13.4H3.8z" fill="currentColor" stroke="none" opacity=".25"/>' : '<path d="M15 4.5v15"/><path d="M15.8 5.3h4.4v13.4h-4.4z" fill="currentColor" stroke="none" opacity=".25"/>')
   + '<path d="' + (way < 0 ? "M15.5 9.5l-2.5 2.5 2.5 2.5" : "M8.5 9.5l2.5 2.5-2.5 2.5") + '" stroke-width="2.2"/></svg>';
+
+/* any other table behaves like the Actions list: one line per row (cut off text ends in …, the full text on pointing),
+   the columns filling the width, each one draggable to a new width, and a double click on its edge fits it to its
+   contents. The widths are kept per table (key) on this computer; until one is set, the columns share the width in
+   proportion to what they hold */
+function gridCols(table, key, opts){ opts = opts || {}; const ths = [...(table.tHead ? table.tHead.rows[0].cells : [])]; if (!ths.length) return;
+  const store = lsGet("adTW", {}) || {}, W = store[key] = store[key] || {}, fixed = opts.fixed || {};
+  const cv = gridCols.cv || (gridCols.cv = document.createElement("canvas").getContext("2d"));
+  const textW = (t, font) => { cv.font = font; return cv.measureText(String(t || "")).width; };
+  const rows = [...table.tBodies[0].rows].slice(0, 300);
+  /* a column's natural width: its heading or its widest entry (a box measures by what's typed in it, or its hint) */
+  const natural = i => { const th = ths[i], hf = getComputedStyle(th).font; let w = textW(th.textContent.trim(), hf) + 34;
+    rows.forEach(r => { const td = r.cells[i]; if (!td) return; const f = td.querySelector("input,select,textarea"), font = getComputedStyle(f || td).font;
+      const t = f ? (f.tagName === "SELECT" ? (f.options[f.selectedIndex] || {}).text : f.value || f.placeholder) : td.textContent.trim(); w = Math.max(w, textW(t, font) + (f ? 30 : 20)); });
+    return Math.min(opts.max || 480, Math.ceil(w)); };
+  const id = (th, i) => th.dataset.col || String(i);
+  let cg = table.querySelector("colgroup"); if (!cg){ cg = document.createElement("colgroup"); table.insertBefore(cg, table.firstChild); } cg.innerHTML = ths.map(() => "<col>").join("");
+  /* the width there is: the nearest box round the table that has a width (measured after the page has laid out) */
+  let host = table.parentElement; while (host && host !== document.body && !host.clientWidth) host = host.parentElement;
+  const cols = [...cg.children], room = Math.max(300, ((host && host.clientWidth) || 800) - 2);
+  const nat = ths.map((th, i) => fixed[id(th, i)] || natural(i)), set = ths.map((th, i) => W[id(th, i)]);
+  /* the columns nobody has set share what's left, in proportion to what they hold (a short one never below its own width) */
+  const used = set.reduce((t, w, i) => t + (w || 0), 0), free = ths.map((th, i) => !set[i] && !fixed[id(th, i)]), natFree = nat.reduce((t, w, i) => t + (free[i] ? w : 0), 0), fix = nat.reduce((t, w, i) => t + (!set[i] && !free[i] ? w : 0), 0);
+  /* (more than fits: the columns nobody has set narrow in proportion, each to no less than its heading, and their
+     text ends in …; less than fits: they widen in proportion to fill the width) */
+  const k = natFree ? (room - used - fix) / natFree : 1, minW = i => Math.min(nat[i], Math.ceil(textW(ths[i].textContent.trim(), getComputedStyle(ths[i]).font) + 34));
+  const widths = ths.map((th, i) => Math.round(set[i] || (free[i] ? Math.max(minW(i), nat[i] * k) : nat[i])));
+  cols.forEach((c, i) => c.style.width = widths[i] + "px"); table.classList.add("tw"); table.style.width = Math.max(room, widths.reduce((t, w) => t + w, 0)) + "px";
+  rows.forEach(r => [...r.cells].forEach(td => { if (!td.title && !td.querySelector("input,select,textarea,button")) td.title = td.textContent.trim(); }));
+  const save = () => lsSet("adTW", store);
+  ths.forEach((th, i) => { if (th.querySelector(".tw-r")) return; const h = document.createElement("i"); h.className = "tw-r"; th.appendChild(h);
+    h.onclick = e => e.stopPropagation();
+    h.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const x0 = e.clientX, w0 = cols[i].getBoundingClientRect().width || widths[i]; h.setPointerCapture(e.pointerId);
+      h.onpointermove = ev => { const w = Math.max(40, w0 + ev.clientX - x0); cols[i].style.width = w + "px"; W[id(th, i)] = Math.round(w); table.style.width = Math.max(room, cols.reduce((t, c) => t + parseFloat(c.style.width), 0)) + "px"; };
+      h.onpointerup = () => { h.onpointermove = null; save(); }; };
+    h.ondblclick = e => { e.stopPropagation(); W[id(th, i)] = natural(i); save(); gridCols(table, key, opts); }; }); }

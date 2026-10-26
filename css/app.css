@@ -1147,3 +1147,9 @@ html.dark .menubar{box-shadow:none}
 .stk-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(var(--rows),auto);grid-auto-flow:column;gap:6px 14px;margin:2px 0 14px}
 .stk{display:flex;align-items:center;gap:8px;min-height:24px;min-width:0}.stk .ck{flex:none}.stk-l{font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stk-l{white-space:normal;overflow:visible;line-height:1.2}.stk{align-items:center}
+.cts-t{width:auto;max-width:100%;table-layout:fixed}.cts{padding:10px 14px 20px}
+/* the other tables, like the Actions list: one line a row, columns you drag or double click to fit */
+.tbl.tw{table-layout:fixed}.tbl.tw td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:auto;vertical-align:middle}.tbl.tw td .in{width:100%;min-width:0}
+.tbl.tw th{position:relative;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tw-r{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;z-index:2}.tw-r:hover{background:rgba(255,255,255,.35)}
+.tw-wrap{overflow-x:auto}.vd-tbl td{white-space:nowrap;vertical-align:middle}
