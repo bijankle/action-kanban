@@ -24,8 +24,8 @@ const ActionView = (() => {
        leave the panel as it is, so its photos and map don't flash */
     const sig = JSON.stringify([stable(a), Media.pendingOf(a).length, sub, ro, i, list.length, Store.S.config.mod, (Store.S.config.contacts || []).length, Store.S.vendors && Store.S.vendors.mod, Equip.count, Store.projects().length]);
     if (el.__sig === sig && el.isConnected && $(".av", el)) return; el.__sig = sig;
-    /* the header repeats the list row: complete, delete and on hold, then the ID with its copy and PDF buttons; the arrows and close sit at the right */
-    el.innerHTML = '<div class="av"><div class="av-head" data-ref="' + esc(a._p + ":" + a.u) + '">' + Table.rowBtns(a) + Table.idBox(a, true) + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "") + '<span class="grow"></span>'
+    /* the header: the ID with its PDF button on the far left, in line with the title, then the hold, complete and delete buttons; the arrows and close sit at the right */
+    el.innerHTML = '<div class="av"><div class="av-head" data-ref="' + esc(a._p + ":" + a.u) + '">' + Table.idBox(a, true) + Table.rowBtns(a) + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "") + '<span class="grow"></span>'
       + '<span class="av-nav"><button type="button" class="ic-b" data-k="prev" title="Previous action"' + (i > 0 ? "" : " disabled") + '>‹</button><span class="dim">' + (i >= 0 ? (i + 1) + " of " + list.length : "") + '</span><button type="button" class="ic-b" data-k="next" title="Next action"' + (i >= 0 && i < list.length - 1 ? "" : " disabled") + '>›</button></span>'
       + '<button type="button" class="ic-b av-close" data-k="x" title="Close (Esc)" aria-label="Close">✕</button></div>'
       + '<div class="av-title" data-f="title"></div>'

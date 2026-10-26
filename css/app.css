@@ -1064,3 +1064,7 @@ html.dark .menubar{box-shadow:none}
 .cal-f{display:flex;justify-content:space-between;margin-top:6px;padding:6px 2px 0;border-top:1px solid var(--line)}.cal-f button{border:0;background:none;color:var(--th);font:600 12.5px var(--font);cursor:pointer;text-decoration:underline}
 .tmpop{position:fixed;z-index:30500;width:96px;max-height:220px;overflow:auto;padding:4px}.tmpop button{display:block;width:100%;height:28px;border:0;background:none;border-radius:7px;font:600 13px var(--font);color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums}.tmpop button:hover,.tmpop button.on{background:var(--hl)}
 .ov-g .det-r .dt .dchip,.dt .dchip{height:var(--ctl-h,28px);padding:0 10px}.dt .tchip{padding-right:6px}
+/* a vendor in the list: the name, its description in small letters under it, the PO count on the right */
+.vd-o{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;row-gap:0;align-items:center}
+.vd-o b{grid-column:1;font-weight:600;font-size:13px}.vd-o span{grid-column:1;grid-row:2;font-size:12px;color:var(--dim)}.vd-o small{grid-column:2;grid-row:1 / span 2;font-size:11.5px}
+.av-head .rb-hi:empty{display:none}
