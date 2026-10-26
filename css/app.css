@@ -1153,3 +1153,4 @@ html.dark .menubar{box-shadow:none}
 .tbl.tw th{position:relative;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tw-r{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;z-index:2}.tw-r:hover{background:rgba(255,255,255,.35)}
 .tw-wrap{overflow-x:auto}.vd-tbl td{white-space:nowrap;vertical-align:middle}
+.dv-body:has(.vd-tbl){max-width:none}   /* (the vendor list uses the whole width) */

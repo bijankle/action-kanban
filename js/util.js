@@ -246,14 +246,16 @@ function gridCols(table, key, opts){ opts = opts || {}; const ths = [...(table.t
   let cg = table.querySelector("colgroup"); if (!cg){ cg = document.createElement("colgroup"); table.insertBefore(cg, table.firstChild); } cg.innerHTML = ths.map(() => "<col>").join("");
   /* the width there is: the nearest box round the table that has a width (measured after the page has laid out) */
   let host = table.parentElement; while (host && host !== document.body && !host.clientWidth) host = host.parentElement;
-  const cols = [...cg.children], room = Math.max(300, ((host && host.clientWidth) || 800) - 2);
+  const hs = host ? getComputedStyle(host) : null, cols = [...cg.children], room = Math.max(300, ((host && host.clientWidth) || 800) - (hs ? parseFloat(hs.paddingLeft) + parseFloat(hs.paddingRight) : 0) - 2);
   const nat = ths.map((th, i) => fixed[id(th, i)] || natural(i)), set = ths.map((th, i) => W[id(th, i)]);
   /* the columns nobody has set share what's left, in proportion to what they hold (a short one never below its own width) */
   const used = set.reduce((t, w, i) => t + (w || 0), 0), free = ths.map((th, i) => !set[i] && !fixed[id(th, i)]), natFree = nat.reduce((t, w, i) => t + (free[i] ? w : 0), 0), fix = nat.reduce((t, w, i) => t + (!set[i] && !free[i] ? w : 0), 0);
   /* (more than fits: the columns nobody has set narrow in proportion, each to no less than its heading, and their
      text ends in …; less than fits: they widen in proportion to fill the width) */
-  const k = natFree ? (room - used - fix) / natFree : 1, minW = i => Math.min(nat[i], Math.ceil(textW(ths[i].textContent.trim(), getComputedStyle(ths[i]).font) + 34));
-  const widths = ths.map((th, i) => Math.round(set[i] || (free[i] ? Math.max(minW(i), nat[i] * k) : nat[i])));
+  const minW = i => Math.min(nat[i], Math.ceil(textW(ths[i].textContent.trim(), getComputedStyle(ths[i]).font) + 34)), flo = new Set();
+  let k = 1; for (let pass = 0; pass < 4; pass++){ const left = room - used - fix - [...flo].reduce((t, i) => t + minW(i), 0), sc = nat.reduce((t, w, i) => t + (free[i] && !flo.has(i) ? w : 0), 0);
+    k = sc ? left / sc : 1; let more = false; ths.forEach((th, i) => { if (free[i] && !flo.has(i) && nat[i] * k < minW(i)){ flo.add(i); more = true; } }); if (!more) break; }   // (a column held at its heading's width leaves the rest to share what's left)
+  const widths = ths.map((th, i) => Math.round(set[i] || (free[i] ? (flo.has(i) ? minW(i) : nat[i] * k) : nat[i])));
   cols.forEach((c, i) => c.style.width = widths[i] + "px"); table.classList.add("tw"); table.style.width = Math.max(room, widths.reduce((t, w) => t + w, 0)) + "px";
   rows.forEach(r => [...r.cells].forEach(td => { if (!td.title && !td.querySelector("input,select,textarea,button")) td.title = td.textContent.trim(); }));
   const save = () => lsSet("adTW", store);
