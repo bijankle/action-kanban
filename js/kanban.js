@@ -11,7 +11,7 @@ const Kanban = (() => {
     const match = a => Filters.match(a), ss = Store.stages(), open = ss.filter(s => s.kind === "open"), top = ss.filter(s => s.kind === "hold").concat(ss.filter(s => s.kind === "done"));
     const cardsOf = s => Store.ranked(s.id).filter(a => s.kind === "done" ? Filters.match(a, "st") : match(a));
     const sx = $(".kb", el) ? $(".kb", el).scrollLeft : 0, sy = {}; $$(".kb-cards", el).forEach(c => sy[c.dataset.s] = c.scrollTop);
-    const head = (s, cards, drag) => '<header class="kb-h" draggable="' + (adm && drag) + '"><i class="dot"></i><span class="kb-n" title="' + esc("On the action this step reads " + s.name + ". Double click to rename it") + '">' + esc(Store.todo(s)) + '</span><span class="kb-c">' + (q ? cards.length + " of " + Store.ranked(s.id).length : cards.length) + '</span>'
+    const head = (s, cards, drag) => '<header class="kb-h" draggable="' + (adm && drag) + '"><i class="dot"></i><span class="kb-n" title="' + esc(adm ? "Double click to rename it" : Store.todo(s)) + '">' + esc(Store.todo(s)) + '</span><span class="kb-c">' + (q ? cards.length + " of " + Store.ranked(s.id).length : cards.length) + '</span>'
       + (s.kind === "hold" ? '<span class="kb-k">on hold</span>' : s.kind === "done" ? '<span class="kb-k">complete</span>' : "") + '<span class="grow"></span>'
       + (adm ? '<button type="button" class="ic-b sm kb-m" title="Stage options">⋯</button>' : "") + '</header>';
     el.innerHTML = '<div class="kbw"><div class="kb-rows">' + top.map(s => { const cards = cardsOf(s), n = Math.max(1, ROWS[s.id] || 1);
@@ -65,11 +65,11 @@ const Kanban = (() => {
     const kn = $(".kb-new", el); if (kn) kn.onclick = async () => { const n = await promptBox("Name of the new stage", ""); if (!n || !n.trim()) return;
       Store.mutate("config", () => { const ss = Store.S.config.stages; const at = ss.findIndex(s => !s.del && s.kind !== "open"); const s = Store.touch({ id: "st" + uid(), name: n.trim(), color: "#64748b", kind: "open", print: true });
         if (at < 0) ss.push(s); else ss.splice(at, 0, s); Store.S.config.mod = now(); }); }; }
-  /* the column name is the step being done ("Draft RFQ"); its name on the action ("RFQ Sent") is renamed in Data validation */
-  async function rename(st){ const s = Store.stage(st), was = Store.todo(s); const n = await promptBox("Rename the column (on the action this step reads " + s.name + ")", was); if (!n || !n.trim() || n.trim() === was) return; Store.mutate("config", () => { s.todo = n.trim(); Store.touch(s); }); }
+  /* (an open stage is named by the step still to do, the same on the column and on the action, so both change together) */
+  async function rename(st){ const s = Store.stage(st), was = Store.todo(s); const n = await promptBox("Rename the stage", was); if (!n || !n.trim() || n.trim() === was) return; Store.mutate("config", () => { s.todo = n.trim(); if (s.kind === "open") s.name = n.trim(); Store.touch(s); }); }
   const COLORS = ["#3B8FE0", "#2F7FD1", "#7C5CD6", "#0E9AA7", "#2FB463", "#F2B03D", "#C07A12", "#E0453A", "#D6488A", "#64748b"];
   function menu(anchor, st){ Fields.closePop(); const s = Store.stage(st);
-    const p = h('<div class="pop stpop"><div class="pop-h">' + esc(Store.todo(s)) + '</div><div class="dim stpop-m">On the action: ' + esc(s.name) + '</div><button type="button" class="mi" data-k="ren">Rename column…</button>'
+    const p = h('<div class="pop stpop"><div class="pop-h">' + esc(Store.todo(s)) + '</div><button type="button" class="mi" data-k="ren">Rename column…</button>'
       + '<div class="sw">' + COLORS.map(c => '<button type="button" style="--c:' + c + '" data-c="' + c + '"' + (c === s.color ? ' class="on"' : "") + '></button>').join("") + '<input type="color" value="' + esc(s.color) + '" title="Any colour"></div>'
       + '<div class="pop-h">Stage type</div>' + [["open", "Normal"], ["hold", "On hold"], ["done", "Completed"]].map(([k, n]) => '<label class="tp-o"><input type="radio" name="sk" value="' + k + '"' + (s.kind === k ? " checked" : "") + '><span>' + n + '</span></label>').join("")
       + '<label class="tp-o"><input type="checkbox" data-k="pr"' + (s.print ? " checked" : "") + '><span>Include when printing</span></label><div class="msep"></div><button type="button" class="mi danger" data-k="del">Delete stage…</button></div>');

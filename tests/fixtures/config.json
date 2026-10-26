@@ -1,71 +1,71 @@
 {
  "v": 1,
- "mod": 1792981362991,
+ "mod": 1792998708859,
  "stages": [
   {
    "id": "st0",
-   "name": "Identified",
+   "name": "Categorize Issue",
    "color": "#3B8FE0",
    "kind": "open",
    "print": true,
-   "mod": 1792972351427,
+   "mod": 1792998708859,
    "todo": "Categorize Issue",
    "by": "bijan khadembashi",
    "byE": "bkhadembashi@nsrltd.com"
   },
   {
    "id": "stP",
-   "name": "PCCR Sent",
+   "name": "Send PCCR",
    "todo": "Send PCCR",
    "color": "#E07A3A",
    "kind": "open",
    "print": true,
-   "mod": 1792973031732
+   "mod": 1792998708859
   },
   {
    "id": "stM",
-   "name": "MTO Drafted",
+   "name": "Draft MTO",
    "todo": "Draft MTO",
    "color": "#0E9AA7",
    "kind": "open",
    "print": true,
-   "mod": 1792972351427
+   "mod": 1792998708859
   },
   {
    "id": "stS",
-   "name": "Spares Secured",
+   "name": "Secure Spares",
    "todo": "Secure Spares",
    "color": "#5965D6",
    "kind": "open",
    "print": true,
-   "mod": 1792972359319
+   "mod": 1792998708859
   },
   {
    "id": "st3",
-   "name": "RFQ Sent",
+   "name": "Send RFQ",
    "color": "#C07A12",
    "kind": "open",
    "print": true,
-   "mod": 1792972351427,
+   "mod": 1792998708859,
    "todo": "Send RFQ"
   },
   {
    "id": "st4",
-   "name": "PO Sent",
+   "name": "Send PO",
    "color": "#D6488A",
    "kind": "open",
    "print": true,
-   "mod": 1792972351427,
+   "mod": 1792998708859,
    "todo": "Send PO"
   },
   {
    "id": "st8",
-   "name": "Contractor Engaged",
+   "name": "Engage Contractor",
    "todo": "Engage Contractor",
    "color": "#7C5CD6",
    "kind": "open",
    "print": true,
-   "mod": 1792904450763
+   "mod": 1792998708859
   },
   {
    "id": "st1",
@@ -490,17 +490,6 @@
    "del": true
   },
   {
-   "id": "sparelist",
-   "label": "Spares list",
-   "type": "sparelist",
-   "builtin": true,
-   "table": false,
-   "tbc": false,
-   "na": false,
-   "core": true,
-   "mod": 1792416472299
-  },
-  {
    "id": "isollist",
    "label": "Isolations",
    "type": "isollist",
@@ -569,6 +558,19 @@
    "mod": 1792881545360,
    "short": "Done",
    "desc": "Action complete. Ticking it moves the action to Done."
+  },
+  {
+   "id": "sparelist",
+   "label": "Spares list",
+   "type": "sparelist",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "core": true,
+   "mod": 1792997366194,
+   "by": "bijan khadembashi",
+   "byE": "bkhadembashi@nsrltd.com"
   }
  ],
  "contacts": [],

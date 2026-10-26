@@ -37,6 +37,7 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     check("ticking PCCR moves it to Draft MTO", /Draft MTO$/.test(s2), s2);
     await p.evaluate(() => { const a = Store.all().find(x => x.no === 1); Fields.set(a, Store.field("pccr"), false); }); const s3 = await at();
     check("unticking PCCR takes it back", /Send PCCR$/.test(s3), s3);
+    check("each open stage reads as the step still to do", await p.evaluate(() => Store.stages().filter(s => s.kind === "open").every(s => s.name === Store.todo(s))));
     await p.evaluate(() => { const a = Store.all().find(x => x.no === 3); Fields.set(a, Store.field("defect"), true); });
     check("Defect emailed sets the Category to Defect", await p.evaluate(() => Store.all().find(x => x.no === 3).f.category === "Defect"));
     /* deleting takes it off hold */

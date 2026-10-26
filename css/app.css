@@ -1143,3 +1143,6 @@ html.dark .menubar{box-shadow:none}
 .kb-rows{align-items:flex-start}.kb-row{width:fit-content;max-width:100%;min-width:300px}.kb-row .kb-cards{min-height:calc(106px + 16px)}
 .rb-del.on,.rb-del.on:hover{background:color-mix(in srgb,#c0392b 14%,var(--panel));border-color:color-mix(in srgb,#c0392b 55%,var(--panel));color:#c0392b}html.dark .rb-del.on{color:#ff6b5b}.rb:disabled{opacity:.45;cursor:not-allowed}
 .tbl td.idc{text-align:left;padding:0 10px}.idw.idt{border:0;background:none;padding:0;height:auto;font-weight:700;font-size:14px}.idw.idt .aid{margin:0}
+/* Details, Status: the tick boxes down three columns */
+.stk-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(var(--rows),auto);grid-auto-flow:column;gap:6px 14px;margin:2px 0 14px}
+.stk{display:flex;align-items:center;gap:8px;min-height:24px;min-width:0}.stk .ck{flex:none}.stk-l{font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
