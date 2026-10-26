@@ -1045,3 +1045,4 @@ html.dark .menubar{box-shadow:none}
 .menubar .mb-btn{height:calc(var(--ctl-h,28px) - 2px);padding:0 10px;border-radius:4px}
 .menubar .mb-btn:hover,.menubar .mb.open .mb-btn{background:rgba(71,85,105,.1)}html.dark .menubar .mb-btn:hover,html.dark .menubar .mb.open .mb-btn{background:rgba(255,255,255,.08)}
 .mb-btn u{text-underline-offset:2px;text-decoration-thickness:1px}
+.dtt [type=date]{flex:1 1 auto;min-width:130px;width:auto}
