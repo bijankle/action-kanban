@@ -161,3 +161,44 @@ const kindSym = k => { const n = k === "Tags" ? "Tag added in the app" : k; retu
 
 /* a person's name with each word capitalised (bijan KHADEMBASHI → Bijan Khadembashi, o'brien → O'Brien) */
 const properName = s => String(s || "").trim().replace(/\s+/g, " ").toLowerCase().replace(/(^|[\s\-'’])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+
+/* the app's own date and time boxes: a square box with a calendar (or clock) symbol and the date (or 24 hour time),
+   only as wide as its words. The date opens a calendar (Monday first, Clear and Today), the time is typed (730, 7:30,
+   1930) or picked from a list in half hours. Each has .value (YYYY-MM-DD, HH:MM) and fires "change" like an input */
+const ICO_CAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+const ICO_CLK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>';
+let pickPop = null; const closePick = () => { if (pickPop){ pickPop.remove(); pickPop = null; } };
+document.addEventListener("mousedown", e => { if (pickPop && !pickPop.contains(e.target) && !e.target.closest(".dchip")) closePick(); }, true);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && pickPop){ e.stopPropagation(); closePick(); } }, true);
+const isoDay = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+function placePick(p, anchor){ const r = anchor.getBoundingClientRect(), below = innerHeight - r.bottom > p.offsetHeight + 8 || r.top < p.offsetHeight;
+  Object.assign(p.style, { left: Math.max(8, Math.min(r.left, innerWidth - p.offsetWidth - 8)) + "px", top: (below ? r.bottom + 4 : r.top - p.offsetHeight - 4) + "px" }); }
+function dateBox(value, opts){ opts = opts || {}; let v = value || "";
+  const b = h('<button type="button" class="dchip' + (opts.cls ? " " + opts.cls : "") + '"' + (opts.label ? ' aria-label="' + esc(opts.label) + '"' : "") + '>' + ICO_CAL + '<span></span></button>');
+  const show = () => { const ok = /^\d{4}-\d\d-\d\d$/.test(v); $("span", b).textContent = v ? (ok ? fmtDate(v) : v) : (opts.ph || "Add date"); b.classList.toggle("dc-ph", !v); };
+  Object.defineProperty(b, "value", { get: () => v, set: x => { v = x || ""; show(); } }); show();
+  const fire = () => b.dispatchEvent(new Event("change", { bubbles: true }));
+  b.onclick = () => { if (pickPop && pickPop.__for === b) return closePick(); closePick(); let view = /^\d{4}-\d\d/.test(v) ? new Date(v.slice(0, 7) + "-01T12:00") : new Date(); view.setDate(1);
+    const p = pickPop = h('<div class="pop calpop" role="dialog" aria-label="Pick a date"></div>'); p.__for = b; document.body.appendChild(p);
+    const draw = () => { const y = view.getFullYear(), m = view.getMonth(), off = (new Date(y, m, 1).getDay() + 6) % 7, today = isoDay(new Date()); let g = "";
+      for (let k = 0; k < 42; k++){ const d = new Date(y, m, 1 - off + k), id = isoDay(d); g += '<button type="button" data-d="' + id + '" class="' + (d.getMonth() !== m ? "x " : "") + (id === today ? "td " : "") + (id === v ? "on" : "") + '">' + d.getDate() + '</button>'; }
+      p.innerHTML = '<div class="cal-h"><button type="button" data-mv="-1" aria-label="Previous month">‹</button><span>' + "January February March April May June July August September October November December".split(" ")[m] + " " + y + '</span><button type="button" data-mv="1" aria-label="Next month">›</button></div>'
+        + '<div class="cal-g">' + "Mo Tu We Th Fr Sa Su".split(" ").map(x => "<span>" + x + "</span>").join("") + g + '</div><div class="cal-f"><button type="button" data-clr>Clear</button><button type="button" data-td>Today</button></div>'; };
+    p.onclick = e => { const mv = e.target.closest("[data-mv]"); if (mv){ view.setMonth(view.getMonth() + +mv.dataset.mv); return draw(); }
+      const d = e.target.closest("[data-d]"), pick = x => { closePick(); if (x !== v){ v = x; show(); fire(); } else b.focus(); };
+      if (d) pick(d.dataset.d); else if (e.target.closest("[data-clr]")) pick(""); else if (e.target.closest("[data-td]")) pick(isoDay(new Date())); };
+    draw(); placePick(p, b); };
+  return b; }
+function timeBox(value, opts){ opts = opts || {};
+  const w = h('<span class="dchip tchip">' + ICO_CLK + '<input type="text" inputmode="numeric" maxlength="5" placeholder="' + esc(opts.ph || "Time") + '" aria-label="' + esc(opts.label || "Time, 24 hour") + '" title="24 hour time" autocomplete="off" spellcheck="false"></span>'), i = $("input", w);
+  i.value = value || ""; Object.defineProperty(w, "value", { get: () => i.value, set: x => { i.value = x || ""; } });
+  const norm = x => { const g = String(x).replace(/[^\d:]/g, "").match(/^(\d{1,2}):?(\d{2})?$/); if (!g) return ""; const hh = +g[1], mm = +(g[2] || 0); return hh < 24 && mm < 60 ? String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0") : ""; };
+  let was = i.value; w.addEventListener("pointerdown", e => { if (e.target !== i){ e.preventDefault(); i.focus(); } else if (document.activeElement === i && !(pickPop && pickPop.__for === w)) setTimeout(() => i.onfocus(), 0); });   // (a box that already had the focus, after the panel redrew, opens on a click too)
+  i.onfocus = () => { was = i.value; i.select(); closePick(); const p = pickPop = h('<div class="pop tmpop" role="listbox" aria-label="Pick a time"></div>'); p.__for = w; let o = "";
+    for (let k = 0; k < 48; k++){ const x = String(k >> 1).padStart(2, "0") + ":" + (k % 2 ? "30" : "00"); o += '<button type="button" data-t="' + x + '"' + (x === i.value ? ' class="on"' : "") + '>' + x + '</button>'; }
+    p.innerHTML = o; document.body.appendChild(p); placePick(p, w); const on = $(".on", p) || $('[data-t="07:00"]', p); if (on) p.scrollTop = on.offsetTop - 80;
+    p.onmousedown = e => { const t = e.target.closest("[data-t]"); if (!t) return; e.preventDefault(); i.value = t.dataset.t; i.blur(); }; };
+  i.onblur = () => { setTimeout(() => { if (pickPop && pickPop.__for === w) closePick(); }, 0); const n = i.value.trim() ? norm(i.value) || was : ""; i.value = n; if (n !== was){ was = n; i.dispatchEvent(new Event("change", { bubbles: true })); } };
+  i.onkeydown = e => { if (e.key === "Enter") i.blur(); };
+  i.addEventListener("change", e => { if (e.isTrusted) e.stopPropagation(); });   // (only the tidied time counts, not the raw typing)
+  return w; }

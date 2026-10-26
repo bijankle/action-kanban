@@ -59,10 +59,11 @@ const Filters = (() => {
      on from the From date when that was set last, back from the To date when that was, or back from today */
   const SPANS = [["1d", "1 day", 1], ["1w", "1 week", 7], ["1m", "1 month", 0], ["all", "All time", -1]];
   function dateBar(el){ const draw = () => { el.innerHTML = '<select class="in sm gd-by" aria-label="Which date"><option value="created"' + (D.by === "created" ? " selected" : "") + '>Date created</option><option value="modified"' + (D.by === "modified" ? " selected" : "") + '>Date modified</option></select>'
-        + '<input class="in sm gd-d" type="date" data-k="from" aria-label="From date" title="From" value="' + esc(D.from) + '"><span class="dim">to</span><input class="in sm gd-d" type="date" data-k="to" aria-label="To date" title="To" value="' + esc(D.to) + '">'
+        + '<i class="gd-slot" data-k="from"></i><span class="dim">to</span><i class="gd-slot" data-k="to"></i>'
         + '<div class="gd-sp" role="group" aria-label="How long">' + SPANS.map(([k, n]) => '<button type="button" class="btn ghost sm" data-sp="' + k + '">' + n + '</button>').join("") + '</div>';
       $(".gd-by", el).onchange = e => { D.by = e.target.value; save(); };
-      $$(".gd-d", el).forEach(i => i.onchange = () => { D[i.dataset.k] = i.value; D.last = i.value ? i.dataset.k : ""; save(); });
+      $$(".gd-slot", el).forEach(x => { const k = x.dataset.k, i = dateBox(D[k], { ph: k === "from" ? "From" : "To", label: k === "from" ? "From date" : "To date", cls: "gd-d" }); i.dataset.k = k; x.replaceWith(i);
+        i.addEventListener("change", () => { D[k] = i.value; D.last = i.value ? k : ""; save(); }); });
       $$("[data-sp]", el).forEach(b => b.onclick = () => { const sp = SPANS.find(x => x[0] === b.dataset.sp);
         if (sp[2] < 0){ D.from = D.to = D.last = ""; return save(true); }
         const move = (iso, sign) => { const d = new Date(iso + "T12:00:00"); if (sp[2]) d.setDate(d.getDate() + sign * sp[2]); else d.setMonth(d.getMonth() + sign); return day(d); };

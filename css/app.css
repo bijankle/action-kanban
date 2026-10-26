@@ -1050,3 +1050,17 @@ html.dark .menubar{box-shadow:none}
 .ph-up{position:relative;border-radius:8px;overflow:hidden}.ph-up img{width:100%;height:100%;object-fit:cover;display:block;opacity:.75}
 .ph-bar{position:absolute;left:8px;right:8px;bottom:8px;height:5px;border-radius:3px;background:rgba(0,0,0,.35);overflow:hidden}
 .ph-bar i{display:block;height:100%;background:#2FB463;border-radius:3px;transition:width 1.8s cubic-bezier(.2,.7,.3,1)}
+/* the date and time boxes: square like the other boxes, a symbol then the words, only as wide as they need */
+.dchip{display:inline-flex;align-items:center;gap:7px;height:var(--ctl-h,28px);padding:0 10px;border:var(--ctl-bd,1px solid var(--line2));border-radius:8px;background:var(--panel);color:var(--ink);font:13.5px var(--font);cursor:pointer;white-space:nowrap;flex:none;max-width:100%}
+.dchip svg{width:15px;height:15px;flex:none;color:var(--muted)}.dchip.dc-ph span{color:var(--dim)}
+.dchip:hover{border-color:var(--th)}.dchip:focus-visible,.tchip:focus-within{outline:0;border-color:var(--focus);box-shadow:0 0 0 1px var(--focus)}
+.tchip{cursor:text;padding-right:6px}.tchip input{border:0;outline:0;background:none;font:13.5px var(--font);color:var(--ink);width:44px;padding:0;font-variant-numeric:tabular-nums}.tchip input::placeholder{color:var(--dim)}
+.dtt{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.dt{display:flex;gap:6px;align-items:center}
+.calpop{position:fixed;z-index:30500;width:248px;padding:8px}.cal-h{display:flex;align-items:center;justify-content:space-between;margin:0 2px 6px;font-weight:700;font-size:13.5px}
+.cal-h button{border:0;background:none;width:26px;height:26px;border-radius:7px;cursor:pointer;color:var(--muted);font-size:16px}.cal-h button:hover{background:var(--panel2);color:var(--ink)}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}.cal-g span{font-size:11px;font-weight:700;color:var(--dim);text-align:center;padding:2px 0}
+.cal-g button{height:30px;border:0;background:none;border-radius:7px;font:13px var(--font);color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums}
+.cal-g button.x{color:var(--dim);opacity:.6}.cal-g button:hover{background:var(--hl)}.cal-g button.td{box-shadow:inset 0 0 0 1px var(--line2)}.cal-g button.on{background:var(--th);color:#fff;font-weight:700}
+.cal-f{display:flex;justify-content:space-between;margin-top:6px;padding:6px 2px 0;border-top:1px solid var(--line)}.cal-f button{border:0;background:none;color:var(--th);font:600 12.5px var(--font);cursor:pointer;text-decoration:underline}
+.tmpop{position:fixed;z-index:30500;width:96px;max-height:220px;overflow:auto;padding:4px}.tmpop button{display:block;width:100%;height:28px;border:0;background:none;border-radius:7px;font:600 13px var(--font);color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums}.tmpop button:hover,.tmpop button.on{background:var(--hl)}
+.ov-g .det-r .dt .dchip,.dt .dchip{height:var(--ctl-h,28px);padding:0 10px}.dt .tchip{padding-right:6px}
