@@ -32,7 +32,8 @@ const Hold = (() => {
     who.oninput = () => { const c = Store.contacts().find(x => x.name.toLowerCase() === who.value.trim().toLowerCase()); if (c){ const m = $('[data-k="mobile"]', p), co = $('[data-k="company"]', p); if (!m.value) m.value = c.mobile || ""; if (!co.value) co.value = c.company || ""; } };
     const ok = $('[data-k="ok"]', p); if (ok) ok.onclick = () => { save(a, { who: v("who"), mobile: v("mobile"), company: v("company"), since: v("since"), due: v("due"), why: v("why") }); Fields.closePop(); };
     $$("input", p).forEach(i => i.onkeydown = e => { if (e.key === "Enter" && ok) ok.click(); if (e.key === "Escape") Fields.closePop(); });
-    setTimeout(() => (who.value ? $('[data-k="' + (missing(a)[0] || "who") + '"]', p) : who).focus(), 0); }
+    /* (it opens to read: nothing is picked for typing until a box is clicked; the card itself takes the focus so Esc and Tab work) */
+    p.tabIndex = -1; p.style.outline = "none"; setTimeout(() => p.focus({ preventScroll: true }), 0); }
   function save(a, h){ if (!Store.S.edit) return App.viewOnly();
     Store.mutate("a:" + a._p, () => { a.hold = h; Store.touch(a); Store.log("On hold details for " + Store.actId(a));
       /* into the running contact list: a new person, or a known one's missing mobile or company */
