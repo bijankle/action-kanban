@@ -13,14 +13,19 @@ const Contacts = (() => {
   const coOf = c => String(c.company || "").trim() || NOCO, owOf = c => owed(c).n ? "Something outstanding" : "Nothing outstanding";
   const pass = (c, skip) => (skip === "co" || !F.co.size || F.co.has(coOf(c))) && (skip === "ow" || !F.ow.size || F.ow.has(owOf(c)));
   const searched = () => list().filter(c => smartHit([c.first, c.last, c.company, c.mobile, c.email].join(" "), App.q));
+  const MINCO = 10; let allCo = false;
   function filters(el){ const base = searched(), cnt = (k, v) => base.filter(c => pass(c, k) && (k === "co" ? coOf(c) : owOf(c)) === v).length;
-    const cos = [...new Set(list().map(coOf))].sort((a, b) => a === NOCO ? 1 : b === NOCO ? -1 : a.localeCompare(b));
+    /* only the companies with plenty of people (MINCO or more) get a pill; the rest wait behind more… (a picked one always shows) */
+    const tot = new Map(); list().forEach(c => tot.set(coOf(c), (tot.get(coOf(c)) || 0) + 1));
+    const all = [...tot.keys()].sort((a, b) => a === NOCO ? 1 : b === NOCO ? -1 : a.localeCompare(b)), few = all.filter(v => v !== NOCO && tot.get(v) < MINCO && !F.co.has(v));
+    const cos = allCo ? all : all.filter(v => !few.includes(v));
     const grp = (k, name, vals) => '<div class="fg2" data-k="' + k + '"><div class="fgh"><span>' + name + '</span>' + (F[k].size ? '<button type="button" class="link fclr">Clear</button>' : "") + '</div>'
       + vals.map(v => { const n = cnt(k, v), on = F[k].has(v); if (!n && !on) return ""; return '<button type="button" class="pill fpill' + (on ? " on" : "") + (v === NOCO ? " ns" : "") + '" data-v="' + esc(v) + '" aria-pressed="' + on + '">' + esc(v) + ' <b>' + n + '</b></button>'; }).join("") + '</div>';
     let body = $(".fp-groups", el); if (!body){ body = document.createElement("div"); body.className = "fp-groups"; el.appendChild(body); }
     const shown = base.filter(c => pass(c)).length;
-    body.innerHTML = grp("ow", "Outstanding", ["Something outstanding", "Nothing outstanding"]) + grp("co", "Company", cos) + '<p class="dim fshown">' + shown + " of " + list().length + " people shown" + (F.co.size || F.ow.size ? ' <button type="button" class="link fall">Clear all</button>' : "") + '</p>';
+    body.innerHTML = grp("ow", "Outstanding", ["Something outstanding", "Nothing outstanding"]) + grp("co", "Company", cos).replace(/<\/div>$/, few.length ? '<button type="button" class="link fco-more">' + (allCo ? "fewer" : few.length + " more…") + '</button></div>' : "</div>") + '<p class="dim fshown">' + shown + " of " + list().length + " people shown" + (F.co.size || F.ow.size ? ' <button type="button" class="link fall">Clear all</button>' : "") + '</p>';
     $$(".fg2", body).forEach(g => { const k = g.dataset.k; g.onclick = e => { const b = e.target.closest(".fpill"); if (b){ const v = b.dataset.v; F[k].has(v) ? F[k].delete(v) : F[k].add(v); keepF(); App.render(); } if (e.target.closest(".fclr")){ F[k].clear(); keepF(); App.render(); } }; });
+    const fm = $(".fco-more", body); if (fm) fm.onclick = () => { allCo = !allCo; App.render(); };
     const fa = $(".fall", body); if (fa) fa.onclick = () => { F.co.clear(); F.ow.clear(); keepF(); App.render(); }; }
   const fcount = () => F.co.size + F.ow.size + ((App.q || "").trim() ? 1 : 0);
   const split = n => { const p = String(n || "").trim().split(/\s+/); return { first: p.shift() || "", last: p.join(" ") }; };
