@@ -1084,3 +1084,10 @@ html.dark .menubar{box-shadow:none}
 .mi-sub-w{position:relative}.mb-side{display:none;position:absolute;left:calc(100% + 4px);top:-5px;min-width:200px;background:var(--panel);border:var(--ctl-bd);border-radius:10px;box-shadow:0 12px 32px #1e1f2233;padding:5px;z-index:7001}
 .mi-sub-w:hover .mb-side,.mi-sub-w.open .mb-side,.mi-sub-w:focus-within .mb-side{display:block}.mi-sub-w:hover>.mi,.mi-sub-w.open>.mi{background:var(--panel2)}
 .tbl td.has-eta{padding-right:6px}.tbl td.has-eta .eta-i{right:2px;width:16px;height:16px;font-size:10px;line-height:16px}   /* (the box stays centred like the other tick columns; the ETA mark sits at the edge until its new look is picked) */
+/* Parts Arrived: a dot on the box's corner for the delivery (red overdue, yellow due within 7 days, green further off, grey to be confirmed) */
+.tbl td.eta .ck{position:relative}.tbl td.eta .ck::after{content:"";position:absolute;top:-4px;right:-4px;width:8px;height:8px;border-radius:50%;background:var(--eta);border:1.5px solid var(--panel);pointer-events:none}
+.tbl td.eta.late{--eta:#d64541}.tbl td.eta.soon{--eta:#e8b10e}.tbl td.eta.ok{--eta:#1f8a58}.tbl td.eta.tbc{--eta:#9aa3ad}
+.etapop{width:280px;gap:6px}.etapop.late{--eta:#d64541}.etapop.soon{--eta:#e8b10e}.etapop.ok{--eta:#1f8a58}.etapop.tbc{--eta:#9aa3ad}
+.ep-h{display:flex;align-items:center;gap:7px;font-size:13.5px}.ep-h i{width:9px;height:9px;border-radius:50%;background:var(--eta);flex:none}
+.ep-g{display:grid;grid-template-columns:62px 1fr;gap:3px 8px;font-size:12.5px}.ep-g a{color:inherit}
+.ep-items{border-top:1px solid var(--line);padding-top:6px;display:flex;flex-direction:column;gap:3px;font-size:12.5px}

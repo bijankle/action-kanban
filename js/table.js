@@ -121,7 +121,7 @@ const Table = (() => {
         else if (c.type === "longtext" && Store.S.edit){ td.classList.add("ed", "ltc"); const v = String(a.f[c.id] || ""); td.innerHTML = '<div class="lt-w"><button type="button" class="lt-b in" data-lt="' + esc(c.id) + '" title="Click to edit">' + (v ? esc(v.split("\n").join("  ·  ")) : '<span class="dim">Add ' + esc((c.label || "").toLowerCase()) + '</span>') + '</button><button type="button" class="lt-more" data-lt="' + esc(c.id) + '" title="Show and edit it all">more…</button></div>'; }
         else if (c.id === "title"){ td.classList.add("ttl"); td.innerHTML = '<div class="tt-w"><span class="tt">' + (esc(a.f.title || "") || '<span class="dim">No title</span>') + '</span><button type="button" class="tt-more" title="Show the full title">more…</button></div>'; }
         else { const v = Fields.show(a, c); td.innerHTML = v && !TICK.has(c.type) && /^(text|longtext|choice|contact|multi)$/.test(c.type) ? moreCut(v, Store.actId(a) + " " + c.label) : v; }
-        if (c.id === "parts"){ td.classList.add("has-eta"); td.insertAdjacentHTML("beforeend", etaI(a)); }   // (the space is kept on every row so the boxes line up)
+        if (c.id === "parts"){ const st = etaState(a); if (st){ td.classList.add("eta", st); td.dataset.eta = ""; } }   // (a coloured dot on the box's corner; point at it for the delivery)
         tr.appendChild(td); });
       if (ADD){ const td = document.createElement("td"); td.className = "addcol"; tr.appendChild(td); }
       frag.appendChild(tr); });
@@ -146,16 +146,26 @@ const Table = (() => {
       document.body.appendChild(p); Fields.place(p, mb); const l = $(".link", p); if (l) l.onclick = () => { Fields.closePop(); edit(); }; }; }
   /* beside the Parts Arrived box, until it's ticked: an i for the parts ETA (the latest ETA on the MTO), green while
      it's still to come, red once it's past, grey while it's TBC. Click it for the date and the MTO items */
-  function etaI(a){ if (a.f.parts) return ""; const e = Store.eta(a); if (!e) return "";
-    const late = e !== "TBC" && e < new Date().toISOString().slice(0, 10), cls = e === "TBC" ? "unk" : late ? "late" : "ok";
-    const tip = e === "TBC" ? "Parts ETA to be confirmed" : (late ? "Parts overdue: ETA was " : "Parts ETA ") + fmtDate(e);
-    return '<button type="button" class="eta-i ' + cls + '" data-eta title="' + esc(tip) + '" aria-label="' + esc(tip) + '">i</button>'; }
-  document.addEventListener("click", e => { const b = e.target.closest("[data-eta]"); if (!b) return; e.stopPropagation(); Fields.closePop(); const a = App.act(b.closest("[data-ref]").dataset.ref); if (!a) return;
-    const e0 = Store.eta(a), rows = (a.mto || []).filter(it => it.desc || it.part);
-    const p = h('<div class="pop etapop"><b>' + (e0 === "TBC" ? "Parts ETA to be confirmed" : (b.classList.contains("late") ? "Parts overdue, ETA was " : "Parts ETA ") + esc(fmtDate(e0))) + '</b>'
-      + (rows.length ? '<div class="dim">From the MTO:</div>' + rows.map(it => '<div class="ep-r"><span>' + esc(it.desc || it.part) + '</span><span class="' + (it.eta && it.eta !== "TBC" && it.eta < new Date().toISOString().slice(0, 10) ? "bad" : "dim") + '">' + esc(it.eta ? (it.eta === "TBC" ? "TBC" : fmtDate(it.eta)) : "no ETA") + '</span></div>').join("") : "")
+  /* Parts Arrived, while the parts are still to come: a dot on the box's corner, red when they're overdue, yellow when
+     they're due within 7 days, green when they're further off, grey while the ETA is to be confirmed. Pointing at the
+     box shows when they're expected, who from and who to call, and the MTO items with their ETAs */
+  const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  const daysTo = e => Math.round((new Date(e + "T12:00") - new Date(today() + "T12:00")) / 864e5);
+  function etaState(a){ if (a.f.parts === true || a.f.parts === Flow.NA) return ""; const e = Store.eta(a); if (!e) return ""; if (e === "TBC") return "tbc"; const n = daysTo(e); return n < 0 ? "late" : n <= 7 ? "soon" : "ok"; }
+  let etaT = null;
+  function etaCard(td){ Fields.closePop(); const a = App.act(td.closest("[data-ref]").dataset.ref); if (!a) return; const e0 = Store.eta(a), st = etaState(a), n = e0 && e0 !== "TBC" ? daysTo(e0) : null, rows = (a.mto || []).filter(it => it.desc || it.part);
+    const ven = (a.rfqTo || [])[0], v = ven && Vendors.byName(ven) || {}, po = (a.pos || []).slice(-1)[0];
+    const head = st === "tbc" ? "ETA to be confirmed" : st === "late" ? "Should have arrived" : st === "soon" ? "Due within a week" : "On track";
+    const p = h('<div class="pop etapop ' + st + '" role="tooltip"><b class="ep-h"><i></i>' + head + '</b><div class="ep-g">'
+      + '<span class="dim">Expected</span><span>' + (e0 === "TBC" ? "To be confirmed" : esc(fmtDate(e0)) + ' · ' + (n === 0 ? "today" : n > 0 ? "in " + n + " day" + (n === 1 ? "" : "s") : -n + " day" + (n === -1 ? "" : "s") + " late")) + '</span>'
+      + (ven ? '<span class="dim">From</span><span>' + esc(ven) + (po ? ', ' + esc(po.name.replace(/\.[a-z0-9]+$/i, "")) : "") + '</span>' : "")
+      + (v.contact || v.phone || v.email ? '<span class="dim">Contact</span><span>' + esc(v.contact || "") + (v.phone ? (v.contact ? ", " : "") + '<a href="tel:' + esc(String(v.phone).replace(/\s/g, "")) + '">' + esc(v.phone) + '</a>' : "") + (!v.phone && v.email ? (v.contact ? ", " : "") + '<a href="mailto:' + esc(v.email) + '">' + esc(v.email) + '</a>' : "") + '</span>' : ven ? '<span class="dim">Contact</span><span class="dim">None on file for ' + esc(ven) + '</span>' : "") + '</div>'
+      + (rows.length ? '<div class="ep-items">' + rows.map(it => '<div class="ep-r"><span>' + esc(it.desc || it.part) + '</span><span class="' + (it.eta && it.eta !== "TBC" && it.eta < today() ? "bad" : "dim") + '">' + esc(it.eta ? (it.eta === "TBC" ? "TBC" : fmtDate(it.eta)) : "no ETA") + '</span></div>').join("") + '</div>' : "")
       + '<button type="button" class="link">Open the MTO</button></div>');
-    document.body.appendChild(p); Fields.place(p, b); $(".link", p).onclick = () => { Fields.closePop(); App.openParts(a._p + ":" + a.u, "mto"); }; }, true);
+    document.body.appendChild(p); Fields.place(p, td); $(".link", p).onclick = () => { Fields.closePop(); App.openParts(a._p + ":" + a.u, "mto"); };
+    p.onmouseenter = () => clearTimeout(etaT); p.onmouseleave = () => { etaT = setTimeout(() => p.remove(), 250); }; }
+  document.addEventListener("mouseover", e => { const td = e.target.closest("td[data-eta]"); if (!td || td.__on) return; td.__on = true; clearTimeout(etaT); etaT = setTimeout(() => etaCard(td), 300);
+    td.addEventListener("mouseleave", () => { td.__on = false; clearTimeout(etaT); etaT = setTimeout(() => { const p = $(".etapop"); if (p && !p.matches(":hover")) p.remove(); }, 250); }, { once: true }); });
   /* a column heading's ▾: sort it either way, fit it to its contents, or take it out of the list (+ Add column brings it back) */
   function colMenu(anchor, id, fit){ Fields.closePop(); const f = Store.field(id), keep = id[0] === "_" || id === "title";
     const p = h('<div class="pop colm"><button type="button" data-m="asc">Sort A to Z</button><button type="button" data-m="desc">Sort Z to A</button>' + (App.sort && App.sort.id === id ? '<button type="button" data-m="off">Clear the sort</button>' : "")
