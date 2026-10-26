@@ -112,7 +112,7 @@ const Table = (() => {
     const w = el.clientWidth || 9999, level = need(0) <= w ? 0 : need(1) <= w ? 1 : 2, cs = all.filter(c => lv(c) > level); lastLv = level; levelOf = w2 => need(0) <= w2 ? 0 : need(1) <= w2 ? 1 : 2;
     if (!ro && window.ResizeObserver){ ro = new ResizeObserver(() => { if (App.view === "tiles" || !el.isConnected || !$(".tbl", el)) return; if (levelOf(el.clientWidth) !== lastLv) App.render(); else cut(el); }); ro.observe(el); }
     /* the spare width at the end goes to the + Add column strip, so every column stays as wide as it was set */
-    const ADD = Store.S.edit ? 140 : 24, fixW = cs.filter(fix).reduce((t, c) => t + fw(c), 0) + ADD, flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
+    const ADD = Store.S.edit ? (ws._add || 140) : 24, fixW = cs.filter(fix).reduce((t, c) => t + fw(c), 0) + ADD, flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? pref("titleMin") : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
@@ -232,12 +232,20 @@ const Table = (() => {
      width so they line up evenly. A column dragged to a width keeps it until the app is next opened */
   let fitted = false, fitKey = ""; const dragged = new Set(), LONG = c => c.id === "title" || c.type === "longtext";
   function autoFit(el, cs){ if (!pref("autoFit") || !$$("tbody tr", el).length) return; const first = !fitted; fitted = true;
-    const key = cs.map(c => c.id).join() + "|" + $$("tbody tr", el).map(tr => { const a = App.act(tr.dataset.ref); return a ? a.u + ":" + (a.mod || 0) : ""; }).join();
+    const key = el.clientWidth + "|" + cs.map(c => c.id).join() + "|" + $$("tbody tr", el).map(tr => { const a = App.act(tr.dataset.ref); return a ? a.u + ":" + (a.mod || 0) : ""; }).join();
     if (!first && key === fitKey) return; fitKey = key;
     const ws = first ? {} : widths(), was = JSON.stringify(ws), ths = $$("th[data-c]", el);
     ths.forEach((th, i) => { const c = cs[i]; if (!c || c.type === "act" || c.type === "id" || dragged.has(c.id)) return;
       if (c.id !== "title" && LONG(c)){ if (!ws[c.id] || first) ws[c.id] = pref("notesW"); return; } ws[c.id] = c.id === "title" ? Math.max(pref("titleMin"), fitW(el, cs, th, i)) : fitW(el, cs, th, i); });   // (the title fits its longest title too; the spare width goes to the strip at the end)
     const tk = cs.filter(c => TICK.has(c.type) && !dragged.has(c.id)), tw = Math.max(0, ...tk.map(c => ws[c.id] || 0)); tk.forEach(c => { if (tw) ws[c.id] = tw; });
+    /* the width left over: the + Add column strip stays about as wide as the ID column, the title gets what it needs
+       to show its longest title, and Notes takes the rest (when space is short, Notes narrows first, to 120px) */
+    const add = Store.S.edit ? Math.max(90, idW) : 24; ws._add = add;
+    const tc = cs.find(c => c.id === "title" && !dragged.has(c.id)), lc = cs.filter(c => c.id !== "title" && LONG(c) && !dragged.has(c.id));
+    const used = cs.filter(c => c !== tc && !lc.includes(c)).reduce((t, c) => t + (c.type === "act" ? NEED.act : c.type === "id" ? idW : ws[c.id] || 0), 0);
+    let room = el.clientWidth - used - add - 2;
+    if (tc){ ws.title = Math.max(pref("titleMin"), Math.min(ws.title, room - lc.length * 120)); room -= ws.title; }
+    lc.forEach(c => { ws[c.id] = Math.max(120, Math.floor(room / lc.length)); });
     if (JSON.stringify(ws) !== was || first){ lsSet("adColW", ws); requestAnimationFrame(() => App.render()); } }
   function wireHead(el, cs){ $$("th", el).forEach(th => { const id = th.dataset.c; if (!$(".th-l", th)) return;   // (the row buttons' column has no heading)
       $(".th-l", th).onclick = () => { App.sort = App.sort && App.sort.id === id ? (App.sort.dir > 0 ? { id, dir: -1 } : null) : { id, dir: 1 }; App.render(); };
