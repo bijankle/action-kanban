@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.98";
+const APP_VERSION = "1.10.99";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -20,7 +20,7 @@ const App = (() => {
     /* the list (Actions table or Organizer) stays on the left; the open action is in the panel on the right (or, with the
        panel switched off in View, in a pop up over the list) */
     const sideTab = A.tab === "actions" || A.tab === "kanban", panel = A.tab === "actions" && lsGet("adPanel", true),   /* (the Organizer has no Details panel: a card opens as a pop up) */ sel = sideTab && !!act(A.selRef), inAct = false, list = A.tab === "actions";
-    $$("#xlsB,#printB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid" || A.tab === "contacts"; $("#gdate").hidden = !(A.tab === "actions" || A.tab === "kanban");
+    $$("#xlsB,#printB,#docB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid" || A.tab === "contacts"; $("#gdate").hidden = !(A.tab === "actions" || A.tab === "kanban");
     $("#q").placeholder = inAct ? "Search actions (back to the list)" : { actions: "Search actions", kanban: "Search, filters every stage", contacts: "Search people, companies, numbers", valid: "Search fields and stages" }[A.tab] || "Search";
     if ($("#q").value !== A.q) $("#q").value = A.q; panels(sideTab, panel);
     const v = $("#view"); v.dataset.tab = A.tab;
@@ -281,14 +281,16 @@ const App = (() => {
     $$("[data-pn]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); lsSet("adPanel", b.dataset.pn === "1"); render(); viewMenu(drop); }); }
 
   /* ---------- menus ---------- */
+  /* (an item whose fourth part is a list opens a side menu: File, Export) */
   const MENUS = {
+    File: [["Export", "", null, [["Excel (.xlsx)…", () => Print.excelDialog()], ["PDF or print…", () => Print.dialog()], ["Word (.docx)…", () => Print.dialog("word")]]]],
     Edit: [["Undo", "Ctrl+Z", () => Store.undo()], ["Redo", "Ctrl+Y", () => Store.redo()]],
     View: null,
     Help: [["How to use", "", guide], ["Keyboard shortcuts", "", keys], "-", ["Settings…", "", () => settings()], "-", ["Update app", "", update], ["About", "", about]] };
   function menus(){ const bar = $("#menubar"); bar.innerHTML = Object.keys(MENUS).map(k => '<div class="mb"><button type="button" class="mb-btn"><u>' + k[0] + '</u>' + k.slice(1) + '</button><div class="mb-drop"></div></div>').join("");
     $$(".mb", bar).forEach((mb, i) => { const k = Object.keys(MENUS)[i], drop = $(".mb-drop", mb);
-      const fill = () => { if (!MENUS[k]) return viewMenu(drop); drop.innerHTML = MENUS[k].map((x, j) => x === "-" ? '<div class="msep"></div>' : '<button type="button" class="mi" data-j="' + j + '">' + esc(x[0]) + (x[1] ? '<span class="mk">' + x[1] + '</span>' : "") + '</button>').join("");
-        $$(".mi", drop).forEach(b => b.onclick = () => { closeMenus(); MENUS[k][+b.dataset.j][2](); }); };
+      const fill = () => { if (!MENUS[k]) return viewMenu(drop); drop.innerHTML = MENUS[k].map((x, j) => x === "-" ? '<div class="msep"></div>' : x[3] ? '<div class="mi-sub-w"><button type="button" class="mi mi-has" data-j="' + j + '" aria-haspopup="true">' + esc(x[0]) + '<span class="mk">▸</span></button><div class="mb-side">' + x[3].map((y, n) => '<button type="button" class="mi" data-j="' + j + '" data-n="' + n + '">' + esc(y[0]) + '</button>').join("") + '</div></div>' : '<button type="button" class="mi" data-j="' + j + '">' + esc(x[0]) + (x[1] ? '<span class="mk">' + x[1] + '</span>' : "") + '</button>').join("");
+        $$(".mi", drop).forEach(b => b.onclick = () => { const x = MENUS[k][+b.dataset.j]; if (x[3] && b.dataset.n == null){ b.parentNode.classList.toggle("open"); return; } closeMenus(); (x[3] ? x[3][+b.dataset.n][1] : x[2])(); }); };
       $(".mb-btn", mb).onclick = e => { e.stopPropagation(); const was = mb.classList.contains("open"); closeMenus(); if (!was){ fill(); mb.classList.add("open"); } };
       $(".mb-btn", mb).onmouseenter = () => { if ($(".mb.open") && !mb.classList.contains("open")){ closeMenus(); fill(); mb.classList.add("open"); } };
       drop.onclick = e => e.stopPropagation(); }); }
@@ -373,7 +375,7 @@ const App = (() => {
       $("#q").oninput = debounce(() => { A.q = $("#q").value; render(); }, 150);
       $("#newB").onclick = () => newAction(); $("#pasteB").onclick = () => Intake.open(null, "");
       $$("#vt button").forEach(b => b.onclick = () => { A.view = b.dataset.v; lsSet("adViewType", A.view); render(); }); $("#sizeB").onclick = e => { e.stopPropagation(); Table.sizePop(e.currentTarget); };
-      $("#printB").onclick = () => Print.dialog(); $("#xlsB").onclick = () => Print.excelDialog();
+      $("#printB").onclick = () => Print.dialog(); $("#xlsB").onclick = () => Print.excelDialog(); $("#docB").onclick = () => Print.dialog("word");
       $("#updB").onclick = update; Filters.dateBar($("#gdate"));
       $("#saveB").onclick = () => { if (!Store.S.edit) settings(); else if (Store.S.status !== "saving" && (Store.S.dirty.size || Store.S.blobs.length || Store.S.status === "error")) Store.save(); };
       $("#profB").onclick = e => { e.stopPropagation(); if ($(".profpop")) return Fields.closePop(); Profile.name() ? profMenu(e.currentTarget) : signIn(); }; drawProf();

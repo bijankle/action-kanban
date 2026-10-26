@@ -1079,3 +1079,7 @@ html.dark .menubar{box-shadow:none}
 .pt-dh{font-size:var(--fl);font-weight:600;color:var(--muted)}.pt-dk .att-add{margin-top:2px}
 @media (max-width:760px){.pt-top{grid-template-columns:1fr}.pt-r{border-left:0;border-top:1px solid var(--line)}}
 .gdate .dchip.gd-d{width:auto}
+.fico .fw{fill:#2b579a}html.dark .fico .fw{fill:#7fa8e0}
+/* a menu item with a side menu (File, Export): it opens to the right on pointing at it */
+.mi-sub-w{position:relative}.mb-side{display:none;position:absolute;left:calc(100% + 4px);top:-5px;min-width:200px;background:var(--panel);border:var(--ctl-bd);border-radius:10px;box-shadow:0 12px 32px #1e1f2233;padding:5px;z-index:7001}
+.mi-sub-w:hover .mb-side,.mi-sub-w.open .mb-side,.mi-sub-w:focus-within .mb-side{display:block}.mi-sub-w:hover>.mi,.mi-sub-w.open>.mi{background:var(--panel2)}

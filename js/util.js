@@ -130,11 +130,13 @@ const properTitle = (() => {
    purple letters underneath */
 const aiIco = () => '<svg class="fico" viewBox="0 0 24 26" aria-hidden="true"><path d="M13 1.5H7.5a1.6 1.6 0 00-1.6 1.6v10.8a1.6 1.6 0 001.6 1.6h9a1.6 1.6 0 001.6-1.6V6.6z M13 1.5v5.1h5.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
   + '<path d="M12 13V7.6M9.7 9.8L12 7.5l2.3 2.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><text class="fa" x="12" y="24.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="8.6" letter-spacing=".2">AI</text></svg>';
-/* the file symbol on export buttons: a page with its type on a coloured label (red for PDF, green for Excel) */
-const fileIco = (label, cls) => { let t = String(label).toUpperCase(); if (t === "XLSX") t = "XLS"; const xl = /XLS|CSV/.test(t);
+/* the file symbol on export (download) buttons: a page with a down arrow in it, its type in coloured letters under it
+   (red for PDF, green for Excel, blue for Word), like the up arrow on the upload with AI button */
+const fileIco = (label, cls) => { let t = String(label).toUpperCase(); if (t === "XLSX") t = "XLS"; if (t === "DOCX") t = "DOC"; const xl = /XLS|CSV/.test(t), wd = t === "DOC";
   /* (option 1: a small page with the type in bold letters underneath, red for PDF, green for Excel) */
   return '<svg class="fico' + (cls ? " " + cls : "") + '" viewBox="0 0 24 26" aria-hidden="true"><path d="M13 1.5H7.5a1.6 1.6 0 00-1.6 1.6v10.8a1.6 1.6 0 001.6 1.6h9a1.6 1.6 0 001.6-1.6V6.6z M13 1.5v5.1h5.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
-    + '<text class="' + (xl ? "fx" : "fp") + '" x="12" y="24.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="' + (t.length > 3 ? 7.2 : 8.6) + '" letter-spacing=".2">' + esc(t) + '</text></svg>'; };
+    + '<path d="M12 7.5v5.4M9.7 10.6l2.3 2.3 2.3-2.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<text class="' + (xl ? "fx" : wd ? "fw" : "fp") + '" x="12" y="24.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="' + (t.length > 3 ? 7.2 : 8.6) + '" letter-spacing=".2">' + esc(t) + '</text></svg>'; };
 
 /* the browser's own autofill (saved names, phone numbers, addresses) is turned off for every box in the app, so only
    the app's own dropdowns show. Browsers ignore autocomplete="off" on boxes that look like a name or phone number, but
