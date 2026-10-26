@@ -1142,3 +1142,4 @@ html.dark .menubar{box-shadow:none}
 .kb-new{align-self:flex-start;height:calc(42px + 106px + 10px)}
 .kb-rows{align-items:flex-start}.kb-row{width:fit-content;max-width:100%;min-width:300px}.kb-row .kb-cards{min-height:calc(106px + 16px)}
 .rb-del.on,.rb-del.on:hover{background:color-mix(in srgb,#c0392b 14%,var(--panel));border-color:color-mix(in srgb,#c0392b 55%,var(--panel));color:#c0392b}html.dark .rb-del.on{color:#ff6b5b}.rb:disabled{opacity:.45;cursor:not-allowed}
+.tbl td.idc{text-align:left;padding:0 10px}.idw.idt{border:0;background:none;padding:0;height:auto;font-weight:700;font-size:14px}.idw.idt .aid{margin:0}

@@ -83,13 +83,17 @@ const Table = (() => {
     let k = 1; while (k < tags.length && headW(tags.slice(0, k + 1).join(", "), font) <= (k + 1 === tags.length ? room + 34 : room)) k++;
     t1.textContent = tags.slice(0, k).join(", "); if (mb){ mb.hidden = k >= tags.length; mb.textContent = "+" + (tags.length - k); } }); }
   function cut(el){ moreFit(el); tagFit(el); const ids = $$(".idw .aid", el); el.style.removeProperty("--aid-w"); if (ids.length) el.style.setProperty("--aid-w", Math.ceil(Math.max(...ids.map(x => x.getBoundingClientRect().width))) + "px");
-    const bx = $$("td.idc .idw", el); if (bx.length){ const want = Math.ceil(Math.max(...bx.map(x => x.getBoundingClientRect().width))) + 16 + 1; if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
+    const bx = $$("td.idc .idw", el); if (bx.length){ const want = Math.ceil(Math.max(...bx.map(x => x.getBoundingClientRect().width))) + 20 + 2; if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
     $$("td.ttl", el).forEach(td => { const t = $(".tt", td); if (t) td.classList.toggle("cut", t.scrollWidth > t.clientWidth + 1); });
     $$("td.ltc", el).forEach(td => { const t = $(".lt-b", td), v = String((App.act(td.closest("tr").dataset.ref) || { f: {} }).f[t.dataset.lt] || ""); td.classList.toggle("cut", v.includes("\n") || t.scrollWidth > t.clientWidth + 1); }); }
   /* long text (notes and the like) in the list: click the box, or its more…, and it opens over the cell in full to edit,
      saved when you click away or press Ctrl+Enter, Esc to leave it as it was */
   document.addEventListener("click", e => { const b = e.target.closest("[data-lt]"); if (!b || !b.closest(".tbl")) return; e.stopPropagation(); Fields.closePop();
-    const tr = b.closest("tr"), a = tr && App.act(tr.dataset.ref), f = a && Store.field(b.dataset.lt); if (f) Fields.textPop($(".lt-b", b.closest("td")), a, f, true); }, true);
+    const tr = b.closest("tr"), a = tr && App.act(tr.dataset.ref), f = a && Store.field(b.dataset.lt); if (!f) return;
+    /* (the cursor goes where the text was clicked; a click on more…, or past the text, puts it at the end) */
+    const box = $(".lt-b", b.closest("td")), cp = b === box && (document.caretPositionFromPoint ? document.caretPositionFromPoint(e.clientX, e.clientY) : document.caretRangeFromPoint && document.caretRangeFromPoint(e.clientX, e.clientY));
+    const node = cp && (cp.offsetNode || cp.startContainer), off = cp && (cp.offset != null ? cp.offset : cp.startOffset), at = node && box.contains(node) && node.nodeType === 3 && !node.parentElement.closest(".dim") ? off : null;
+    Fields.textPop(box, a, f, true, at); }, true);
   document.addEventListener("click", e => { const b = e.target.closest(".tt-more"); if (!b) return; e.stopPropagation(); Fields.closePop(); const tr = b.closest("tr"), a = tr && App.act(tr.dataset.ref); if (!a) return;
     const p = h('<div class="pop ttpop"><div class="ttpop-id">' + esc(Store.actId(a)) + '</div><div class="ttpop-t">' + esc(a.f.title || "") + '</div><button type="button" class="link">Open the action</button></div>');
     document.body.appendChild(p); Fields.place(p, b); $(".link", p).onclick = () => { Fields.closePop(); App.select(tr.dataset.ref); }; }, true);
@@ -126,11 +130,12 @@ const Table = (() => {
     list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on";
       cs.forEach(c => { const td = document.createElement("td"); const l = lp(c).trim(); if (l) td.classList.add(l); if (TICK.has(c.type)) td.classList.add("tk");
         if (c.type === "act"){ td.classList.add("actc"); td.innerHTML = rowBtns(a); }
-        else if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = idBox(a); }
+        else if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = '<span class="idw idt"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + esc(Store.actId(a)) + '</span></span>'; }   // (plain bold text in the list: it can't be edited, so no box)
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
         else if (c.id === "equipment"){ td.classList.add("ed", "tgc"); tagCell(td, a, c); }
         else if (Store.S.edit && (["stage", "rank", "check", "complete", "multi", "choice"].includes(c.type) || c.id === "location") && !Fields.DERIVED[c.id]){ td.classList.add("ed"); td.appendChild(Fields.editor(a, c)); if (c.id === "onhold"){ const hb = Hold.btn(a); if (hb){ td.classList.add("has-hold"); td.insertAdjacentHTML("beforeend", hb); } } }
         else if (c.type === "longtext" && Store.S.edit){ td.classList.add("ed", "ltc"); const v = String(a.f[c.id] || ""); td.innerHTML = '<div class="lt-w"><button type="button" class="lt-b in" data-lt="' + esc(c.id) + '" title="Click to edit">' + (v ? esc(v.split("\n").join("  ·  ")) : '<span class="dim">Add ' + esc((c.label || "").toLowerCase()) + '</span>') + '</button><button type="button" class="lt-more" data-lt="' + esc(c.id) + '" title="Show and edit it all">more…</button></div>'; }
+        else if (c.id === "title" && Store.S.edit){ td.classList.add("ed", "ltc"); const v = String(a.f.title || ""); td.innerHTML = '<div class="lt-w"><button type="button" class="lt-b in" data-lt="title" title="Click to edit the title">' + (v ? esc(v) : '<span class="dim">Add a title</span>') + '</button><button type="button" class="lt-more" data-lt="title" title="Show and edit it all">more…</button></div>'; }   // (the title is a box like the others, edited in place)
         else if (c.id === "title"){ td.classList.add("ttl"); td.innerHTML = '<div class="tt-w"><span class="tt">' + (esc(a.f.title || "") || '<span class="dim">No title</span>') + '</span><button type="button" class="tt-more" title="Show the full title">more…</button></div>'; }
         else { const v = Fields.show(a, c); td.innerHTML = v && !TICK.has(c.type) && /^(text|longtext|choice|contact|multi)$/.test(c.type) ? moreCut(v, Store.actId(a) + " " + c.label) : v; }
         if (c.id === "parts"){ const st = etaState(a); if (st){ td.classList.add("eta", st); td.dataset.eta = ""; } }

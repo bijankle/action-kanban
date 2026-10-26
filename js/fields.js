@@ -201,7 +201,7 @@ const Fields = (() => {
     const below = innerHeight - r.bottom > 300; p.style.top = (below ? r.bottom + 4 : Math.max(8, r.top - 304)) + "px"; }
   /* a text field opened over its box in full to read and edit: Enter or clicking away saves it and closes it, Shift+Enter
      starts a new line (not in one line fields like the title), Esc leaves it as it was */
-  function textPop(anchor, a, f, inline){ closePop(); const one = f.type !== "longtext";
+  function textPop(anchor, a, f, inline, caret){ closePop(); const one = f.type !== "longtext";
     /* (the part of the box you can see: a column can run on behind the panel beside the list, so it's scrolled into
        view first, then the editor is cut to what shows, at least 160px wide) */
     if (inline) anchor.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -217,7 +217,7 @@ const Fields = (() => {
     if (inline) p.style.top = r.top + "px"; ta.oninput = grow; grow();
     let keep = true; p._done = () => { const v = one ? ta.value.replace(/\s*\n\s*/g, " ").trim() : ta.value; if (keep && v !== was) set(a, f, v); };
     ta.onkeydown = ev => { if (ev.key === "Escape"){ ev.stopPropagation(); keep = false; closePop(); } else if (ev.key === "Enter" && (one || !ev.shiftKey)){ ev.preventDefault(); closePop(); } };
-    ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); return p; }
+    const k = caret != null ? Math.min(caret, ta.value.length) : ta.value.length; ta.focus(); ta.setSelectionRange(k, k); return p; }
   function closePop(){ $$(".pop").forEach(p => { p._done && p._done(); p.remove(); }); }
   document.addEventListener("mousedown", e => { if (!e.target.closest(".pop, .pj-b, #profB")) closePop(); });
   return { DERIVED, show, text, editor, set, val, closePop, place, chip, optLabels, grow, suggest, textPop };
