@@ -9,6 +9,7 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - When something is ambiguous, ask short questions with clear options and a recommended default (he often ends with "Qs?"). When he doesn't answer, go with the recommendation and say so.
 - Explain things plainly, as to a mechanical engineer. Replies: bold capital headers, plain paragraphs, tables are fine, no dashes or hyphens in prose.
 - Re-show pending choices with their preview links when he asks what's outstanding; he loses track of old previews.
+- Before each push run the quick checks, `node tests/smoke.js` (made up data, no real site data; about a minute), and add a check when a core flow changes.
 - After each change: bump the version (`sed -i 's/1\.10\.N/1.10.N+1/g' index.html version.json js/app.js`), commit, push, and report what was tested.
 
 ## Look and feel

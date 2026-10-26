@@ -1,0 +1,579 @@
+{
+ "v": 1,
+ "mod": 1792981362991,
+ "stages": [
+  {
+   "id": "st0",
+   "name": "Identified",
+   "color": "#3B8FE0",
+   "kind": "open",
+   "print": true,
+   "mod": 1792972351427,
+   "todo": "Categorize Issue",
+   "by": "bijan khadembashi",
+   "byE": "bkhadembashi@nsrltd.com"
+  },
+  {
+   "id": "stP",
+   "name": "PCCR Sent",
+   "todo": "Send PCCR",
+   "color": "#E07A3A",
+   "kind": "open",
+   "print": true,
+   "mod": 1792973031732
+  },
+  {
+   "id": "stM",
+   "name": "MTO Drafted",
+   "todo": "Draft MTO",
+   "color": "#0E9AA7",
+   "kind": "open",
+   "print": true,
+   "mod": 1792972351427
+  },
+  {
+   "id": "stS",
+   "name": "Spares Secured",
+   "todo": "Secure Spares",
+   "color": "#5965D6",
+   "kind": "open",
+   "print": true,
+   "mod": 1792972359319
+  },
+  {
+   "id": "st3",
+   "name": "RFQ Sent",
+   "color": "#C07A12",
+   "kind": "open",
+   "print": true,
+   "mod": 1792972351427,
+   "todo": "Send RFQ"
+  },
+  {
+   "id": "st4",
+   "name": "PO Sent",
+   "color": "#D6488A",
+   "kind": "open",
+   "print": true,
+   "mod": 1792972351427,
+   "todo": "Send PO"
+  },
+  {
+   "id": "st8",
+   "name": "Contractor Engaged",
+   "todo": "Engage Contractor",
+   "color": "#7C5CD6",
+   "kind": "open",
+   "print": true,
+   "mod": 1792904450763
+  },
+  {
+   "id": "st1",
+   "name": "Notice Sent",
+   "color": "#7C5CD6",
+   "kind": "open",
+   "print": true,
+   "mod": 1792829567810,
+   "todo": "Draft Notice",
+   "del": true
+  },
+  {
+   "id": "st2",
+   "name": "WO Created",
+   "color": "#0E9AA7",
+   "kind": "open",
+   "print": true,
+   "mod": 1792972351427,
+   "todo": "Create WO",
+   "del": true
+  },
+  {
+   "id": "st7",
+   "name": "Parts Received",
+   "color": "#2F7FD1",
+   "kind": "open",
+   "print": true,
+   "mod": 1792972351427,
+   "by": "Action Database",
+   "todo": "Await Parts",
+   "del": true
+  },
+  {
+   "id": "st9",
+   "name": "Work Scheduled",
+   "todo": "Work Scheduled",
+   "color": "#5965D6",
+   "kind": "open",
+   "print": true,
+   "mod": 1792972351427,
+   "del": true
+  },
+  {
+   "id": "st5",
+   "name": "On Hold",
+   "color": "#F2B03D",
+   "kind": "hold",
+   "print": true,
+   "mod": 1792421559214,
+   "todo": "On Hold"
+  },
+  {
+   "id": "st6",
+   "name": "Done",
+   "color": "#2FB463",
+   "kind": "done",
+   "print": false,
+   "mod": 1792421559214,
+   "todo": "Done"
+  }
+ ],
+ "fields": [
+  {
+   "id": "title",
+   "label": "Title",
+   "type": "text",
+   "builtin": true,
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "core": true
+  },
+  {
+   "id": "status",
+   "label": "Status",
+   "type": "stage",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792836248711,
+   "core": true
+  },
+  {
+   "id": "priority",
+   "label": "Priority",
+   "type": "rank",
+   "builtin": true,
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "core": true
+  },
+  {
+   "id": "problem",
+   "label": "Problem",
+   "type": "longtext",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "core": true
+  },
+  {
+   "id": "solution",
+   "label": "Solution",
+   "type": "longtext",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792413292212,
+   "core": true
+  },
+  {
+   "id": "equipment",
+   "label": "Tags",
+   "type": "multi",
+   "builtin": true,
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792881037406,
+   "options": []
+  },
+  {
+   "id": "category",
+   "label": "Category",
+   "type": "choice",
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "stage": "st0",
+   "desc": "What kind of item it is. It sets the ID's letters: DEF, MAN, OPS, PUN or COM.",
+   "mod": 1792972351427,
+   "options": [
+    {
+     "id": "mnxhg94c3c418vs",
+     "label": "Defect",
+     "color": "#E0453A"
+    },
+    {
+     "id": "mmyzubousbfbbvc",
+     "label": "Maintenance",
+     "color": "#2F7FD1"
+    },
+    {
+     "id": "mby7rbbunf4mhmz",
+     "label": "Operations",
+     "color": "#C07A12"
+    },
+    {
+     "id": "mfmxylfe8fji35k",
+     "label": "Punchlist",
+     "color": "#7C5CD6"
+    },
+    {
+     "id": "mrh15q4qhm4txm6",
+     "label": "Commissioning",
+     "color": "#2FB463"
+    }
+   ]
+  },
+  {
+   "id": "location",
+   "label": "Location",
+   "type": "text",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792837751405,
+   "suggest": true
+  },
+  {
+   "id": "defect",
+   "label": "Defect notice sent",
+   "type": "check",
+   "builtin": true,
+   "table": true,
+   "tbc": true,
+   "na": true,
+   "mod": 1792981362991,
+   "short": "Defect Emailed",
+   "desc": "Defect notice emailed. Ticking it sets the Category to Defect."
+  },
+  {
+   "id": "pccr",
+   "label": "PCCR sent",
+   "short": "PCCR",
+   "type": "check",
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "desc": "PCCR sent. Ticking it moves the action on from Send PCCR.",
+   "mod": 1792981362991,
+   "stage": "stP"
+  },
+  {
+   "id": "scope",
+   "label": "Scope document sent",
+   "type": "check",
+   "builtin": true,
+   "table": false,
+   "tbc": true,
+   "na": true,
+   "mod": 1792886493754,
+   "short": "Scope",
+   "desc": "Scope of work document sent."
+  },
+  {
+   "id": "wo",
+   "label": "WO created",
+   "type": "check",
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792981362991,
+   "short": "WO",
+   "desc": "Work order created.",
+   "by": "bijan khadembashi",
+   "byE": "bkhadembashi@nsrltd.com"
+  },
+  {
+   "id": "procurement",
+   "label": "Procurement required",
+   "type": "check",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792838441694,
+   "short": "Procure",
+   "desc": "Procurement required: parts or services need buying for this job.",
+   "del": true
+  },
+  {
+   "id": "spares",
+   "label": "Spares required",
+   "type": "check",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792838441694,
+   "short": "Spares",
+   "desc": "Spares required: parts for this job need to come from the store.",
+   "del": true
+  },
+  {
+   "id": "mto",
+   "label": "MTO",
+   "type": "mto",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "core": true,
+   "mod": 1792840456677
+  },
+  {
+   "id": "mtodone",
+   "label": "MTO done",
+   "short": "MTO",
+   "desc": "MTO drafted: the material take off for this job is written up. Ticking it moves the action on from Draft MTO.",
+   "type": "check",
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792981362991,
+   "stage": "stM"
+  },
+  {
+   "id": "secured",
+   "label": "Spares secured",
+   "short": "Spares Secured",
+   "desc": "Spares secured: the spares for this job are reserved or in hand. Ticking it moves the action on from Secure Spares.",
+   "type": "check",
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792981362991,
+   "by": "bijan khadembashi",
+   "byE": "bkhadembashi@nsrltd.com",
+   "stage": "stS"
+  },
+  {
+   "id": "rfq",
+   "label": "RFQ sent",
+   "type": "check",
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "stage": "st3",
+   "mod": 1792981362991,
+   "short": "RFQ",
+   "desc": "RFQ sent to the vendors. Ticking it (or uploading a quote) moves the action on from Send RFQ."
+  },
+  {
+   "id": "po",
+   "label": "PO sent",
+   "type": "check",
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "stage": "st4",
+   "mod": 1792981362991,
+   "short": "PO",
+   "desc": "PO sent. Ticking it (or uploading the PO) moves the action on from Send PO."
+  },
+  {
+   "id": "eta",
+   "label": "Parts ETA",
+   "type": "date",
+   "builtin": true,
+   "table": false,
+   "tbc": true,
+   "na": true,
+   "mod": 1792905518163
+  },
+  {
+   "id": "parts",
+   "label": "Parts arrived",
+   "type": "check",
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "mod": 1792981362991,
+   "short": "Parts Arrived",
+   "desc": "Parts arrived on site. Until then the box shows a dot for the ETA: green on track, yellow due within a week, red overdue."
+  },
+  {
+   "id": "engaged",
+   "label": "Contractor engaged",
+   "short": "Contractor Engaged",
+   "type": "check",
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "stage": "st8",
+   "desc": "Contractor engaged to do the work. Mark it not needed when Ops or Maintenance do the job themselves.",
+   "mod": 1792981362991
+  },
+  {
+   "id": "onhold",
+   "label": "On hold",
+   "type": "check",
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792981362991,
+   "short": "Hold",
+   "desc": "On hold. Tick it, then click the i to add who it's waiting on, their mobile and the date."
+  },
+  {
+   "id": "contractor",
+   "label": "Contractor company",
+   "type": "text",
+   "builtin": true,
+   "table": false,
+   "tbc": true,
+   "na": true,
+   "mod": 1792531062535,
+   "suggest": true
+  },
+  {
+   "id": "contractorDate",
+   "label": "Date and time on site",
+   "type": "date",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792968385660,
+   "time": true
+  },
+  {
+   "id": "contractorContact",
+   "label": "Contact name",
+   "type": "contact",
+   "builtin": true,
+   "table": false,
+   "tbc": true,
+   "na": true,
+   "mod": 1792531062535
+  },
+  {
+   "id": "contractorPhone",
+   "label": "Contact number",
+   "type": "phone",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "mod": 1792531062535,
+   "link": "contractorContact"
+  },
+  {
+   "id": "contractorAssigned",
+   "label": "Contractor assigned",
+   "type": "choice",
+   "builtin": true,
+   "table": false,
+   "tbc": true,
+   "na": true,
+   "mod": 1792530799429,
+   "options": [
+    {
+     "id": "mvf8lfp0znri4t0",
+     "label": "Yes",
+     "color": ""
+    },
+    {
+     "id": "mvf8lfp0cqnpkk1",
+     "label": "No",
+     "color": ""
+    }
+   ],
+   "del": true
+  },
+  {
+   "id": "sparelist",
+   "label": "Spares list",
+   "type": "sparelist",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "core": true,
+   "mod": 1792416472299
+  },
+  {
+   "id": "isollist",
+   "label": "Isolations",
+   "type": "isollist",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "core": true,
+   "mod": 1792416218674
+  },
+  {
+   "id": "created",
+   "label": "Date created",
+   "type": "meta",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "core": true,
+   "mod": 1792416942261
+  },
+  {
+   "id": "modified",
+   "label": "Last modified",
+   "type": "meta",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "core": true,
+   "mod": 1792416942261
+  },
+  {
+   "id": "completed",
+   "label": "Date completed",
+   "type": "meta",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "core": true,
+   "mod": 1792416942261
+  },
+  {
+   "id": "notes",
+   "label": "Notes",
+   "type": "longtext",
+   "builtin": true,
+   "table": true,
+   "tbc": false,
+   "na": false,
+   "core": true,
+   "mod": 1792912069861,
+   "by": "bijan khadembashi",
+   "byE": "bkhadembashi@nsrltd.com"
+  },
+  {
+   "id": "complete",
+   "label": "Action complete",
+   "type": "complete",
+   "builtin": true,
+   "table": false,
+   "tbc": false,
+   "na": false,
+   "core": true,
+   "mod": 1792881545360,
+   "short": "Done",
+   "desc": "Action complete. Ticking it moves the action to Done."
+  }
+ ],
+ "contacts": [],
+ "quality": "low",
+ "admins": [
+  "bkhadembashi@nsrltd.com"
+ ]
+}

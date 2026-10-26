@@ -1,0 +1,65 @@
+/* Quick checks of the core flows, run before each push:  node tests/smoke.js
+   It starts a stand in for GitHub (tests/mockgh.py) on made up data (no real site data), opens the app in the
+   headless browser and checks that it loads, that ticks move cards, that dates and times save, that the exports open,
+   and that the admin only parts stay admin only. Exits 1 if anything fails. */
+"use strict";
+const { spawn } = require("child_process"), fs = require("fs"), os = require("os"), path = require("path");
+let pw; try { pw = require("playwright"); } catch (e) { pw = require("/opt/node22/lib/node_modules/playwright"); }
+const ROOT = path.resolve(__dirname, ".."), PORT = 8890, B = "http://127.0.0.1:" + PORT, ADMIN = "bkhadembashi@nsrltd.com";
+const EXE = fs.existsSync("/opt/pw-browsers/chromium-1194/chrome-linux/chrome") ? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" : undefined;
+
+/* made up data: one project, four actions */
+function fixtures(dir){ const w = (p, o) => { fs.mkdirSync(path.dirname(path.join(dir, p)), { recursive: true }); fs.writeFileSync(path.join(dir, p), JSON.stringify(o, null, 1)); };
+  const t = Date.now() - 86400e3, act = (no, title, stage, f) => ({ u: "t" + no, no, stage, rank: no, created: t, mod: t, f: Object.assign({ title }, f || {}), photos: [], files: [] });
+  w("data/config.json", JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures/config.json"), "utf8")));
+  w("data/projects.json", { v: 1, projects: [{ id: "test", name: "Test Plant", prefix: "ACT", color: "#475569", created: t, mod: t }] });
+  w("data/p/test/actions.json", { v: 1, nextNo: 5, actions: [act(1, "Pump seal leaking", "st0"), act(2, "Conveyor guard missing", "stP", { category: "Defect", defect: true }), act(3, "Valve sticking", "st0"), act(4, "Sump overflow", "st0")] });
+  w("data/users.json", { v: 1, users: [] }); w("data/vendors.json", { v: 1, categories: [], vendors: [] }); }
+
+const results = []; const check = (name, ok, more) => { results.push([name, !!ok]); console.log((ok ? "  ok    " : "  FAIL  ") + name + (more ? "  (" + more + ")" : "")); };
+
+(async () => { const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ad-smoke-")); fixtures(dir); fs.mkdirSync(path.join(dir, "am"), { recursive: true });
+  const srv = spawn("python3", [path.join(__dirname, "mockgh.py"), ROOT, dir, path.join(dir, "am"), String(PORT)], { stdio: "ignore" });
+  for (let i = 0; i < 40; i++){ try { const r = await fetch(B + "/app/index.html"); if (r.ok) break; } catch (e) {} await new Promise(r => setTimeout(r, 150)); }
+  const browser = await pw.chromium.launch(EXE ? { executablePath: EXE } : {});
+  const open = async (user, opts) => { const ctx = await browser.newContext(Object.assign({ viewport: { width: 1700, height: 950 }, acceptDownloads: true }, opts || {}));
+    await ctx.addInitScript(([B, u]) => { const s = (k, v) => localStorage.setItem(k, JSON.stringify(v)); s("adApiBase", B + "/api"); s("adRawBase", B + "/store/"); s("adGhKey", "test"); s("adSetup", 1); s("adUser", u); s("adProfile", { first: "Test", last: "User", email: u }); s("adTab", "actions"); s("adPanel", true); s("adPlBase", B + "/store/pl/"); s("adEquipSrc", B + "/store/none.json"); s("adFast", false); }, [B, user]);
+    const p = await ctx.newPage(), errs = []; p.on("pageerror", x => errs.push(x.message)); await p.goto(B + "/app/index.html?v=" + Date.now()); await p.waitForSelector(".tbl tbody tr", { timeout: 20000 }); await p.waitForTimeout(800); return { p, errs, ctx }; };
+  let code = 0;
+  try {
+    const { p, errs } = await open("someone@example.com");
+    check("loads with the actions listed", (await p.$$(".tbl tbody tr")).length >= 3);
+    /* ticks lead: picking a category and ticking PCCR move the card on */
+    const at = () => p.evaluate(() => { const a = Store.all().find(x => x.no === 1); return Store.actId(a) + " " + Store.todo(Store.stage(a.stage)); });
+    await p.evaluate(() => { const a = Store.all().find(x => x.no === 1); Fields.set(a, Store.field("category"), "Maintenance"); }); const s1 = await at();
+    check("Category sets the ID and moves it to Send PCCR", /^MAN-0001 Send PCCR$/.test(s1), s1);
+    await p.evaluate(() => { const a = Store.all().find(x => x.no === 1); Fields.set(a, Store.field("pccr"), true); }); const s2 = await at();
+    check("ticking PCCR moves it to Draft MTO", /Draft MTO$/.test(s2), s2);
+    await p.evaluate(() => { const a = Store.all().find(x => x.no === 1); Fields.set(a, Store.field("pccr"), false); }); const s3 = await at();
+    check("unticking PCCR takes it back", /Send PCCR$/.test(s3), s3);
+    await p.evaluate(() => { const a = Store.all().find(x => x.no === 3); Fields.set(a, Store.field("defect"), true); });
+    check("Defect emailed sets the Category to Defect", await p.evaluate(() => Store.all().find(x => x.no === 3).f.category === "Defect"));
+    /* dates and times save, 24 hour */
+    const dt = await p.evaluate(() => { const f = Store.fields().find(x => x.time); if (!f) return "no time field"; const a = Store.all().find(x => x.no === 4); const el = Fields.editor(a, f); document.body.appendChild(el);
+      const [d, t] = el.querySelectorAll(".dchip"); d.value = "2026-11-03"; d.dispatchEvent(new Event("change", { bubbles: true })); const i = t.querySelector("input"); i.value = "1930"; i.dispatchEvent(new Event("blur"));
+      return a.f[f.id] + " " + Fields.text(a, f); });
+    check("a date and a typed 24 hour time save", /^2026-11-03T19:30 3 Nov 2026, 19:30$/.test(dt), dt);
+    /* exports open */
+    const [x1] = await Promise.all([p.waitForEvent("download", { timeout: 20000 }).catch(() => null), p.evaluate(() => Excel.run(Store.visible()))]);
+    check("the Excel export downloads", x1 && /\.xlsx$/.test(x1.suggestedFilename()), x1 && x1.suggestedFilename());
+    const [x2] = await Promise.all([p.waitForEvent("download", { timeout: 40000 }).catch(() => null), p.evaluate(() => Word.run(Store.visible(), { photos: false }))]);
+    check("the Word export downloads", x2 && /\.docx$/.test(x2.suggestedFilename()), x2 && x2.suggestedFilename());
+    const pdf = await p.evaluate(async () => { window.print = () => {}; await Print.run(Store.visible(), { photos: false, pages: 0 }); return document.querySelectorAll("#printRoot .pr-act").length; });
+    check("the PDF export builds its pages", pdf >= 3, pdf + " actions");
+    /* admin only */
+    check("someone else can't add columns", (await p.$$(".addc")).length === 0 && !(await p.evaluate(() => App.isAdmin())));
+    await p.click(".mb-btn >> text=ile"); await p.click(".mi >> text=Parameters"); await p.waitForTimeout(200);
+    check("someone else can't change a team rule", await p.$eval('[data-p="poTick"]', x => x.disabled) && !(await p.$eval('[data-p="etaSoon"]', x => x.disabled)), "team rules locked, own settings open");
+    await p.keyboard.press("Escape");
+    check("no errors on the page", !errs.length, errs.join(" | "));
+    const a = await open(ADMIN); check("the admin can add columns", (await a.p.$$(".addc")).length === 1 && await a.p.evaluate(() => App.isAdmin()));
+    check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
+  } catch (e) { console.log("  FAIL  the checks stopped: " + e.message); code = 1; }
+  await browser.close(); srv.kill(); fs.rmSync(dir, { recursive: true, force: true });
+  const bad = results.filter(r => !r[1]).length; console.log(bad || code ? "\n" + (bad || 1) + " check(s) failed" : "\nAll " + results.length + " checks passed");
+  process.exit(bad || code ? 1 : 0); })();
