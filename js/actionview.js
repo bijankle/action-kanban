@@ -22,7 +22,7 @@ const ActionView = (() => {
     const list = Table.rows(), i = list.indexOf(a), n = k => (a[k] || []).length;
     /* nothing about this action, its tab or the settings has changed (a save finishing, a redraw for something else):
        leave the panel as it is, so its photos and map don't flash */
-    const sig = JSON.stringify([stable(a), sub, ro, i, list.length, Store.S.config.mod, (Store.S.config.contacts || []).length, Store.S.vendors && Store.S.vendors.mod, Equip.count, Store.projects().length]);
+    const sig = JSON.stringify([stable(a), Media.pendingOf(a).length, sub, ro, i, list.length, Store.S.config.mod, (Store.S.config.contacts || []).length, Store.S.vendors && Store.S.vendors.mod, Equip.count, Store.projects().length]);
     if (el.__sig === sig && el.isConnected && $(".av", el)) return; el.__sig = sig;
     /* the header repeats the list row: complete, delete and on hold, then the ID with its copy and PDF buttons; the arrows and close sit at the right */
     el.innerHTML = '<div class="av"><div class="av-head" data-ref="' + esc(a._p + ":" + a.u) + '">' + Table.rowBtns(a) + Table.idBox(a, true) + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "") + '<span class="grow"></span>'
@@ -110,12 +110,13 @@ const ActionView = (() => {
      columns (at least 2) whose rows still fit the height left beside the map and details; if none fit, the smallest
      tiles and the box grows */
   const GRID = new Map();
-  function photos(a, box, ro){ const g = $(".ph-g", box), n = a.photos.length + (ro ? 0 : 1), GAP = 6, MIN = 64;
+  function photos(a, box, ro){ const g = $(".ph-g", box), up = Media.pendingOf(a), n = a.photos.length + up.length + (ro ? 0 : 1), GAP = 6, MIN = 64;
     g.innerHTML = a.photos.map((p, i) => '<div class="ph-c"><button type="button" class="ph-t" data-i="' + i + '" title="View photo ' + (i + 1) + '"><img alt="Photo ' + (i + 1) + '" loading="lazy"></button>' + (ro ? "" : '<button type="button" class="ph-del" data-i="' + i + '" title="Remove this photo" aria-label="Remove photo ' + (i + 1) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg></button>') + '</div>').join("")
+      + up.map(u => '<div class="ph-c ph-up" data-pid="' + u.id + '" title="Adding this photo…"><img alt="Photo being added" src="' + esc(u.url) + '"><span class="ph-bar" aria-hidden="true"><i style="width:' + Math.round(u.p * 100) + '%"></i></span></div>').join("")
       + (ro ? "" : '<button type="button" class="ph-add" title="Upload photos, or drop or paste them anywhere on the action">+ Add photos</button>');
     $$(".ph-t", g).forEach(b => { const p = a.photos[+b.dataset.i], im = $("img", b); im.src = Media.src(a, p, true); im.onerror = () => { if (!im.dataset.r){ im.dataset.r = 1; im.src = Media.src(a, p); } }; b.onclick = () => Media.view(a, +b.dataset.i); });
     /* drag a tile onto another to move it there; the tile under it gets a line on the side it will go */
-    if (!ro) $$(".ph-c", g).forEach((c, i) => { c.draggable = true;
+    if (!ro) $$(".ph-c:not(.ph-up)", g).forEach((c, i) => { c.draggable = true;
       c.addEventListener("dragstart", e => { e.dataTransfer.setData("x-ph", String(i)); e.dataTransfer.effectAllowed = "move"; c.classList.add("ph-drag"); });
       c.addEventListener("dragend", () => { c.classList.remove("ph-drag"); $$(".ph-c", g).forEach(x => x.classList.remove("ph-l", "ph-r")); });
       const side = e => { const r = c.getBoundingClientRect(); return e.clientX < r.left + r.width / 2 ? "l" : "r"; };

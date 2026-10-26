@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.92";
+const APP_VERSION = "1.10.93";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -345,11 +345,11 @@ const App = (() => {
     let f = null; const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (img && pan && !still){ const pr = pan.getBoundingClientRect(), W = Math.min(260, pr.width - 40), H = W * .75; f = h('<div class="ph-fly"><img alt=""></div>'); $("img", f).src = URL.createObjectURL(img);
       Object.assign(f.style, { left: pr.left + (pr.width - W) / 2 + "px", top: pr.top + Math.min(pr.height, innerHeight - pr.top) / 2 - H / 2 + "px", width: W + "px", height: H + "px" }); document.body.appendChild(f); requestAnimationFrame(() => f.classList.add("in")); }
-    await Media.addFiles(a, files);
+    const adding = Media.addFiles(a, files);   // (its tile shows straight away with a progress bar, so the photo lands at once)
     const land = () => { const t = $$(".av .ph-c", pan)[was]; if (f){ if (t){ t.style.visibility = "hidden"; const r = t.getBoundingClientRect(); Object.assign(f.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", borderRadius: "6px" }); }
         setTimeout(() => { const t2 = $$(".av .ph-c", pan)[was]; if (t2) t2.style.visibility = ""; URL.revokeObjectURL($("img", f).src); f.remove(); bump(); }, t ? 560 : 0); } else bump(); };
     const bump = () => { const c = $(".av .cnt", pan); if (c){ c.classList.remove("bump"); void c.offsetWidth; c.classList.add("bump"); } };
-    setTimeout(land, f ? 450 : 0); }
+    setTimeout(land, f ? 450 : 0); await adding; }
   /* pasted photos wait in the tray (bottom left) until dragged onto an action */
   document.addEventListener("paste", e => { if (A.mobile) return; const files = [...(e.clipboardData && e.clipboardData.files || [])];
     if (files.length){ e.preventDefault(); if (!Store.S.edit) return viewOnly(); const a = openAct(); if (a) return pasteInto(a, files); Media.toTray(files); return; }

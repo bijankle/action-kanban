@@ -1046,3 +1046,7 @@ html.dark .menubar{box-shadow:none}
 .menubar .mb-btn:hover,.menubar .mb.open .mb-btn{background:rgba(71,85,105,.1)}html.dark .menubar .mb-btn:hover,html.dark .menubar .mb.open .mb-btn{background:rgba(255,255,255,.08)}
 .mb-btn u{text-underline-offset:2px;text-decoration-thickness:1px}
 .dtt [type=date]{flex:1 1 auto;min-width:130px;width:auto}
+/* a photo still being added: slightly faded, with a progress bar along its foot */
+.ph-up{position:relative;border-radius:8px;overflow:hidden}.ph-up img{width:100%;height:100%;object-fit:cover;display:block;opacity:.75}
+.ph-bar{position:absolute;left:8px;right:8px;bottom:8px;height:5px;border-radius:3px;background:rgba(0,0,0,.35);overflow:hidden}
+.ph-bar i{display:block;height:100%;background:#2FB463;border-radius:3px;transition:width 1.8s cubic-bezier(.2,.7,.3,1)}

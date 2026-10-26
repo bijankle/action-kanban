@@ -18,15 +18,20 @@ const Media = (() => {
     const big = docs.filter(f => f.size > 50 * 1048576); if (big.length){ alert(big.map(f => f.name).join(", ") + " is over 50 MB, too large to store online, so it's kept in your local folder only."); }
     note("Adding " + files.length + " file" + (files.length > 1 ? "s" : "") + " to " + Store.actId(a) + "…", 6000);
     const qual = QUALITY[Store.S.config.quality || "medium"] || QUALITY.medium;
-    for (const f of imgs){ try { const buf = await f.arrayBuffer(); const hh = await sha1(buf);
-        if (a.photos.some(p => p.h === hh)) continue;
+    /* each photo shows in its place straight away, with a bar along its foot while it's made smaller and uploaded */
+    const ref = a._p + ":" + a.u, list = pend.get(ref) || []; pend.set(ref, list);
+    const ups = imgs.map(f => ({ id: uid(), url: URL.createObjectURL(f), p: 0.08 })); list.push(...ups); if (ups.length) App.render();
+    const done = u => { const i = list.indexOf(u); if (i >= 0) list.splice(i, 1); setTimeout(() => URL.revokeObjectURL(u.url), 4000); };
+    for (const [n, f] of imgs.entries()){ const up = ups[n]; try { const buf = await f.arrayBuffer(); const hh = await sha1(buf);
+        if (a.photos.some(p => p.h === hh)){ done(up); App.render(); continue; }
         const name = uniq(a, f.name && !/^image\.\w+$/.test(f.name) ? f.name : "Pasted " + new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-") + ".png", hh);
-        let main, th; try { main = await compress(f, qual[0], qual[1]); th = await compress(f, 420, 0.7); } catch (e){ docs.push(f); note(f.name + " can't be shown as a photo in this browser, so it's kept as an attachment", 5000); continue; }
+        let main, th; try { main = await compress(f, qual[0], qual[1]); th = await compress(f, 420, 0.7); } catch (e){ done(up); App.render(); docs.push(f); note(f.name + " can't be shown as a photo in this browser, so it's kept as an attachment", 5000); continue; }
+        prog(up, 0.3);
         mem.set(hh, { main: URL.createObjectURL(main.blob), thumb: URL.createObjectURL(th.blob), orig: f });
         Local.saveOriginal(a, name, f);
-        await Store.addBlob(pImg(a._p, hh), bufToB64(await main.blob.arrayBuffer())); await Store.addBlob(pThumb(a._p, hh), bufToB64(await th.blob.arrayBuffer()));
-        Store.mutate("a:" + a._p, () => { a.photos.push({ h: hh, name, w: main.w, ht: main.h, added: now() }); Store.touch(a); }); Store.log("Added a photo to " + Store.actId(a));
-      } catch (e){ console.error(e); alert("Couldn't add " + f.name + ": " + e.message); } }
+        await Store.addBlob(pImg(a._p, hh), bufToB64(await main.blob.arrayBuffer())); prog(up, 0.85); await Store.addBlob(pThumb(a._p, hh), bufToB64(await th.blob.arrayBuffer())); prog(up, 1);
+        done(up); Store.mutate("a:" + a._p, () => { a.photos.push({ h: hh, name, w: main.w, ht: main.h, added: now() }); Store.touch(a); }); Store.log("Added a photo to " + Store.actId(a));
+      } catch (e){ done(up); App.render(); console.error(e); alert("Couldn't add " + f.name + ": " + e.message); } }
     for (const f of docs){ try { const buf = await f.arrayBuffer(); const hh = (await sha1(buf)).slice(0, 12), big = f.size > 50 * 1048576, name = uniq(a, f.name, hh);
         const kept = await Local.saveOriginal(a, name, f);
         if (big && !kept){ alert(f.name + " is over 50 MB, too large to store online, and no local folder is connected, so it wasn't attached."); continue; }
@@ -112,6 +117,9 @@ const Media = (() => {
   const refresh = a => { if (V && V._a === a) V._show(); };
   function pickFiles(a, accept){ pickFile(accept, true, fs => addFiles(a, fs)); }
 
+  /* photos still being added, per action: shown as tiles with a progress bar */
+  const pend = new Map(), pendingOf = a => pend.get(a._p + ":" + a.u) || [];
+  const prog = (u, p) => { u.p = p; const b = document.querySelector('.ph-up[data-pid="' + u.id + '"] .ph-bar i'); if (b) b.style.width = Math.round(p * 100) + "%"; };
   /* ---------- the tray: pasted photos wait here until dragged onto an action ---------- */
   const tray = [];
   function toTray(files){ files.forEach(f => tray.push({ id: uid(), f, url: URL.createObjectURL(f) })); drawTray(); note("Pasted photo waiting at the bottom left. Drag it onto an action.", 4000); }
@@ -126,5 +134,5 @@ const Media = (() => {
   function dropOn(a, e){ if (!a) return; const id = e.dataTransfer.getData("text/tray");
     if (id){ const x = tray.find(y => y.id === id); if (!x) return; tray.splice(tray.indexOf(x), 1); drawTray(); return addFiles(a, [x.f]); }
     if (e.dataTransfer.files.length) addFiles(a, e.dataTransfer.files); }
-  return { uniq, addFiles, src, fileSrc, fileUrlOnline, shareLinks, openFile, view, close, refresh, pickFiles, toTray, hasDrop, dropOn, isImg, compress, mem, get open(){ return !!V; } };
+  return { pendingOf, uniq, addFiles, src, fileSrc, fileUrlOnline, shareLinks, openFile, view, close, refresh, pickFiles, toTray, hasDrop, dropOn, isImg, compress, mem, get open(){ return !!V; } };
 })();
