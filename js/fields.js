@@ -59,6 +59,8 @@ const Fields = (() => {
       if (f.id === "priority"){ Store.place(a, a.stage, v - 1); Store.log("Reordered " + Store.actId(a)); return; }
       a.f[f.id] = v; Store.touch(a); Store.log("Edited " + Store.actId(a));
       /* a stage's step (its tick, or the Category choice): the card goes where the ticks now say (see Flow) */
+      /* ticking Defect emailed makes it a defect (the ID becomes DEF-), and moves it on from Categorize Issue */
+      if (f.id === "defect" && v === true){ const c = Store.field("category"); if (c && a.f.category !== "Defect"){ Flow.mark(a, c, "Defect"); Flow.sync(a); note("Category set to Defect: " + Store.actId(a)); } }
       if (f.stage && (f.type === "check" || f.type === "choice")){ Flow.mark(a, f, v); Flow.sync(a); }
       const auto = a.auto = a.auto || {}; delete auto[f.id]; if (f.id === "location") delete a.locAuto;
       const fill = (id, val) => { if (a.f[id] && !auto[id] && !(id === "location" && a.locAuto)) return; if (val){ a.f[id] = val; auto[id] = true; } else if (auto[id]){ a.f[id] = ""; delete auto[id]; } };
