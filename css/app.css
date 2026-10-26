@@ -1162,3 +1162,5 @@ html.dark .menubar{box-shadow:none}
 /* any table: a heading sorts on click and drags to move its column */
 .tbl th.tk-h{cursor:pointer;user-select:none}.tbl th.tk-h:hover{filter:brightness(1.12)}
 .tbl th.dover{box-shadow:inset 3px 0 0 #fff}.tbl th.drag{opacity:.55}
+/* a filter pill too long for the side bar ends in … (its name in full on pointing) */
+.fpill{max-width:100%;display:inline-flex;align-items:center;gap:4px;min-width:0}.fpill .fp-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.fpill b{flex:none}

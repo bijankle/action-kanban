@@ -20,6 +20,21 @@ const Valid = (() => {
     if (lock){ $$("input,select,button:not(.dv-f)", body).forEach(x => x.disabled = true); if (!ro) body.insertAdjacentHTML("afterbegin", '<p class="dim dv-lock">Only the admin changes the fields and stages.</p>'); }
     if (keep){ const r = keep.id === "_new" ? $(".ct-new", el) : keep.id === "_ed" ? $(".dv-ed", el) : $('[data-id="' + keep.id + '"]', el), t = r && $$("input,select", r)[keep.i];
       if (t){ if (t.tagName === "INPUT" && t.type !== "checkbox" && t.type !== "color" && t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
+  const tname = x => x.type === "stage" ? "Stage" : x.type === "rank" ? "Organizer order" : x.type === "mto" ? "MTO count" : x.type === "sparelist" ? "Spares count" : x.type === "isollist" ? "Isolations count" : x.type === "meta" ? "Date, automatic" : x.type === "complete" ? "Tick box, moves the card" : TYPES[x.type] || x.type;
+  /* the Filters side bar for each tab: the pills that make sense for its list */
+  const KIND = { open: "Normal", hold: "On hold", done: "Completed" };
+  const FG = {
+    vendors: [{ k: "cat", name: "Category", of: v => v.cat, all: true }, { k: "type", name: "Supply type", of: v => v.type }],
+    fields: [{ k: "type", name: "Type of data", of: f => tname(f) }, { k: "tbl", name: "On the Actions list", of: f => f.table ? "A column" : "Not a column" }],
+    stages: [{ k: "kind", name: "Kind", of: s => KIND[s.kind] || s.kind, order: (a, b) => Object.values(KIND).indexOf(a) - Object.values(KIND).indexOf(b) }, { k: "print", name: "Print", of: s => s.print ? "Printed" : "Not printed" }] };
+  const ITEMS = { vendors: () => Vendors.all(), fields: () => Store.fields(), stages: () => Store.stages() };
+  const SRCH = { vendors: v => [v.name, v.cat, v.ordered, v.type], fields: f => [f.label, tname(f), (f.options || []).filter(o => !o.del).map(o => o.label).join(" ")], stages: s => [s.name, Store.todo(s)] };
+  const pf = (k, items) => FG[k] ? PillF.apply(k, FG[k], items) : items;
+  function filters(el){ if (sec === "contacts") return Contacts.filters(el); let body = $(".fp-groups", el);
+    if (!FG[sec]){ if (body) body.innerHTML = ""; return; } const all = ITEMS[sec](); PillF.render(el, sec, FG[sec], all.filter(x => smartHit(SRCH[sec](x).join(" "), App.q)), all); }
+  const fcount = () => sec === "contacts" ? Contacts.fcount() : (FG[sec] ? PillF.count(sec, FG[sec]) : 0) + ((App.q || "").trim() ? 1 : 0);
+  const PH = { contacts: "Search people, companies, numbers", vendors: "Search suppliers, categories, what we order", equip: "Search tags, names", fields: "Search columns and their choices", stages: "Search the status steps" };
+  const place = () => PH[sec] || "Search";
   const up = (o, fn) => Store.mutate("config", () => { fn(); Store.touch(o); });
   /* drag rows in a list to reorder the array behind them */
   function sortable(list, arr, sel){ $$(sel, list).forEach(r => { r.draggable = App.isAdmin();
@@ -29,8 +44,8 @@ const Valid = (() => {
       r.ondrop = e => { r.classList.remove("dover"); const from = e.dataTransfer.getData("text/row"); if (!from || from === r.dataset.id) return; e.preventDefault();
         Store.mutate("config", () => { const A = arr(); const i = A.findIndex(x => x.id === from), b0 = A.findIndex(x => x.id === r.dataset.id), m = A.splice(i, 1)[0]; A.splice(A.findIndex(x => x.id === r.dataset.id) + (i < b0 ? 1 : 0), 0, m); Store.touch(m); Store.S.config.mod = now(); }); }; }); }
 
-  function fields(body){ const all = Store.fields(), hits = all.filter(f => hit(f.label, TYPES[f.type] || f.type, (f.options || []).filter(o => !o.del).map(o => o.label).join(" "))), fs = hits.length ? hits : all; if (!Store.field(cur)) cur = fs[0].id; const f = Store.field(cur);
-    body.innerHTML = '<div class="dv-cols"><div class="dv-list"><div class="dv-h">Fields <span class="dim">drag to reorder</span></div>' + fs.map(x => '<button type="button" class="dv-f' + (x.id === cur ? " on" : "") + '" data-id="' + x.id + '"><span>' + esc(x.label) + '</span><small>' + esc(x.type === "stage" ? "Stage" : x.type === "rank" ? "Organizer order" : x.type === "mto" ? "MTO count" : x.type === "sparelist" ? "Spares count" : x.type === "isollist" ? "Isolations count" : x.type === "meta" ? "Date, automatic" : x.type === "complete" ? "Tick box, moves the card" : TYPES[x.type] || x.type) + '</small></button>').join("")
+  function fields(body){ const all = Store.fields(), hits = pf("fields", all.filter(f => hit(...SRCH.fields(f)))), fs = hits.length ? hits : all; if (!Store.field(cur)) cur = fs[0].id; const f = Store.field(cur);
+    body.innerHTML = '<div class="dv-cols"><div class="dv-list"><div class="dv-h">Fields <span class="dim">drag to reorder</span></div>' + fs.map(x => '<button type="button" class="dv-f' + (x.id === cur ? " on" : "") + '" data-id="' + x.id + '"><span>' + esc(x.label) + '</span><small>' + esc(tname(x)) + '</small></button>').join("")
       + '<button type="button" class="btn ghost sm dv-addf">+ Add field</button></div><div class="dv-ed"></div></div>';
     $$(".dv-f", body).forEach(b => b.onclick = () => { cur = b.dataset.id; fields(body); });
     sortable($(".dv-list", body), () => Store.S.config.fields, ".dv-f");
@@ -63,7 +78,7 @@ const Valid = (() => {
         $(".ic-b", r).onclick = () => up(f, () => o.del = true); });
       sortable(ol, () => f.options, ".opt"); } }
 
-  function stages(body){ const ss = Store.stages().filter(s => hit(s.name, Store.todo(s)));
+  function stages(body){ const ss = pf("stages", Store.stages().filter(s => hit(s.name, Store.todo(s))));
     body.innerHTML = '<div class="dv-h">Organizer stages' + tipI("Drag to reorder. Each stage has two names for the same step: as done, on the action (its steps, the status choices and exports, such as RFQ Sent), and as being done, on the Organizer column (such as Draft RFQ).") + '</div><div class="stl"><div class="str str-h"><span class="grip"></span><span class="swh"></span><span>On the action (done)</span><span>Organizer column (doing)</span></div>' + ss.map(s => '<div class="str" data-id="' + s.id + '"><span class="grip">⋮⋮</span><input type="color" value="' + esc(s.color) + '"><input class="in" data-n="name" value="' + esc(s.name) + '"><input class="in" data-n="todo" value="' + esc(Store.todo(s)) + '"><select class="in sm">' + [["open", "Normal"], ["hold", "On hold"], ["done", "Completed"]].map(([k, n]) => '<option value="' + k + '"' + (s.kind === k ? " selected" : "") + '>' + n + '</option>').join("") + '</select><label class="tp-o"><input type="checkbox"' + (s.print ? " checked" : "") + '><span>Print</span></label><span class="dim">' + Store.all().filter(a => a.stage === s.id).length + '</span><button type="button" class="ic-b sm" title="Delete">✕</button></div>').join("") + '</div>'
       + '<input class="in" data-k="new" placeholder="+ Add a stage, then Enter">';
     $$(".str[data-id]", body).forEach(r => { const s = Store.stage(r.dataset.id);
@@ -101,5 +116,5 @@ const Valid = (() => {
     $("button", nr).onclick = add; $$("input", nr).forEach(i => i.onkeydown = e => e.key === "Enter" && add()); }
   const section = () => sec;
   const open = k => { sec = k; lsSet("adDvSec", k); if (OTHER.includes(k)) lsSet("adDvOther", k); };
-  return { section, open, render };
+  return { section, open, render, filters, fcount, place, pf };
 })();

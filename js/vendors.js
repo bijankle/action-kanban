@@ -12,7 +12,7 @@ const Vendors = (() => {
 
   /* ---------- the box on the MTO tab ---------- */
   function box(a, ro){ const c = a.rfqCat || "", to = a.rfqTo || [];
-    if (!all().length) return '<div class="vd-box"><div class="dim">No approved vendor list yet. Import it on the Data validation tab, Vendors.</div></div>';
+    if (!all().length) return '<div class="vd-box"><div class="dim">No approved vendor list yet. Import it on the Data validation tab, Suppliers.</div></div>';
     return '<div class="vd-box">' + (a.rfqCatAI ? '<span class="vd-ai" title="' + esc(a.rfqCatWhy || "") + '">✨ Category picked by Gemini from the MTO</span>' : "")
       + '<div class="vd-row"><label class="fl vd-cat">Vendor category<select class="in" data-k="cat"' + (ro ? " disabled" : "") + '><option value="">' + (hasKey() ? "Pick, or let Gemini suggest" : "Pick a category") + '</option>' + cats().map(x => '<option' + (x.name === c ? " selected" : "") + ' title="' + esc(x.look) + '">' + esc(x.name) + '</option>').join("") + '</select></label>'
       + (ro || !hasKey() ? "" : '<button type="button" class="btn ghost sm vd-sug" data-k="sug" title="Ask Gemini which category fits the MTO">✨ Suggest</button>')
@@ -58,7 +58,7 @@ const Vendors = (() => {
 
   /* ---------- the Vendors page on the Data validation tab ---------- */
   function page(body, ro){ const hit = v => smartHit(v.name + " " + v.cat + " " + v.ordered + " " + v.type, App.q);
-    const list = all().filter(hit).sort((a, b) => a.cat.localeCompare(b.cat) || (b.po || 0) - (a.po || 0));
+    const list = Valid.pf("vendors", all().filter(hit)).sort((a, b) => a.cat.localeCompare(b.cat) || (b.po || 0) - (a.po || 0));
     /* (just the list: the import is the upload symbol in the toolbar above) */
     body.innerHTML = '<div class="tw-wrap"><table class="tbl ct vd-tbl"><thead><tr><th>Vendor</th><th>Category</th><th>Supply type</th><th>What we have ordered from them</th><th data-col="po">POs</th><th data-col="last">Last PO</th><th data-col="ct">Contact</th></tr></thead><tbody>'
       + list.slice(0, 600).map(v => '<tr><td><b>' + esc(v.name) + '</b></td><td>' + esc(v.cat) + '</td><td>' + esc(v.type) + '</td><td>' + esc(v.ordered) + '</td><td>' + (v.po || "") + '</td><td>' + esc(fmtDate(v.last)) + '</td><td><button type="button" class="link vd-det' + (v.contact || v.email || v.phone ? "" : " dim") + '" data-vd="' + esc(v.name) + '">' + esc([v.contact, v.phone, v.email].filter(Boolean).join(", ") || (ro ? "" : "Add")) + '</button></td></tr>').join("") + '</tbody></table></div>'; gridCols($(".vd-tbl", body), "vendors", { fixed: { po: 60, last: 110 }, max: 700 });
@@ -96,5 +96,5 @@ const Vendors = (() => {
       note("Imported " + vendors.length + " approved vendors"); }
     catch (e){ console.error(e); alert("Couldn't import the vendor list: " + e.message); } }
   const pickImport = () => { if (!Store.S.edit) return App.viewOnly(); pickFile(".xlsx", false, importFile); };
-  return { pickImport, box, wire, suggest, page, importFile, byName, lines, details };
+  return { pickImport, box, wire, suggest, page, importFile, byName, lines, details, all };
 })();

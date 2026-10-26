@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.133";
+const APP_VERSION = "1.10.134";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -21,7 +21,7 @@ const App = (() => {
        panel switched off in View, in a pop up over the list) */
     const sideTab = A.tab === "actions" || A.tab === "kanban", panel = A.tab === "actions" && lsGet("adPanel", true),   /* (the Organizer has no Details panel: a card opens as a pop up) */ sel = sideTab && !!act(A.selRef), inAct = false, list = A.tab === "actions";
     $$("#xlsB,#printB,#docB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid"; $("#dvT").hidden = A.tab !== "valid"; const ctOn = isCt(); $("#gdate").hidden = !(A.tab === "actions" || A.tab === "kanban"); $("#ctImpB").hidden = !Store.S.edit || !(ctOn || (A.tab === "valid" && Valid.section() === "vendors")); $("#ctImpB").title = ctOn ? "Import a contact list from Excel (Name or First and Last name, Company, Mobile, Email). Anyone already in the list is filled in, not doubled." : "Import the latest Approved Vendor List from Excel. It replaces the list for everyone, and keeps the contact details already entered.";
-    $("#q").placeholder = inAct ? "Search actions (back to the list)" : { actions: "Search actions", kanban: "Search, filters every stage", valid: ctOn ? "Search people, companies, numbers" : "Search fields and stages" }[A.tab] || "Search";
+    $("#q").placeholder = inAct ? "Search actions (back to the list)" : { actions: "Search actions", kanban: "Search, filters every stage", valid: Valid.place() }[A.tab] || "Search";
     if ($("#q").value !== A.q) $("#q").value = A.q; panels(sideTab, panel);
     const v = $("#view"); v.dataset.tab = A.tab;
     v.classList.toggle("in-act", inAct);
@@ -37,15 +37,15 @@ const App = (() => {
      opens as a pop up. The search box sits in the Filters panel, or in the list's header row while that's hidden. */
   /* the contacts are a section of the Data validation tab */
   const isCt = () => A.tab === "valid" && Valid.section() === "contacts";
-  function panels(sideTab, panel){ const ct = isCt(); sideTab = sideTab || ct;   // (Contacts has the Filters panel too: the search, companies and what's outstanding)
+  function panels(sideTab, panel){ const ct = A.tab === "valid"; sideTab = sideTab || ct;   // (each Data validation tab has the Filters panel too: the search and its own pills)
     const fopen = sideTab && lsGet("adFpanel", true), fp = $("#fpanel"), q = $(".hsearch");
     fp.hidden = $("#splitL").hidden = !fopen;
-    const phL = $("#phL"), phR = $("#phR"), n = ct ? Contacts.fcount() : Filters.count();
+    const phL = $("#phL"), phR = $("#phR"), n = ct ? Valid.fcount() : Filters.count();
     (fopen ? $("#hxL") : $("#slotL")).appendChild(phL); phL.hidden = !sideTab; phL.setAttribute("aria-expanded", fopen); $(".chev", phL).innerHTML = panelIco("l", fopen ? -1 : 1); phL.title = fopen ? "Hide the filters" : "Show the filters";
     const c = $(".cnt", phL); c.textContent = n; c.hidden = !n;
     const qHome = fopen ? $("#fbody") : $("#slotL"); if (q.parentNode !== qHome){ const had = document.activeElement === $("#q"); qHome.insertBefore(q, qHome === $("#fbody") ? qHome.firstChild : null); if (had) $("#q").focus(); }
     (panel ? $("#hxR") : $("#slotR")).appendChild(phR); phR.hidden = A.tab !== "actions"; phR.setAttribute("aria-expanded", !!panel); $(".chev", phR).innerHTML = panelIco("r", panel ? 1 : -1); phR.title = panel ? "Hide the details. Actions then open as a pop up" : "Show the details panel";
-    if (fopen){ const fb = $("#fbody"); const fk = ct ? "contacts" : A.tab; if (fb.dataset.for !== fk){ $$(".fp-groups", fb).forEach(x => x.remove()); fb.dataset.for = fk; } (ct ? Contacts.filters : Filters.render)(fb); }
+    if (fopen){ const fb = $("#fbody"); const fk = ct ? "v:" + Valid.section() : A.tab; if (fb.dataset.for !== fk){ $$(".fp-groups", fb).forEach(x => x.remove()); fb.dataset.for = fk; } (ct ? Valid.filters : Filters.render)(fb); }
     const ac = $("#achips"); ac.hidden = !sideTab || ct; if (sideTab && !ct){ const all = Store.visible(); ac.innerHTML = Filters.chipsHtml(Filters.apply(all).length, all.length); Filters.wireChips(ac); }
     /* the strip over the list only shows when it holds something (filter chips, or the buttons of a closed side panel) */
     const vis = el => [...el.children].some(x => !x.hidden); $("#mid .hx3").hidden = !(sideTab && !ct && ac.innerHTML.trim()) && !vis($("#slotL")) && !vis($("#slotR")); }

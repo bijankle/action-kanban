@@ -303,3 +303,32 @@ function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts)
       h.onpointermove = ev => { const w = Math.max(40, w0 + ev.clientX - x0); cols[i].style.width = w + "px"; W[id(th, i)] = Math.round(w); table.style.width = cols.reduce((t, c) => t + parseFloat(c.style.width), 0) + "px"; };
       h.onpointerup = () => { h.onpointermove = null; save(); }; };
     h.ondblclick = e => { e.stopPropagation(); W[id(th, i)] = natural(i); save(); gridCols(table, key, opts); }; }); }
+
+/* filter pills for a list in the Filters side bar (the Data validation tabs): groups of pills, each pill a value with how many
+   it leaves. Picks are kept per list. A group with many values shows the common ones and folds the rest behind more…
+   (a picked one always shows). groups: [{ k, name, of: item => value }] */
+const PillF = (() => {
+  const S = lsGet("adPF", {}) || {}, open = {};
+  const sel = (key, k) => new Set((S[key] || {})[k] || []);
+  const pass = (key, groups, it, skip) => groups.every(g => g.k === skip || !sel(key, g.k).size || sel(key, g.k).has(String(g.of(it) || "Not set")));
+  const apply = (key, groups, items) => items.filter(it => pass(key, groups, it));
+  const count = (key, groups) => groups.reduce((t, g) => t + sel(key, g.k).size, 0);
+  const keep = () => lsSet("adPF", S);
+  function render(el, key, groups, items, total){ let body = $(".fp-groups", el); if (!body){ body = document.createElement("div"); body.className = "fp-groups"; el.appendChild(body); }
+    const html = groups.map(g => { const on = sel(key, g.k), tot = new Map(); total.forEach(it => { const v = String(g.of(it) || "Not set"); tot.set(v, (tot.get(v) || 0) + 1); });
+      const cnt = v => items.filter(it => pass(key, groups, it, g.k) && String(g.of(it) || "Not set") === v).length;
+      let vals = [...tot.keys()].sort((a, b) => a === "Not set" ? 1 : b === "Not set" ? -1 : g.order ? g.order(a, b) : a.localeCompare(b, undefined, { numeric: true }));
+      const big = !g.all && vals.length > 12 ? new Set([...tot.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(x => x[0])) : null, few = big ? vals.filter(v => !big.has(v) && !on.has(v)) : [];
+      if (few.length && !open[key + g.k]) vals = vals.filter(v => !few.includes(v));
+      return '<div class="fg2" data-k="' + esc(g.k) + '"><div class="fgh"><span>' + esc(g.name) + '</span>' + (on.size ? '<button type="button" class="link fclr">Clear</button>' : "") + '</div>'
+        + vals.map(v => { const n = cnt(v), p = on.has(v); if (!n && !p) return ""; return '<button type="button" class="pill fpill' + (p ? " on" : "") + (v === "Not set" ? " ns" : "") + '" data-v="' + esc(v) + '" aria-pressed="' + p + '" title="' + esc(v) + '"><span class="fp-t">' + esc(v) + '</span> <b>' + n + '</b></button>'; }).join("")
+        + (few.length ? '<button type="button" class="link fco-more">' + (open[key + g.k] ? "fewer" : few.length + " more…") + '</button>' : "") + '</div>'; }).join("");
+    const shown = apply(key, groups, items).length;
+    body.innerHTML = html + '<p class="dim fshown">' + shown + " of " + total.length + " shown" + (count(key, groups) ? ' <button type="button" class="link fall">Clear all</button>' : "") + '</p>';
+    $$(".fg2", body).forEach(gEl => { const k = gEl.dataset.k; gEl.onclick = e => { const b = e.target.closest(".fpill"), o = S[key] = S[key] || {};
+      if (b){ const v = b.dataset.v, set = sel(key, k); set.has(v) ? set.delete(v) : set.add(v); o[k] = [...set]; keep(); App.render(); }
+      else if (e.target.closest(".fclr")){ o[k] = []; keep(); App.render(); }
+      else if (e.target.closest(".fco-more")){ open[key + k] = !open[key + k]; App.render(); } }; });
+    const fa = $(".fall", body); if (fa) fa.onclick = () => { S[key] = {}; keep(); App.render(); }; }
+  return { apply, render, count };
+})();
