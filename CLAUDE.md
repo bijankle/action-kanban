@@ -34,6 +34,22 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - Rules and presets live in File, Parameters, per person; the defaults are what he has tuned. Settings shared by everyone (photo quality) are admin only (bkhadembashi@nsrltd.com).
 - All exports in File, Export (Excel, PDF, Word), with quick buttons above the list too.
 
+## More of the same spirit
+
+- Nothing pops up or moves under the user: switching tabs never opens something on its own (the Organizer opens laid out in full), and background redraws wait while they're typing or picking.
+- No flashing or noisy status: save state is a quiet dot on the save button, not a changing banner.
+- Fast to open: show the copy kept on the computer at once, refresh from GitHub behind it.
+- Infer the obvious (Defect emailed sets the Category, the equipment's WBS sets the Location, a quote ticks RFQ sent) but always let it be overridden, and make each such rule a switch in File, Parameters.
+- Model the real workflow, not an idealised one: ask how the job is actually done on site (who ticks what, when the quote comes back, jobs handed to Ops or Maintenance) before designing the rule.
+- Plain, active step names that say what's done next ("Send RFQ", not "Draft RFQ"; "Categorize Issue").
+- Symbols over words where the meaning is obvious (a gear for mech equipment, a bolt for electrical), with the word in the tooltip.
+- Pointing shows, clicking pins: hover cards can also be clicked to stay open, with a ✕.
+- Uploads look the same everywhere: a slim dashed bar, one box high, that you can click or drop onto. Photos as tiles you can drag to reorder, with a bin on each.
+- Avoid accidental triggers: no single key shortcuts that create things; deletes ask first.
+- Exports read well on paper: A4 portrait, blanks and unticked boxes left out, links that work without signing in, no browser header or footer.
+- The app remembers where you were: the last action viewed, the tab inside it (next and previous keep the tab), panel widths and filters.
+- He can't comment on preview pages from this session; he replies in chat, and loses track of old ones, so keep pending choices listed with their links.
+
 ## Technical notes
 
 - Plain JS globals, no build step: App, Store, Fields, Flow, Table, Kanban, ActionView, Media, Print, Word, Parts, Vendors, Hold, Drawings, Equip.
