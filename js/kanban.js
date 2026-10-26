@@ -6,13 +6,14 @@ const Kanban = (() => {
   /* On Hold and Done are rows across the top, their cards side by side (more… opens another row of them); the
      stages being worked through are the columns under them. Done always shows; deleted actions never do here */
   const ROWS = lsGet("adKbRows", {});
-  function render(el){ const ro = !Store.S.edit, q = (App.q || "").trim().toLowerCase(), multi = Store.selected().length > 1;
+  /* (the stages themselves, their names, colours and order, are the admin's to change) */
+  function render(el){ const ro = !Store.S.edit, adm = App.isAdmin(), q = (App.q || "").trim().toLowerCase(), multi = Store.selected().length > 1;
     const match = a => Filters.match(a), ss = Store.stages(), open = ss.filter(s => s.kind === "open"), top = ss.filter(s => s.kind === "hold").concat(ss.filter(s => s.kind === "done"));
     const cardsOf = s => Store.ranked(s.id).filter(a => s.kind === "done" ? Filters.match(a, "st") : match(a));
     const sx = $(".kb", el) ? $(".kb", el).scrollLeft : 0, sy = {}; $$(".kb-cards", el).forEach(c => sy[c.dataset.s] = c.scrollTop);
-    const head = (s, cards, drag) => '<header class="kb-h" draggable="' + (!ro && drag) + '"><i class="dot"></i><span class="kb-n" title="' + esc("On the action this step reads " + s.name + ". Double click to rename it") + '">' + esc(Store.todo(s)) + '</span><span class="kb-c">' + (q ? cards.length + " of " + Store.ranked(s.id).length : cards.length) + '</span>'
+    const head = (s, cards, drag) => '<header class="kb-h" draggable="' + (adm && drag) + '"><i class="dot"></i><span class="kb-n" title="' + esc("On the action this step reads " + s.name + ". Double click to rename it") + '">' + esc(Store.todo(s)) + '</span><span class="kb-c">' + (q ? cards.length + " of " + Store.ranked(s.id).length : cards.length) + '</span>'
       + (s.kind === "hold" ? '<span class="kb-k">on hold</span>' : s.kind === "done" ? '<span class="kb-k">complete</span>' : "") + '<span class="grow"></span>'
-      + (ro ? "" : '<button type="button" class="ic-b sm kb-m" title="Stage options">⋯</button>') + '</header>';
+      + (adm ? '<button type="button" class="ic-b sm kb-m" title="Stage options">⋯</button>' : "") + '</header>';
     el.innerHTML = '<div class="kbw"><div class="kb-rows">' + top.map(s => { const cards = cardsOf(s), n = Math.max(1, ROWS[s.id] || 1);
         return '<section class="kb-col kb-row" data-s="' + s.id + '" style="' + esc(stageVars(s.color)) + ';--rows:' + n + '">' + head(s, cards, false)
           + '<div class="kb-cards" data-s="' + s.id + '">' + cards.map(a => card(a, multi)).join("") + (cards.length ? "" : '<span class="dim kb-0">Nothing here</span>') + '</div>'
@@ -20,7 +21,7 @@ const Kanban = (() => {
       + '<div class="kb">' + open.map(s => { const cards = cardsOf(s);
         return '<section class="kb-col" data-s="' + s.id + '" style="' + esc(stageVars(s.color)) + '">' + head(s, cards, true)
           + '<div class="kb-cards" data-s="' + s.id + '">' + cards.map(a => card(a, multi)).join("") + '</div></section>'; }).join("")
-      + (ro ? "" : '<button type="button" class="kb-new">+ Add a stage</button>') + '</div></div>';
+      + (adm ? '<button type="button" class="kb-new">+ Add a stage</button>' : "") + '</div></div>';
     $(".kb", el).scrollLeft = sx; $$(".kb-cards", el).forEach(c => c.scrollTop = sy[c.dataset.s] || 0);
     $$(".kc", el).forEach(c => { const a = App.act(c.dataset.ref); const im = $("img", c); if (im && a && a.photos[0]) im.src = Media.src(a, a.photos[0], true); });
     /* a row whose cards spill past its rows offers more… (another row each click) */
@@ -55,13 +56,13 @@ const Kanban = (() => {
           Flow.moveTo(a, st, at); return; }   // (to another stage it asks which steps change; within its own it just reorders)
         if (sid && sid !== st){ e.preventDefault(); Store.mutate("config", () => { const ss = Store.S.config.stages, a = ss.findIndex(x => x.id === sid), b0 = ss.findIndex(x => x.id === st), m = ss.splice(a, 1)[0]; ss.splice(ss.findIndex(x => x.id === st) + (a < b0 ? 1 : 0), 0, m); Store.S.config.mod = now(); Store.touch(m); }); } };
       const hd = $(".kb-h", col); hd.ondragstart = e => { if (e.target !== hd || col.classList.contains("kb-row")) return; e.dataTransfer.setData("text/stage", st); };
-      $(".kb-n", col).ondblclick = () => rename(st);
-      $(".kb-m", col).onclick = e => menu(e.currentTarget, st); });
+      $(".kb-n", col).ondblclick = () => { if (App.isAdmin()) rename(st); };
+      const km = $(".kb-m", col); if (km) km.onclick = e => menu(e.currentTarget, st); });
     /* between columns, or past the last card: the nearest column takes it */
     const near = x => { let best = null, d = 1e9; $$(".kb .kb-col", el).forEach(c => { const r = c.getBoundingClientRect(), dd = x < r.left ? r.left - x : x > r.right ? x - r.right : 0; if (dd < d){ d = dd; best = c; } }); return best; };
     kb.ondragover = e => { if (e.target.closest(".kb-col")) return; const c = near(e.clientX); if (c) c.ondragover(e); };
     kb.ondrop = e => { if (e.target.closest(".kb-col")) return; const c = near(e.clientX); if (c) c.ondrop(e); else $$(".kb-ph").forEach(x => x.remove()); };
-    $(".kb-new", el).onclick = async () => { const n = await promptBox("Name of the new stage", ""); if (!n || !n.trim()) return;
+    const kn = $(".kb-new", el); if (kn) kn.onclick = async () => { const n = await promptBox("Name of the new stage", ""); if (!n || !n.trim()) return;
       Store.mutate("config", () => { const ss = Store.S.config.stages; const at = ss.findIndex(s => !s.del && s.kind !== "open"); const s = Store.touch({ id: "st" + uid(), name: n.trim(), color: "#64748b", kind: "open", print: true });
         if (at < 0) ss.push(s); else ss.splice(at, 0, s); Store.S.config.mod = now(); }); }; }
   /* the column name is the step being done ("Draft RFQ"); its name on the action ("RFQ Sent") is renamed in Data validation */

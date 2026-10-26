@@ -177,7 +177,10 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && pickPop){ 
 const isoDay = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 function placePick(p, anchor){ const r = anchor.getBoundingClientRect(), below = innerHeight - r.bottom > p.offsetHeight + 8 || r.top < p.offsetHeight;
   Object.assign(p.style, { left: Math.max(8, Math.min(r.left, innerWidth - p.offsetWidth - 8)) + "px", top: (below ? r.bottom + 4 : r.top - p.offsetHeight - 4) + "px" }); }
-function dateBox(value, opts){ opts = opts || {}; let v = value || "";
+/* (on a phone or tablet the device's own date and time pickers are used: big, familiar and made for fingers) */
+const TOUCH = !!(window.matchMedia && matchMedia("(pointer: coarse)").matches);
+const nativeBox = (type, value, opts) => { const i = h('<input class="in dnat" type="' + type + '"' + (opts.label ? ' aria-label="' + esc(opts.label) + '"' : "") + '>'); i.value = value || ""; if (opts.cls) i.classList.add(...opts.cls.split(" ")); return i; };
+function dateBox(value, opts){ opts = opts || {}; if (TOUCH) return nativeBox("date", /^\d{4}-\d\d-\d\d$/.test(value || "") ? value : "", opts); let v = value || "";
   const b = h('<button type="button" class="dchip' + (opts.cls ? " " + opts.cls : "") + '"' + (opts.label ? ' aria-label="' + esc(opts.label) + '"' : "") + '>' + ICO_CAL + '<span></span></button>');
   const show = () => { const ok = /^\d{4}-\d\d-\d\d$/.test(v); $("span", b).textContent = v ? (ok ? fmtDate(v) : v) : (opts.ph || "Add date"); b.classList.toggle("dc-ph", !v); };
   Object.defineProperty(b, "value", { get: () => v, set: x => { v = x || ""; show(); } }); show();
@@ -193,7 +196,7 @@ function dateBox(value, opts){ opts = opts || {}; let v = value || "";
       if (d) pick(d.dataset.d); else if (e.target.closest("[data-clr]")) pick(""); else if (e.target.closest("[data-td]")) pick(isoDay(new Date())); };
     draw(); placePick(p, b); };
   return b; }
-function timeBox(value, opts){ opts = opts || {};
+function timeBox(value, opts){ opts = opts || {}; if (TOUCH) return nativeBox("time", value, opts);
   const w = h('<span class="dchip tchip">' + ICO_CLK + '<input type="text" inputmode="numeric" maxlength="5" placeholder="' + esc(opts.ph || "Time") + '" aria-label="' + esc(opts.label || "Time, 24 hour") + '" title="24 hour time" autocomplete="off" spellcheck="false"></span>'), i = $("input", w);
   i.value = value || ""; Object.defineProperty(w, "value", { get: () => i.value, set: x => { i.value = x || ""; } });
   const norm = x => { const g = String(x).replace(/[^\d:]/g, "").match(/^(\d{1,2}):?(\d{2})?$/); if (!g) return ""; const hh = +g[1], mm = +(g[2] || 0); return hh < 24 && mm < 60 ? String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0") : ""; };
@@ -211,7 +214,10 @@ function timeBox(value, opts){ opts = opts || {};
    computer). These are the defaults */
 const PREF_DEF = { etaSoon: 7, etaHover: 300, defTime: "07:00", timeStep: 30, passDefault: "done", defectCat: true, quoteTick: true, poTick: true,
   autoFit: true, notesW: 220, titleMin: 260, openLast: true, kbClear: true, pasteInto: true, locFromWbs: true };
-const pref = k => { const v = (lsGet("adRules", {}) || {})[k]; return v === undefined || v === null || v === "" ? PREF_DEF[k] : v; };
+/* the team rules (they change shared data, so they're the same for everyone and set by the admin) are kept in the shared
+   config; the rest are each person's own, on their computer */
+const TEAM_RULES = new Set(["passDefault", "defectCat", "quoteTick", "poTick", "locFromWbs"]);
+const pref = k => { const src = TEAM_RULES.has(k) ? ((typeof Store !== "undefined" && Store.S.config && Store.S.config.rules) || {}) : (lsGet("adRules", {}) || {}); const v = src[k]; return v === undefined || v === null || v === "" ? PREF_DEF[k] : v; };
 
 /* the hide and show symbol of the Filters and Details panels: a little screen with the panel's side shaded and an
    arrow the way it goes (side l or r, way -1 left or 1 right), so it plainly means the whole panel */

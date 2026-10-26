@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.115";
+const APP_VERSION = "1.10.116";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -168,23 +168,25 @@ const App = (() => {
     ["Moving actions on", [["passDefault", "pick", "When a card is dragged past a step, start it as", "", [["done", "Done"], ["na", "Not needed"]], "You can still change each one in the box that asks."], ["defectCat", "tick", "Ticking Defect emailed sets the Category to Defect"], ["quoteTick", "tick", "Uploading a quote ticks RFQ sent"], ["poTick", "tick", "Uploading a PO ticks PO sent"]]],
     ["The actions list", [["autoFit", "tick", "Fit the short columns to their contents"], ["notesW", "num", "Notes column width", "px", 120, 600], ["titleMin", "num", "Title column at least", "px", 160, 600]]],
     ["Opening and pasting", [["openLast", "tick", "Details opens on the action last looked at"], ["kbClear", "tick", "The Organizer opens with no action popped up"], ["pasteInto", "tick", "A pasted photo goes into the open action", "With this off it waits bottom left to be dragged onto one."], ["locFromWbs", "tick", "Location fills in from the equipment's area"]]]];
-  function params(){ const R = Object.assign({}, lsGet("adRules", {}) || {});
+  function params(){ const R = Object.assign({}, lsGet("adRules", {}) || {}), adm = isAdmin() && Store.S.edit;
     const row = ([k, t, label, unit, a1, a2, tip]) => { const v = pref(k), dv = PREF_DEF[k], tp = typeof a1 === "string" ? a1 : tip, more = tp ? tipI(tp) : "", def = '<span class="pm-def">' + (v !== dv ? "default " + esc(t === "tick" ? (dv ? "on" : "off") : t === "pick" ? (a1.find(o => o[0] === dv) || [, dv])[1] : dv + (unit ? " " + unit : "")) : "") + '</span>';
-      if (t === "tick") return '<label class="pm-r pm-t"><input type="checkbox" data-p="' + k + '"' + (v ? " checked" : "") + '><span>' + esc(label) + more + '</span>' + def + '</label>';
+      const team = TEAM_RULES.has(k), lock = team && !adm ? " disabled" : "", tag = team ? '<span class="pm-team" title="A team rule: the same for everyone, set by the admin">Team</span>' : "";
+      if (t === "tick") return '<label class="pm-r pm-t"><input type="checkbox" data-p="' + k + '"' + (v ? " checked" : "") + lock + '><span>' + esc(label) + more + tag + '</span>' + def + '</label>';
       const ctl = t === "num" ? '<input class="in sm pm-n" type="number" data-p="' + k + '" min="' + a1 + '" max="' + a2 + '" value="' + esc(v) + '">' + (unit ? '<span class="dim">' + unit + '</span>' : "")
         : t === "time" ? '<input class="in sm pm-n" type="text" data-p="' + k + '" maxlength="5" value="' + esc(v) + '" title="24 hour">'
-        : '<select class="in sm" data-p="' + k + '">' + a1.map(([o, n]) => '<option value="' + o + '"' + (String(o) === String(v) ? " selected" : "") + '>' + n + '</option>').join("") + '</select>';
-      return '<div class="pm-r"><span>' + esc(label) + more + '</span><span class="pm-c">' + ctl + '</span>' + def + '</div>'; };
-    const m = modal('<h3>Parameters' + tipI("The app's rules and presets. They're yours: set here, they only change how the app works for you, on this computer.") + '</h3>'
+        : '<select class="in sm" data-p="' + k + '"' + lock + '>' + a1.map(([o, n]) => '<option value="' + o + '"' + (String(o) === String(v) ? " selected" : "") + '>' + n + '</option>').join("") + '</select>';
+      return '<div class="pm-r"><span>' + esc(label) + more + tag + '</span><span class="pm-c">' + ctl + '</span>' + def + '</div>'; };
+    const m = modal('<h3>Parameters' + tipI("The app's rules and presets. Most are yours: they only change how the app works for you, on this computer. The ones marked Team change the shared data, so they're the same for everyone and only the admin sets them.") + '</h3>' + (adm ? "" : '<p class="dim sm-t">Team rules are set by the admin (' + esc(admins().join(", ")) + ').</p>')
       + PARAMS.map(([g, rows]) => '<div class="set-sec"><div class="set-h">' + g + '</div>' + rows.map(row).join("") + '</div>').join("")
       + '<div class="yn-btns"><button class="yn-no pm-reset" type="button">Back to the defaults</button><button class="yn-yes" type="button">Done</button></div>', { cls: "set-win pm-win" });
-    const put = (k, v) => { if (v === PREF_DEF[k]) delete R[k]; else R[k] = v; lsSet("adRules", R); render(); };
+    const put = (k, v) => { if (TEAM_RULES.has(k)){ if (!adm) return; Store.mutate("config", () => { const T = Store.S.config.rules = Object.assign({}, Store.S.config.rules || {}); if (v === PREF_DEF[k]) delete T[k]; else T[k] = v; Store.S.config.mod = now(); }); Store.log("Changed the team rule " + k); return; }
+      if (v === PREF_DEF[k]) delete R[k]; else R[k] = v; lsSet("adRules", R); render(); };
     $$("[data-p]", m).forEach(i => i.onchange = () => { const k = i.dataset.p, dv = PREF_DEF[k];
       if (i.type === "checkbox") return put(k, i.checked);
       if (i.tagName === "SELECT") return put(k, typeof dv === "number" ? +i.value : i.value);
       if (typeof dv === "number"){ const n = Math.max(+i.min || 0, Math.min(+i.max || 1e9, Math.round(+i.value))); if (isNaN(n)){ i.value = pref(k); return; } i.value = n; return put(k, n); }
       const g = String(i.value).replace(/[^\d:]/g, "").match(/^(\d{1,2}):?(\d{2})?$/); if (!g || +g[1] > 23 || +(g[2] || 0) > 59){ i.value = pref(k); return; } i.value = String(+g[1]).padStart(2, "0") + ":" + String(+(g[2] || 0)).padStart(2, "0"); put(k, i.value); });
-    $(".pm-reset", m).onclick = () => { lsSet("adRules", {}); m.close(); render(); note("Parameters back to the defaults"); };
+    $(".pm-reset", m).onclick = () => { lsSet("adRules", {}); if (adm && Store.S.config.rules && Object.keys(Store.S.config.rules).length) Store.mutate("config", () => { Store.S.config.rules = {}; Store.S.config.mod = now(); }); m.close(); render(); note(adm ? "Parameters and team rules back to the defaults" : "Your parameters are back to the defaults"); };
     $(".yn-yes", m).onclick = () => m.close(); }
   /* the profile window, from the round button top right */
   function profile(after){ const p = Profile.get(), F = (k, l, t, ph) => '<label class="fl">' + l + '<input class="in" data-k="' + k + '" type="' + (t || "text") + '" value="' + esc(p[k]) + '"' + (ph ? ' placeholder="' + ph + '"' : "") + '></label>';
@@ -429,6 +431,6 @@ const App = (() => {
     addEventListener("pagehide", flush); document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
     checkUpdate(); setInterval(checkUpdate, 30 * 60000);
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {}); }
-  return Object.assign(A, { act, render, renderIdle, renderStatus, select, openParts, othersChanged, clashes, who, ago, viewOnly, newAction, projBox, boot, settings, viewGet, viewSet, update });
+  return Object.assign(A, { isAdmin: () => isAdmin() && Store.S.edit, act, render, renderIdle, renderStatus, select, openParts, othersChanged, clashes, who, ago, viewOnly, newAction, projBox, boot, settings, viewGet, viewSet, update });
 })();
 document.addEventListener("DOMContentLoaded", App.boot);

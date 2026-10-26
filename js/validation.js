@@ -7,13 +7,15 @@ const Valid = (() => {
     const ae = document.activeElement, row = ae && el.contains(ae) && ae.closest("[data-id], .ct-new, .dv-ed"), keep = row ? { id: row.dataset.id || (row.classList.contains("ct-new") ? "_new" : "_ed"), i: $$("input,select", row).indexOf(ae), s: ae.selectionStart, v: ae.value } : null;
     el.innerHTML = '<div class="dv"><nav class="dv-nav">' + [["fields", "Fields and choices"], ["stages", "Stages"], ["equip", "Equipment"], ["vendors", "Vendors"]].map(([k, n]) => '<button type="button" data-s="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</nav><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
     $$(".dv-nav button", el).forEach(b => b.onclick = () => { sec = b.dataset.s; render(el); });
-    const body = $(".dv-body", el); if (sec === "contacts") sec = "fields"; ({ fields, stages, equip, vendors: Vendors.page })[sec](body, ro);   // (Contacts has its own tab now)
-    if (ro) $$("input,select,button:not(.dv-f)", body).forEach(x => x.disabled = true);
+    const body = $(".dv-body", el); if (sec === "contacts") sec = "fields";     /* the fields and the stages are the admin's to change; anyone editing can keep the equipment and vendor lists */
+    const lock = ro || ((sec === "fields" || sec === "stages") && !App.isAdmin());
+    ({ fields, stages, equip, vendors: Vendors.page })[sec](body, lock);   // (Contacts has its own tab now)
+    if (lock){ $$("input,select,button:not(.dv-f)", body).forEach(x => x.disabled = true); if (!ro) body.insertAdjacentHTML("afterbegin", '<p class="dim dv-lock">Only the admin changes the fields and stages.</p>'); }
     if (keep){ const r = keep.id === "_new" ? $(".ct-new", el) : keep.id === "_ed" ? $(".dv-ed", el) : $('[data-id="' + keep.id + '"]', el), t = r && $$("input,select", r)[keep.i];
       if (t){ if (t.tagName === "INPUT" && t.type !== "checkbox" && t.type !== "color" && t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
   const up = (o, fn) => Store.mutate("config", () => { fn(); Store.touch(o); });
   /* drag rows in a list to reorder the array behind them */
-  function sortable(list, arr, sel){ $$(sel, list).forEach(r => { r.draggable = Store.S.edit;
+  function sortable(list, arr, sel){ $$(sel, list).forEach(r => { r.draggable = App.isAdmin();
       r.ondragstart = e => { if (e.target.closest("input,select")) return e.preventDefault(); e.dataTransfer.setData("text/row", r.dataset.id); };
       r.ondragover = e => { if ([...e.dataTransfer.types].includes("text/row")){ e.preventDefault(); r.classList.add("dover"); } };
       r.ondragleave = () => r.classList.remove("dover");

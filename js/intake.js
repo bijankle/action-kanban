@@ -62,7 +62,7 @@ const Intake = (() => {
       const mo = $("[data-k=more]", form); if (mo) mo.onclick = () => { read(); draw(true); };
       $$("textarea", form).forEach(t => { Fields.grow(t); t.oninput = () => Fields.grow(t); });
       $$("input[data-f]", form).forEach(i => { const f = Store.field(i.dataset.f); if (f && f.type === "multi") Fields.suggest(i, f); });
-      const t = $("[data-f=title]", form); t && !full && t.focus(); };
+      const t = $("[data-f=title]", form); if (t && !full){ t.focus(); setTimeout(() => { if (t.isConnected && document.activeElement !== t && !form.contains(document.activeElement)) t.focus(); }, 60); } };   // (a new action starts with the cursor in its title, after the window has settled)
     const read = () => { const s = $("[data-k=stage]", form); if (s) stage = s.value; $$("[data-f]", form).forEach(i => { const f = Store.field(i.dataset.f); let v = i.type === "checkbox" ? i.checked : i.value.trim();
         if (f.type === "multi") v = v ? v.split(/\s*,\s*/).filter(Boolean) : []; if (v === "" || (Array.isArray(v) && !v.length) || v === false) delete vals[f.id]; else vals[f.id] = v; }); };
     draw(false);

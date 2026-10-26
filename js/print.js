@@ -3,7 +3,8 @@
    unticked to start with. Print to PDF keeps the attachment links clickable. */
 "use strict";
 const Print = (() => {
-  const prefs = () => Object.assign({ photos: true, per: 2, board: true, newPage: true, pages: 0 }, lsGet("adPrint", {}));
+  if (lsGet("adPrintV", 0) < 2){ const o = lsGet("adPrint", {}) || {}; o.pages = 1; o.blanks = false; lsSet("adPrint", o); lsSet("adPrintV", 2); }   // (once: the new defaults, 1 page per action and no blank fields)
+  const prefs = () => Object.assign({ photos: true, per: 2, board: true, newPage: true, pages: 1, blanks: false }, lsGet("adPrint", {}));   // (1 page per action to start with; blank fields left out unless asked for)
   /* what goes into an export (the list's PDF and Excel buttons): which statuses, Deleted included, and a date range
      on the date created, last modified or completed (blank is all time). The search and the other Filters panel pills
      still apply. Done and Deleted are unticked to start with; the choice is remembered per export. */
@@ -27,6 +28,7 @@ const Print = (() => {
       + '<label class="tp-o"><input type="checkbox" data-o="photos"' + (pf.photos ? " checked" : "") + '><span>Photos</span></label><label class="fl in-row">Photos per row <select class="in sm" data-o="per">' + [1, 2, 3, 4].map(n => '<option' + (n === pf.per ? " selected" : "") + '>' + n + '</option>').join("") + '</select></label>'
       + (word ? "" : '<label class="fl in-row">Pages per action <select class="in sm" data-o="pages">' + [[0, "No limit"], [1, "1"], [2, "2"], [3, "3"], [4, "4"]].map(([v, n]) => '<option value="' + v + '"' + (v === (pf.pages || 0) ? " selected" : "") + '>' + n + '</option>').join("") + '</select>' + tipI("The photos are made smaller, and more go on each row, until each action fits this many pages.") + '</label>')
       + '<label class="tp-o"><input type="checkbox" data-o="newPage"' + (pf.newPage ? " checked" : "") + '><span>Each action on a new page</span></label>'
+      + '<label class="tp-o"><input type="checkbox" data-o="blanks"' + (pf.blanks ? " checked" : "") + '><span>Include blank fields' + tipI("For records that may be audited: every field is listed, with a dash where nothing was filled in, and the steps not done yet.") + '</span></label>'
       + '<div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Export</button></div>', { cls: "pr-win" });
     $(".yn-no", m).onclick = () => m.close();
     $(".yn-yes", m).onclick = () => { const list = pickList(m, "adPrintPick"); const o = {}; $$("[data-o]", m).forEach(c => o[c.dataset.o] = c.type === "checkbox" ? c.checked : +c.value); lsSet("adPrint", Object.assign(prefs(), o));
@@ -49,9 +51,11 @@ const Print = (() => {
       /* only what has something in it: blank boxes, unticked ticks and empty columns are left out to save the space */
       /* the ticked boxes together in one row, each with a tick (unticked ones are left out) */
       const ticks = Store.fields().filter(f => f.type === "check" && a.f[f.id] === true).map(f => '<span class="pa-tk">✓ ' + esc(f.label) + '</span>').join("");
-      const det = (ticks ? '<tr><th>Done</th><td class="pa-tks">' + ticks + '</td></tr>' : "") + Store.fields().filter(f => !skip.has(f.id) && f.type !== "check").map(f => [f, Fields.show(a, f)]).filter(([, v]) => { const t = String(v || "").replace(/<[^>]*>/g, "").trim(); return t && !/^(none|–|-|0 items?)$/i.test(t); }).map(([f, v]) => '<tr><th>' + esc(f.label) + '</th><td>' + v + '</td></tr>').join("");
+      /* (with blank fields included, for audited records: the steps not done or not needed, and every field, a dash where empty) */
+      const notDone = o.blanks ? Store.fields().filter(f => f.type === "check" && a.f[f.id] !== true).map(f => '<span class="pa-tk pa-no">' + (a.f[f.id] === Flow.NA ? "– " + esc(f.label) + " (not needed)" : "☐ " + esc(f.label)) + '</span>').join("") : "";
+      const det = (ticks ? '<tr><th>Done</th><td class="pa-tks">' + ticks + '</td></tr>' : "") + (notDone ? '<tr><th>Not done</th><td class="pa-tks">' + notDone + '</td></tr>' : "") + Store.fields().filter(f => !skip.has(f.id) && f.type !== "check").map(f => [f, Fields.show(a, f)]).filter(([, v]) => { const t = String(v || "").replace(/<[^>]*>/g, "").trim(); return o.blanks || (t && !/^(none|–|-|0 items?)$/i.test(t)); }).map(([f, v]) => '<tr><th>' + esc(f.label) + '</th><td>' + (String(v || "").replace(/<[^>]*>/g, "").trim() ? v : '<span class="dim">–</span>') + '</td></tr>').join("");
       const tbl = (title, cols, rows) => { const keep = cols.map((c, k) => k === 0 || rows.some(r => String(r[k] == null ? "" : r[k]).trim())); return rows.length ? '<div class="pa-b"><h5>' + title + '</h5><table class="pa-mto"><tr>' + cols.filter((c, k) => keep[k]).map(c => '<th>' + c + '</th>').join("") + '</tr>' + rows.map(r => '<tr>' + r.filter((c, k) => keep[k]).map(c => '<td>' + esc(c == null ? "" : c) + '</td>').join("") + '</tr>').join("") + '</table></div>' : ""; };
-      const txt = [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([, v]) => String(v || "").trim()).map(([k, v]) => '<div class="pa-b"><h5>' + k + '</h5><div class="pa-tx">' + esc(v) + '</div></div>').join("");
+      const txt = [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([, v]) => o.blanks || String(v || "").trim()).map(([k, v]) => '<div class="pa-b"><h5>' + k + '</h5><div class="pa-tx">' + (String(v || "").trim() ? esc(v) : '<span class="dim">–</span>') + '</div></div>').join("");
       root.appendChild(h('<section class="pr-act' + (o.newPage || (!o.board && i === 0) ? " np" : "") + '">' + (!o.board && i === 0 ? head : "") + '<div class="pa-h" style="--c:' + esc(s.color) + '"><b>' + esc(Store.actId(a)) + '</b><span class="pa-t">' + esc(a.f.title || "") + '</span><span class="stg">' + esc(s.name) + '</span></div>'
         /* on hold: who it's waiting on and how to reach them on one row (symbols, not labels), the notes underneath */
         + (Hold.lines(a).length ? (() => { const L = Object.fromEntries(Hold.lines(a)), it = (e, lab, v) => v ? '<span><svg class="pa-ic" viewBox="0 0 24 24" role="img" aria-label="' + lab + '"><path d="' + HI[e] + '"/></svg>' + v + '</span>' : "";
