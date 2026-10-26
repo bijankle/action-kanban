@@ -76,7 +76,12 @@ const Table = (() => {
   /* titles are one line: a title too long for its column ends in … with a more… that shows it in full */
   /* the ID column is just wide enough for its box with an 8px margin each side, like the Status buttons */
   let idW = NEED.id;
-  function cut(el){ moreFit(el); const ids = $$(".idw .aid", el); el.style.removeProperty("--aid-w"); if (ids.length) el.style.setProperty("--aid-w", Math.ceil(Math.max(...ids.map(x => x.getBoundingClientRect().width))) + "px");
+  /* a tags cell shows as many tags as fit its width, the rest as +N (widen the column to see more) */
+  function tagFit(el){ $$("td.tgc .tgv", el).forEach(v => { const a = App.act(v.closest("tr").dataset.ref), tags = a ? [].concat(a.f.equipment || []).filter(Boolean) : []; if (tags.length < 2) return;
+    const t1 = $(".tg1", v), mb = $(".tg-more", v), font = getComputedStyle(t1).font, room = v.clientWidth - 20 - (mb ? 34 : 0);
+    let k = 1; while (k < tags.length && headW(tags.slice(0, k + 1).join(", "), font) <= (k + 1 === tags.length ? room + 34 : room)) k++;
+    t1.textContent = tags.slice(0, k).join(", "); if (mb){ mb.hidden = k >= tags.length; mb.textContent = "+" + (tags.length - k); } }); }
+  function cut(el){ moreFit(el); tagFit(el); const ids = $$(".idw .aid", el); el.style.removeProperty("--aid-w"); if (ids.length) el.style.setProperty("--aid-w", Math.ceil(Math.max(...ids.map(x => x.getBoundingClientRect().width))) + "px");
     const bx = $$("td.idc .idw", el); if (bx.length){ const want = Math.ceil(Math.max(...bx.map(x => x.getBoundingClientRect().width))) + 16 + 1; if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
     $$("td.ttl", el).forEach(td => { const t = $(".tt", td); if (t) td.classList.toggle("cut", t.scrollWidth > t.clientWidth + 1); });
     $$("td.ltc", el).forEach(td => { const t = $(".lt-b", td), v = String((App.act(td.closest("tr").dataset.ref) || { f: {} }).f[t.dataset.lt] || ""); td.classList.toggle("cut", v.includes("\n") || t.scrollWidth > t.clientWidth + 1); }); }
@@ -144,7 +149,7 @@ const Table = (() => {
   /* the Tags cell shows the first tag only, as wide as a typical tag number, with +2 when there are more (click it to see
      them all); clicking the tag box opens it for typing */
   function tagCell(td, a, c){ const tags = [].concat(a.f[c.id] || []).filter(Boolean), ro = !Store.S.edit;
-    td.innerHTML = '<div class="tgv"><span class="tg1' + (tags.length ? "" : " ph") + '"' + (ro ? "" : ' role="button" tabindex="0" title="Edit the tags"') + '>' + esc(tags[0] || (ro ? "" : "Add tag")) + '</span>'
+    td.innerHTML = '<div class="tgv" data-n="' + tags.length + '"><span class="tg1' + (tags.length ? "" : " ph") + '"' + (ro ? "" : ' role="button" tabindex="0" title="Edit the tags"') + '>' + esc(tags[0] || (ro ? "" : "Add tag")) + '</span>'
       + (tags.length > 1 ? '<button type="button" class="tg-more" title="Show all ' + tags.length + ' tags">+' + (tags.length - 1) + '</button>' : "") + '</div>';
     const edit = () => { if (ro) return; td.innerHTML = ""; const ed = Fields.editor(a, c); td.appendChild(ed); const i = $("input", ed); if (i){ i.focus(); try { i.setSelectionRange(i.value.length, i.value.length); } catch (e) {} i.addEventListener("blur", () => setTimeout(() => { if (td.isConnected && !td.contains(document.activeElement)) tagCell(td, a, c); }, 150)); } };
     const t1 = $(".tg1", td); t1.onclick = e => { e.stopPropagation(); edit(); }; t1.onkeydown = e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); edit(); } };
@@ -217,7 +222,8 @@ const Table = (() => {
       /* (a box you type in measures by what's in it, or its hint when empty, not by the box's default width) */
       $$("input,select,textarea", m).forEach((x, n) => { const src = $$("input,select,textarea", td)[n], t = document.createElement("span");
         t.textContent = src.tagName === "SELECT" ? ((src.options[src.selectedIndex] || {}).text || "") : (src.value || src.placeholder || ""); t.style.padding = "0 " + (src.tagName === "SELECT" ? 28 : 12) + "px"; x.replaceWith(t); });   // (a box's own padding and border, and a dropdown's arrow)
-      $$(".mc-more,.lt-more,.tt-more", m).forEach(x => x.remove());   // (the more… links only show when cut off)
+      $$(".mc-more,.lt-more,.tt-more", m).forEach(x => x.remove());
+      $$(".tgv", m).forEach(v => { const n = +v.dataset.n || 0, t = $(".tg1", v), b = $(".tg-more", v); if (t && n > 1) t.textContent = t.textContent.split(", ")[0]; if (b){ b.hidden = false; b.textContent = "+" + (n - 1); } });   // (Tags fits its first tag and the +N)   // (the more… links only show when cut off)
       document.body.appendChild(m); w = Math.max(w, Math.min(cs[i] && cs[i].type === "longtext" ? 220 : 640, m.scrollWidth + 22)); m.remove(); });
     return Math.round(w); }
   /* the short columns fit their contents: when the app opens, and again whenever what's in them changes (a longer

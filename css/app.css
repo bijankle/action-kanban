@@ -1115,3 +1115,4 @@ html.dark .menubar{box-shadow:none}
 .mt-i{width:20px;height:20px;color:var(--dim)}.mt-i.on{color:var(--th)}.mt-i.on .ii circle:first-child{fill:color-mix(in srgb,var(--th) 15%,transparent)}.mt-i:hover{color:var(--th);filter:none}
 .tip-i:focus-visible,.th-i:focus-visible,.hold-i:focus-visible,.dw-i:focus-visible,.mt-i:focus-visible{outline:2px solid var(--focus,#2f6fd1);outline-offset:1px;border-radius:50%}
 .tbl th.addcol{border-left:1px solid rgba(255,255,255,.18)}.tbl td.addcol{border-left:1px solid color-mix(in srgb,var(--line) 70%,transparent)}   /* (the + Add column strip lined like the other columns) */
+.tg-more[hidden]{display:none}
