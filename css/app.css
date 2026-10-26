@@ -1134,3 +1134,10 @@ html.dark .menubar{box-shadow:none}
   .dnat{min-width:150px}
 }
 .pa-tk.pa-no{color:#777}
+/* the Organizer: each part washed in its own colour behind the cards, the cards lifted off it; columns only as tall as
+   their cards (an empty one as tall as one card), the On Hold and Done rows only as wide as their cards */
+.kb-col{background:color-mix(in srgb,var(--c) 13%,#eef0f3)}html.dark .kb-col{background:color-mix(in srgb,var(--c) 14%,#1e2024)}
+.kc{box-shadow:0 1px 3px rgba(16,24,40,.18)}.kc:hover{box-shadow:0 2px 6px rgba(16,24,40,.22)}
+.kbw .kb{align-items:flex-start}.kb .kb-col{max-height:100%;height:auto}.kb .kb-cards{flex:0 1 auto;min-height:106px}
+.kb-new{align-self:flex-start;height:calc(42px + 106px + 10px)}
+.kb-rows{align-items:flex-start}.kb-row{width:fit-content;max-width:100%;min-width:300px}.kb-row .kb-cards{min-height:calc(106px + 16px)}
