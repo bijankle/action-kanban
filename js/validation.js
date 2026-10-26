@@ -2,13 +2,19 @@
    the Organizer stages, the equipment and vendor lists, and the contacts (people, their companies and what they have outstanding). */
 "use strict";
 const Valid = (() => {
-  let sec = lsGet("adTab", "") === "contacts" ? "contacts" : ["fields", "stages", "equip", "vendors", "contacts"].includes(lsGet("adDvSec", "")) ? lsGet("adDvSec", "") : "fields", cur = "title";
+  const TABS = [["contacts", "Contacts"], ["vendors", "Suppliers"], ["equip", "Assets"], ["other", "Other"]], OTHER = ["fields", "stages"];
+  let sec = lsGet("adTab", "") === "contacts" ? "contacts" : ["fields", "stages", "equip", "vendors", "contacts"].includes(lsGet("adDvSec", "")) ? lsGet("adDvSec", "") : "contacts", cur = "title";
   function render(el){ const ro = !Store.S.edit;
     const ae = document.activeElement, row = ae && el.contains(ae) && ae.closest("[data-id], .ct-new, .dv-ed"), keep = row ? { id: row.dataset.id || (row.classList.contains("ct-new") ? "_new" : "_ed"), i: $$("input,select", row).indexOf(ae), s: ae.selectionStart, v: ae.value } : null;
-    el.innerHTML = '<div class="dv"><nav class="dv-nav">' + [["fields", "Action tab - Columns"], ["stages", "Action tab - Status"], ["equip", "Assets"], ["vendors", "Suppliers"], ["contacts", "Contacts"]].map(([k, n]) => '<button type="button" data-s="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</nav><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
-    $$(".dv-nav button", el).forEach(b => b.onclick = () => { sec = b.dataset.s; lsSet("adDvSec", sec); App.render(); });
+    /* the sections are tabs in the strip over the page: Contacts, Suppliers, Assets, and Other (the Actions tab's columns and its status stages) */
+    const top = OTHER.includes(sec) ? "other" : sec, dt = $("#dvT");
+    if (dt){ dt.innerHTML = TABS.map(([k, n]) => '<button type="button" class="tab' + (k === top ? " on" : "") + '" data-s="' + k + '" role="tab" aria-selected="' + (k === top) + '">' + n + '</button>').join("");
+      $$("button", dt).forEach(b => b.onclick = () => { const k = b.dataset.s; open(k === "other" ? (OTHER.includes(lsGet("adDvOther", "")) ? lsGet("adDvOther", "") : "fields") : k); App.render(); }); }
+    el.innerHTML = '<div class="dv"><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
     const body = $(".dv-body", el);     /* the fields and the stages are the admin's to change; anyone editing can keep the equipment and vendor lists */
     const lock = ro || ((sec === "fields" || sec === "stages") && !App.isAdmin());
+    if (top === "other"){ body.insertAdjacentHTML("beforebegin", '<div class="av-sub dv-sub" role="tablist">' + [["fields", "Columns"], ["stages", "Status"]].map(([k, n]) => '<button type="button" data-o="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</div>');
+      $$(".dv-sub button", el).forEach(b => b.onclick = () => { open(b.dataset.o); App.render(); }); }
     if (sec === "contacts") return Contacts.render(body);   // (the contacts keep their own rules: anyone editing can change them)
     ({ fields, stages, equip, vendors: Vendors.page })[sec](body, lock);
     if (lock){ $$("input,select,button:not(.dv-f)", body).forEach(x => x.disabled = true); if (!ro) body.insertAdjacentHTML("afterbegin", '<p class="dim dv-lock">Only the admin changes the fields and stages.</p>'); }
@@ -94,6 +100,6 @@ const Valid = (() => {
       Store.mutate("config", () => Store.S.config.contacts.push(Store.touch({ id: uid(), name: v("name"), company: v("company"), mobile: v("mobile"), email: v("email") }))); };
     $("button", nr).onclick = add; $$("input", nr).forEach(i => i.onkeydown = e => e.key === "Enter" && add()); }
   const section = () => sec;
-  const open = k => { sec = k; lsSet("adDvSec", k); };
+  const open = k => { sec = k; lsSet("adDvSec", k); if (OTHER.includes(k)) lsSet("adDvOther", k); };
   return { section, open, render };
 })();

@@ -1157,3 +1157,6 @@ html.dark .menubar{box-shadow:none}
 .is-sr td:last-child{white-space:normal}.is-why{display:block;padding:4px 7px;font-style:italic;color:var(--muted);line-height:1.3}
 .pt-blank .pt-in::placeholder{color:var(--dim)}
 .fco-more{align-self:center;font-size:12.5px;padding:0 4px}
+/* Data validation: the sections as tabs in the strip over the page; Other holds Columns and Status as small tabs */
+#dvT{margin-left:0}
+.dv{flex-direction:column}.dv-sub{align-self:flex-start;margin:14px 22px 0}
