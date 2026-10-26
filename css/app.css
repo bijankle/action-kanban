@@ -1146,3 +1146,4 @@ html.dark .menubar{box-shadow:none}
 /* Details, Status: the tick boxes down three columns */
 .stk-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(var(--rows),auto);grid-auto-flow:column;gap:6px 14px;margin:2px 0 14px}
 .stk{display:flex;align-items:center;gap:8px;min-height:24px;min-width:0}.stk .ck{flex:none}.stk-l{font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stk-l{white-space:normal;overflow:visible;line-height:1.2}.stk{align-items:center}
