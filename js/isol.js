@@ -1,7 +1,7 @@
-/* The Isolations tab of the action view: the action's equipment tags, and its list the isolation points (equipment
-   number, name and a note). Typing a number or a name suggests equipment from the plant equipment lists
-   (mechanical and electrical equipment, valves, instruments) and the Equipment tags list; picking one fills
-   both. The row can still be edited afterwards, and that never changes the lists. */
+/* The Isolations tab of the action view: one table of the isolation points (equipment number, name and a note), the
+   picked ones on top and the suggestions for the action's Tags under them. Typing a number or a name suggests equipment
+   from the plant equipment lists (mechanical and electrical equipment, valves, instruments) and the Equipment tags list;
+   picking one fills both. The row can still be edited afterwards, and that never changes the lists. */
 "use strict";
 const Equip = (() => {
   const SRC = "https://raw.githubusercontent.com/bijankle/ProjectLibrary/HEAD/search-data.json";   // where the plant equipment lists live
@@ -54,55 +54,49 @@ const Isol = (() => {
   const list = a => a.isol || (a.isol = []);
   const created = new Map();
   /* one action's isolations, drawn into its action view tab; keep is where the cursor was before the redraw */
+  /* one table: the picked isolations on top (ticked, a padlock, numbered, then a blank row to type another), and under them
+     the suggestions for the action's Tags (unticked, a bulb, the reason in italics). Ticking a suggestion moves it up;
+     unticking a picked one drops it back down, or takes it off if it was typed in (asking first if it has a note). */
+  const LOCK = '<svg class="is-ic is-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/><path d="M12 14.5v2.5"/></svg>';
+  const BULB = '<svg class="is-ic is-bulb" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M8.5 14.5a6 6 0 117 0c-.8.6-1.5 1.5-1.5 2.5h-4c0-1-.7-1.9-1.5-2.5z"/></svg>';
+  const tick = (on, ro, key, tip) => '<td class="is-pk"><label class="ck is-ck" title="' + esc(tip) + '"><input type="checkbox"' + (on ? " checked" : "") + (ro ? " disabled" : "") + ' data-pk="' + esc(key) + '"></label>' + (on ? LOCK : BULB) + '</td>';
   function renderFor(el, a, keep){ const ro = !Store.S.edit;
-    const s = Store.stage(a.stage), items = list(a), tags = Array.isArray(a.f.equipment) ? a.f.equipment : [], blanks = Math.max(ro ? 0 : 1, 5 - items.length);
-    el.innerHTML = '<div class="is-main"><div class="pt-head"><b class="pt-h">Isolations</b><span class="grow"></span><span class="dim is-src">' + (Equip.count ? Equip.count.toLocaleString() + " items in the plant equipment lists" : "Loading the plant equipment lists…") + ' <button type="button" class="link" data-k="ref">Refresh</button></span></div>'
-      + '<div class="is-tags"><b>Subject equipment</b>' + (tags.length ? tags.map(t => '<button type="button" class="is-chip" data-tag="' + esc(t) + '" title="' + (ro ? "" : "Add as an isolation row") + '">' + Fields.chip(t) + (ro ? "" : "<i>+</i>") + '</button>').join("") + (ro ? "" : tipI("Click a tag to add it as a row.")) : '<span class="dim">No equipment tags on this action.</span>' + tipI("Add them in its side panel on the Actions tab.")) + '</div>'
-      + sugBox(a, tags, ro)
-      + '<table class="tbl pt-tbl is-tbl"><thead><tr><th class="pt-no">No.</th>' + COLS.map(([k, n]) => '<th class="is-' + k + '">' + esc(n) + '</th>').join("") + '<th class="pt-act"></th></tr></thead><tbody>'
-      + items.map((it, i) => '<tr data-id="' + it.id + '"><td class="pt-no">' + (i + 1) + '</td>' + COLS.map(([k]) => cell(it.id, k, it[k], ro)).join("") + '<td class="pt-act">' + (ro ? "" : '<button type="button" class="ic-b sm pt-x" title="Remove this row">✕</button>') + '</td></tr>').join("")
-      + Array.from({ length: blanks }, (_, k) => '<tr class="pt-blank"><td class="pt-no"></td>' + COLS.map(([c]) => cell("new" + k, c, "", ro)).join("") + '<td></td></tr>').join("") + '</tbody></table>'
-      + '<div class="dim pt-foot">' + (items.length ? items.length + " isolation" + (items.length > 1 ? "s" : "") : "Empty, type an equipment number or name to start") + tipI("Picking a suggestion fills in the number and the name. You can still edit them, and that doesn't change the lists.") + '</div></div>';
-    $("[data-k=ref]", el).onclick = () => { note("Refreshing the plant equipment lists…"); Equip.load(true).then(() => { note(Equip.count.toLocaleString() + " equipment items loaded"); App.render(); }); };
+    const items = list(a), tags = Array.isArray(a.f.equipment) ? a.f.equipment : [], sug = tags.length && typeof IsolSuggest !== "undefined" ? suggestions(a, tags) : [];
+    el.innerHTML = '<div class="is-main"><table class="tbl pt-tbl is-tbl"><thead><tr><th class="is-pk"></th><th class="pt-no">No.</th>' + COLS.map(([k, n]) => '<th class="is-' + k + '">' + esc(n) + '</th>').join("") + '</tr></thead><tbody>'
+      + items.map((it, i) => '<tr data-id="' + it.id + '">' + tick(true, ro, it.id, ro ? "Isolated" : "Isolated. Untick to take it off") + '<td class="pt-no">' + (i + 1) + '</td>' + COLS.map(([k]) => cell(it.id, k, it[k], ro)).join("") + '</tr>').join("")
+      + (ro ? "" : '<tr class="pt-blank"><td class="is-pk"></td><td class="pt-no"></td>' + COLS.map(([c]) => cell("new0", c, "", ro, c === "tag" ? "Type a number" : c === "name" ? "or a name" : "")).join("") + '</tr>')
+      + (sug === null ? '<tr class="is-sep"><td colspan="5">Suggested from the plant lists <span class="dim">' + (Equip.raw() ? "working them out…" : "loading the lists…") + '</span></td></tr>'
+        : sug.length ? '<tr class="is-sep"><td colspan="5">Suggested from the plant lists' + tipI("Worked out from this action's Tags. Check each one before ticking it.") + '</td></tr>'
+          + sug.map(x => '<tr class="is-sr">' + tick(false, ro, x.tag, ro ? "Suggested" : "Suggested. Tick to add it") + '<td class="pt-no"></td><td class="is-cb"><span class="is-tx" title="' + esc(x.tag) + '">' + esc(x.tag) + '</span></td><td class="is-cb"><span class="is-tx" title="' + esc(x.name || "") + '">' + esc(x.name || "") + '</span></td><td><span class="is-why">' + esc(x.reason || "") + (tags.length > 1 && x.for !== x.tag ? " (for " + esc(x.for) + ")" : "") + '</span></td></tr>').join("") : "")
+      + '</tbody></table></div>';
     if (!Equip.count) Equip.load().then(() => { if (App.sub === "isol" && Equip.count) App.render(); });
     wire(el, a, ro);
-    wireSug(el, a, ro);
-    if (!ro) $$(".is-chip", el).forEach(b => b.onclick = () => { const t = b.dataset.tag, x = Equip.find(t, "t").find(y => y.t.toLowerCase() === t.toLowerCase() && y.n);
-      put(a, "new-chip", { tag: t, name: x ? x.n : "" }); created.delete("new-chip"); });
+    wireSug(el, a, ro, sug || []);
     if (keep && keep.c){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
   /* ---------- suggested isolations: what to isolate for the subject equipment, as pills to add or dismiss ---------- */
   let index = null, building = null;
   function idx(){ if (index || building || typeof IsolSuggest === "undefined") return index; const raw = Equip.raw(); if (!raw) return null;
     /* iso-extra.json (drives, isolator panels and boards from the single line diagrams, process streams from the PFD) is optional: without it the suggestions still come, just with fewer drives */
     building = fetch("js/iso-extra.json?v=" + APP_VERSION).then(r => r.ok ? r.json() : null).catch(() => null).then(extra => new Promise(res => setTimeout(() => { try { index = IsolSuggest.build(raw, extra || undefined); } catch (e){ console.warn("isolation suggestions", e); } building = null; res(); App.render(); }, 30))); return null; }
-  const KIND = { electrical: "Electrical", upstream: "Upstream feed", valve: "Valve", associated: "Associated", utility: "Utility" };
+  /* the suggestions for the action's Tags: each tag itself first, then what the plant lists say to isolate for it */
   function suggestions(a, tags){ const ix = idx(); if (!ix) return null; const have = new Set((a.isol || []).map(x => String(x.tag || "").toUpperCase())), seen = new Set(), out = [];
-    tags.forEach(t => { let r = []; try { r = IsolSuggest.suggest(ix, t) || []; } catch (e){ console.warn(e); }
-      r.forEach(x => { const k = String(x.tag || "").toUpperCase(); if (!k || seen.has(k) || have.has(k) || tags.some(y => y.toUpperCase() === k)) return; seen.add(k); out.push(Object.assign({ for: t }, x)); }); });
+    const add = x => { const k = String(x.tag || "").toUpperCase(); if (!k || seen.has(k) || have.has(k)) return; seen.add(k); out.push(x); };
+    tags.forEach(t => { const e = Equip.get(t) || Equip.get(String(t).toUpperCase()); add({ for: t, tag: t, name: e ? e.n : "", reason: "Tagged on this action" }); });
+    tags.forEach(t => { let r = []; try { r = IsolSuggest.suggest(ix, t) || []; } catch (e){ console.warn(e); } r.forEach(x => add(Object.assign({ for: t }, x))); });
     return out; }
-  function sugBox(a, tags, ro){ if (!tags.length || typeof IsolSuggest === "undefined") return ""; const all = suggestions(a, tags);
-    if (!all) return '<div class="is-sug"><b>Suggested isolations</b><span class="dim">' + (Equip.raw() ? "Working out the suggestions…" : "Loading the plant equipment lists…") + '</span></div>';
-    const no = new Set(a.isolNo || []), show = all.filter(x => !no.has(x.tag)), gone = all.length - show.length;
-    if (!all.length) return '<div class="is-sug"><b>Suggested isolations</b><span class="dim">No suggestions found in the plant equipment lists for ' + esc(tags.join(", ")) + '.</span></div>';
-    const groups = {}; show.forEach(x => (groups[x.kind] = groups[x.kind] || []).push(x));
-    return '<div class="is-sug"><div class="is-sh"><b>Suggested isolations</b>' + tipI("From the plant equipment lists. Check every one, then add it" + (ro ? "." : " with + or dismiss it with ✕.")) + '<span class="grow"></span>'
-      + (!ro && show.length ? '<button type="button" class="link" data-sk="addall">Add all ' + show.length + '</button>' : "") + (gone ? '<button type="button" class="link" data-sk="back">Show ' + gone + ' dismissed</button>' : "") + '</div>'
-      + Object.keys(KIND).filter(k => groups[k]).concat(Object.keys(groups).filter(k => !KIND[k])).map(k => '<div class="is-sg"><span class="is-sk">' + esc(KIND[k] || k) + '</span>' + groups[k].map(x => '<span class="is-pill k-' + esc(k) + '" title="' + esc((x.reason || "") + (tags.length > 1 ? "\nFor " + x.for : "")) + '"><b>' + esc(x.tag) + '</b><span>' + esc(x.name || "") + '</span>'
-        + (ro ? "" : '<button type="button" class="ip-add" data-add="' + esc(x.tag) + '" title="Add as an isolation">+</button><button type="button" class="ip-x" data-no="' + esc(x.tag) + '" title="Dismiss">✕</button>') + '</span>').join("") + '</div>').join("")
-      + (show.length ? "" : '<div class="dim">All suggestions dismissed or added.</div>') + '</div>'; }
-  function wireSug(el, a, ro){ if (ro) return; const all = () => suggestions(a, Array.isArray(a.f.equipment) ? a.f.equipment : []) || [];
-    const row = x => ({ tag: x.tag, name: x.name || "", note: x.reason || "" });
-    $$("[data-add]", el).forEach(b => b.onclick = () => { const x = all().find(y => y.tag === b.dataset.add); if (!x) return; Store.mutate("a:" + a._p, () => { list(a).push(Object.assign({ id: uid() }, row(x))); Store.touch(a); }); Store.log("Added a suggested isolation to " + Store.actId(a)); });
-    $$("[data-no]", el).forEach(b => b.onclick = () => Store.mutate("a:" + a._p, () => { a.isolNo = (a.isolNo || []).concat(b.dataset.no); Store.touch(a); }));
-    const aa = $("[data-sk=addall]", el); if (aa) aa.onclick = () => { const no = new Set(a.isolNo || []), xs = all().filter(x => !no.has(x.tag)); Store.mutate("a:" + a._p, () => { xs.forEach(x => list(a).push(Object.assign({ id: uid() }, row(x)))); Store.touch(a); }); Store.log("Added " + xs.length + " suggested isolations to " + Store.actId(a)); };
-    const bk = $("[data-sk=back]", el); if (bk) bk.onclick = () => Store.mutate("a:" + a._p, () => { a.isolNo = []; Store.touch(a); }); }
-  const cell = (r, c, v, ro) => '<td' + (c !== "note" ? ' class="is-cb"' : "") + '><input class="in pt-in" autocomplete="off" data-r="' + r + '" data-c="' + c + '" value="' + esc(v || "") + '"' + (ro ? " readonly" : "") + '></td>';
+  function wireSug(el, a, ro, sug){ if (ro) return;
+    $$("[data-pk]", el).forEach(b => b.onchange = async () => { const k = b.dataset.pk;
+      if (b.checked){ const x = sug.find(y => y.tag === k); if (!x) return; Store.mutate("a:" + a._p, () => { list(a).push({ id: uid(), tag: x.tag, name: x.name || "", note: "", sug: 1 }); Store.touch(a); }); Store.log("Added a suggested isolation to " + Store.actId(a)); return; }
+      const it = list(a).find(y => y.id === k); if (!it) return;
+      const back = it.sug || sug.some(y => y.tag === it.tag) || (Array.isArray(a.f.equipment) && a.f.equipment.includes(it.tag));
+      if (it.note || !back){ b.checked = true; if (!await confirmBox("Take " + (it.tag || it.name || "this isolation") + " off the list" + (it.note ? " and lose its note?" : "?"), "Take it off", true)) return; }
+      Store.mutate("a:" + a._p, () => { const i = list(a).indexOf(it); if (i >= 0) list(a).splice(i, 1); Store.touch(a); }); Store.log("Took an isolation off " + Store.actId(a)); }); }
+  const cell = (r, c, v, ro, ph) => '<td' + (c !== "note" ? ' class="is-cb"' : "") + '><input class="in pt-in" autocomplete="off" data-r="' + r + '" data-c="' + c + '" value="' + esc(v || "") + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : "") + (ro ? " readonly" : "") + '></td>';
   /* write one or both of a row's values; a blank row becomes a new isolation */
   function put(a, r, vals){ const key = "a:" + a._p, items = list(a);
     if (String(r).startsWith("new")){ if (!Object.values(vals).some(Boolean)) return; const it = Object.assign({ id: uid() }, vals); created.set(r, it.id); Store.mutate(key, () => { items.push(it); Store.touch(a); }); Store.log("Added an isolation to " + Store.actId(a)); return; }
     const it = items.find(x => x.id === r); if (!it || Object.keys(vals).every(k => (it[k] || "") === vals[k])) return; Store.mutate(key, () => { Object.assign(it, vals); Store.touch(a); }); Store.log("Edited an isolation on " + Store.actId(a)); }
   function wire(el, a, ro){
-    $$(".pt-x", el).forEach(b => b.onclick = () => { const id = b.closest("tr").dataset.id; Store.mutate("a:" + a._p, () => { const i = list(a).findIndex(x => x.id === id); list(a).splice(i, 1); Store.touch(a); }); });
     $$(".pt-in", el).forEach(i => { if (ro) return; const c = i.dataset.c;
       i.onchange = () => { if (i._picked) return; put(a, i.dataset.r, { [c]: i.value.trim() }); };
       if (c === "note"){ i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }; return; }
@@ -121,5 +115,5 @@ const Isol = (() => {
       i.onkeydown = e => { if (dd && (e.key === "ArrowDown" || e.key === "ArrowUp")){ e.preventDefault(); hi = (hi + (e.key === "ArrowDown" ? 1 : -1) + res.length) % res.length; $$(".is-o", dd).forEach((b, k) => b.classList.toggle("on", k === hi)); const o = $$(".is-o", dd)[hi]; o && o.scrollIntoView({ block: "nearest" }); }
         else if (e.key === "Enter"){ e.preventDefault(); if (dd && res[hi]) pick(res[hi]); else i.blur(); }
         else if (e.key === "Escape" && dd){ e.stopPropagation(); close(); } }; }); }
-  return { renderFor };
+  return { renderFor, ready: () => !!index };
 })();
