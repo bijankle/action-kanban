@@ -212,3 +212,9 @@ function timeBox(value, opts){ opts = opts || {};
 const PREF_DEF = { etaSoon: 7, etaHover: 300, defTime: "07:00", timeStep: 30, passDefault: "done", defectCat: true, quoteTick: true, poTick: true,
   autoFit: true, notesW: 220, titleMin: 260, openLast: true, kbClear: true, pasteInto: true, locFromWbs: true };
 const pref = k => { const v = (lsGet("adRules", {}) || {})[k]; return v === undefined || v === null || v === "" ? PREF_DEF[k] : v; };
+
+/* the hide and show symbol of the Filters and Details panels: a little screen with the panel's side shaded and an
+   arrow the way it goes (side l or r, way -1 left or 1 right), so it plainly means the whole panel */
+const panelIco = (side, way) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2.2"/>'
+  + (side === "l" ? '<path d="M9 4.5v15"/><path d="M3.8 5.3h4.4v13.4H3.8z" fill="currentColor" stroke="none" opacity=".25"/>' : '<path d="M15 4.5v15"/><path d="M15.8 5.3h4.4v13.4h-4.4z" fill="currentColor" stroke="none" opacity=".25"/>')
+  + '<path d="' + (way < 0 ? "M15.5 9.5l-2.5 2.5 2.5 2.5" : "M8.5 9.5l2.5 2.5-2.5 2.5") + '" stroke-width="2.2"/></svg>';
