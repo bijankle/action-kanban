@@ -259,7 +259,7 @@ function tblKit(table, key, opts){ const hr = table.tHead && table.tHead.rows[0]
     rows.forEach(r => att(r) && run.length ? run[run.length - 1].sub.push(r) : data(r) ? run.push({ r, sub: [] }) : flush()); flush(); };
   if (opts.sort !== false) ths.forEach((th, i) => { if (!th.textContent.trim()) return; th.classList.add("tk-h");
     th.onclick = e => { if (e.target.closest(".tw-r, button, input, select, a")) return; const c = cid(th, i), st = S[key];
-      S[key] = !st || st.c !== c ? { c, d: 1 } : st.d > 0 ? { c, d: -1 } : null; sortNow(); }; });
+      S[key] = !st || st.c !== c ? { c, d: 1 } : st.d > 0 ? { c, d: -1 } : null; if (opts.onSort) opts.onSort(); else sortNow(); }; });   // (a list too long to show at once sorts itself, onSort)
   sortNow();
   /* drag a heading onto another to move its column */
   ths.forEach((th, i) => { th.draggable = true;

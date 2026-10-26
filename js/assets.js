@@ -1,0 +1,130 @@
+/* The Assets tab of Data validation, the same as the Assets view of the Project Library app: pick an asset type
+   (equipment, instruments, valves, lines…), then narrow it step by step with that type's own tag nomenclature
+   (Equipment: code then area; Lines: service, area, pipe spec, size). Each pill shows how many it leaves; the picked
+   steps sit on top as chips, ✕ on one steps back to it, and Any skips a step. The pills are in the Filters side bar,
+   the matching assets in the table. The lists are the plant lists (search-data.json) and their names (browse.json)
+   from the Project Library. */
+"use strict";
+const Assets = (() => {
+  const TYPES = [["mel", "Equipment (mech)"], ["elec", "Equipment (elec)"], ["cable", "Cables"], ["ins", "Instruments"], ["cv", "Control valves"], ["mv", "Manual valves"], ["line", "Lines"],
+    ["spi", "Pipe specials"], ["hose", "Hoses"], ["ctl", "Control tags"]];
+  const TN = Object.fromEntries(TYPES);
+  const STEPS = {
+    mel: [["k", "Equipment code"], ["a", "Area"]], ins: [["k", "Instrument letters"], ["a", "Area"]],
+    cv: [["k", "Valve type"], ["a", "Area"], ["sz", "Size (mm)"]], mv: [["k", "Valve type"], ["a", "Area"], ["sz", "Size (DN)"]],
+    line: [["k", "Service"], ["a", "Area"], ["sp", "Pipe spec"], ["sz", "Size (DN)"]],
+    spi: [["k", "Type"], ["a", "Area"]], hose: [["k", "Service"], ["a", "Area"]], ctl: [["k", "Kind"], ["a", "Area"]],
+    elec: [["k", "Equipment code"], ["a", "Area"]], cable: [["k", "Cable kind"], ["a", "Area"]] };
+  const SIZE = { cv: "Valve size (mm)", mv: "Size (DN)", line: "Size (DN)" };
+  const NAMEF = { mel: "Equipment name", elec: "Equipment name", ins: "Description", cv: "Location", spi: "Description", hose: "Description", ctl: "Description", mv: "Valve type" };
+  /* the names of the codes (as the Project Library gives them) */
+  const CBK = { P: "Power", C: "Control", I: "Instrument", D: "Data / comms", E: "Earth", FO: "Fibre optic", F: "Fibre optic", S: "Signal", B: "DB circuit", R: "DB circuit", W: "DB circuit", N: "Neutral" };
+  const CV = { XV: "On / off valve", PRV: "Pressure relief valve", SV: "Safety / solenoid valve", FCV: "Flow control valve", HV: "Hand actuated valve",
+    PCV: "Pressure control valve", LCV: "Level control valve", TCV: "Temperature control valve", DCV: "Density control valve", XCV: "Control valve", SVO: "Solenoid valve" };
+  const SPI = { EB: "Blower header", FR: "Not used", FS: "Deluge system", HS: "Slurry hose", MC: "Service / flushing coupling", MS: "Filter, trap, breather",
+    MV: "Gland water valve", OP: "Orifice plate", SC: "Straub coupling", SP: "Spray nozzle / bar", SS: "Special spool / injector", ST: "Strainer", VC: "Victaulic coupling" };
+  const INS = { XV: "On / off valve", SV: "Solenoid valve", SVO: "Solenoid valve, open", SVC: "Solenoid valve, close", ZSO: "Position switch, open",
+    ZSC: "Position switch, closed", HS: "Hand switch", PRV: "Pressure relief valve", VT: "Vibration transmitter", VE: "Vibration element" };
+  const ELN = { VS: "Variable speed drive", LCS: "Local control station", ISL: "Isolator", JB: "Junction box", XE: "Earth electrode", EB: "Earth bar",
+    CP: "Control panel", NR: "Neutral earthing resistor", DPS: "Decontactor", KEB: "Key exchange box", GPO: "General power outlet", FOB: "Fibre optic break out",
+    UA: "Fire alarm unit", CAM: "CCTV camera", BC: "Battery charger", GWY: "Network gateway", PS: "Power supply", PA: "Patch panel", PE: "Photo electric cell", UPS: "UPS" };
+  let rows = null, built = null, B = { areas: {}, equip: {}, inst: {}, svc: {}, spec: {} }, elNames = {}, loadingB = null;
+  const SHOW = 500; let more = 0;
+  let path = lsGet("adAsP", []) || [];
+  const keepPath = () => lsSet("adAsP", path);
+
+  /* the names list (browse.json), from where the plant lists come from, kept on this device */
+  function names(){ if (loadingB) return loadingB;
+    const src = (lsGet("adEquipSrc", "") || "https://raw.githubusercontent.com/bijankle/ProjectLibrary/HEAD/search-data.json").replace(/search-data\.json(\?.*)?$/, "browse.json");
+    loadingB = IDB.get("browse").then(c => { if (c && c.d) B = c.d; if (c && c.d && now() - c.at < 864e5) return;
+      return fetch(src, { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(d => { if (d){ B = d; IDB.set("browse", { at: now(), d }); rows = null; App.render(); } }).catch(() => {}); });
+    return loadingB; }
+
+  const area = s => { const m = /\bF(\d{2})\b/.exec(s || ""); return m ? "F" + m[1] : ""; };
+  function elCode(k){ let m = /^F\d{2,3}[A-Z]+\d+[A-Z]?-(R|W|B|RWB)\d+$/.exec(k); if (m) return "DB";
+    m = /^F\d{2,3}[A-Z]+[0-9A-Z]*-([A-Z]+)[\d/]*$/.exec(k); if (m) return m[1] === "VSD" ? "VS" : m[1];
+    m = /^F\d{2,3}-([A-Z]+)/.exec(k); return m ? m[1] : "?"; }
+  /* an asset's area and code, from its tag (as the Project Library reads them) */
+  function facet(t, k, g){
+    switch (t){
+      case "mel": { const m = /^F(\d\d)-([A-Z]+)/.exec(k); return m ? ["F" + m[1], m[2]] : [area(g("Area")), "?"]; }
+      case "ins": { const m = /^([A-Z]*)\s*(\d{2})/.exec(k); return [m && m[2] !== "00" ? "F" + m[2] : m ? "F00" : "", m && m[1] ? m[1] : "?"]; }
+      case "cv": { const m = /^([A-Z]+)\s*(\d{2})/.exec(k); return [m ? "F" + m[2] : "", g("Valve type") || (m && m[1]) || "?"]; }
+      case "line": { const m = /^(\d{2,3})-[A-Z]?\d+-([A-Z0-9]+)-/.exec(k); return m ? ["F" + m[1], m[2]] : ["", g("Service") || "?"]; }
+      case "mv": return [area(k), g("Valve type") || "?"];
+      case "spi": return [area((/2000-F\d\d/.exec(g("P&IDs") || g("P&ID") || "") || [""])[0].slice(5)), g("Type") || "?"];
+      case "hose": return [area(g("Location ref")), g("Service") || "?"];
+      case "ctl": return [g("Area") || "?", (g("Kind") || "?").split(",")[0]];
+      case "elec": { const m = /^F(\d{2,3})/.exec(k); return [m ? "F" + m[1] : "", elCode(k)]; }
+      case "cable": { const m = /^F(\d{2,3})/.exec(k), c = /-([A-Z]{1,2})\d{1,2}(?:-[A-Z]{1,2})?$/.exec(k); return [m ? "F" + m[1] : "", c ? (CBK[c[1]] ? c[1] : "?") : "?"]; }
+    } return null; }
+  function build(){ const d = Equip.raw(); if (!d || !d.data) return null; if (rows && built === d) return rows; rows = []; built = d; const ec = {};
+    TYPES.forEach(([t]) => { const ty = (d.types || {})[t], list = (d.data || {})[t] || []; if (!ty) return; const f = ty.f || [];
+      list.forEach(r => { const g = n => { const i = f.indexOf(n); return i < 0 ? "" : String(r[i] == null ? "" : r[i]).trim(); }, key = String(r[0] || "").trim(); if (!key) return;
+        const fc = facet(t, key, g); if (!fc) return;
+        const name = t === "line" ? [g("Service description"), g("From") && "from " + g("From"), g("To") && "to " + g("To")].filter(Boolean).join(", ") : t === "cable" ? [g("From name") || g("From"), g("To name") || g("To")].filter(Boolean).join(" → ") : g(NAMEF[t]);
+        rows.push({ t, key, name, a: fc[0] || "?", k: fc[1] || "?", sp: t === "line" ? g("Pipe spec") || "?" : "", sz: SIZE[t] ? g(SIZE[t]) || "?" : "" });
+        if (t === "elec"){ const ty2 = g("Type"); if (ty2){ const c = elCode(key); (ec[c] = ec[c] || {})[ty2] = (ec[c][ty2] || 0) + 1; } } }); });
+    elNames = {}; for (const c in ec){ const n = Object.entries(ec[c]).sort((a, b) => b[1] - a[1])[0][0]; elNames[c] = n === n.toUpperCase() && n.length > 4 ? n.charAt(0) + n.slice(1).toLowerCase() : n; }
+    const col = new Intl.Collator(undefined, { numeric: true }); rows.sort((x, y) => col.compare(x.key, y.key)); return rows; }
+
+  const insName = p => { if (!p || p === "?") return "No letter code"; if (INS[p]) return INS[p]; const L = B.inst || {};
+    const out = [L[p[0]] ? L[p[0]][0] : p[0]]; let rest = p.slice(1); if (rest[0] === "D" && rest.length > 1){ out.push("Differential"); rest = rest.slice(1); }
+    return out.concat([...rest].map(c => L[c] ? L[c][1] : c)).filter(Boolean).join(" "); };
+  const kName = (t, v) => ({ mel: () => (B.equip || {})[v], ins: () => insName(v), cv: () => CV[v], line: () => (B.svc || {})[v], hose: () => (B.svc || {})[v],
+    elec: () => ELN[v] || elNames[v] || (B.equip || {})[v], cable: () => CBK[v], spi: () => SPI[v] }[t] || (() => ""))() || "";
+  const nameOf = (f, t, v) => v === "?" ? (f === "a" ? "No area in the tag" : "Not given") : f === "k" ? kName(t, v) : f === "a" ? (B.areas || {})[v] || "" : f === "sp" ? (B.spec || {})[v] || "" : "";
+  /* a short form of a name for the pills: the first one or two words, about 14 characters ("Pump Process") */
+  const SKIP = /^(and|of|the|for|with|to|in|on|at)$/i;
+  const shortName = n => { const w = String(n || "").replace(/\(.*?\)/g, " ").replace(/[·&/,;:]+|\s[-–]\s/g, " ").split(/\s+/).filter(x => x && !SKIP.test(x));
+    if (!w.length) return ""; let s = w[0];
+    if (w[1]) s += (s + " " + w[1]).length <= 14 ? " " + w[1] : " " + w[1].slice(0, Math.max(3, 12 - s.length)) + ".";
+    const tag = w.slice(2).find(x => /\d/.test(x) || /^[A-Z]$/.test(x)); if (tag) s += " " + tag;
+    return s === s.toUpperCase() && /[A-Z]{3}/.test(s) ? s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : s; };
+
+  const ty = () => path.length ? path[0].v : "";
+  const steps = () => ty() ? STEPS[ty()] || [] : [];
+  const nextStep = () => ty() ? steps()[path.length - 1] : ["t", "Asset type"];
+  const match = r => path.every(p => p.v == null || String(r[p.f]) === String(p.v));
+  const ALPHA = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+  const label = (f, v) => f === "t" ? TN[v] : v === "?" ? "Other" : v;
+  const searched = list => (App.q || "").trim() ? list.filter(r => smartHit(r.key + " " + r.name + " " + TN[r.t], App.q)) : list;
+  const current = () => { const all = build(); return all ? searched(all.filter(match)) : null; };
+  const fcount = () => path.filter(p => p.v != null || p.f !== "t").length + ((App.q || "").trim() ? 1 : 0);
+
+  /* the Filters side bar: the picked steps as chips, then the pills of the next step */
+  function filters(el){ let body = $(".fp-groups", el); if (!body){ body = document.createElement("div"); body.className = "fp-groups"; el.appendChild(body); }
+    names(); const list = current();
+    if (!list){ body.innerHTML = '<p class="dim fshown">Loading the plant lists…</p>'; if (!Equip.raw()) Equip.load().then(() => App.render()); return; }
+    const crumbs = path.map((p, i) => { const nm = p.f === "t" || p.v == null || p.v === "?" ? "" : shortName(nameOf(p.f, ty(), p.v));
+      const txt = p.f === "t" ? TN[p.v] : p.v == null ? "Any " + steps()[i - 1][1].toLowerCase() : label(p.f, p.v) + (nm ? " " + nm : "");
+      return '<button type="button" class="pill fpill on as-cr" data-i="' + i + '" title="Take this step off, and the ones after it"><span class="fp-t">' + esc(txt) + '</span> <i aria-hidden="true">✕</i></button>'; }).join("");
+    const st = nextStep(); let opts = "";
+    if (st){ const c = {}; list.forEach(r => { const v = st[0] === "t" ? r.t : r[st[0]]; c[v] = (c[v] || 0) + 1; });
+      const vals = st[0] === "t" ? TYPES.map(x => x[0]).filter(v => c[v]).sort((x, y) => ALPHA.compare(TN[x], TN[y])) : Object.keys(c).sort((x, y) => (x === "?") - (y === "?") || ALPHA.compare(x, y));
+      opts = '<div class="fg2" data-k="step"><div class="fgh"><span>' + esc(st[1]) + '</span>' + (st[0] !== "t" ? '<button type="button" class="link as-any" title="Skip this step">Any</button>' : "") + '</div>'
+        + vals.map(v => { const nm = st[0] === "t" || v === "?" ? "" : shortName(nameOf(st[0], ty(), v)), full = st[0] === "t" ? TN[v] : nameOf(st[0], ty(), v);
+          return '<button type="button" class="pill fpill as-o" data-v="' + esc(v) + '" title="' + esc(label(st[0], v) + (full && full !== label(st[0], v) ? ", " + full : "")) + '"><span class="fp-t"><b class="as-c">' + esc(label(st[0], v)) + '</b>' + (nm ? " " + esc(nm) : "") + '</span> <b>' + c[v].toLocaleString() + '</b></button>'; }).join("") + '</div>'; }
+    body.innerHTML = (crumbs ? '<div class="fg2 as-crs"><div class="fgh"><span>Picked</span><button type="button" class="link fall">Clear all</button></div>' + crumbs + '</div>' : "") + opts
+      + '<p class="dim fshown">' + list.length.toLocaleString() + " of " + build().length.toLocaleString() + " assets</p>";
+    $$(".as-o", body).forEach(b => b.onclick = () => { path.push({ f: st[0], v: b.dataset.v }); more = 0; keepPath(); App.render(); });
+    const any = $(".as-any", body); if (any) any.onclick = () => { path.push({ f: st[0], v: null }); more = 0; keepPath(); App.render(); };
+    $$(".as-cr", body).forEach(b => b.onclick = () => { path = path.slice(0, +b.dataset.i); more = 0; keepPath(); App.render(); });
+    const fa = $(".fall", body); if (fa) fa.onclick = () => { path = []; more = 0; keepPath(); App.render(); }; }
+
+  /* the matching assets, as a table like every other (sort, fit, resize, move a column) */
+  function page(body){ names(); const list = current();
+    if (!list){ body.innerHTML = '<p class="dim">Loading the plant lists…</p>'; if (!Equip.raw()) Equip.load().then(() => App.render()); return; }
+    const t = ty(), cols = [["key", "Tag"], ["name", "Name"]].concat(t ? [] : [["t", "Type"]]).concat((t ? steps() : [["a", "Area"]]).map(([f, n]) => [f, n]));
+    const cell = (r, f) => f === "t" ? TN[r.t] : f === "key" || f === "name" ? r[f] : (r[f] === "?" ? "" : r[f]) + (f === "a" || f === "k" || f === "sp" ? (s => s ? " " + s : "")(r[f] === "?" ? "" : shortName(nameOf(f, r.t, r[f]))) : "");
+    /* (the whole list sorts by the heading picked, then the first rows show) */
+    const st = (tblKit.sort || {}).assets, ci = st ? cols.findIndex(([, n]) => n === st.c) : -1;
+    const sorted = ci < 0 ? list : list.slice().sort((x, y) => st.d * ALPHA.compare(String(cell(x, cols[ci][0]) || "~"), String(cell(y, cols[ci][0]) || "~")));
+    const n = Math.min(sorted.length, SHOW + more);
+    body.innerHTML = '<div class="tw-wrap"><table class="tbl ct vd-tbl as-tbl"><thead><tr>' + cols.map(([f, nm]) => '<th data-col="' + esc(nm) + '">' + esc(nm) + '</th>').join("") + '</tr></thead><tbody>'
+      + sorted.slice(0, n).map(r => '<tr>' + cols.map(([f]) => '<td>' + (f === "key" ? '<b>' + esc(r.key) + '</b>' : esc(cell(r, f))) + '</td>').join("") + '</tr>').join("") + '</tbody></table></div>'
+      + (sorted.length > n ? '<button type="button" class="link as-more">' + (sorted.length - n).toLocaleString() + ' more…</button>' : "");
+    const m = $(".as-more", body); if (m) m.onclick = () => { more += SHOW; App.render(); };
+    gridCols($(".as-tbl", body), "assets", { max: 520, onSort: () => App.render() }); }
+  return { page, filters, fcount, reset: () => { more = 0; } };
+})();

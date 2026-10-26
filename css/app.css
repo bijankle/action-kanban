@@ -1164,3 +1164,4 @@ html.dark .menubar{box-shadow:none}
 .tbl th.dover{box-shadow:inset 3px 0 0 #fff}.tbl th.drag{opacity:.55}
 /* a filter pill too long for the side bar ends in … (its name in full on pointing) */
 .fpill{max-width:100%;display:inline-flex;align-items:center;gap:4px;min-width:0}.fpill .fp-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.fpill b{flex:none}
+.fpill .as-c{color:var(--ink);font-weight:700;margin-right:3px}.as-more{margin:10px 2px}

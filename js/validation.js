@@ -16,7 +16,7 @@ const Valid = (() => {
     if (top === "other"){ body.insertAdjacentHTML("beforebegin", '<div class="av-sub dv-sub" role="tablist">' + [["fields", "Columns"], ["stages", "Status"]].map(([k, n]) => '<button type="button" data-o="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</div>');
       $$(".dv-sub button", el).forEach(b => b.onclick = () => { open(b.dataset.o); App.render(); }); }
     if (sec === "contacts") return Contacts.render(body);   // (the contacts keep their own rules: anyone editing can change them)
-    ({ fields, stages, equip, vendors: Vendors.page })[sec](body, lock);
+    ({ fields, stages, equip: Assets.page, vendors: Vendors.page })[sec](body, lock);
     if (lock){ $$("input,select,button:not(.dv-f)", body).forEach(x => x.disabled = true); if (!ro) body.insertAdjacentHTML("afterbegin", '<p class="dim dv-lock">Only the admin changes the fields and stages.</p>'); }
     if (keep){ const r = keep.id === "_new" ? $(".ct-new", el) : keep.id === "_ed" ? $(".dv-ed", el) : $('[data-id="' + keep.id + '"]', el), t = r && $$("input,select", r)[keep.i];
       if (t){ if (t.tagName === "INPUT" && t.type !== "checkbox" && t.type !== "color" && t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
@@ -30,10 +30,10 @@ const Valid = (() => {
   const ITEMS = { vendors: () => Vendors.all(), fields: () => Store.fields(), stages: () => Store.stages() };
   const SRCH = { vendors: v => [v.name, v.cat, v.ordered, v.type], fields: f => [f.label, tname(f), (f.options || []).filter(o => !o.del).map(o => o.label).join(" ")], stages: s => [s.name, Store.todo(s)] };
   const pf = (k, items) => FG[k] ? PillF.apply(k, FG[k], items) : items;
-  function filters(el){ if (sec === "contacts") return Contacts.filters(el); let body = $(".fp-groups", el);
+  function filters(el){ if (sec === "contacts") return Contacts.filters(el); if (sec === "equip") return Assets.filters(el); let body = $(".fp-groups", el);
     if (!FG[sec]){ if (body) body.innerHTML = ""; return; } const all = ITEMS[sec](); PillF.render(el, sec, FG[sec], all.filter(x => smartHit(SRCH[sec](x).join(" "), App.q)), all); }
-  const fcount = () => sec === "contacts" ? Contacts.fcount() : (FG[sec] ? PillF.count(sec, FG[sec]) : 0) + ((App.q || "").trim() ? 1 : 0);
-  const PH = { contacts: "Search people, companies, numbers", vendors: "Search suppliers, categories, what we order", equip: "Search tags, names", fields: "Search columns and their choices", stages: "Search the status steps" };
+  const fcount = () => sec === "contacts" ? Contacts.fcount() : sec === "equip" ? Assets.fcount() : (FG[sec] ? PillF.count(sec, FG[sec]) : 0) + ((App.q || "").trim() ? 1 : 0);
+  const PH = { contacts: "Search people, companies, numbers", vendors: "Search suppliers, categories, what we order", equip: "Search tags, lines, valves…", fields: "Search columns and their choices", stages: "Search the status steps" };
   const place = () => PH[sec] || "Search";
   const up = (o, fn) => Store.mutate("config", () => { fn(); Store.touch(o); });
   /* drag rows in a list to reorder the array behind them */
@@ -93,27 +93,7 @@ const Valid = (() => {
     sortable($(".stl", body), () => Store.S.config.stages, ".str[data-id]");
     $("[data-k=new]", body).onkeydown = e => { const v = e.target.value.trim(); if (e.key !== "Enter" || !v) return; Store.mutate("config", () => { const A = Store.S.config.stages, at = A.findIndex(x => !x.del && x.kind !== "open"), s = Store.touch({ id: "st" + uid(), name: v, color: "#64748b", kind: "open", print: true }); at < 0 ? A.push(s) : A.splice(at, 0, s); Store.S.config.mod = now(); }); }; }
 
-  /* the equipment the app suggests: the Equipment tags list, plus everything in the plant equipment lists */
-  function equip(body, ro){ const f = Store.field("equipment"), tags = f ? Fields.optLabels(f) : [], q = (App.q || "").toLowerCase().split(/\s+/).filter(Boolean);
-    const list = Equip.count ? Equip.find(q.join(" ") || "-", "t") : [];
-    body.innerHTML = '<div class="dv-h">Equipment' + tipI("Suggested when typing equipment tags and isolations. Anything can still be typed.") + '</div>'
-      + '<div class="dv-h" style="margin-top:14px">Tags list <span class="dim">' + tags.length + ' tags</span>' + (ro ? "" : '<button type="button" class="link" data-k="edtags">Edit the list</button>') + '</div><div class="eq-tags">' + (tags.length ? tags.map(t => Fields.chip(t)).join(" ") : '<span class="dim">None yet. Tags typed on actions are added here.</span>') + '</div>'
-      + '<div class="dv-h" style="margin-top:18px">Plant equipment lists <span class="dim">' + (Equip.count ? Equip.count.toLocaleString() + " items: mechanical and electrical equipment, valves, instruments" : "loading…") + '</span><button type="button" class="link" data-k="ref">Refresh</button></div>'
-      + (q.length ? '<table class="tbl ct vd-tbl"><thead><tr><th>Tag</th><th>Name</th><th>List</th></tr></thead><tbody>' + list.map(x => '<tr><td><b>' + esc(x.t) + '</b></td><td>' + esc(x.n) + '</td><td>' + esc(x.k) + '</td></tr>').join("") + '</tbody></table>' + (list.length ? "" : '<div class="dim">Nothing matches.</div>') : '<div class="dim">Type in the search box above to look up equipment.</div>');
-    const e = $("[data-k=edtags]", body); if (e) e.onclick = () => { sec = "fields"; cur = "equipment"; App.render(); };
-    $("[data-k=ref]", body).onclick = () => Equip.load(true).then(() => App.render());
-    if (!Equip.count) Equip.load().then(() => App.render()); }
   const hit = (...xs) => smartHit(xs.join(" "), App.q);
-  function contacts(body){ const q = (App.q || "").toLowerCase(); const cs = Store.contacts().filter(c => hit(c.name, c.company, c.mobile, c.email)).sort((a, b) => a.name.localeCompare(b.name));
-    body.innerHTML = '<div class="dv-h">Contacts <span class="dim">picking a name on an action fills in its number</span></div>'
-      + '<table class="tbl ct"><thead><tr><th>Name</th><th>Company</th><th>Mobile</th><th>Email</th><th></th></tr></thead><tbody>' + cs.map(c => '<tr data-id="' + c.id + '">' + ["name", "company", "mobile", "email"].map(k => '<td><input class="in" data-k="' + k + '" value="' + esc(c[k] || "") + '"></td>').join("") + '<td><button type="button" class="ic-b sm" title="Delete">✕</button></td></tr>').join("")
-      + '<tr class="ct-new"><td><input class="in" data-k="name" placeholder="+ New name"></td><td><input class="in" data-k="company" placeholder="Company"></td><td><input class="in" data-k="mobile" placeholder="Mobile"></td><td><input class="in" data-k="email" placeholder="Email"></td><td><button type="button" class="btn sm">Add</button></td></tr></tbody></table>';
-    $$("tr[data-id]", body).forEach(r => { const c = Store.S.config.contacts.find(x => x.id === r.dataset.id);
-      $$("input", r).forEach(i => i.onchange = () => up(c, () => c[i.dataset.k] = i.value.trim()));
-      $(".ic-b", r).onclick = () => up(c, () => c.del = true); });
-    const nr = $(".ct-new", body), add = () => { const v = k => $("[data-k=" + k + "]", nr).value.trim(); if (!v("name")) return;
-      Store.mutate("config", () => Store.S.config.contacts.push(Store.touch({ id: uid(), name: v("name"), company: v("company"), mobile: v("mobile"), email: v("email") }))); };
-    $("button", nr).onclick = add; $$("input", nr).forEach(i => i.onkeydown = e => e.key === "Enter" && add()); }
   const section = () => sec;
   const open = k => { sec = k; lsSet("adDvSec", k); if (OTHER.includes(k)) lsSet("adDvOther", k); };
   return { section, open, render, filters, fcount, place, pf };
