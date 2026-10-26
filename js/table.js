@@ -20,7 +20,13 @@ const Table = (() => {
      the column it follows, shared like the field order) */
   function cols(){ const t = Store.field("title"), rest = (Store.selected().length > 1 ? [{ id: "_proj", label: "Project", type: "proj" }] : []).concat(Store.fields().filter(f => f.table && f.id !== "title"));
     const at = Store.S.config.actAfter; rest.splice(at && at !== "title" ? rest.findIndex(f => f.id === at) + 1 : 0, 0, { id: "_act", label: "", type: "act" });
-    return [{ id: "_id", label: "ID", type: "id" }].concat(t && t.table !== false ? [t] : [], rest); }
+    const base = [{ id: "_id", label: "ID", type: "id" }].concat(t && t.table !== false ? [t] : [], rest);
+    /* once any column has been dragged, the whole order is kept (config.colOrder, shared like the field order); columns
+       added since keep their place in the default order */
+    const ord = Store.S.config.colOrder; if (!Array.isArray(ord) || !ord.length) return base;
+    const at2 = new Map(ord.map((id, n) => [id, n])), dflt = new Map(base.map((c, n) => [c.id, n]));
+    const rank = c => at2.has(c.id) ? at2.get(c.id) : (() => { for (let n = dflt.get(c.id) - 1; n >= 0; n--) if (at2.has(base[n].id)) return at2.get(base[n].id) + 0.5; return -0.5; })();
+    return base.slice().sort((x, y) => rank(x) - rank(y) || dflt.get(x.id) - dflt.get(y.id)); }
   /* what's on show: the projects ticked, the stage pills, the search */
   /* the order sticks while you work: ticking Done or Hold, or changing a status, leaves the row where it is (so you
      can carry on with it) until the list is opened again, sorted, filtered or searched */
@@ -105,7 +111,7 @@ const Table = (() => {
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? pref("titleMin") : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
-    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" draggable="' + !!Store.S.edit + '" aria-label="Status: on hold, complete, delete" style="width:' + NEED.act + 'px">Status</th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_" && c.id !== "title") + '" style="width:' + wid(c) + '">'
+    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" draggable="' + !!Store.S.edit + '" aria-label="Status: on hold, complete, delete" style="width:' + NEED.act + 'px">Status</th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + !!Store.S.edit + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + esc(head(c)) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">' + INFO_I + '</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '><button type="button" class="addc" aria-haspopup="true">+ Add column</button></th>' : "");
     const minW = cs.reduce((t, c) => t + least(c), 0) + ADD;
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
@@ -240,18 +246,17 @@ const Table = (() => {
     }); dragHead(el, cs); }
   /* reorder by dragging a heading (the field order is shared, it's also the order in the side panel); ID and title stay
      first, Status can go anywhere after them */
-  function dragHead(el){ const ids = cols().map(c => c.id), movable = id => id === "_act" ? !!Store.S.edit : id[0] !== "_" && id !== "title";
+  function dragHead(el){ const ids = cols().map(c => c.id), movable = () => !!Store.S.edit;   // (every column moves, the ID and title too)
     $$("th[data-c]", el).forEach(th => { const id = th.dataset.c;
       th.ondragstart = e => { if (!movable(id)) return e.preventDefault(); e.dataTransfer.setData("text/col", id); th.classList.add("drag"); };
       th.ondragend = () => th.classList.remove("drag");
-      th.ondragover = e => { if ([...e.dataTransfer.types].includes("text/col") && (movable(id) || id === "title" || id === "_proj")){ e.preventDefault(); th.classList.add("dover"); } };
+      th.ondragover = e => { if ([...e.dataTransfer.types].includes("text/col")){ e.preventDefault(); th.classList.add("dover"); } };
       th.ondragleave = () => th.classList.remove("dover");
       th.ondrop = e => { th.classList.remove("dover"); const from = e.dataTransfer.getData("text/col"); if (!from || from === id) return; e.preventDefault();
         /* the new order of all the columns: the dragged one takes the dropped on one's place (after it going right, before it going left) */
         const o = ids.slice(), a = o.indexOf(from), b0 = o.indexOf(id); o.splice(a, 1); let b = o.indexOf(id); b = a < b0 ? b + 1 : b;
-        if (b <= o.indexOf("title")) b = o.indexOf("title") + 1; if (b < 1) b = 1; o.splice(b, 0, from);
-        Store.mutate("config", () => { const C = Store.S.config, fs = C.fields, i = o.indexOf("_act");
-          if (from === "_act" || ids.indexOf("_act") !== i) C.actAfter = o[i - 1] === "_id" ? "title" : o[i - 1];
+        o.splice(Math.max(0, b), 0, from);
+        Store.mutate("config", () => { const C = Store.S.config, fs = C.fields; C.colOrder = o;
           /* the shown fields keep the slots they had in the field list, refilled in their new order */
           const shown = o.filter(x => x[0] !== "_" && x !== "title"), slots = fs.map((f, n) => shown.includes(f.id) ? n : -1).filter(n => n >= 0), by = new Map(fs.map(f => [f.id, f]));
           slots.forEach((n, k) => { fs[n] = by.get(shown[k]); }); C.mod = now(); const it = Store.field(from); if (it) Store.touch(it); }); }; }); }
