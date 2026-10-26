@@ -121,7 +121,8 @@ const Table = (() => {
         else if (c.type === "longtext" && Store.S.edit){ td.classList.add("ed", "ltc"); const v = String(a.f[c.id] || ""); td.innerHTML = '<div class="lt-w"><button type="button" class="lt-b in" data-lt="' + esc(c.id) + '" title="Click to edit">' + (v ? esc(v.split("\n").join("  ·  ")) : '<span class="dim">Add ' + esc((c.label || "").toLowerCase()) + '</span>') + '</button><button type="button" class="lt-more" data-lt="' + esc(c.id) + '" title="Show and edit it all">more…</button></div>'; }
         else if (c.id === "title"){ td.classList.add("ttl"); td.innerHTML = '<div class="tt-w"><span class="tt">' + (esc(a.f.title || "") || '<span class="dim">No title</span>') + '</span><button type="button" class="tt-more" title="Show the full title">more…</button></div>'; }
         else { const v = Fields.show(a, c); td.innerHTML = v && !TICK.has(c.type) && /^(text|longtext|choice|contact|multi)$/.test(c.type) ? moreCut(v, Store.actId(a) + " " + c.label) : v; }
-        if (c.id === "parts"){ const st = etaState(a); if (st){ td.classList.add("eta", st); td.dataset.eta = ""; } }   // (a coloured dot on the box's corner; point at it for the delivery)
+        if (c.id === "parts"){ const st = etaState(a); if (st){ td.classList.add("eta", st); td.dataset.eta = ""; } }
+        if (c.type === "check" && c.id !== "parts" && Store.S.edit !== undefined){ td.dataset.tk = c.id; td.classList.add("tkc"); }   // (click beside the box for its card)   // (a coloured dot on the box's corner; point at it for the delivery)
         tr.appendChild(td); });
       if (ADD){ const td = document.createElement("td"); td.className = "addcol"; tr.appendChild(td); }
       frag.appendChild(tr); });
@@ -165,6 +166,24 @@ const Table = (() => {
     document.body.appendChild(p); Fields.place(p, td); $(".link", p).onclick = () => { Fields.closePop(); App.openParts(a._p + ":" + a.u, "mto"); };
     const x = $(".ep-x", p); if (x) x.onclick = () => p.remove();
     p.onmouseenter = () => clearTimeout(etaT); p.onmouseleave = () => { if (!p.classList.contains("pin")) etaT = setTimeout(() => p.remove(), 250); }; }
+  /* every other tick column: a click beside the box opens a short card about that step (whether it's done, who ticked
+     it and when, what's behind it) with a link to the tab where it's worked on */
+  const tabFor = id => ({ mtodone: ["mto", "Open the MTO"], rfq: ["mto", "Open the MTO"], po: ["mto", "Open the MTO"], secured: ["spares", "Open the Spares"] })[id] || ["overview", "Open the action"];
+  function stepCard(td){ Fields.closePop(); const a = App.act(td.closest("[data-ref]").dataset.ref), f = a && Store.field(td.dataset.tk); if (!f) return;
+    const v = a.f[f.id], st = v === Flow.NA ? "na" : v === true ? "done" : "open", who = Flow.who(a, f), L = [];
+    const files = k => (a[k] || []).map(x => esc(x.name)).join(", "), n = k => (a[k] || []).filter(it => it.desc || it.part || it.t).length;
+    if (f.id === "mtodone") L.push(["Items", n("mto") ? n("mto") + " on the MTO" : "None yet"]);
+    if (f.id === "secured"){ const sp = (a.spares || []), ok = sp.filter(x => x.secured).length; L.push(["Spares", sp.length ? ok + " of " + sp.length + " secured" : "None listed"]); }
+    if (f.id === "rfq"){ L.push(["Sent to", (a.rfqTo || []).length ? a.rfqTo.map(esc).join(", ") : "No vendor picked"]); if ((a.quotes || []).length) L.push(["Quotes", files("quotes")]); }
+    if (f.id === "po"){ L.push(["PO", (a.pos || []).length ? files("pos") : "None uploaded"]); if ((a.rfqTo || []).length) L.push(["Vendor", a.rfqTo.map(esc).join(", ")]); }
+    if (f.id === "engaged"){ const ff = k => { const x = Store.field(k); return x ? Fields.text(a, x) : ""; }; [["Contractor", ff("contractor")], ["On site", ff("contractorDate")], ["Contact", [ff("contractorContact"), ff("contractorPhone")].filter(Boolean).join(", ")]].forEach(([k, x]) => x && L.push([k, esc(x)])); if (L.length === 0) L.push(["Contractor", "Not set yet"]); }
+    if (f.id === "pccr" || f.id === "defect"){ const at = (a.files || []).filter(x => new RegExp(f.id === "pccr" ? "pccr" : "defect", "i").test(x.name)); if (at.length) L.push(["Attached", at.map(x => esc(x.name)).join(", ")]); }
+    const [tab, lab] = tabFor(f.id);
+    const p = h('<div class="pop etapop tkpop pin ' + st + '" role="dialog" aria-label="' + esc(f.label) + '"><b class="ep-h"><i></i>' + esc(f.label) + '<span class="dim tk-st">' + (st === "done" ? "done" : st === "na" ? "not needed" : "not done yet") + '</span><button type="button" class="ic-b sm ep-x" aria-label="Close">✕</button></b>'
+      + (f.desc ? '<div class="dim tk-d">' + esc(f.desc) + '</div>' : "") + (L.length || who ? '<div class="ep-g">' + L.map(([k, x]) => '<span class="dim">' + k + '</span><span>' + x + '</span>').join("") + (who ? '<span class="dim">By</span><span>' + esc(who.replace(/^(Ticked|Marked not needed|Set) by /, "")) + '</span>' : "") + '</div>' : "")
+      + '<button type="button" class="link">' + lab + '</button></div>');
+    document.body.appendChild(p); p.__td = td; Fields.place(p, td); $(".ep-x", p).onclick = () => p.remove(); $(".link", p).onclick = () => { Fields.closePop(); p.remove(); App.select(a._p + ":" + a.u, tab); }; }
+  document.addEventListener("click", e => { const td = e.target.closest("td[data-tk]"); if (!td || e.target.closest(".ck,input,label")) return; e.stopPropagation(); const open = $(".tkpop"); if (open && open.__td === td){ open.remove(); return; } stepCard(td); }, true);
   /* a click in the cell, outside the box, pins the card open (the box itself still ticks Parts Arrived) */
   document.addEventListener("click", e => { const td = e.target.closest("td[data-eta]"); if (!td || e.target.closest(".ck,input,label")) return; e.stopPropagation(); clearTimeout(etaT); const open = $(".etapop.pin"); if (open && open.__td === td){ open.remove(); return; } etaCard(td, true); const p = $(".etapop.pin"); if (p) p.__td = td; }, true);
   document.addEventListener("mouseover", e => { const td = e.target.closest("td[data-eta]"); if (!td || td.__on || $(".etapop.pin")) return; td.__on = true; clearTimeout(etaT); etaT = setTimeout(() => etaCard(td), pref("etaHover"));
