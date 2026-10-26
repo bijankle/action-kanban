@@ -1116,3 +1116,4 @@ html.dark .menubar{box-shadow:none}
 .tip-i:focus-visible,.th-i:focus-visible,.hold-i:focus-visible,.dw-i:focus-visible,.mt-i:focus-visible{outline:2px solid var(--focus,#2f6fd1);outline-offset:1px;border-radius:50%}
 .tbl th.addcol{border-left:1px solid rgba(255,255,255,.18)}.tbl td.addcol{border-left:1px solid color-mix(in srgb,var(--line) 70%,transparent)}   /* (the + Add column strip lined like the other columns) */
 .tg-more[hidden]{display:none}
+.tbl th.addcol:has(.addc-s){padding:0 2px}.addc.addc-s{padding:0;width:20px;min-width:0}

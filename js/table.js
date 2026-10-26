@@ -110,14 +110,14 @@ const Table = (() => {
     const least = c => fix(c) ? fw(c) : c.id === "title" ? pref("titleMin") : 110;
     const lv = c => lp(c) === " lp1" ? 1 : lp(c) === " lp2" ? 2 : 3, need = n => all.filter(c => lv(c) > n).reduce((t, c) => t + least(c), 0);
     const w = el.clientWidth || 9999, level = need(0) <= w ? 0 : need(1) <= w ? 1 : 2, cs = all.filter(c => lv(c) > level); lastLv = level; levelOf = w2 => need(0) <= w2 ? 0 : need(1) <= w2 ? 1 : 2;
-    if (!ro && window.ResizeObserver){ ro = new ResizeObserver(() => { if (App.view === "tiles" || !el.isConnected || !$(".tbl", el)) return; if (levelOf(el.clientWidth) !== lastLv) App.render(); else cut(el); }); ro.observe(el); }
+    if (!ro && window.ResizeObserver){ ro = new ResizeObserver(() => { if (App.view === "tiles" || !el.isConnected || !$(".tbl", el)) return; if (levelOf(el.clientWidth) !== lastLv) App.render(); else { cut(el); if (lastCs) autoFit(el, lastCs); } }); ro.observe(el); }   // (a side panel opening or closing re-fits the widths)
     /* the spare width at the end goes to the + Add column strip, so every column stays as wide as it was set */
     const ADD = Store.S.edit ? (ws._add || 140) : 24, fixW = cs.filter(fix).reduce((t, c) => t + fw(c), 0) + ADD, flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? pref("titleMin") : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
     const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" draggable="' + !!Store.S.edit + '" aria-label="Status: on hold, complete, delete" style="width:' + NEED.act + 'px">Status</th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + !!Store.S.edit + '" style="width:' + wid(c) + '">'
-      + '<span class="th-l">' + esc(head(c)) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">' + INFO_I + '</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '>' + (Store.S.edit ? '<button type="button" class="addc" aria-haspopup="true">+ Add column</button>' : "") + '</th>' : "");
+      + '<span class="th-l">' + esc(head(c)) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">' + INFO_I + '</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '>' + (Store.S.edit ? (ADD < 60 ? '<button type="button" class="addc addc-s" aria-haspopup="true" title="Add a column" aria-label="Add a column">+</button>' : '<button type="button" class="addc" aria-haspopup="true">+ Add column</button>') : "") + '</th>' : "");
     const minW = cs.reduce((t, c) => t + least(c), 0) + ADD;
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
       + (list.length ? "" : '<div class="empty">' + (Store.visible().length ? "No actions match the filter." : "No actions yet. Click <b>+ New action</b>, or the upload with AI button beside it to make one from an email.") + '</div>') + '</div>';
@@ -145,7 +145,7 @@ const Table = (() => {
     tb.ondragleave = e => { if (!tb.contains(e.relatedTarget)) $$("tr.drop", tb).forEach(x => x.classList.remove("drop")); };
     tb.ondrop = e => { const tr = e.target.closest("tr"); $$("tr.drop", tb).forEach(x => x.classList.remove("drop")); if (!tr || !Media.hasDrop(e)) return; e.preventDefault(); e.stopPropagation(); const a = App.act(tr.dataset.ref); Media.dropOn(a, e); };
     const ab = $(".addc", el); if (ab) ab.onclick = e => { e.stopPropagation(); addPop(ab); };
-    wireHead(el, cs); autoFit(el, cs); }
+    wireHead(el, cs); lastCs = cs; autoFit(el, cs); }
   /* the Tags cell shows the first tag only, as wide as a typical tag number, with +2 when there are more (click it to see
      them all); clicking the tag box opens it for typing */
   function tagCell(td, a, c){ const tags = [].concat(a.f[c.id] || []).filter(Boolean), ro = !Store.S.edit;
@@ -230,7 +230,7 @@ const Table = (() => {
      category typed in widens it, and it narrows again when that goes). The long ones don't: the title takes the width
      left and Notes keeps a set width, both ending in more… when cut. The tick box columns all share the widest one's
      width so they line up evenly. A column dragged to a width keeps it until the app is next opened */
-  let fitted = false, fitKey = ""; const dragged = new Set(), LONG = c => c.id === "title" || c.type === "longtext";
+  let fitted = false, fitKey = "", lastCs = null; const dragged = new Set(), LONG = c => c.id === "title" || c.type === "longtext";
   function autoFit(el, cs){ if (!pref("autoFit") || !$$("tbody tr", el).length) return; const first = !fitted; fitted = true;
     const key = el.clientWidth + "|" + cs.map(c => c.id).join() + "|" + $$("tbody tr", el).map(tr => { const a = App.act(tr.dataset.ref); return a ? a.u + ":" + (a.mod || 0) : ""; }).join();
     if (!first && key === fitKey) return; fitKey = key;
@@ -244,6 +244,7 @@ const Table = (() => {
     const tc = cs.find(c => c.id === "title" && !dragged.has(c.id)), lc = cs.filter(c => c.id !== "title" && LONG(c) && !dragged.has(c.id));
     const used = cs.filter(c => c !== tc && !lc.includes(c)).reduce((t, c) => t + (c.type === "act" ? NEED.act : c.type === "id" ? idW : ws[c.id] || 0), 0);
     let room = el.clientWidth - used - add - 2;
+    if (room < (tc ? pref("titleMin") : 0) + lc.length * 120){ room += add - 24; ws._add = 24; }   // (short of room: the strip gives way first, then the list scrolls sideways)
     if (tc){ ws.title = Math.max(pref("titleMin"), Math.min(ws.title, room - lc.length * 120)); room -= ws.title; }
     lc.forEach(c => { ws[c.id] = Math.max(120, Math.floor(room / lc.length)); });
     if (JSON.stringify(ws) !== was || first){ lsSet("adColW", ws); requestAnimationFrame(() => App.render()); } }
