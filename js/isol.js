@@ -72,6 +72,7 @@ const Isol = (() => {
     if (!Equip.count) Equip.load().then(() => { if (App.sub === "isol" && Equip.count) App.render(); });
     wire(el, a, ro);
     wireSug(el, a, ro, sug || []);
+    gridCols($(".is-tbl", el), "isol", { fixed: { c0: 64, "No.": 46 } });
     if (keep && keep.c){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
   /* ---------- suggested isolations: what to isolate for the subject equipment, as pills to add or dismiss ---------- */
   let index = null, building = null;

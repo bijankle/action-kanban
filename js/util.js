@@ -232,7 +232,45 @@ const panelIco = (side, way) => '<svg viewBox="0 0 24 24" fill="none" stroke="cu
    the columns filling the width, each one draggable to a new width, and a double click on its edge fits it to its
    contents. The widths are kept per table (key) on this computer; until one is set, the columns share the width in
    proportion to what they hold */
-function gridCols(table, key, opts){ opts = opts || {}; const ths = [...(table.tHead ? table.tHead.rows[0].cells : [])]; if (!ths.length) return;
+/* every table works like the Actions list: click a heading to sort (again to reverse, a third time to go back), drag a
+   heading onto another to move the column; the order and the sort are kept per table (the order for good, the sort while
+   the app is open). Rows that aren't data (the blank row to type in, a divider) stay where they are: each run of data rows
+   between them sorts on its own. */
+tblKit.id = (th, i) => th.dataset.col || th.textContent.replace(/[▲▼]/g, "").trim() || "c" + i;
+function tblKit(table, key, opts){ const hr = table.tHead && table.tHead.rows[0]; if (!hr) return;
+  const n = hr.cells.length, cid = tblKit.id;
+  const plain = r => r.cells.length === n && ![...r.cells].some(c => c.colSpan > 1);
+  /* the column order this person dragged */
+  const ord = (lsGet("adTO", {}) || {})[key];
+  if (ord && ord.length){ const ids = [...hr.cells].map(cid), want = ord.filter(x => ids.includes(x)).concat(ids.filter(x => !ord.includes(x)));
+    const perm = want.map(x => ids.indexOf(x)); if (perm.some((p, i) => p !== i)) [hr].concat([...table.tBodies[0].rows].filter(plain)).forEach(r => { const cs = [...r.cells]; perm.forEach(p => r.appendChild(cs[p])); }); }
+  const ths = [...hr.cells], S = tblKit.sort || (tblKit.sort = {});
+  const val = td => { if (!td) return ""; const f = td.querySelector("input,select,textarea"); return f ? (f.type === "checkbox" ? (f.checked ? "1" : "0") : f.tagName === "SELECT" ? (f.options[f.selectedIndex] || {}).text || "" : f.value) : td.textContent.trim(); };
+  const num = v => { const t = String(v).replace(/[, ]/g, ""); return t !== "" && isFinite(t) ? +t : null; }, day = v => /\d{4}|\d{1,2} [A-Z][a-z]{2}/.test(v) ? Date.parse(v) : NaN;
+  const cmp = (a, b) => { if (a === b) return 0; if (a === "") return 1; if (b === "") return -1; const x = num(a), y = num(b); if (x != null && y != null) return x - y;
+    const dx = day(a), dy = day(b); if (!isNaN(dx) && !isNaN(dy)) return dx - dy; return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }); };
+  const sortNow = () => { const st = S[key], tb = table.tBodies[0]; ths.forEach(th => { const m = th.querySelector(".tk-s"); if (m) m.remove(); });
+    if (!st) return; const i = ths.findIndex((th, k) => cid(th, k) === st.c); if (i < 0) return;
+    const lab = ths[i].querySelector(".th-l") || ths[i]; lab.insertAdjacentHTML("beforeend", '<span class="tk-s">' + (st.d > 0 ? " ▲" : " ▼") + '</span>');
+    /* (a row that belongs under the one before it, such as an MTO row's pieces, moves with it) */
+    const rows = [...tb.rows], att = r => r.matches(".mt-sub, .tk-att"), data = r => plain(r) && !r.matches(".pt-blank, .ct-new, .is-sep, .nosort"); let run = [];
+    const flush = () => { if (run.length > 1){ const last = run[run.length - 1], anchor = (last.sub.length ? last.sub[last.sub.length - 1] : last.r).nextSibling;
+        run.slice().sort((a, b) => st.d * cmp(val(a.r.cells[i]), val(b.r.cells[i]))).forEach(g => [g.r].concat(g.sub).forEach(r => tb.insertBefore(r, anchor))); } run = []; };
+    rows.forEach(r => att(r) && run.length ? run[run.length - 1].sub.push(r) : data(r) ? run.push({ r, sub: [] }) : flush()); flush(); };
+  if (opts.sort !== false) ths.forEach((th, i) => { if (!th.textContent.trim()) return; th.classList.add("tk-h");
+    th.onclick = e => { if (e.target.closest(".tw-r, button, input, select, a")) return; const c = cid(th, i), st = S[key];
+      S[key] = !st || st.c !== c ? { c, d: 1 } : st.d > 0 ? { c, d: -1 } : null; sortNow(); }; });
+  sortNow();
+  /* drag a heading onto another to move its column */
+  ths.forEach((th, i) => { th.draggable = true;
+    th.ondragstart = e => { if (e.target.closest && e.target.closest(".tw-r")) return e.preventDefault(); e.dataTransfer.setData("text/tcol", key + "|" + cid(th, i)); th.classList.add("drag"); };
+    th.ondragend = () => th.classList.remove("drag");
+    th.ondragover = e => { if ([...e.dataTransfer.types].includes("text/tcol")){ e.preventDefault(); th.classList.add("dover"); } };
+    th.ondragleave = () => th.classList.remove("dover");
+    th.ondrop = e => { th.classList.remove("dover"); const [k, from] = (e.dataTransfer.getData("text/tcol") || "").split("|"); const to = cid(th, i); if (k !== key || !from || from === to) return; e.preventDefault();
+      const ids = ths.map(cid), a = ids.indexOf(from), b0 = ids.indexOf(to); ids.splice(a, 1); let b = ids.indexOf(to); b = a < b0 ? b + 1 : b; ids.splice(b, 0, from);
+      const all = lsGet("adTO", {}) || {}; all[key] = ids; lsSet("adTO", all); App.render(); }; }); }
+function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts); const ths = [...(table.tHead ? table.tHead.rows[0].cells : [])]; if (!ths.length) return;
   const store = lsGet("adTW", {}) || {}, W = store[key] = store[key] || {}, fixed = opts.fixed || {};
   const cv = gridCols.cv || (gridCols.cv = document.createElement("canvas").getContext("2d"));
   const textW = (t, font) => { cv.font = font; return cv.measureText(String(t || "")).width; };
@@ -240,9 +278,9 @@ function gridCols(table, key, opts){ opts = opts || {}; const ths = [...(table.t
   /* a column's natural width: its heading or its widest entry (a box measures by what's typed in it, or its hint) */
   const natural = i => { const th = ths[i], hf = getComputedStyle(th).font; let w = textW(th.textContent.trim(), hf) + 34;
     rows.forEach(r => { const td = r.cells[i]; if (!td) return; const f = td.querySelector("input,select,textarea"), font = getComputedStyle(f || td).font;
-      const t = f ? (f.tagName === "SELECT" ? (f.options[f.selectedIndex] || {}).text : f.value || f.placeholder) : td.textContent.trim(); w = Math.max(w, textW(t, font) + (f ? 30 : 20)); });
+      const t = f ? (f.tagName === "SELECT" ? (f.options[f.selectedIndex] || {}).text : f.value || f.placeholder) : td.textContent.trim(); w = Math.max(w, textW(t, font) + (f ? (f.tagName === "SELECT" ? 48 : 36) : 20)); });
     return Math.min(opts.max || 480, Math.ceil(w)); };
-  const id = (th, i) => th.dataset.col || String(i);
+  const id = tblKit.id;
   let cg = table.querySelector("colgroup"); if (!cg){ cg = document.createElement("colgroup"); table.insertBefore(cg, table.firstChild); } cg.innerHTML = ths.map(() => "<col>").join("");
   /* the width there is: the nearest box round the table that has a width (measured after the page has laid out) */
   let host = table.parentElement; while (host && host !== document.body && !host.clientWidth) host = host.parentElement;
@@ -254,7 +292,7 @@ function gridCols(table, key, opts){ opts = opts || {}; const ths = [...(table.t
      text ends in …; less than fits: each keeps its own width, so there's no blank space) */
   const minW = i => Math.min(nat[i], Math.ceil(textW(ths[i].textContent.trim(), getComputedStyle(ths[i]).font) + 34)), flo = new Set();
   let k = 1; for (let pass = 0; pass < 4; pass++){ const left = room - used - fix - [...flo].reduce((t, i) => t + minW(i), 0), sc = nat.reduce((t, w, i) => t + (free[i] && !flo.has(i) ? w : 0), 0);
-    k = sc ? Math.min(1, left / sc) : 1; let more = false; ths.forEach((th, i) => { if (free[i] && !flo.has(i) && nat[i] * k < minW(i)){ flo.add(i); more = true; } }); if (!more) break; }   // (a column held at its heading's width leaves the rest to share what's left)
+    k = sc ? Math.min(1, opts.scroll ? 1 : left / sc) : 1; let more = false; ths.forEach((th, i) => { if (free[i] && !flo.has(i) && nat[i] * k < minW(i)){ flo.add(i); more = true; } }); if (!more) break; }   // (a column held at its heading's width leaves the rest to share what's left)
   const widths = ths.map((th, i) => Math.round(set[i] || (free[i] ? (flo.has(i) ? minW(i) : nat[i] * k) : nat[i])));
   cols.forEach((c, i) => c.style.width = widths[i] + "px"); table.classList.add("tw"); table.style.width = widths.reduce((t, w) => t + w, 0) + "px";
   rows.forEach(r => [...r.cells].forEach(td => { if (!td.title && !td.querySelector("input,select,textarea,button")) td.title = td.textContent.trim(); }));

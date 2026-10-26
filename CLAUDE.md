@@ -28,6 +28,8 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - Smooth and live: anything that depends on a size or a value updates while dragging or typing, never in a jump on release.
 - Show the result straight away and finish the slow part behind it (a pasted photo lands in place at once with a progress bar).
 - Opening something is for viewing: don't put the cursor in a box until the user clicks one. When they click into text, the cursor goes where they clicked.
+- Every table behaves like the Actions list, with no exceptions: click a heading to sort (again to reverse), columns fit their contents with no blank space, drag an edge to resize, double click it to fit, drag a heading to move the column. Use `gridCols(table, key, opts)` in util.js for any new table; it does all of this.
+- Every Data validation tab has the Filters side bar on the left, with the search and pills that make sense for that list (Suppliers by category, Contacts by company).
 - Columns fit their contents on open and as the contents change; long text columns (Title, Notes) share the spare width; a column the user drags keeps its width until the app is reopened. Everything (including ID and Title) can be dragged to reorder.
 - Clicking beside a small control (a tick box) opens a short card about it with a link to where it's worked on; pointing at it can show the same card.
 - Data stays trustworthy: one source of truth, nothing changes silently, and anything that changes other data asks first and lists exactly what will change. The Actions list ticks lead; the Organizer follows them.

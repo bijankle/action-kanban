@@ -11,6 +11,7 @@ const Parts = (() => {
   /* one action's list, drawn into its action view tab; keep is where the cursor was before the redraw */
   function renderFor(el, a, kind, keep){ const ro = !Store.S.edit;
     el.innerHTML = '<div class="pt-main">' + pane(a, kind, ro) + '</div>'; wire(el, a, kind, ro);
+    const pt = $(".pt-tbl", el); if (pt) gridCols(pt, kind === "mto" ? "mto" : "spares", { fixed: { Item: 66 }, scroll: true });
     if (keep && keep.c){ let r = keep.r, cut = keep.cut; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } if (cut === "new" && created.has("cut:" + r)) cut = created.get("cut:" + r);
       const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]' + (cut ? '[data-cut="' + cut + '"]' : ":not([data-cut])"), el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
 
@@ -27,8 +28,8 @@ const Parts = (() => {
       + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF" : "Export the spares list as a PDF") + '">' + fileIco(kind === "mto" ? "RFQ" : "PDF") + '</button></div>'
       /* the MTO's top: who the RFQ goes to on the left, the quotes and the PO on the right */
       + (kind === "mto" ? '<div class="pt-top"><div class="pt-l">' + Vendors.box(a, ro) + '</div><div class="pt-r">' + docs(a, "quotes", ro) + docs(a, "pos", ro) + '</div></div>' : "")
-      + (kind === "mto" ? Mto.table(a, ro) : '<table class="tbl pt-tbl"><thead><tr><th class="pt-no">Item</th>' + cols.map(([k, n]) => '<th class="pt-' + k + '">' + esc(n) + '</th>').join("") + (kind === "spares" ? '<th class="pt-sec">Secured</th>' : "") + '<th class="pt-act"></th></tr></thead><tbody>'
-      + items.map(row).join("") + Array.from({ length: blanks }, (_, k) => blank(k)).join("") + '</tbody></table>')
+      + (kind === "mto" ? Mto.table(a, ro) : '<div class="mt-wrap"><table class="tbl pt-tbl"><thead><tr><th class="pt-no">Item</th>' + cols.map(([k, n]) => '<th class="pt-' + k + '">' + esc(n) + '</th>').join("") + (kind === "spares" ? '<th class="pt-sec">Secured</th>' : "") + '<th class="pt-act"></th></tr></thead><tbody>'
+      + items.map(row).join("") + Array.from({ length: blanks }, (_, k) => blank(k)).join("") + '</tbody></table></div>')
       + '<div class="dim pt-foot">' + (items.length ? items.length + " item" + (items.length > 1 ? "s" : "") : "") + (kind === "mto" && (a.spares || []).length ? " · " + a.spares.length + " more from spares, not on the RFQ" : "") + (kind === "spares" && items.length ? " · " + items.filter(x => x.secured).length + " of " + items.length + " secured" : "") + '</div>'; }
   /* the quotes or the PO: each file on a line, then a dashed bar to upload another (or drop one on it) */
   const DOC = { quotes: ["Quote", "rfq"], pos: ["PO", "po"] };

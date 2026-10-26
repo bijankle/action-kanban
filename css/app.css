@@ -536,7 +536,6 @@ html.dark .dl-xl b{color:#3fbf78}html.dark .dl-pdf b{color:#ff6b5b}
 .is-main{height:100%;overflow:auto;padding:14px 22px 40px}
 .is-top{display:flex;align-items:flex-end;gap:16px;margin-bottom:12px}.is-pick{flex:0 1 560px;margin:0}.is-src{margin-left:auto;font-size:12.5px;white-space:nowrap}
 .is-tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.is-tags b{margin-right:6px;font-size:13px}
-.is-tbl th.is-tag{width:24%}.is-tbl th.is-name{width:38%}
 .is-dd{position:fixed;z-index:8500;max-height:256px;overflow:auto;background:var(--panel);border:var(--ctl-bd);border-radius:10px;box-shadow:0 12px 32px #1e1f2233;padding:4px}
 .is-o{display:grid;grid-template-columns:150px 1fr auto;gap:10px;align-items:baseline;width:100%;border:0;background:none;text-align:left;padding:6px 9px;border-radius:7px;cursor:pointer;font-size:13.5px}
 .is-o b{font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.is-o span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.is-o small{color:var(--dim);white-space:nowrap}
@@ -1147,7 +1146,7 @@ html.dark .menubar{box-shadow:none}
 .tw-wrap{overflow-x:auto}.vd-tbl td{white-space:nowrap;vertical-align:middle}
 .dv-body:has(.vd-tbl){max-width:none}   /* (the vendor list uses the whole width) */
 /* Isolations: one table, picked on top with a padlock, the suggestions under them with a bulb and the reason in italics */
-.av-body .is-tbl,.is-tbl{table-layout:fixed;width:100%}.is-tbl th.is-pk{width:64px}.is-tbl th.pt-no{width:44px}.is-tbl th.is-tag{width:21%}.is-tbl th.is-name{width:29%}.is-tbl .is-pk{white-space:nowrap;text-align:left;padding-left:10px}
+.is-tbl .is-pk{white-space:nowrap;text-align:left;padding-left:10px}
 .is-tbl td.is-pk{display:table-cell}.is-tbl td.is-pk .ck{display:inline-flex;vertical-align:middle;margin-right:6px}
 .is-ic{width:16px;height:16px;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .is-lock{color:var(--th)}.is-bulb{color:#c98a0b}html.dark .is-bulb{color:#f2b03d}
@@ -1160,3 +1159,6 @@ html.dark .menubar{box-shadow:none}
 /* Data validation: the sections as tabs in the strip over the page; Other holds Columns and Status as small tabs */
 #dvT{margin-left:0}
 .dv{flex-direction:column}.dv-sub{align-self:flex-start;margin:14px 22px 0}
+/* any table: a heading sorts on click and drags to move its column */
+.tbl th.tk-h{cursor:pointer;user-select:none}.tbl th.tk-h:hover{filter:brightness(1.12)}
+.tbl th.dover{box-shadow:inset 3px 0 0 #fff}.tbl th.drag{opacity:.55}
