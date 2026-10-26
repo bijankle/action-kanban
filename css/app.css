@@ -1123,3 +1123,4 @@ html.dark .menubar{box-shadow:none}
 .phd .chev svg{width:20px;height:20px;display:block}
 .phd:hover .chev{background:var(--panel2);border-color:var(--th);color:var(--th)}
 .slot .phd{padding:0 4px 0 10px;justify-content:flex-start}.slot .phd .chev{position:static;transform:none;width:26px;height:22px;border:0;background:none;margin-left:2px}.slot .phd .chev svg{width:18px;height:18px}
+.th-i{width:19px;height:19px;color:rgba(255,255,255,.92)}.th-i .ii circle:first-child{stroke-width:1.9}.th-i .ii path{stroke-width:2.3}.th-i .ii circle:last-child{r:1.4}   /* (the heading (i) at 19px, a touch bolder so it reads on the dark heading) */
