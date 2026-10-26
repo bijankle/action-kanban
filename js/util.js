@@ -251,17 +251,17 @@ function gridCols(table, key, opts){ opts = opts || {}; const ths = [...(table.t
   /* the columns nobody has set share what's left, in proportion to what they hold (a short one never below its own width) */
   const used = set.reduce((t, w, i) => t + (w || 0), 0), free = ths.map((th, i) => !set[i] && !fixed[id(th, i)]), natFree = nat.reduce((t, w, i) => t + (free[i] ? w : 0), 0), fix = nat.reduce((t, w, i) => t + (!set[i] && !free[i] ? w : 0), 0);
   /* (more than fits: the columns nobody has set narrow in proportion, each to no less than its heading, and their
-     text ends in …; less than fits: they widen in proportion to fill the width) */
+     text ends in …; less than fits: each keeps its own width, so there's no blank space) */
   const minW = i => Math.min(nat[i], Math.ceil(textW(ths[i].textContent.trim(), getComputedStyle(ths[i]).font) + 34)), flo = new Set();
   let k = 1; for (let pass = 0; pass < 4; pass++){ const left = room - used - fix - [...flo].reduce((t, i) => t + minW(i), 0), sc = nat.reduce((t, w, i) => t + (free[i] && !flo.has(i) ? w : 0), 0);
-    k = sc ? left / sc : 1; let more = false; ths.forEach((th, i) => { if (free[i] && !flo.has(i) && nat[i] * k < minW(i)){ flo.add(i); more = true; } }); if (!more) break; }   // (a column held at its heading's width leaves the rest to share what's left)
+    k = sc ? Math.min(1, left / sc) : 1; let more = false; ths.forEach((th, i) => { if (free[i] && !flo.has(i) && nat[i] * k < minW(i)){ flo.add(i); more = true; } }); if (!more) break; }   // (a column held at its heading's width leaves the rest to share what's left)
   const widths = ths.map((th, i) => Math.round(set[i] || (free[i] ? (flo.has(i) ? minW(i) : nat[i] * k) : nat[i])));
-  cols.forEach((c, i) => c.style.width = widths[i] + "px"); table.classList.add("tw"); table.style.width = Math.max(room, widths.reduce((t, w) => t + w, 0)) + "px";
+  cols.forEach((c, i) => c.style.width = widths[i] + "px"); table.classList.add("tw"); table.style.width = widths.reduce((t, w) => t + w, 0) + "px";
   rows.forEach(r => [...r.cells].forEach(td => { if (!td.title && !td.querySelector("input,select,textarea,button")) td.title = td.textContent.trim(); }));
   const save = () => lsSet("adTW", store);
   ths.forEach((th, i) => { if (th.querySelector(".tw-r")) return; const h = document.createElement("i"); h.className = "tw-r"; th.appendChild(h);
     h.onclick = e => e.stopPropagation();
     h.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const x0 = e.clientX, w0 = cols[i].getBoundingClientRect().width || widths[i]; h.setPointerCapture(e.pointerId);
-      h.onpointermove = ev => { const w = Math.max(40, w0 + ev.clientX - x0); cols[i].style.width = w + "px"; W[id(th, i)] = Math.round(w); table.style.width = Math.max(room, cols.reduce((t, c) => t + parseFloat(c.style.width), 0)) + "px"; };
+      h.onpointermove = ev => { const w = Math.max(40, w0 + ev.clientX - x0); cols[i].style.width = w + "px"; W[id(th, i)] = Math.round(w); table.style.width = cols.reduce((t, c) => t + parseFloat(c.style.width), 0) + "px"; };
       h.onpointerup = () => { h.onpointermove = null; save(); }; };
     h.ondblclick = e => { e.stopPropagation(); W[id(th, i)] = natural(i); save(); gridCols(table, key, opts); }; }); }

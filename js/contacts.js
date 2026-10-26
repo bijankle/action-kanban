@@ -50,7 +50,7 @@ const Contacts = (() => {
         + '<td class="cts-o"><button type="button" class="ct-n' + (o.n ? " on" : "") + '" title="See what\'s outstanding on ' + esc(full(c)) + '">' + (o.n ? o.n + " action" + (o.n === 1 ? "" : "s") : "None") + '</button></td>'
         + '<td class="cts-x">' + (ro ? "" : '<button type="button" class="ic-b sm" data-k="del" title="Remove ' + esc(full(c)) + ' from the list">✕</button>') + '</td></tr>'; }).join("")
       + '</tbody></table>' + (cs.length ? "" : '<div class="empty">' + (all.length ? "No one matches the search." : "No contacts yet. Add someone above, or import a contact list.") + '</div>') + '</div>';
-    gridCols($(".cts-t", el), "contacts", { fixed: { x: 52 } });   // (columns fill the width, drag or double click to size)
+    gridCols($(".cts-t", el), "contacts", { fixed: { x: 52 } });   // (columns fit what they hold, drag or double click to size)
     $$("th[data-s]", el).forEach(th => th.onclick = () => { const k = th.dataset.s; sort = sort.k === k ? { k, dir: -sort.dir } : { k, dir: 1 }; render(el); });
     $$("tr[data-id]", el).forEach(r => { const c = Store.S.config.contacts.find(x => x.id === r.dataset.id); if (!c) return;
       $$("input", r).forEach(i => i.onchange = () => up(c, () => { c[i.dataset.k] = i.value.trim(); c.name = full(c); }));
