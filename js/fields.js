@@ -124,8 +124,12 @@ const Fields = (() => {
     const draw = () => { const q = all && i.value === v ? "" : i.value; const list = items.filter(x => smartHit(x.v + " " + (x.sub || ""), q));
       dd.innerHTML = list.length ? list.map(x => '<button type="button" class="dd-o" data-v="' + esc(x.v) + '"><span class="' + (tbc(x.v) ? "tbc" : "") + '"' + (x.c ? ' style="box-shadow:inset 3px 0 0 ' + esc(x.c) + ';padding-left:7px"' : "") + '>' + esc(x.v) + '</span>' + (x.sub ? '<small>' + esc(x.sub) + '</small>' : "") + '</button>').join("") : '<div class="dd-n">' + (f.type === "contact" ? "New name, it will be added to the contacts" : "Not in the list; it's kept just for this action") + '</div>';
       $$(".dd-o", dd).forEach(b => b.onmousedown = e => { e.preventDefault(); i.value = b.dataset.v; dd.hidden = true; set(a, f, b.dataset.v); }); };
-    i.onfocus = () => { draw(); dd.hidden = false; }; i.oninput = draw;
-    i.onblur = () => { dd.hidden = true; if (i.value.trim() !== v) set(a, f, i.value.trim()); };
+    /* the list floats over everything (a list cell would cut it off), below the box or above it when there's no room */
+    const place = () => { const r = i.getBoundingClientRect(), below = innerHeight - r.bottom > 250 || r.top < 250;
+      Object.assign(dd.style, { position: "fixed", left: r.left + "px", width: Math.max(r.width, 180) + "px", right: "auto", zIndex: 9000, top: below ? r.bottom + 3 + "px" : "auto", bottom: below ? "auto" : innerHeight - r.top + 3 + "px" }); };
+    const follow = () => { if (!dd.hidden) place(); };
+    i.onfocus = () => { draw(); dd.hidden = false; place(); addEventListener("scroll", follow, true); addEventListener("resize", follow); }; i.oninput = () => { draw(); place(); };
+    i.onblur = () => { dd.hidden = true; removeEventListener("scroll", follow, true); removeEventListener("resize", follow); if (i.value.trim() !== v) set(a, f, i.value.trim()); };
     i.onkeydown = e => { if (e.key === "Enter") i.blur(); if (e.key === "Escape"){ e.stopPropagation(); i.value = v; i.blur(); } };
     return w; }
 
