@@ -152,7 +152,8 @@ const Fields = (() => {
       $$(".tg-o", dd).forEach(o => { o.onmousedown = e => { e.preventDefault(); pick(res[+o.dataset.k]); }; o.onmousemove = () => { if (hi !== +o.dataset.k){ hi = +o.dataset.k; paint(); } }; }); };
     const pick = x => { const { head } = seg(); i.value = head + x.t + ", "; const n = i.value.length; i.setSelectionRange(n, n); closeDD(); i.focus(); };
     i.setAttribute("role", "combobox"); i.setAttribute("aria-autocomplete", "list"); i.setAttribute("aria-expanded", "false"); i.autocomplete = "off"; i.spellcheck = false;
-    i.addEventListener("focus", () => { if (eq) Equip.load().catch(() => {}); if (i.value.trim() && !/,\s*$/.test(i.value)) i.value += ", "; const n0 = i.value.length; setTimeout(() => { if (i.value.length === n0) i.setSelectionRange(n0, n0); }, 0); });
+    i.addEventListener("focus", () => { if (eq) Equip.load().catch(() => {}); if (i.value.trim() && !/,\s*$/.test(i.value)) i.value += ", "; const n0 = i.value.length, c0 = i.dataset.caret; delete i.dataset.caret;
+      setTimeout(() => { if (i.value.length === n0){ const k = c0 != null ? Math.min(+c0, n0) : n0; i.setSelectionRange(k, k); } }, 0); });   // (at the point clicked, when a tags cell was clicked into)
     i.addEventListener("input", () => { if (eq && !Equip.count) Equip.load().then(() => document.activeElement === i && draw()).catch(() => {}); draw(); });
     i.addEventListener("blur", closeDD);
     i.addEventListener("keydown", e => { if (!dd) return;
