@@ -1104,3 +1104,14 @@ html.dark .menubar{box-shadow:none}
 /* a tick column's card (click beside the box) */
 .tbl td.tkc{cursor:pointer}.tbl td.tkc:hover{background:color-mix(in srgb,var(--th) 6%,var(--panel))}
 .tkpop{--eta:#9aa3ad}.tkpop.done{--eta:#1f8a58}.tkpop.na{--eta:#9aa3ad}.tkpop.open{--eta:#e8b10e}.tk-st{font-weight:400;font-size:12px;margin-left:2px}.tk-d{font-size:12px;line-height:1.4}
+/* the (i) symbols, one style everywhere: a thin outlined circle and a plain i, no fill */
+.tip-i,.th-i,.hold-i,.dw-i,.mt-i{background:none!important;border:0!important;box-shadow:none!important;padding:0;display:inline-grid;place-items:center;cursor:pointer;font:inherit;line-height:0;animation:none}
+.ii{display:block;width:100%;height:100%}
+.tip-i{width:16px;height:16px;color:var(--dim)}.tip-i:hover,.tip-i[aria-expanded="true"]{color:var(--th)}
+.th-i{width:15px;height:15px;color:rgba(255,255,255,.85)}.th-i:hover{color:#fff}
+.hold-i{width:20px;height:20px;color:var(--th)}.hold-i .ii circle:first-child{fill:color-mix(in srgb,var(--th) 12%,transparent)}
+.hold-i.bad{color:var(--bad,#c0392b)}.hold-i.bad .ii circle:first-child{fill:color-mix(in srgb,#c0392b 14%,transparent)}
+.dw-i{width:18px;height:18px;color:var(--dim)}.dw-i:hover{color:var(--th)}
+.mt-i{width:20px;height:20px;color:var(--dim)}.mt-i.on{color:var(--th)}.mt-i.on .ii circle:first-child{fill:color-mix(in srgb,var(--th) 15%,transparent)}.mt-i:hover{color:var(--th);filter:none}
+.tip-i:focus-visible,.th-i:focus-visible,.hold-i:focus-visible,.dw-i:focus-visible,.mt-i:focus-visible{outline:2px solid var(--focus,#2f6fd1);outline-offset:1px;border-radius:50%}
+.tbl th.addcol{border-left:1px solid rgba(255,255,255,.18)}.tbl td.addcol{border-left:1px solid color-mix(in srgb,var(--line) 70%,transparent)}   /* (the + Add column strip lined like the other columns) */

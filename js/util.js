@@ -70,7 +70,9 @@ function dragResize(handle, get, set, sign){ sign = sign || -1; handle.addEventL
 
 /* an (i) button that shows a how-to note in a small callout, so guidance doesn't take up room on screen */
 /* (a span, not a button, so a label around it doesn't pass its clicks on to it) */
-const tipI = (text, label) => '<span class="tip-i" role="button" tabindex="0" data-tip="' + esc(text) + '" aria-label="' + esc(label || "More information") + '" title="' + esc(label || "More information") + '">i</span>';
+/* the (i) symbol everywhere: a thin outlined circle with a plain upright i (its colour comes from the button) */
+const INFO_I = '<svg class="ii" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="7.6" r="1.25" fill="currentColor"/></svg>';
+const tipI = (text, label) => '<span class="tip-i" role="button" tabindex="0" data-tip="' + esc(text) + '" aria-label="' + esc(label || "More information") + '" title="' + esc(label || "More information") + '">' + INFO_I + '</span>';
 (() => { let cur = null;
   const close = () => { if (cur){ cur.p.remove(); cur.b.setAttribute("aria-expanded", "false"); cur = null; } };
   document.addEventListener("click", e => { const b = e.target.closest("[data-tip]");

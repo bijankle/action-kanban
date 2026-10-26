@@ -95,7 +95,7 @@ const Mto = (() => {
       const auto = !!res;
       h += '<td>' + inp(it, "qty", it.qty, ro || auto, ' inputmode="decimal"' + (auto ? ' title="Worked out from the pieces (▸)"' : "")) + '</td>'
         + '<td>' + (T ? sel(it, "unit", opts(T.units.includes(it.unit) || !it.unit ? T.units : T.units.concat(it.unit), it.unit), ro) : inp(it, "unit", it.unit, ro, ' list="mt-units"')) + '</td>'
-        + '<td class="mt-ic"><button type="button" class="mt-i' + (it.info || res || (T && sz(it)) ? " on" : "") + '" data-info="' + it.id + '" title="More about this item: sizes, weight, how the total was worked out, and notes">i</button></td>'
+        + '<td class="mt-ic"><button type="button" class="mt-i' + (it.info || res || (T && sz(it)) ? " on" : "") + '" data-info="' + it.id + '" title="More about this item: sizes, weight, how the total was worked out, and notes">' + INFO_I + '</button></td>'
         + '<td>' + inp(it, "eta", it.eta, ro, ' type="date" title="When this part is expected on site"') + '</td><td>' + inp(it, "notes", it.notes, ro) + '</td>'
         + '<td class="pt-act">' + (ro ? "" : '<button type="button" class="btn ghost sm pt-mv" title="Move this row to Spares">→ Spares</button><button type="button" class="ic-b sm pt-x" title="Remove this row">✕</button>') + '</td></tr>';
       if (on && many) h += '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="13"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>';
@@ -113,7 +113,7 @@ const Mto = (() => {
       + cs.map((c, i) => '<tr><td class="pt-no">' + (i + 1) + '</td><td>' + cin(c.id, "l", c.l) + '</td>' + (pl ? '<td>' + cin(c.id, "w", c.w) + '</td>' : "") + '<td>' + cin(c.id, "n", c.n || 1) + '</td><td>' + cin(c.id, "mk", c.mk, "e.g. A, or chute brace") + '</td><td>' + (ro ? "" : '<button type="button" class="ic-b sm" data-cx="' + c.id + '" data-r="' + it.id + '" title="Remove this piece">✕</button>') + '</td></tr>').join("")
       + (ro ? "" : '<tr class="pt-blank"><td class="pt-no"></td><td>' + cin("new", "l", "", pl ? "e.g. 600" : "e.g. 2400") + '</td>' + (pl ? '<td>' + cin("new", "w", "", "e.g. 400") + '</td>' : "") + '<td>' + cin("new", "n", "", "1") + '</td><td>' + cin("new", "mk", "") + '</td><td></td></tr>')
       + '</tbody></table><div class="mt-side"><label class="mt-sp">Spare ' + (pl ? "sheets" : "lengths") + ' <input class="in pt-in" data-r="' + it.id + '" data-c="spare" inputmode="numeric" value="' + esc(it.spare || "") + '" placeholder="0"' + (ro ? " readonly" : "") + '></label>'
-      + '<button type="button" class="mt-i' + (res ? " on" : "") + '" data-info="' + it.id + '" title="How the total is worked out">i</button>'
+      + '<button type="button" class="mt-i' + (res ? " on" : "") + '" data-info="' + it.id + '" title="How the total is worked out">' + INFO_I + '</button>'
       + '</div></div>' + (res ? '<div class="mt-draw">' + (res.kind === "len" ? barsSvg(res) : sheetsSvg(res)) + '</div>' : ""); }
   /* bars the same are drawn once, "× 3" */
   function groups(res){ const g = new Map(); res.bars.forEach(b => { const k = b.ps.map(p => p.l + "|" + p.mk).join(",") + "#" + b.off; if (!g.has(k)) g.set(k, { b, n: 0 }); g.get(k).n++; }); return [...g.values()]; }

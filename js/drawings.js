@@ -64,7 +64,7 @@ const Drawings = (() => {
     return '<div class="dw-b' + (on ? " pk" : "") + '" data-key="' + esc(k) + '"><div class="dw-h">'
       + '<label class="dw-ck" title="Include in the work pack"><input type="checkbox" data-n="' + esc(d.n) + '"' + (on ? " checked" : "") + (Store.S.edit ? "" : " disabled") + ' aria-label="Include ' + esc(d.n) + ' in the work pack"></label>'
       + (d.url ? '<a class="dw-a" href="' + esc(d.url) + '" target="_blank" rel="noopener" title="View it in SharePoint">' + nr + '</a>' : '<span class="dw-a dw-a0" title="Not in SharePoint">' + nr + '</span>')
-      + '<span class="dw-t">' + moreCut(esc(d.t || ""), d.n + (d.rev ? "_" + d.rev : "")) + '</span><button type="button" class="dw-i" title="Where it comes from: which equipment it\'s for and why it\'s listed" aria-label="Where ' + esc(d.n) + ' comes from">i</button>'
+      + '<span class="dw-t">' + moreCut(esc(d.t || ""), d.n + (d.rev ? "_" + d.rev : "")) + '</span><button type="button" class="dw-i" title="Where it comes from: which equipment it\'s for and why it\'s listed" aria-label="Where ' + esc(d.n) + ' comes from">' + INFO_I + '</button>'
       + (!d.own ? '<span class="dw-of" title="' + esc(e.n || "") + '">' + esc(d.of) + '</span>' : "")
       + (d.pdf ? '<a class="dw-dl" href="' + esc(d.pdf.split("#")[0]) + '" target="_blank" rel="noopener" download title="Download the PDF copy' + (d.pdfRev ? ", rev " + esc(d.pdfRev) : "") + ' (no SharePoint needed)" aria-label="Download the PDF copy of ' + esc(d.n) + '">' + DLI + '</a>' : '<span class="dw-dl0"></span>') + '</div></div>'; }
   /* the download button's symbol: a cloud with an arrow, SHARE in SharePoint teal underneath */

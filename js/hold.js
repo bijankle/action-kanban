@@ -12,7 +12,7 @@ const Hold = (() => {
   const NAMES = { who: "who it's waiting on", mobile: "their mobile", since: "the date" };
   function btn(a){ if (!on(a)) return ""; const m = missing(a), h = rec(a), ref = a._p + ":" + a.u;
     const tip = m.length ? "On hold: add " + m.map(k => NAMES[k]).join(", ") : "On hold since " + fmtDate(h.since) + ", waiting on " + h.who + " (" + h.mobile + ")";
-    return '<button type="button" class="hold-i' + (m.length ? " bad" : "") + '" data-hold="' + esc(ref) + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '">i</button>'; }
+    return '<button type="button" class="hold-i' + (m.length ? " bad" : "") + '" data-hold="' + esc(ref) + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + INFO_I + '</button>'; }
   /* moving to On Hold (Store.enter): a new record, and the form opens once the screen has redrawn */
   function entered(a){ a.hold = { since: new Date().toISOString().slice(0, 10) }; pending = a._p + ":" + a.u; }
   function after(){ if (!pending) return; const ref = pending; pending = null; setTimeout(() => { const b = $('[data-hold="' + CSS.escape(ref) + '"]'); if (b) open(ref, b); }, 60); }
