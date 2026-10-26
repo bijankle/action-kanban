@@ -88,7 +88,7 @@ const Table = (() => {
        their heading (headings wrap onto two lines), or what their contents need if that's wider */
     const tickF = "700 11.5px " + getComputedStyle(document.body).fontFamily;
     /* a column nobody has sized is as wide as the longest word in its heading (the heading wraps a word at a line) or its widest entry */
-    const tickOf = c => Math.max(44 + (c.id === "parts" ? 26 : 0), headW(head(c), tickF) - 14 + (c.id === "parts" ? 26 : 0));   // (Parts Arrived has room for its ETA i)   // (the i sits under the heading, so only the longest word and a little padding count)
+    const tickOf = c => Math.max(44, headW(head(c), tickF) - 14);   // (the i sits under the heading, so only the longest word and a little padding count)
     const px = c => ws[c.id] || (c.id === "equipment" ? Math.max(headW("F12-CV-402", "600 13px " + getComputedStyle(document.body).fontFamily) + 34, headW(head(c))) : TICK.has(c.type) ? tickOf(c) : fix(c) ? Math.max(headW(head(c)), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
     const FIX = new Set(["act", "id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || c.id === "equipment" || (c.type === "choice" && (c.options || []).length <= 3) || !!ws[c.id];   // (a column someone has sized keeps that width; the rest share what's left)
     /* when space runs out, the counts and dates go first, then the location; the tick boxes stay */
@@ -178,27 +178,33 @@ const Table = (() => {
       const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML;
       /* (a box you type in measures by what's in it, or its hint when empty, not by the box's default width) */
       $$("input,select,textarea", m).forEach((x, n) => { const src = $$("input,select,textarea", td)[n], t = document.createElement("span");
-        t.textContent = src.tagName === "SELECT" ? ((src.options[src.selectedIndex] || {}).text || "") : (src.value || src.placeholder || ""); t.style.padding = "0 9px"; x.replaceWith(t); });
+        t.textContent = src.tagName === "SELECT" ? ((src.options[src.selectedIndex] || {}).text || "") : (src.value || src.placeholder || ""); t.style.padding = "0 " + (src.tagName === "SELECT" ? 28 : 12) + "px"; x.replaceWith(t); });   // (a box's own padding and border, and a dropdown's arrow)
       $$(".mc-more,.lt-more,.tt-more", m).forEach(x => x.remove());   // (the more… links only show when cut off)
       document.body.appendChild(m); w = Math.max(w, Math.min(cs[i] && cs[i].type === "longtext" ? 220 : 640, m.scrollWidth + 22)); m.remove(); });
     return Math.round(w); }
-  /* when the app opens, every column is fitted tight and the title takes the width left; the tick box columns all share
-     the widest one's width so they line up evenly. Widths dragged after that last until the app is next opened */
-  let fitted = false;
-  function autoFit(el, cs){ if (fitted || !$$("tbody tr", el).length) return; fitted = true; const ws = {}, ths = $$("th[data-c]", el);
-    ths.forEach((th, i) => { const c = cs[i]; if (!c || c.id === "title" || c.type === "act" || c.type === "id") return; ws[c.id] = fitW(el, cs, th, i); });
-    const tk = cs.filter(c => TICK.has(c.type)).map(c => ws[c.id] || 0), tw = Math.max(0, ...tk); cs.forEach(c => { if (TICK.has(c.type) && tw) ws[c.id] = tw; });
-    lsSet("adColW", ws); requestAnimationFrame(() => App.render()); }
+  /* the short columns fit their contents: when the app opens, and again whenever what's in them changes (a longer
+     category typed in widens it, and it narrows again when that goes). The long ones don't: the title takes the width
+     left and Notes keeps a set width, both ending in more… when cut. The tick box columns all share the widest one's
+     width so they line up evenly. A column dragged to a width keeps it until the app is next opened */
+  let fitted = false, fitKey = ""; const dragged = new Set(), LONG = c => c.id === "title" || c.type === "longtext";
+  function autoFit(el, cs){ if (!$$("tbody tr", el).length) return; const first = !fitted; fitted = true;
+    const key = cs.map(c => c.id).join() + "|" + $$("tbody tr", el).map(tr => { const a = App.act(tr.dataset.ref); return a ? a.u + ":" + (a.mod || 0) : ""; }).join();
+    if (!first && key === fitKey) return; fitKey = key;
+    const ws = first ? {} : widths(), was = JSON.stringify(ws), ths = $$("th[data-c]", el);
+    ths.forEach((th, i) => { const c = cs[i]; if (!c || c.type === "act" || c.type === "id" || dragged.has(c.id)) return;
+      if (LONG(c)){ if (c.id !== "title" && !ws[c.id]) ws[c.id] = 220; return; } ws[c.id] = fitW(el, cs, th, i); });
+    const tk = cs.filter(c => TICK.has(c.type) && !dragged.has(c.id)), tw = Math.max(0, ...tk.map(c => ws[c.id] || 0)); tk.forEach(c => { if (tw) ws[c.id] = tw; });
+    if (JSON.stringify(ws) !== was || first){ lsSet("adColW", ws); requestAnimationFrame(() => App.render()); } }
   function wireHead(el, cs){ $$("th", el).forEach(th => { const id = th.dataset.c; if (!$(".th-l", th)) return;   // (the row buttons' column has no heading)
       $(".th-l", th).onclick = () => { App.sort = App.sort && App.sort.id === id ? (App.sort.dir > 0 ? { id, dir: -1 } : null) : { id, dir: 1 }; App.render(); };
       /* resize */
       const r = $(".th-r", th); r.onclick = e => e.stopPropagation();
       const mb = $(".th-m", th); if (mb) mb.onclick = e => { e.stopPropagation(); colMenu(mb, id, () => r.ondblclick(new MouseEvent("dblclick"))); };
       /* double click the edge: fit the column to its heading's longest word and its widest cell (as in Excel) */
-      r.ondblclick = e => { e.stopPropagation(); const i = [...th.parentNode.children].indexOf(th); const ws = widths(); ws[id] = fitW(el, cs, th, i); lsSet("adColW", ws); App.render(); };
+      r.ondblclick = e => { e.stopPropagation(); dragged.delete(id); const i = [...th.parentNode.children].indexOf(th); const ws = widths(); ws[id] = fitW(el, cs, th, i); lsSet("adColW", ws); App.render(); };
       r.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); if (e.detail > 1) return; const x0 = e.clientX, w0 = th.offsetWidth; r.setPointerCapture(e.pointerId);
         let moved = false; r.onpointermove = ev => { if (Math.abs(ev.clientX - x0) > 2) moved = true; if (moved) th.style.width = Math.max(50, w0 + ev.clientX - x0) + "px"; };
-        r.onpointerup = () => { r.onpointermove = null; if (!moved) return; const ws = widths(); ws[id] = Math.round(parseFloat(th.style.width) || th.offsetWidth); lsSet("adColW", ws); App.render(); }; };   // (only the column dragged)
+        r.onpointerup = () => { r.onpointermove = null; if (!moved) return; dragged.add(id); const ws = widths(); ws[id] = Math.round(parseFloat(th.style.width) || th.offsetWidth); lsSet("adColW", ws); App.render(); }; };   // (only the column dragged)
     }); dragHead(el, cs); }
   /* reorder by dragging a heading (the field order is shared, it's also the order in the side panel); ID and title stay
      first, Status can go anywhere after them */
