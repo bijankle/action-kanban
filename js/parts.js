@@ -65,7 +65,7 @@ const Parts = (() => {
         const lname = Media.uniq(a, DOC[k][0] + " " + f.name, hh); Local.saveOriginal(a, lname, f); await Store.addBlob(pFile(a._p, hh, f.name), bufToB64(buf)); Media.mem.set("f" + hh, URL.createObjectURL(f));
         Store.mutate("a:" + a._p, () => { (a[k] = a[k] || []).push({ h: hh, name: f.name, lname, size: f.size, type: f.type, added: now(), by: Profile.name() }); Store.touch(a); }); Store.log("Added " + DOC[k][0] + " " + f.name + " to " + Store.actId(a)); added = true;
       } catch (e){ alert("Couldn't add " + f.name + ": " + e.message); } }
-    const t = added && Store.field(DOC[k][1]); if (t && a.f[t.id] !== true){ Fields.set(a, t, true); note(t.label + " ticked: " + Store.actId(a)); } }
+    const t = added && pref(k === "pos" ? "poTick" : "quoteTick") && Store.field(DOC[k][1]); if (t && a.f[t.id] !== true){ Fields.set(a, t, true); note(t.label + " ticked: " + Store.actId(a)); } }
 
   /* ---------- exports ---------- */
   const fname = (a, kind) => Store.actId(a) + " " + (kind === "mto" ? "RFQ" : "Spares") + " " + new Date().toISOString().slice(0, 10) + ".pdf";

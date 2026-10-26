@@ -42,7 +42,7 @@ const Flow = (() => {
   /* the confirm box: each step it passes, Done or Not needed (the category picks its value); the steps it reopens */
   function ask(a, to, p){ return new Promise(res => {
     const row = f => f.type === "choice" ? '<select class="in sm" data-c="' + esc(f.id) + '">' + (f.options || []).filter(o => !o.del).map(o => '<option>' + esc(o.label) + '</option>').join("") + '<option value="na">Not needed</option></select>'
-        : '<div class="seg fl-seg" data-c="' + esc(f.id) + '"><button type="button" data-v="done" class="on">Done</button><button type="button" data-v="na">Not needed</button></div>';
+        : '<div class="seg fl-seg" data-c="' + esc(f.id) + '"><button type="button" data-v="done"' + (pref("passDefault") !== "na" ? ' class="on"' : "") + '>Done</button><button type="button" data-v="na"' + (pref("passDefault") === "na" ? ' class="on"' : "") + '>Not needed</button></div>';
     const m = modal('<h3>Move ' + esc(Store.actId(a)) + ' to ' + esc(Store.todo(to)) + '</h3><p class="dim">Moving it changes these steps in the Actions list. Nothing else changes.</p>'
       + (p.close.length ? '<div class="fw-h">Steps it moves past</div>' + p.close.map(f => '<div class="fw-r"><span>' + esc(f.label) + '</span>' + row(f) + '</div>').join("") : "")
       + (p.reopen.length ? '<div class="fw-h">Reopened, to sit in ' + esc(Store.todo(to)) + '</div>' + p.reopen.map(f => '<div class="fw-r"><span>' + esc(f.label) + '</span><span class="dim">' + (f.type === "choice" ? "cleared (the ID goes back to " + esc(((Store.project(a._p) || {}).prefix || "ACT")) + ")" : state(a, f) === "na" ? "not needed, cleared" : "unticked") + '</span></div>').join("") : "")

@@ -21,8 +21,8 @@ const Fields = (() => {
   /* a date and a 24 hour time (the browser's own time picker follows the computer's region, AM and PM in some):
      the time is typed (730, 7:30 and 1930 all work) or picked from a list in half hours */
   function dateTime(a, f, v){ const m = String(v || "").match(/^(\d{4}-\d\d-\d\d)(?:T(\d\d:\d\d))?$/), w = h('<div class="dt dtt"></div>');
-    const d = dateBox(m ? m[1] : "", { label: f.label + " date" }), t = timeBox(m ? m[2] || "07:00" : "", { label: f.label + " time, 24 hour" }); w.append(d, t);
-    const save = () => { if (!d.value){ if (v) set(a, f, ""); return; } const tt = t.value || "07:00"; t.value = tt; set(a, f, d.value + "T" + tt); };
+    const d = dateBox(m ? m[1] : "", { label: f.label + " date" }), t = timeBox(m ? m[2] || pref("defTime") : "", { label: f.label + " time, 24 hour" }); w.append(d, t);
+    const save = () => { if (!d.value){ if (v) set(a, f, ""); return; } const tt = t.value || pref("defTime"); t.value = tt; set(a, f, d.value + "T" + tt); };
     d.addEventListener("change", save); t.addEventListener("change", save); return w; }
   /* read only display (table cells, mobile, print) */
   function show(a, f){ const v = val(a, f);
@@ -52,12 +52,12 @@ const Fields = (() => {
       a.f[f.id] = v; Store.touch(a); Store.log("Edited " + Store.actId(a));
       /* a stage's step (its tick, or the Category choice): the card goes where the ticks now say (see Flow) */
       /* ticking Defect emailed makes it a defect (the ID becomes DEF-), and moves it on from Categorize Issue */
-      if (f.id === "defect" && v === true){ const c = Store.field("category"); if (c && a.f.category !== "Defect"){ Flow.mark(a, c, "Defect"); Flow.sync(a); note("Category set to Defect: " + Store.actId(a)); } }
+      if (f.id === "defect" && v === true && pref("defectCat")){ const c = Store.field("category"); if (c && a.f.category !== "Defect"){ Flow.mark(a, c, "Defect"); Flow.sync(a); note("Category set to Defect: " + Store.actId(a)); } }
       if (f.stage && (f.type === "check" || f.type === "choice")){ Flow.mark(a, f, v); Flow.sync(a); }
       const auto = a.auto = a.auto || {}; delete auto[f.id]; if (f.id === "location") delete a.locAuto;
       const fill = (id, val) => { if (a.f[id] && !auto[id] && !(id === "location" && a.locAuto)) return; if (val){ a.f[id] = val; auto[id] = true; } else if (auto[id]){ a.f[id] = ""; delete auto[id]; } };
       /* the location follows the equipment's WBS area until someone types their own */
-      if (f.id === "equipment"){ fill("location", (Array.isArray(v) ? v : []).map(t => Equip.areaOf(t)).find(Boolean)); if (auto.location) delete a.locAuto; }
+      if (f.id === "equipment" && pref("locFromWbs")){ fill("location", (Array.isArray(v) ? v : []).map(t => Equip.areaOf(t)).find(Boolean)); if (auto.location) delete a.locAuto; }
       /* the contractor's company brings its contact and number from the last job with that company */
       if (f.id === "contractor"){ const prev = Store.all().filter(x => x !== a && x.f.contractor && x.f.contractor.toLowerCase() === String(v || "").toLowerCase() && x.f.contractorContact).sort((x, y) => (y.mod || 0) - (x.mod || 0))[0],
           ct = !prev && v ? Store.contacts().find(c => (c.company || "").toLowerCase() === String(v).toLowerCase()) : null;

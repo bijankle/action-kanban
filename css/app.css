@@ -1091,3 +1091,9 @@ html.dark .menubar{box-shadow:none}
 .ep-h{display:flex;align-items:center;gap:7px;font-size:13.5px}.ep-h i{width:9px;height:9px;border-radius:50%;background:var(--eta);flex:none}
 .ep-g{display:grid;grid-template-columns:62px 1fr;gap:3px 8px;font-size:12.5px}.ep-g a{color:inherit}
 .ep-items{border-top:1px solid var(--line);padding-top:6px;display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+/* File, Parameters */
+.pm-win{width:min(600px,94vw)}.pm-r{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 12px;min-height:34px;padding:3px 0;border-bottom:1px solid var(--line);font-size:13.5px;font-weight:400;color:var(--ink)}
+.pm-r:last-child{border-bottom:0}.pm-c{display:flex;align-items:center;gap:6px}.pm-n{width:76px;text-align:right}.pm-r select.in{width:auto}
+.pm-t{grid-template-columns:auto minmax(0,1fr) auto;cursor:pointer}.pm-t input{width:18px;height:18px;margin:0}
+.pm-def{grid-column:1 / -1;font-size:11.5px;color:var(--dim);margin-top:-4px}.pm-def:empty{display:none}.pm-t .pm-def{grid-column:2 / -1}
+.pm-win .pm-c .pm-n{width:76px;flex:none}

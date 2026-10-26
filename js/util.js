@@ -197,10 +197,16 @@ function timeBox(value, opts){ opts = opts || {};
   const norm = x => { const g = String(x).replace(/[^\d:]/g, "").match(/^(\d{1,2}):?(\d{2})?$/); if (!g) return ""; const hh = +g[1], mm = +(g[2] || 0); return hh < 24 && mm < 60 ? String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0") : ""; };
   let was = i.value; w.addEventListener("pointerdown", e => { if (e.target !== i){ e.preventDefault(); i.focus(); } else if (document.activeElement === i && !(pickPop && pickPop.__for === w)) setTimeout(() => i.onfocus(), 0); });   // (a box that already had the focus, after the panel redrew, opens on a click too)
   i.onfocus = () => { was = i.value; i.select(); closePick(); const p = pickPop = h('<div class="pop tmpop" role="listbox" aria-label="Pick a time"></div>'); p.__for = w; let o = "";
-    for (let k = 0; k < 48; k++){ const x = String(k >> 1).padStart(2, "0") + ":" + (k % 2 ? "30" : "00"); o += '<button type="button" data-t="' + x + '"' + (x === i.value ? ' class="on"' : "") + '>' + x + '</button>'; }
-    p.innerHTML = o; document.body.appendChild(p); placePick(p, w); const on = $(".on", p) || $('[data-t="07:00"]', p); if (on) p.scrollTop = on.offsetTop - 80;
+    const step = +pref("timeStep") || 30; for (let k = 0; k < 1440; k += step){ const x = String(k / 60 | 0).padStart(2, "0") + ":" + String(k % 60).padStart(2, "0"); o += '<button type="button" data-t="' + x + '"' + (x === i.value ? ' class="on"' : "") + '>' + x + '</button>'; }
+    p.innerHTML = o; document.body.appendChild(p); placePick(p, w); const on = $(".on", p) || $('[data-t="' + pref("defTime") + '"]', p) || p.firstChild; if (on) p.scrollTop = on.offsetTop - 80;
     p.onmousedown = e => { const t = e.target.closest("[data-t]"); if (!t) return; e.preventDefault(); i.value = t.dataset.t; i.blur(); }; };
   i.onblur = () => { setTimeout(() => { if (pickPop && pickPop.__for === w) closePick(); }, 0); const n = i.value.trim() ? norm(i.value) || was : ""; i.value = n; if (n !== was){ was = n; i.dispatchEvent(new Event("change", { bubbles: true })); } };
   i.onkeydown = e => { if (e.key === "Enter") i.blur(); };
   i.addEventListener("change", e => { if (e.isTrusted) e.stopPropagation(); });   // (only the tidied time counts, not the raw typing)
   return w; }
+
+/* the parameters: the app's rules and presets, set by each person for themselves in File, Parameters (kept on this
+   computer). These are the defaults */
+const PREF_DEF = { etaSoon: 7, etaHover: 300, defTime: "07:00", timeStep: 30, passDefault: "done", defectCat: true, quoteTick: true, poTick: true,
+  autoFit: true, notesW: 220, titleMin: 260, openLast: true, kbClear: true, pasteInto: true, locFromWbs: true };
+const pref = k => { const v = (lsGet("adRules", {}) || {})[k]; return v === undefined || v === null || v === "" ? PREF_DEF[k] : v; };

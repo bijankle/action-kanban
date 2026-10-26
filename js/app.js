@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.101";
+const APP_VERSION = "1.10.102";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -162,6 +162,30 @@ const App = (() => {
       if (adm && q && Store.S.config && q.v !== (Store.S.config.quality || "medium") && Store.S.edit) Store.mutate("config", () => { Store.S.config.quality = q.v; Store.S.config.mod = now(); });
       const ck = cut && Store.S.config && Store.S.edit && Object.assign({ kerf: 3, keep: 300 }, Store.S.config.cut || {}); if (ck && (cut.kerf !== ck.kerf || cut.keep !== ck.keep)) Store.mutate("config", () => { Store.S.config.cut = cut; Store.S.config.mod = now(); });
       reload(); }; }
+  /* File, Parameters: the app's rules and presets, each person's own (kept on this computer), the defaults as set */
+  const PARAMS = [["Parts arriving", [["etaSoon", "num", "Yellow dot when the parts are due within", "days", 1, 60, "Red once the ETA has passed, green when it's further off than this."], ["etaHover", "num", "Delivery card shows after pointing for", "ms", 0, 2000]]],
+    ["Dates and times", [["defTime", "time", "Time set when only a date is picked"], ["timeStep", "pick", "Steps in the time list", "", [[15, "15 minutes"], [30, "30 minutes"], [60, "1 hour"]]]]],
+    ["Moving actions on", [["passDefault", "pick", "When a card is dragged past a step, start it as", "", [["done", "Done"], ["na", "Not needed"]], "You can still change each one in the box that asks."], ["defectCat", "tick", "Ticking Defect emailed sets the Category to Defect"], ["quoteTick", "tick", "Uploading a quote ticks RFQ sent"], ["poTick", "tick", "Uploading a PO ticks PO sent"]]],
+    ["The actions list", [["autoFit", "tick", "Fit the short columns to their contents"], ["notesW", "num", "Notes column width", "px", 120, 600], ["titleMin", "num", "Title column at least", "px", 160, 600]]],
+    ["Opening and pasting", [["openLast", "tick", "Details opens on the action last looked at"], ["kbClear", "tick", "The Organizer opens with no action popped up"], ["pasteInto", "tick", "A pasted photo goes into the open action", "With this off it waits bottom left to be dragged onto one."], ["locFromWbs", "tick", "Location fills in from the equipment's area"]]]];
+  function params(){ const R = Object.assign({}, lsGet("adRules", {}) || {});
+    const row = ([k, t, label, unit, a1, a2, tip]) => { const v = pref(k), dv = PREF_DEF[k], tp = typeof a1 === "string" ? a1 : tip, more = tp ? tipI(tp) : "", def = '<span class="pm-def">' + (v !== dv ? "default " + esc(t === "tick" ? (dv ? "on" : "off") : t === "pick" ? (a1.find(o => o[0] === dv) || [, dv])[1] : dv + (unit ? " " + unit : "")) : "") + '</span>';
+      if (t === "tick") return '<label class="pm-r pm-t"><input type="checkbox" data-p="' + k + '"' + (v ? " checked" : "") + '><span>' + esc(label) + more + '</span>' + def + '</label>';
+      const ctl = t === "num" ? '<input class="in sm pm-n" type="number" data-p="' + k + '" min="' + a1 + '" max="' + a2 + '" value="' + esc(v) + '">' + (unit ? '<span class="dim">' + unit + '</span>' : "")
+        : t === "time" ? '<input class="in sm pm-n" type="text" data-p="' + k + '" maxlength="5" value="' + esc(v) + '" title="24 hour">'
+        : '<select class="in sm" data-p="' + k + '">' + a1.map(([o, n]) => '<option value="' + o + '"' + (String(o) === String(v) ? " selected" : "") + '>' + n + '</option>').join("") + '</select>';
+      return '<div class="pm-r"><span>' + esc(label) + more + '</span><span class="pm-c">' + ctl + '</span>' + def + '</div>'; };
+    const m = modal('<h3>Parameters' + tipI("The app's rules and presets. They're yours: set here, they only change how the app works for you, on this computer.") + '</h3>'
+      + PARAMS.map(([g, rows]) => '<div class="set-sec"><div class="set-h">' + g + '</div>' + rows.map(row).join("") + '</div>').join("")
+      + '<div class="yn-btns"><button class="yn-no pm-reset" type="button">Back to the defaults</button><button class="yn-yes" type="button">Done</button></div>', { cls: "set-win pm-win" });
+    const put = (k, v) => { if (v === PREF_DEF[k]) delete R[k]; else R[k] = v; lsSet("adRules", R); render(); };
+    $$("[data-p]", m).forEach(i => i.onchange = () => { const k = i.dataset.p, dv = PREF_DEF[k];
+      if (i.type === "checkbox") return put(k, i.checked);
+      if (i.tagName === "SELECT") return put(k, typeof dv === "number" ? +i.value : i.value);
+      if (typeof dv === "number"){ const n = Math.max(+i.min || 0, Math.min(+i.max || 1e9, Math.round(+i.value))); if (isNaN(n)){ i.value = pref(k); return; } i.value = n; return put(k, n); }
+      const g = String(i.value).replace(/[^\d:]/g, "").match(/^(\d{1,2}):?(\d{2})?$/); if (!g || +g[1] > 23 || +(g[2] || 0) > 59){ i.value = pref(k); return; } i.value = String(+g[1]).padStart(2, "0") + ":" + String(+(g[2] || 0)).padStart(2, "0"); put(k, i.value); });
+    $(".pm-reset", m).onclick = () => { lsSet("adRules", {}); m.close(); render(); note("Parameters back to the defaults"); };
+    $(".yn-yes", m).onclick = () => m.close(); }
   /* the profile window, from the round button top right */
   function profile(after){ const p = Profile.get(), F = (k, l, t, ph) => '<label class="fl">' + l + '<input class="in" data-k="' + k + '" type="' + (t || "text") + '" value="' + esc(p[k]) + '"' + (ph ? ' placeholder="' + ph + '"' : "") + '></label>';
     const m = modal('<h3>Your profile' + tipI("Goes on the workpacks and RFQs you export, so people know who to contact with any queries. Everyone signed in can see it.") + '</h3><div class="pf-g">' + F("first", "First name") + F("last", "Last name") + '</div>'
@@ -283,7 +307,7 @@ const App = (() => {
   /* ---------- menus ---------- */
   /* (an item whose fourth part is a list opens a side menu: File, Export) */
   const MENUS = {
-    File: [["Export", "", null, [["Excel (.xlsx)…", () => Print.excelDialog()], ["PDF or print…", () => Print.dialog()], ["Word (.docx)…", () => Print.dialog("word")]]]],
+    File: [["Export", "", null, [["Excel (.xlsx)…", () => Print.excelDialog()], ["PDF or print…", () => Print.dialog()], ["Word (.docx)…", () => Print.dialog("word")]]], "-", ["Parameters…", "", () => params()]],
     Edit: [["Undo", "Ctrl+Z", () => Store.undo()], ["Redo", "Ctrl+Y", () => Store.redo()]],
     View: null,
     Help: [["How to use", "", guide], ["Keyboard shortcuts", "", keys], "-", ["Settings…", "", () => settings()], "-", ["Update app", "", update], ["About", "", about]] };
@@ -309,7 +333,7 @@ const App = (() => {
       + sec("Printing and Excel", ["The PDF button above the list: tick the stages to print (Completed starts unticked). The board prints first, then each action's details and photos. The XLS button exports the table as filtered, with a Photos link that opens the photos online."])
       + '<div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>', { cls: "guide-win" }); $(".yn-yes", m).onclick = () => m.close(); }
   /* actions with tags but no location get their tags' WBS area once the plant lists are in (as a new tag would) */
-  function fillLocations(){ if (!Store.S.edit) return; Store.all().forEach(a => { const tags = Array.isArray(a.f.equipment) ? a.f.equipment : []; if (a.f.location || !tags.length) return;
+  function fillLocations(){ if (!Store.S.edit || !pref("locFromWbs")) return; Store.all().forEach(a => { const tags = Array.isArray(a.f.equipment) ? a.f.equipment : []; if (a.f.location || !tags.length) return;
       const area = tags.map(t => Equip.areaOf(t)).find(Boolean); if (area) Store.mutate("a:" + a._p, () => { a.f.location = area; (a.auto = a.auto || {}).location = true; Store.touch(a); }); }); }
   function keys(){ const m = modal('<h3>Keyboard shortcuts</h3><table class="keys">' + [["Ctrl+Z", "Undo"], ["Ctrl+Y", "Redo"], ["Ctrl+V", "Paste a photo into the open action (with none open it waits bottom left, drag it onto an action), or pasted text into a new action"], ["Ctrl+F or /", "Search"], ["Ctrl+P", "Print"], ["Esc", "Close full screen or menus, or go back from an action to the list"], ["↑ ↓", "Previous or next action, in an open action"], ["1 2 3", "Actions, Organizer, Data validation tabs"]].map(([k, d]) => '<tr><td><kbd>' + k + '</kbd></td><td>' + d + '</td></tr>').join("") + '</table><div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>');
     $(".yn-yes", m).onclick = () => m.close(); }
@@ -340,7 +364,7 @@ const App = (() => {
     else if ((k === "arrowdown" || k === "arrowup") && A.tab === "actions" && A.selRef){ const rs = Table.rows(), i = rs.findIndex(a => a._p + ":" + a.u === A.selRef), n = rs[i + (k === "arrowdown" ? 1 : -1)]; if (n){ e.preventDefault(); select(n._p + ":" + n.u); } } });
   /* a pasted photo goes straight into the action open in Details or the pop up (else it waits in the tray, bottom left,
      to be dragged onto one). It shows big in the middle of the panel, then shrinks and flies into its spot in the photos */
-  const openAct = () => { const a = act(A.selRef); if (!a) return null; const pan = popEl ? $(".apop-w", popEl) : A.tab === "actions" && !$("#side").hidden ? $("#sideBody") : null; return pan && $(".av", pan) ? a : null; };
+  const openAct = () => { const a = act(A.selRef); if (!a || !pref("pasteInto")) return null; const pan = popEl ? $(".apop-w", popEl) : A.tab === "actions" && !$("#side").hidden ? $("#sideBody") : null; return pan && $(".av", pan) ? a : null; };
   async function pasteInto(a, files){ const pan = popEl ? $(".apop-w", popEl) : $("#sideBody"), img = files.find(f => /^image\//.test(f.type)), was = a.photos.length;
     let f = null; const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (img && pan && !still){ const pr = pan.getBoundingClientRect(), W = Math.min(260, pr.width - 40), H = W * .75; f = h('<div class="ph-fly"><img alt=""></div>'); $("img", f).src = URL.createObjectURL(img);
@@ -359,10 +383,10 @@ const App = (() => {
   document.addEventListener("drop", e => { if (!e.dataTransfer.files.length) return; e.preventDefault(); if (!Store.S.edit) return viewOnly(); Media.toTray([...e.dataTransfer.files]); });
   /* with the Details panel open on the Actions tab, it shows an action from the start: the one last looked at if it's
      not deleted (even if the list hides it now), else the top one (closing it with ✕ leaves the panel empty until the next one is picked) */
-  function autoPick(){ if (A.mobile || A.selRef || A.tab !== "actions" || !lsGet("adPanel", true)) return; const rows = Table.rows(true), last = act(lsGet("adLast", null));
+  function autoPick(){ if (!pref("openLast") || A.mobile || A.selRef || A.tab !== "actions" || !lsGet("adPanel", true)) return; const rows = Table.rows(true), last = act(lsGet("adLast", null));
     const a = last && !last.del ? last : rows[0]; if (a){ A.selRef = A.last = a._p + ":" + a.u; A.sub = "overview"; } }
   /* the Organizer always opens laid out in full: an action open on the Actions tab doesn't pop up over it */
-  function setTab(t){ const was = A.tab; A.tab = t; lsSet("adTab", t); if (t === "kanban" && was !== "kanban" && A.selRef) return select(null); if (t === "actions" && was !== "actions") autoPick(); render(); }
+  function setTab(t){ const was = A.tab; A.tab = t; lsSet("adTab", t); if (t === "kanban" && was !== "kanban" && A.selRef && pref("kbClear")) return select(null); if (t === "actions" && was !== "actions") autoPick(); render(); }
 
   /* ---------- start ---------- */
   async function boot(){ applyView();

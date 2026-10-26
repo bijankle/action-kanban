@@ -96,7 +96,7 @@ const Table = (() => {
     /* the least each column can be; when they don't all fit, the tick columns go first, then the dates and numbers,
        so a title never gets squeezed to one letter per line (and the list scrolls sideways only if even that's not enough) */
     const fw = c => c.type === "id" ? idW : ws[c.id] || Math.min(px(c), 150);   // (the ID column fits its box)   // (a width someone set is kept as it is)
-    const least = c => fix(c) ? fw(c) : c.id === "title" ? 260 : 110;
+    const least = c => fix(c) ? fw(c) : c.id === "title" ? pref("titleMin") : 110;
     const lv = c => lp(c) === " lp1" ? 1 : lp(c) === " lp2" ? 2 : 3, need = n => all.filter(c => lv(c) > n).reduce((t, c) => t + least(c), 0);
     const w = el.clientWidth || 9999, level = need(0) <= w ? 0 : need(1) <= w ? 1 : 2, cs = all.filter(c => lv(c) > level); lastLv = level; levelOf = w2 => need(0) <= w2 ? 0 : need(1) <= w2 ? 1 : 2;
     if (!ro && window.ResizeObserver){ ro = new ResizeObserver(() => { if (App.view === "tiles" || !el.isConnected || !$(".tbl", el)) return; if (levelOf(el.clientWidth) !== lastLv) App.render(); else cut(el); }); ro.observe(el); }
@@ -104,7 +104,7 @@ const Table = (() => {
     const ADD = Store.S.edit ? 140 : 0, fixW = cs.filter(fix).reduce((t, c) => t + fw(c), 0) + ADD, flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
-    const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? 260 : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
+    const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? pref("titleMin") : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
     const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" draggable="' + !!Store.S.edit + '" aria-label="Status: on hold, complete, delete" style="width:' + NEED.act + 'px">Status</th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + (c.id[0] !== "_" && c.id !== "title") + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + esc(head(c)) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">i</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '><button type="button" class="addc" aria-haspopup="true">+ Add column</button></th>' : "");
     const minW = cs.reduce((t, c) => t + least(c), 0) + ADD;
@@ -151,7 +151,7 @@ const Table = (() => {
      box shows when they're expected, who from and who to call, and the MTO items with their ETAs */
   const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
   const daysTo = e => Math.round((new Date(e + "T12:00") - new Date(today() + "T12:00")) / 864e5);
-  function etaState(a){ if (a.f.parts === true || a.f.parts === Flow.NA) return ""; const e = Store.eta(a); if (!e) return ""; if (e === "TBC") return "tbc"; const n = daysTo(e); return n < 0 ? "late" : n <= 7 ? "soon" : "ok"; }
+  function etaState(a){ if (a.f.parts === true || a.f.parts === Flow.NA) return ""; const e = Store.eta(a); if (!e) return ""; if (e === "TBC") return "tbc"; const n = daysTo(e); return n < 0 ? "late" : n <= pref("etaSoon") ? "soon" : "ok"; }
   let etaT = null;
   function etaCard(td){ Fields.closePop(); const a = App.act(td.closest("[data-ref]").dataset.ref); if (!a) return; const e0 = Store.eta(a), st = etaState(a), n = e0 && e0 !== "TBC" ? daysTo(e0) : null, rows = (a.mto || []).filter(it => it.desc || it.part);
     const ven = (a.rfqTo || [])[0], v = ven && Vendors.byName(ven) || {}, po = (a.pos || []).slice(-1)[0];
@@ -164,7 +164,7 @@ const Table = (() => {
       + '<button type="button" class="link">Open the MTO</button></div>');
     document.body.appendChild(p); Fields.place(p, td); $(".link", p).onclick = () => { Fields.closePop(); App.openParts(a._p + ":" + a.u, "mto"); };
     p.onmouseenter = () => clearTimeout(etaT); p.onmouseleave = () => { etaT = setTimeout(() => p.remove(), 250); }; }
-  document.addEventListener("mouseover", e => { const td = e.target.closest("td[data-eta]"); if (!td || td.__on) return; td.__on = true; clearTimeout(etaT); etaT = setTimeout(() => etaCard(td), 300);
+  document.addEventListener("mouseover", e => { const td = e.target.closest("td[data-eta]"); if (!td || td.__on) return; td.__on = true; clearTimeout(etaT); etaT = setTimeout(() => etaCard(td), pref("etaHover"));
     td.addEventListener("mouseleave", () => { td.__on = false; clearTimeout(etaT); etaT = setTimeout(() => { const p = $(".etapop"); if (p && !p.matches(":hover")) p.remove(); }, 250); }, { once: true }); });
   /* a column heading's ▾: sort it either way, fit it to its contents, or take it out of the list (+ Add column brings it back) */
   function colMenu(anchor, id, fit){ Fields.closePop(); const f = Store.field(id), keep = id[0] === "_" || id === "title";
@@ -197,12 +197,12 @@ const Table = (() => {
      left and Notes keeps a set width, both ending in more… when cut. The tick box columns all share the widest one's
      width so they line up evenly. A column dragged to a width keeps it until the app is next opened */
   let fitted = false, fitKey = ""; const dragged = new Set(), LONG = c => c.id === "title" || c.type === "longtext";
-  function autoFit(el, cs){ if (!$$("tbody tr", el).length) return; const first = !fitted; fitted = true;
+  function autoFit(el, cs){ if (!pref("autoFit") || !$$("tbody tr", el).length) return; const first = !fitted; fitted = true;
     const key = cs.map(c => c.id).join() + "|" + $$("tbody tr", el).map(tr => { const a = App.act(tr.dataset.ref); return a ? a.u + ":" + (a.mod || 0) : ""; }).join();
     if (!first && key === fitKey) return; fitKey = key;
     const ws = first ? {} : widths(), was = JSON.stringify(ws), ths = $$("th[data-c]", el);
     ths.forEach((th, i) => { const c = cs[i]; if (!c || c.type === "act" || c.type === "id" || dragged.has(c.id)) return;
-      if (LONG(c)){ if (c.id !== "title" && !ws[c.id]) ws[c.id] = 220; return; } ws[c.id] = fitW(el, cs, th, i); });
+      if (LONG(c)){ if (c.id !== "title" && (!ws[c.id] || first)) ws[c.id] = pref("notesW"); return; } ws[c.id] = fitW(el, cs, th, i); });
     const tk = cs.filter(c => TICK.has(c.type) && !dragged.has(c.id)), tw = Math.max(0, ...tk.map(c => ws[c.id] || 0)); tk.forEach(c => { if (tw) ws[c.id] = tw; });
     if (JSON.stringify(ws) !== was || first){ lsSet("adColW", ws); requestAnimationFrame(() => App.render()); } }
   function wireHead(el, cs){ $$("th", el).forEach(th => { const id = th.dataset.c; if (!$(".th-l", th)) return;   // (the row buttons' column has no heading)
