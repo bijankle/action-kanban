@@ -133,7 +133,7 @@ const Table = (() => {
     tb.ondragleave = e => { if (!tb.contains(e.relatedTarget)) $$("tr.drop", tb).forEach(x => x.classList.remove("drop")); };
     tb.ondrop = e => { const tr = e.target.closest("tr"); $$("tr.drop", tb).forEach(x => x.classList.remove("drop")); if (!tr || !Media.hasDrop(e)) return; e.preventDefault(); e.stopPropagation(); const a = App.act(tr.dataset.ref); Media.dropOn(a, e); };
     const ab = $(".addc", el); if (ab) ab.onclick = e => { e.stopPropagation(); addPop(ab); };
-    wireHead(el, cs); }
+    wireHead(el, cs); autoFit(el, cs); }
   /* the Tags cell shows the first tag only, as wide as a typical tag number, with +2 when there are more (click it to see
      them all); clicking the tag box opens it for typing */
   function tagCell(td, a, c){ const tags = [].concat(a.f[c.id] || []).filter(Boolean), ro = !Store.S.edit;
@@ -171,21 +171,31 @@ const Table = (() => {
     const q = $("input", p); if (q){ q.focus(); q.oninput = () => $$("[data-f]", p).forEach(b => b.hidden = !smartHit(b.textContent, q.value));
       q.onkeydown = e => { if (e.key === "Enter"){ const b = $$("[data-f]", p).find(x => !x.hidden); if (b) b.click(); } if (e.key === "Escape") Fields.closePop(); }; }
     $$("[data-f]", p).forEach(b => b.onclick = () => { Fields.closePop(); Store.mutate("config", () => { const f = Store.field(b.dataset.f), fs = Store.S.config.fields; f.table = true; fs.splice(fs.indexOf(f), 1); fs.push(f); Store.S.config.mod = now(); Store.touch(f); }); Store.log("Added the " + b.textContent + " column"); }); }
+  /* a column's tight width (as a double click on its edge gives): its heading's longest word, or its widest cell */
+  function fitW(el, cs, th, i){ const l = $(".th-l", th);
+    let w = cs[i] && TICK.has(cs[i].type) ? headW(head(cs[i]), getComputedStyle(l).font) - 14 : headW(cs[i] ? head(cs[i]) : l.textContent, getComputedStyle(l).font);
+    $$("tbody tr", el).forEach(tr => { const td = tr.children[i]; if (!td) return;
+      const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML;
+      /* (a box you type in measures by what's in it, or its hint when empty, not by the box's default width) */
+      $$("input,select,textarea", m).forEach((x, n) => { const src = $$("input,select,textarea", td)[n], t = document.createElement("span");
+        t.textContent = src.tagName === "SELECT" ? ((src.options[src.selectedIndex] || {}).text || "") : (src.value || src.placeholder || ""); t.style.padding = "0 9px"; x.replaceWith(t); });
+      $$(".mc-more,.lt-more,.tt-more", m).forEach(x => x.remove());   // (the more… links only show when cut off)
+      document.body.appendChild(m); w = Math.max(w, Math.min(cs[i] && cs[i].type === "longtext" ? 220 : 640, m.scrollWidth + 22)); m.remove(); });
+    return Math.round(w); }
+  /* when the app opens, every column is fitted tight and the title takes the width left; the tick box columns all share
+     the widest one's width so they line up evenly. Widths dragged after that last until the app is next opened */
+  let fitted = false;
+  function autoFit(el, cs){ if (fitted || !$$("tbody tr", el).length) return; fitted = true; const ws = {}, ths = $$("th[data-c]", el);
+    ths.forEach((th, i) => { const c = cs[i]; if (!c || c.id === "title" || c.type === "act" || c.type === "id") return; ws[c.id] = fitW(el, cs, th, i); });
+    const tk = cs.filter(c => TICK.has(c.type)).map(c => ws[c.id] || 0), tw = Math.max(0, ...tk); cs.forEach(c => { if (TICK.has(c.type) && tw) ws[c.id] = tw; });
+    lsSet("adColW", ws); requestAnimationFrame(() => App.render()); }
   function wireHead(el, cs){ $$("th", el).forEach(th => { const id = th.dataset.c; if (!$(".th-l", th)) return;   // (the row buttons' column has no heading)
       $(".th-l", th).onclick = () => { App.sort = App.sort && App.sort.id === id ? (App.sort.dir > 0 ? { id, dir: -1 } : null) : { id, dir: 1 }; App.render(); };
       /* resize */
       const r = $(".th-r", th); r.onclick = e => e.stopPropagation();
       const mb = $(".th-m", th); if (mb) mb.onclick = e => { e.stopPropagation(); colMenu(mb, id, () => r.ondblclick(new MouseEvent("dblclick"))); };
       /* double click the edge: fit the column to its heading's longest word and its widest cell (as in Excel) */
-      r.ondblclick = e => { e.stopPropagation(); const i = [...th.parentNode.children].indexOf(th), l = $(".th-l", th);
-        let w = cs[i] && TICK.has(cs[i].type) ? headW(head(cs[i]), getComputedStyle(l).font) - 14 : headW(cs[i] ? head(cs[i]) : l.textContent, getComputedStyle(l).font);
-        $$("tbody tr", el).forEach(tr => { const td = tr.children[i]; if (!td) return; const k = td.firstElementChild;
-          const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML;
-          /* (a box you type in measures by what's in it, or its hint when empty, not by the box's default width) */
-          $$("input,select,textarea", m).forEach((x, n) => { const src = $$("input,select,textarea", td)[n], t = document.createElement("span");
-            t.textContent = src.tagName === "SELECT" ? ((src.options[src.selectedIndex] || {}).text || "") : (src.value || src.placeholder || ""); t.style.padding = "0 9px"; x.replaceWith(t); });
-          document.body.appendChild(m); w = Math.max(w, Math.min(640, m.scrollWidth + 22)); m.remove(); });
-        const ws = widths(); ws[id] = Math.round(w); lsSet("adColW", ws); App.render(); };
+      r.ondblclick = e => { e.stopPropagation(); const i = [...th.parentNode.children].indexOf(th); const ws = widths(); ws[id] = fitW(el, cs, th, i); lsSet("adColW", ws); App.render(); };
       r.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); if (e.detail > 1) return; const x0 = e.clientX, w0 = th.offsetWidth; r.setPointerCapture(e.pointerId);
         let moved = false; r.onpointermove = ev => { if (Math.abs(ev.clientX - x0) > 2) moved = true; if (moved) th.style.width = Math.max(50, w0 + ev.clientX - x0) + "px"; };
         r.onpointerup = () => { r.onpointermove = null; if (!moved) return; const ws = widths(); ws[id] = Math.round(parseFloat(th.style.width) || th.offsetWidth); lsSet("adColW", ws); App.render(); }; };   // (only the column dragged)

@@ -85,7 +85,7 @@ const Parts = (() => {
     let y0 = 36 + tl * 4.6 + 2;
     if (kind === "mto"){
       /* From (whoever exports it, from their profile) and To (the vendors picked), side by side */
-      const from = [Profile.name() || "Name not set (File, Your profile)", pf.role, pf.company, pf.mobile && "Mobile " + pf.mobile, pf.email].filter(Boolean);
+      const from = [Profile.name() || "Name not set (your profile, the round button top right)", pf.role, pf.company, pf.mobile && "Mobile " + pf.mobile, pf.email].filter(Boolean);
       const to = (a.rfqTo || []).length ? a.rfqTo.map(n => Vendors.lines(n)) : [["No vendor picked"]];
       const box = (x, label, groups) => { let yy = y0 + 5.5; doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(110); doc.text(label.toUpperCase(), x + 3, y0 + 4.5); yy += 1;
         groups.forEach((g, gi) => { if (gi) yy += 2; g.forEach((l, li) => { doc.setFont("helvetica", li ? "normal" : "bold"); doc.setFontSize(li ? 9 : 10); doc.setTextColor(li ? 60 : 25); const w = doc.splitTextToSize(String(l), 84); doc.text(w, x + 3, yy + 3); yy += w.length * 4.2; }); });
@@ -106,7 +106,7 @@ const Parts = (() => {
     try { if (kind !== "mto"){ Excel.save(await build(a, kind), fname(a, kind)); return; }
       if (!Store.S.edit) return App.viewOnly();
       const pf = Profile.get(), miss = [!Profile.name() && "your name", !pf.mobile && "your mobile", !pf.email && "your email"].filter(Boolean), noTo = !(a.rfqTo || []).length, bare = (a.rfqTo || []).filter(n => { const v = Vendors.byName(n) || {}; return !(v.contact || v.email || v.phone); });
-      const warn = (miss.length ? " Your profile has no " + miss.join(", ") + " (File, Your profile)." : "") + (noTo ? " No vendor is picked." : bare.length ? " No contact details for " + bare.join(", ") + " (click the vendor to add them)." : "");
+      const warn = (miss.length ? " Your profile has no " + miss.join(", ") + " (your profile, the round button top right)." : "") + (noTo ? " No vendor is picked." : bare.length ? " No contact details for " + bare.join(", ") + " (click the vendor to add them)." : "");
       if (warn && !await confirmBox("Missing on the RFQ:" + warn + " Export it anyway?", "Export")) return;
       const blob = await build(a, kind), name = fname(a, kind); Excel.save(blob, name); Local.saveOriginal(a, name, blob); Store.log("Exported " + name);
       if (Mto.needsCut(a)) await Mto.cutList(a);   // (the trades' cutting list comes too, only when something needs more than one length or sheet)

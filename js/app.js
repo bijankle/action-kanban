@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.97";
+const APP_VERSION = "1.10.98";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -269,7 +269,7 @@ const App = (() => {
       + '<div class="mi-sub">Text size</div><div class="mi-seg">' + [[0.87, "Smaller"], [1, "Normal"], [1.13, "Larger"], [1.27, "Largest"]].map(([k, n]) => '<button type="button" data-z="' + k + '"' + (+v.text === k ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</div>'
       + '<div class="mi-sub">Font</div><div class="mi-fo">' + FONTS.map(([id, n, ff]) => '<button type="button" data-fo="' + id + '" style="font-family:' + esc(ff) + '"' + (v.font === id ? ' class="on"' : "") + '>' + esc(n) + '</button>').join("") + '</div>'
       + '<div class="mi-sub">Open actions in</div><div class="mi-seg"><button type="button" data-pn="1"' + (lsGet("adPanel", true) ? ' class="on"' : "") + '>Side panel</button><button type="button" data-pn="0"' + (!lsGet("adPanel", true) ? ' class="on"' : "") + '>Pop up</button></div>'
-      + '<div class="msep"></div><button type="button" class="mi" data-k="side">Reset side panel width</button>';
+      ;
     const set = o => { lsSet("adView", Object.assign(v, o)); applyView(); viewMenu(drop); };
     $$("[data-th]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ theme: b.dataset.th }); });
     $(".thp-c input", drop).oninput = e => { lsSet("adView", Object.assign(v, { theme: "custom", custom: e.target.value })); applyView(); };
@@ -277,13 +277,12 @@ const App = (() => {
     $$("[data-d]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ dark: b.dataset.d === "1" }); });
     $$("[data-z]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ text: +b.dataset.z }); });
     $$("[data-fo]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); set({ font: b.dataset.fo }); });
-    $("[data-k=side]", drop).onclick = () => { lsSet("adSideW", null); $("#main").style.removeProperty("--side-w"); closeMenus(); };
+
     $$("[data-pn]", drop).forEach(b => b.onclick = e => { e.stopPropagation(); lsSet("adPanel", b.dataset.pn === "1"); render(); viewMenu(drop); }); }
 
   /* ---------- menus ---------- */
   const MENUS = {
-    File: [["New action", "N", () => newAction()], ["New action from pasted text…", "", () => Intake.open(null, "")], "-", ["Projects…", "", projectsWin], ["New project…", "", () => editProject(null)], "-", ["Export to PDF or print…", "Ctrl+P", () => Print.dialog()], ["Export to Excel…", "", () => Print.excelDialog()], "-", ["Your profile…", "", () => profile()]],
-    Edit: [["Undo", "Ctrl+Z", () => Store.undo()], ["Redo", "Ctrl+Y", () => Store.redo()], "-", ["Delete selected action", "", () => { const a = act(A.selRef); if (a) $(".av [data-k=del]") && $(".av [data-k=del]").click(); }]],
+    Edit: [["Undo", "Ctrl+Z", () => Store.undo()], ["Redo", "Ctrl+Y", () => Store.redo()]],
     View: null,
     Help: [["How to use", "", guide], ["Keyboard shortcuts", "", keys], "-", ["Settings…", "", () => settings()], "-", ["Update app", "", update], ["About", "", about]] };
   function menus(){ const bar = $("#menubar"); bar.innerHTML = Object.keys(MENUS).map(k => '<div class="mb"><button type="button" class="mb-btn"><u>' + k[0] + '</u>' + k.slice(1) + '</button><div class="mb-drop"></div></div>').join("");
@@ -305,12 +304,12 @@ const App = (() => {
       + sec("MTO and spares", ["Open an action and pick its MTO tab. Choose a type for each row (pipe, plate, UB, SHS, flanges, bolts and so on), then its standard (Australian, Chinese or international), size, material and rating; Other is a free text row for motors, bearings and vendor parts. For lengths and plate, ▸ opens the pieces the job needs: the row's quantity becomes the stock lengths or sheets to buy, packed with a saw cut between pieces (Help, Settings). The i button says how a total was worked out and holds longer notes. When anything needs more than one length or sheet, the RFQ export also downloads a cutting list for the trades, and Cut list downloads it any time.", "→ Spares moves a row to its Spares tab (and → MTO moves it back), so parts coming from site spares stay off the RFQ. The MTO column in the list says how many items each action has; click it to go straight there.", "Upload quotes at the top of the MTO (several, if they get revised) and download them any time. The RFQ button there exports the RFQ as a PDF. XLSX exports the list to Excel. Paste text lets Gemini fill in the rows from an email or quote; you check them before they're added."])
       + sec("Isolations", ["Open an action and pick its Isolations tab; its equipment tags show above the list (click one to add it). Type an equipment number or name and pick from the suggestions (the plant equipment, valves and instruments, plus the Equipment tags list): picking fills in both. You can still edit them, which doesn't change any list. Add a note on each row. The isolations go in the workpack PDF and the print."])
       + sec("Data validation", ["Set the type of every field (text, choice, tags, date, tick box, contact…), its allowed values and colours, whether it offers TBC and N/A, and whether it's a table column. Contacts hold names, companies and mobiles; picking a name fills in the number."])
-      + sec("Printing and Excel", ["File, Print: tick the stages to print (Completed starts unticked). The board prints first, then each action's details and photos. File, Export to Excel exports the table as filtered, with a Photos link that opens the photos online."])
+      + sec("Printing and Excel", ["The PDF button above the list: tick the stages to print (Completed starts unticked). The board prints first, then each action's details and photos. The XLS button exports the table as filtered, with a Photos link that opens the photos online."])
       + '<div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>', { cls: "guide-win" }); $(".yn-yes", m).onclick = () => m.close(); }
   /* actions with tags but no location get their tags' WBS area once the plant lists are in (as a new tag would) */
   function fillLocations(){ if (!Store.S.edit) return; Store.all().forEach(a => { const tags = Array.isArray(a.f.equipment) ? a.f.equipment : []; if (a.f.location || !tags.length) return;
       const area = tags.map(t => Equip.areaOf(t)).find(Boolean); if (area) Store.mutate("a:" + a._p, () => { a.f.location = area; (a.auto = a.auto || {}).location = true; Store.touch(a); }); }); }
-  function keys(){ const m = modal('<h3>Keyboard shortcuts</h3><table class="keys">' + [["Ctrl+Z", "Undo"], ["Ctrl+Y or Ctrl+Shift+Z", "Redo"], ["N", "New action"], ["Ctrl+V", "Paste a photo into the open action (with none open it waits bottom left, drag it onto an action), or pasted text into a new action"], ["Ctrl+F or /", "Search"], ["Ctrl+P", "Print"], ["Esc", "Close full screen or menus, or go back from an action to the list"], ["↑ ↓", "Previous or next action, in an open action"], ["1 2 3", "Actions, Organizer, Data validation tabs"]].map(([k, d]) => '<tr><td><kbd>' + k + '</kbd></td><td>' + d + '</td></tr>').join("") + '</table><div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>');
+  function keys(){ const m = modal('<h3>Keyboard shortcuts</h3><table class="keys">' + [["Ctrl+Z", "Undo"], ["Ctrl+Y", "Redo"], ["Ctrl+V", "Paste a photo into the open action (with none open it waits bottom left, drag it onto an action), or pasted text into a new action"], ["Ctrl+F or /", "Search"], ["Ctrl+P", "Print"], ["Esc", "Close full screen or menus, or go back from an action to the list"], ["↑ ↓", "Previous or next action, in an open action"], ["1 2 3", "Actions, Organizer, Data validation tabs"]].map(([k, d]) => '<tr><td><kbd>' + k + '</kbd></td><td>' + d + '</td></tr>').join("") + '</table><div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>');
     $(".yn-yes", m).onclick = () => m.close(); }
   function about(){ const c = GH.cfg(); const m = modal('<h3>About</h3><table class="keys"><tr><td>Version</td><td>' + APP_VERSION + '</td></tr><tr><td>Data</td><td>' + esc(c.repo) + ', data folder</td></tr><tr><td>Access</td><td>' + (Store.S.edit ? "Can edit" : "View only") + '</td></tr><tr><td>Local folder</td><td>' + esc(Local.name() || "None") + '</td></tr><tr><td>Projects</td><td>' + Store.projects().length + ', ' + Store.all().length + ' actions</td></tr></table><div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>');
     $(".yn-yes", m).onclick = () => m.close(); }
@@ -335,8 +334,7 @@ const App = (() => {
     if ((mod && k === "f") || (k === "/" && !typing())){ e.preventDefault(); $("#q").focus(); $("#q").select(); return; }
     if (k === "escape"){ if (Media.open || $(".pop") || $(".mb.open")){ Fields.closePop(); closeMenus(); return; } if (typing()){ document.activeElement.blur(); return; } if (A.selRef) select(null); return; }
     if (typing() || mod || e.altKey) return;
-    if (k === "n"){ e.preventDefault(); newAction(); }
-    else if (/^[1-4]$/.test(k)){ setTab(["actions", "kanban", "contacts", "valid"][+k - 1]); }
+    if (/^[1-4]$/.test(k)){ setTab(["actions", "kanban", "contacts", "valid"][+k - 1]); }
     else if ((k === "arrowdown" || k === "arrowup") && A.tab === "actions" && A.selRef){ const rs = Table.rows(), i = rs.findIndex(a => a._p + ":" + a.u === A.selRef), n = rs[i + (k === "arrowdown" ? 1 : -1)]; if (n){ e.preventDefault(); select(n._p + ":" + n.u); } } });
   /* a pasted photo goes straight into the action open in Details or the pop up (else it waits in the tray, bottom left,
      to be dragged onto one). It shows big in the middle of the panel, then shrinks and flies into its spot in the photos */

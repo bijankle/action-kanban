@@ -1078,3 +1078,4 @@ html.dark .menubar{box-shadow:none}
 .pt-dk{display:flex;flex-direction:column;gap:4px;border-radius:8px}.pt-dk.drop{outline:2px dashed var(--th);outline-offset:4px}
 .pt-dh{font-size:var(--fl);font-weight:600;color:var(--muted)}.pt-dk .att-add{margin-top:2px}
 @media (max-width:760px){.pt-top{grid-template-columns:1fr}.pt-r{border-left:0;border-top:1px solid var(--line)}}
+.gdate .dchip.gd-d{width:auto}
