@@ -253,7 +253,10 @@ const Table = (() => {
       const r = $(".th-r", th); r.onclick = e => e.stopPropagation();
       const mb = $(".th-m", th); if (mb) mb.onclick = e => { e.stopPropagation(); colMenu(mb, id, () => r.ondblclick(new MouseEvent("dblclick"))); };
       /* double click the edge: fit the column to its heading's longest word and its widest cell (as in Excel) */
-      r.ondblclick = e => { e.stopPropagation(); dragged.delete(id); const i = [...th.parentNode.children].indexOf(th); const ws = widths(); ws[id] = fitW(el, cs, th, i); lsSet("adColW", ws); App.render(); };
+      r.ondblclick = e => { e.stopPropagation(); dragged.delete(id); const i = [...th.parentNode.children].indexOf(th), ws = widths(), c = cs[i];
+        /* Notes (a long text column) fills the width there is, leaving the + Add column strip about the ID column's width */
+        if (c && c.id !== "title" && LONG(c)){ const others = $$("th[data-c]", el).filter(x => x !== th).reduce((t, x) => t + x.getBoundingClientRect().width, 0); ws[id] = Math.max(120, Math.floor(el.clientWidth - others - (ws._add || Math.max(90, idW)) - 2)); }
+        else ws[id] = fitW(el, cs, th, i); lsSet("adColW", ws); App.render(); };
       r.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); if (e.detail > 1) return; const x0 = e.clientX, w0 = th.offsetWidth; r.setPointerCapture(e.pointerId);
         let moved = false; r.onpointermove = ev => { if (Math.abs(ev.clientX - x0) > 2) moved = true; if (moved) th.style.width = Math.max(50, w0 + ev.clientX - x0) + "px"; };
         r.onpointerup = () => { r.onpointermove = null; if (!moved) return; dragged.add(id); const ws = widths(); ws[id] = Math.round(parseFloat(th.style.width) || th.offsetWidth); lsSet("adColW", ws); App.render(); }; };   // (only the column dragged)
