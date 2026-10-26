@@ -1037,3 +1037,4 @@ input[type=checkbox]{width:18px;height:18px}
 /* the confirm box when a card is dragged to another stage */
 .fw-win{width:min(460px,94vw)}.fw-h{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin:14px 0 4px}.fw-h .dim{text-transform:none;letter-spacing:0;font-weight:400}
 .fw-r{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:var(--ctl-h,28px);padding:3px 0;border-bottom:1px solid var(--line)}.fw-r .in{width:auto}
+.fw-r .seg button{white-space:nowrap}
