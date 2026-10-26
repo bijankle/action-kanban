@@ -1097,3 +1097,7 @@ html.dark .menubar{box-shadow:none}
 .pm-t{grid-template-columns:auto minmax(0,1fr) auto;cursor:pointer}.pm-t input{width:18px;height:18px;margin:0}
 .pm-def{grid-column:1 / -1;font-size:11.5px;color:var(--dim);margin-top:-4px}.pm-def:empty{display:none}.pm-t .pm-def{grid-column:2 / -1}
 .pm-win .pm-c .pm-n{width:76px;flex:none}
+/* the Parts Arrived cell washed faintly in its dot's colour; click it (outside the box) to pin the delivery card */
+.tbl td.eta{background:color-mix(in srgb,var(--eta) 10%,var(--panel));cursor:pointer}.tbl td.eta:hover{background:color-mix(in srgb,var(--eta) 18%,var(--panel))}
+.tbl tr.on td.eta{background:color-mix(in srgb,var(--eta) 16%,var(--th-t,var(--panel)))}
+.etapop.pin{box-shadow:0 0 0 2px var(--eta),0 10px 28px rgba(16,24,40,.16)}.ep-x{margin-left:auto}

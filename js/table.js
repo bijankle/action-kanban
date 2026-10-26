@@ -153,19 +153,22 @@ const Table = (() => {
   const daysTo = e => Math.round((new Date(e + "T12:00") - new Date(today() + "T12:00")) / 864e5);
   function etaState(a){ if (a.f.parts === true || a.f.parts === Flow.NA) return ""; const e = Store.eta(a); if (!e) return ""; if (e === "TBC") return "tbc"; const n = daysTo(e); return n < 0 ? "late" : n <= pref("etaSoon") ? "soon" : "ok"; }
   let etaT = null;
-  function etaCard(td){ Fields.closePop(); const a = App.act(td.closest("[data-ref]").dataset.ref); if (!a) return; const e0 = Store.eta(a), st = etaState(a), n = e0 && e0 !== "TBC" ? daysTo(e0) : null, rows = (a.mto || []).filter(it => it.desc || it.part);
+  function etaCard(td, pin){ Fields.closePop(); const a = App.act(td.closest("[data-ref]").dataset.ref); if (!a) return; const e0 = Store.eta(a), st = etaState(a), n = e0 && e0 !== "TBC" ? daysTo(e0) : null, rows = (a.mto || []).filter(it => it.desc || it.part);
     const ven = (a.rfqTo || [])[0], v = ven && Vendors.byName(ven) || {}, po = (a.pos || []).slice(-1)[0];
     const head = st === "tbc" ? "ETA to be confirmed" : st === "late" ? "Should have arrived" : st === "soon" ? "Due within a week" : "On track";
-    const p = h('<div class="pop etapop ' + st + '" role="tooltip"><b class="ep-h"><i></i>' + head + '</b><div class="ep-g">'
+    const p = h('<div class="pop etapop ' + st + (pin ? " pin" : "") + '" role="' + (pin ? "dialog" : "tooltip") + '" aria-label="Delivery"><b class="ep-h"><i></i>' + head + (pin ? '<button type="button" class="ic-b sm ep-x" aria-label="Close">✕</button>' : "") + '</b><div class="ep-g">'
       + '<span class="dim">Expected</span><span>' + (e0 === "TBC" ? "To be confirmed" : esc(fmtDate(e0)) + ' · ' + (n === 0 ? "today" : n > 0 ? "in " + n + " day" + (n === 1 ? "" : "s") : -n + " day" + (n === -1 ? "" : "s") + " late")) + '</span>'
       + (ven ? '<span class="dim">From</span><span>' + esc(ven) + (po ? ', ' + esc(po.name.replace(/\.[a-z0-9]+$/i, "")) : "") + '</span>' : "")
       + (v.contact || v.phone || v.email ? '<span class="dim">Contact</span><span>' + esc(v.contact || "") + (v.phone ? (v.contact ? ", " : "") + '<a href="tel:' + esc(String(v.phone).replace(/\s/g, "")) + '">' + esc(v.phone) + '</a>' : "") + (!v.phone && v.email ? (v.contact ? ", " : "") + '<a href="mailto:' + esc(v.email) + '">' + esc(v.email) + '</a>' : "") + '</span>' : ven ? '<span class="dim">Contact</span><span class="dim">None on file for ' + esc(ven) + '</span>' : "") + '</div>'
       + (rows.length ? '<div class="ep-items">' + rows.map(it => '<div class="ep-r"><span>' + esc(it.desc || it.part) + '</span><span class="' + (it.eta && it.eta !== "TBC" && it.eta < today() ? "bad" : "dim") + '">' + esc(it.eta ? (it.eta === "TBC" ? "TBC" : fmtDate(it.eta)) : "no ETA") + '</span></div>').join("") + '</div>' : "")
       + '<button type="button" class="link">Open the MTO</button></div>');
     document.body.appendChild(p); Fields.place(p, td); $(".link", p).onclick = () => { Fields.closePop(); App.openParts(a._p + ":" + a.u, "mto"); };
-    p.onmouseenter = () => clearTimeout(etaT); p.onmouseleave = () => { etaT = setTimeout(() => p.remove(), 250); }; }
-  document.addEventListener("mouseover", e => { const td = e.target.closest("td[data-eta]"); if (!td || td.__on) return; td.__on = true; clearTimeout(etaT); etaT = setTimeout(() => etaCard(td), pref("etaHover"));
-    td.addEventListener("mouseleave", () => { td.__on = false; clearTimeout(etaT); etaT = setTimeout(() => { const p = $(".etapop"); if (p && !p.matches(":hover")) p.remove(); }, 250); }, { once: true }); });
+    const x = $(".ep-x", p); if (x) x.onclick = () => p.remove();
+    p.onmouseenter = () => clearTimeout(etaT); p.onmouseleave = () => { if (!p.classList.contains("pin")) etaT = setTimeout(() => p.remove(), 250); }; }
+  /* a click in the cell, outside the box, pins the card open (the box itself still ticks Parts Arrived) */
+  document.addEventListener("click", e => { const td = e.target.closest("td[data-eta]"); if (!td || e.target.closest(".ck,input,label")) return; e.stopPropagation(); clearTimeout(etaT); const open = $(".etapop.pin"); if (open && open.__td === td){ open.remove(); return; } etaCard(td, true); const p = $(".etapop.pin"); if (p) p.__td = td; }, true);
+  document.addEventListener("mouseover", e => { const td = e.target.closest("td[data-eta]"); if (!td || td.__on || $(".etapop.pin")) return; td.__on = true; clearTimeout(etaT); etaT = setTimeout(() => etaCard(td), pref("etaHover"));
+    td.addEventListener("mouseleave", () => { td.__on = false; clearTimeout(etaT); etaT = setTimeout(() => { const p = $(".etapop"); if (p && !p.matches(":hover") && !p.classList.contains("pin")) p.remove(); }, 250); }, { once: true }); });
   /* a column heading's ▾: sort it either way, fit it to its contents, or take it out of the list (+ Add column brings it back) */
   function colMenu(anchor, id, fit){ Fields.closePop(); const f = Store.field(id), keep = id[0] === "_" || id === "title";
     const p = h('<div class="pop colm"><button type="button" data-m="asc">Sort A to Z</button><button type="button" data-m="desc">Sort Z to A</button>' + (App.sort && App.sort.id === id ? '<button type="button" data-m="off">Clear the sort</button>' : "")
