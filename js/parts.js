@@ -25,13 +25,17 @@ const Parts = (() => {
       + (kind === "mto" && Mto.needsCut(a) ? '<button type="button" class="dl dl-pdf" data-k="cut" title="The cutting list for the trades: which pieces come out of which length or sheet, and the offcuts. It also comes with each RFQ export.">' + fileIco("Cut") + '</button>' : "")
       + '<button type="button" class="dl dl-xl" data-k="xls" title="Export this ' + NAME[kind] + ' to Excel">' + fileIco("XLSX") + '</button>'
       + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF" : "Export the spares list as a PDF") + '">' + fileIco(kind === "mto" ? "RFQ" : "PDF") + '</button></div>'
-      + (kind === "mto" ? Vendors.box(a, ro) : "")
-      + (kind === "mto" ? '<div class="pt-docs"><div class="pt-box pt-quotes"><div class="pt-bh"><b>Quotes</b><span class="dim">' + (a.quotes || []).length + '</span><span class="grow"></span>' + (ro ? "" : '<button type="button" class="btn ghost sm" data-k="quote">Upload quotes</button>') + '</div>'
-          + ((a.quotes || []).length ? (a.quotes || []).slice().reverse().map(f => '<div class="pt-file"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : "FILE") + '</span><button type="button" class="link" data-q="' + f.h + '">' + esc(f.name) + '</button><span class="dim">' + esc(fmtDate(f.added)) + ' · ' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" data-qx="' + f.h + '" title="Remove">✕</button>') + '</div>').join("") : '<div class="dim pt-drop">No quotes yet.' + (ro ? "" : tipI("Upload them, or drop them here.")) + '</div>') + '</div>'
-        + '</div>' : "")
+      /* the MTO's top: who the RFQ goes to on the left, the quotes and the PO on the right */
+      + (kind === "mto" ? '<div class="pt-top"><div class="pt-l">' + Vendors.box(a, ro) + '</div><div class="pt-r">' + docs(a, "quotes", ro) + docs(a, "pos", ro) + '</div></div>' : "")
       + (kind === "mto" ? Mto.table(a, ro) : '<table class="tbl pt-tbl"><thead><tr><th class="pt-no">Item</th>' + cols.map(([k, n]) => '<th class="pt-' + k + '">' + esc(n) + '</th>').join("") + (kind === "spares" ? '<th class="pt-sec">Secured</th>' : "") + '<th class="pt-act"></th></tr></thead><tbody>'
       + items.map(row).join("") + Array.from({ length: blanks }, (_, k) => blank(k)).join("") + '</tbody></table>')
       + '<div class="dim pt-foot">' + (items.length ? items.length + " item" + (items.length > 1 ? "s" : "") : "") + (kind === "mto" && (a.spares || []).length ? " · " + a.spares.length + " more from spares, not on the RFQ" : "") + (kind === "spares" && items.length ? " · " + items.filter(x => x.secured).length + " of " + items.length + " secured" : "") + '</div>'; }
+  /* the quotes or the PO: each file on a line, then a dashed bar to upload another (or drop one on it) */
+  const DOC = { quotes: ["Quote", "rfq"], pos: ["PO", "po"] };
+  const docs = (a, k, ro) => { const fs = a[k] || [];
+    return '<div class="pt-dk" data-dk="' + k + '"><div class="pt-dh">' + DOC[k][0] + (fs.length ? ' <span class="dim">' + fs.length + '</span>' : "") + '</div>'
+      + fs.slice().reverse().map(f => '<div class="pt-file"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : "FILE") + '</span><button type="button" class="link" data-q="' + f.h + '" data-qk="' + k + '">' + esc(f.name) + '</button><span class="dim">' + esc(fmtDate(f.added)) + ' · ' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" data-qx="' + f.h + '" data-qk="' + k + '" title="Remove">✕</button>') + '</div>').join("")
+      + (ro ? (fs.length ? "" : '<div class="dim">None yet.</div>') : '<button type="button" class="att-add" data-up="' + k + '" title="Upload the ' + DOC[k][0] + ', or drop it here. It ticks ' + (k === "pos" ? "PO sent" : "RFQ sent") + '">+ Upload ' + DOC[k][0].replace("Quote", "quote") + '</button>') + '</div>'; };
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
 
   function wire(el, a, kind, ro){ const key = "a:" + a._p, items = list(a, kind); if (kind === "mto"){ Vendors.wire(el, a, ro); Mto.wire(el, a, ro); }
@@ -45,21 +49,23 @@ const Parts = (() => {
     $$(".pt-mv", el).forEach(b => b.onclick = () => { const id = b.closest("tr").dataset.id; Store.mutate(key, () => { const i = items.findIndex(x => x.id === id); const it = items.splice(i, 1)[0]; if (kind === "mto") it.desc = Mto.desc(it); list(a, OTHER[kind]).push(it); Store.touch(a); });
       note("Moved to " + NAME[OTHER[kind]] + " (Ctrl+Z to undo)"); Store.log("Moved a part of " + Store.actId(a) + " to " + NAME[OTHER[kind]]); });
     $$(".pt-x", el).forEach(b => b.onclick = () => { const id = b.closest("tr").dataset.id; Store.mutate(key, () => { const i = items.findIndex(x => x.id === id); items.splice(i, 1); Store.touch(a); }); });
-    $$("[data-q]", el).forEach(b => b.onclick = () => Media.openFile(a, a.quotes.find(f => f.h === b.dataset.q)));
-    $$("[data-qx]", el).forEach(b => b.onclick = () => Store.mutate(key, () => { a.quotes = a.quotes.filter(f => f.h !== b.dataset.qx); Store.touch(a); }));
+    $$("[data-q]", el).forEach(b => b.onclick = () => Media.openFile(a, (a[b.dataset.qk] || []).find(f => f.h === b.dataset.q)));
+    $$("[data-qx]", el).forEach(b => b.onclick = () => Store.mutate(key, () => { const k = b.dataset.qk; a[k] = (a[k] || []).filter(f => f.h !== b.dataset.qx); Store.touch(a); }));
+    $$("[data-up]", el).forEach(b => b.onclick = () => pickFile("", true, fs => quotes(a, fs, b.dataset.up)));
     $$("[data-k]", el).forEach(b => b.onclick = () => { const k = b.dataset.k;
-      if (k === "quote") pickFile("", true, fs => quotes(a, fs));
-      else if (k === "xls") excel(a, kind); else if (k === "pdf") pdf(a, kind); else if (k === "gem") gemini(a, kind); else if (k === "cut") Mto.cutList(a); });
-    const qb = $(".pt-quotes", el); if (qb && !ro){ qb.ondragover = e => { if ([...e.dataTransfer.types].includes("Files")){ e.preventDefault(); qb.classList.add("drop"); } };
-      qb.ondragleave = () => qb.classList.remove("drop"); qb.ondrop = e => { qb.classList.remove("drop"); if (!e.dataTransfer.files.length) return; e.preventDefault(); e.stopPropagation(); quotes(a, e.dataTransfer.files); }; } }
+      if (k === "xls") excel(a, kind); else if (k === "pdf") pdf(a, kind); else if (k === "gem") gemini(a, kind); else if (k === "cut") Mto.cutList(a); });
+    if (!ro) $$(".pt-dk", el).forEach(qb => { qb.ondragover = e => { if ([...e.dataTransfer.types].includes("Files")){ e.preventDefault(); qb.classList.add("drop"); } };
+      qb.ondragleave = () => qb.classList.remove("drop"); qb.ondrop = e => { qb.classList.remove("drop"); if (!e.dataTransfer.files.length) return; e.preventDefault(); e.stopPropagation(); quotes(a, e.dataTransfer.files, qb.dataset.dk); }; }); }
 
-  /* quotes: kept like attachments (online, and the original in the local folder), newest at the top */
-  async function quotes(a, files){ if (!Store.S.edit) return App.viewOnly();
+  /* quotes and POs: kept like attachments (online, and the original in the local folder), newest at the top. A quote
+     ticks RFQ sent and a PO ticks PO sent (the card moves on as the ticks say) */
+  async function quotes(a, files, k){ k = k || "quotes"; if (!Store.S.edit) return App.viewOnly(); let added = false;
     for (const f of Array.from(files)){ try { const buf = await f.arrayBuffer(), hh = (await sha1(buf)).slice(0, 12);
-        if ((a.quotes || []).some(x => x.h === hh)){ note(f.name + " is already there"); continue; }
-        const lname = Media.uniq(a, "Quote " + f.name, hh); Local.saveOriginal(a, lname, f); await Store.addBlob(pFile(a._p, hh, f.name), bufToB64(buf)); Media.mem.set("f" + hh, URL.createObjectURL(f));
-        Store.mutate("a:" + a._p, () => { (a.quotes = a.quotes || []).push({ h: hh, name: f.name, lname, size: f.size, type: f.type, added: now(), by: Profile.name() }); Store.touch(a); }); Store.log("Added quote " + f.name + " to " + Store.actId(a));
-      } catch (e){ alert("Couldn't add " + f.name + ": " + e.message); } } }
+        if ((a[k] || []).some(x => x.h === hh)){ note(f.name + " is already there"); continue; }
+        const lname = Media.uniq(a, DOC[k][0] + " " + f.name, hh); Local.saveOriginal(a, lname, f); await Store.addBlob(pFile(a._p, hh, f.name), bufToB64(buf)); Media.mem.set("f" + hh, URL.createObjectURL(f));
+        Store.mutate("a:" + a._p, () => { (a[k] = a[k] || []).push({ h: hh, name: f.name, lname, size: f.size, type: f.type, added: now(), by: Profile.name() }); Store.touch(a); }); Store.log("Added " + DOC[k][0] + " " + f.name + " to " + Store.actId(a)); added = true;
+      } catch (e){ alert("Couldn't add " + f.name + ": " + e.message); } }
+    const t = added && Store.field(DOC[k][1]); if (t && a.f[t.id] !== true){ Fields.set(a, t, true); note(t.label + " ticked: " + Store.actId(a)); } }
 
   /* ---------- exports ---------- */
   const fname = (a, kind) => Store.actId(a) + " " + (kind === "mto" ? "RFQ" : "Spares") + " " + new Date().toISOString().slice(0, 10) + ".pdf";
