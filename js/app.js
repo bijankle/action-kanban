@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.88";
+const APP_VERSION = "1.10.89";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -286,7 +286,7 @@ const App = (() => {
     Edit: [["Undo", "Ctrl+Z", () => Store.undo()], ["Redo", "Ctrl+Y", () => Store.redo()], "-", ["Delete selected action", "", () => { const a = act(A.selRef); if (a) $(".av [data-k=del]") && $(".av [data-k=del]").click(); }]],
     View: null,
     Help: [["How to use", "", guide], ["Keyboard shortcuts", "", keys], "-", ["Settings…", "", () => settings()], "-", ["Update app", "", update], ["About", "", about]] };
-  function menus(){ const bar = $("#menubar"); bar.innerHTML = Object.keys(MENUS).map(k => '<div class="mb"><button type="button" class="mb-btn">' + k + '</button><div class="mb-drop"></div></div>').join("");
+  function menus(){ const bar = $("#menubar"); bar.innerHTML = Object.keys(MENUS).map(k => '<div class="mb"><button type="button" class="mb-btn"><u>' + k[0] + '</u>' + k.slice(1) + '</button><div class="mb-drop"></div></div>').join("");
     $$(".mb", bar).forEach((mb, i) => { const k = Object.keys(MENUS)[i], drop = $(".mb-drop", mb);
       const fill = () => { if (!MENUS[k]) return viewMenu(drop); drop.innerHTML = MENUS[k].map((x, j) => x === "-" ? '<div class="msep"></div>' : '<button type="button" class="mi" data-j="' + j + '">' + esc(x[0]) + (x[1] ? '<span class="mk">' + x[1] + '</span>' : "") + '</button>').join("");
         $$(".mi", drop).forEach(b => b.onclick = () => { closeMenus(); MENUS[k][+b.dataset.j][2](); }); };

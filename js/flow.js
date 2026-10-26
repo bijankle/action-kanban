@@ -15,7 +15,7 @@ const Flow = (() => {
   function where(a){ const ss = open(); for (const s of ss){ const f = stepOf(s); if (f && !ok(a, f)) return s; } return ss[ss.length - 1]; }
   /* record who set a step, and when (shown when you point at the tick) */
   function mark(a, f, v){ a.f[f.id] = v; const w = a.tkw = a.tkw || {}; if (v === false || v === "" || v == null) delete w[f.id]; else w[f.id] = { by: Profile.name() || "", at: now() }; }
-  const who = (a, f) => { const w = (a.tkw || {})[f.id]; if (!w) return ""; return (a.f[f.id] === NA ? "Marked not needed" : f.type === "choice" ? "Set" : "Ticked") + (w.by ? " by " + w.by : "") + ", " + fmtDate(new Date(w.at).toISOString().slice(0, 16).replace("T", " ")); };
+  const who = (a, f) => { const w = (a.tkw || {})[f.id]; if (!w) return ""; return (a.f[f.id] === NA ? "Marked not needed" : f.type === "choice" ? "Set" : "Ticked") + (w.by ? " by " + w.by : "") + ", " + fmtDate((d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + "T" + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"))(new Date(w.at))); };   // (local time, 24 hour)
   /* after a tick changed: the card goes where the ticks say (inside a Store.mutate) */
   function sync(a){ const k = Store.stage(a.stage).kind; if (k === "hold" || k === "done") return; const s = where(a); if (s && s.id !== a.stage){ Store.place(a, s.id); Store.log("Moved " + Store.actId(a) + " to " + Store.todo(s)); } }
   /* what has to change for the action to sit in stage st: the steps before it still to do get done or marked not

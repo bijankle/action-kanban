@@ -18,6 +18,20 @@ const Fields = (() => {
   function text(a, f){ const v = val(a, f); if (f.type === "check" && v === Flow.NA) return "Not needed"; if (f.type === "meta") return v ? fmtDate(v) : ""; if (f.type === "complete") return v ? "Yes" : "No"; if (f.type === "mto" || f.type === "sparelist" || f.type === "isollist") return v ? v + (f.type === "isollist" ? " isolations" : " items") : ""; if (f.type === "stage") return Store.stage(v).name; if (f.type === "check") return v ? "Yes" : "No";
     if (f.type === "date") return fmtDate(v); if (Array.isArray(v)) return v.join(", "); return v == null ? "" : String(v); }
   function chip(label, color){ return '<span class="chip' + (tbc(label) ? " tbc" : "") + '"' + (color && !tbc(label) ? ' style="--c:' + esc(color) + '"' : "") + '>' + esc(label) + '</span>'; }
+  /* a date and a 24 hour time (the browser's own time picker follows the computer's region, AM and PM in some):
+     the time is typed (730, 7:30 and 1930 all work) or picked from a list in half hours */
+  function dateTime(a, f, v){ const m = String(v || "").match(/^(\d{4}-\d\d-\d\d)(?:T(\d\d:\d\d))?$/), w = h('<div class="dt dtt"><input class="in" type="date" aria-label="' + esc(f.label) + ' date"><input class="in tm" type="text" inputmode="numeric" placeholder="07:00" maxlength="5" aria-label="' + esc(f.label) + ' time, 24 hour" title="24 hour time"></div>');
+    const d = $("[type=date]", w), t = $(".tm", w); if (m){ d.value = m[1]; t.value = m[2] || "07:00"; }
+    const norm = x => { const g = String(x).replace(/[^\d:]/g, "").match(/^(\d{1,2}):?(\d{2})?$/); if (!g) return null; const hh = +g[1], mm = +(g[2] || 0); return hh < 24 && mm < 60 ? String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0") : null; };
+    const save = () => { if (!d.value) return; const tt = norm(t.value) || "07:00"; t.value = tt; set(a, f, d.value + "T" + tt); };
+    let dd = null; const close = () => { if (dd){ dd.remove(); dd = null; } };
+    t.onfocus = () => { t.select(); close(); const times = []; for (let k = 0; k < 48; k++) times.push(String(k >> 1).padStart(2, "0") + ":" + (k % 2 ? "30" : "00"));
+      dd = h('<div class="tg-dd tm-dd" role="listbox">' + times.map(x => '<div class="tg-o' + (x === t.value ? " on" : "") + '" role="option" data-t="' + x + '"><b>' + x + '</b></div>').join("") + '</div>'); document.body.appendChild(dd);
+      const r = t.getBoundingClientRect(); Object.assign(dd.style, { left: r.left + "px", top: r.bottom + 3 + "px", width: "96px", maxHeight: "220px" });
+      const on = $(".on", dd) || $('[data-t="07:00"]', dd); if (on) dd.scrollTop = on.offsetTop - 80;
+      $$(".tg-o", dd).forEach(o => o.onmousedown = e => { e.preventDefault(); t.value = o.dataset.t; close(); t.blur(); }); };
+    t.onblur = () => { close(); save(); }; t.onkeydown = e => { if (e.key === "Enter") t.blur(); if (e.key === "Escape"){ t.value = m ? m[2] || "07:00" : ""; t.blur(); } };
+    d.onchange = save; return w; }
   /* read only display (table cells, mobile, print) */
   function show(a, f){ const v = val(a, f);
     switch (f.type){
@@ -92,7 +106,7 @@ const Fields = (() => {
         return combo(a, f, its.concat(extra(f).map(x => ({ v: x })))); }
       case "longtext": { const t = h('<textarea class="in ta' + (tbc(v) ? " tbc" : "") + '" rows="3"></textarea>'); t.value = v || ""; grow(t); t.oninput = () => grow(t); t.onchange = () => set(a, f, t.value); return t; }
       /* a date, or with the field's time option a date and time in one box (2026-11-03T07:30); TBC and N/A only when the field offers them */
-      case "date": { const kind = f.time ? "datetime-local" : "date", w = h('<div class="dt"><input class="in" type="' + kind + '">' + (f.tbc ? '<button type="button" class="mini">TBC</button>' : "") + (f.na ? '<button type="button" class="mini">N/A</button>' : "") + '</div>');
+      case "date": if (f.time) return dateTime(a, f, v); { const kind = "date", w = h('<div class="dt"><input class="in" type="' + kind + '">' + (f.tbc ? '<button type="button" class="mini">TBC</button>' : "") + (f.na ? '<button type="button" class="mini">N/A</button>' : "") + '</div>');
         const i = $("input", w); if (v && /^\d{4}-\d\d-\d\d(T\d\d:\d\d)?$/.test(v)) i.value = f.time && v.length === 10 ? v + "T07:00" : !f.time ? v.slice(0, 10) : v; else if (v){ i.type = "text"; i.value = v; i.readOnly = true; i.classList.toggle("tbc", tbc(v)); i.title = "Click to pick a date"; i.onclick = () => { i.type = kind; i.readOnly = false; i.value = ""; i.classList.remove("tbc"); i.showPicker && i.showPicker(); }; }
         i.onchange = () => i.type === kind && set(a, f, i.value); $$(".mini", w).forEach(b => b.onclick = () => set(a, f, b.textContent)); return w; }
       case "number": { const i = h('<input class="in" type="number">'); i.value = v == null ? "" : v; i.onchange = () => set(a, f, i.value === "" ? "" : +i.value); return i; }

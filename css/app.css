@@ -1038,3 +1038,10 @@ input[type=checkbox]{width:18px;height:18px}
 .fw-win{width:min(460px,94vw)}.fw-h{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin:14px 0 4px}.fw-h .dim{text-transform:none;letter-spacing:0;font-weight:400}
 .fw-r{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:var(--ctl-h,28px);padding:3px 0;border-bottom:1px solid var(--line)}.fw-r .in{width:auto}
 .fw-r .seg button{white-space:nowrap}
+.dtt{display:flex;gap:6px;align-items:center}.dtt .tm{width:64px;flex:none;font-variant-numeric:tabular-nums;text-align:center}.tm-dd .tg-o{justify-content:center}
+/* the menus in one slim strip, like an older program's menu bar: a soft top highlight, a firmer bottom edge, 28px in all */
+.menubar{height:var(--ctl-h,28px);gap:0;padding:0 2px;background:linear-gradient(var(--panel),var(--panel2));border:1px solid var(--line2);border-radius:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);flex:none}
+html.dark .menubar{box-shadow:none}
+.menubar .mb-btn{height:calc(var(--ctl-h,28px) - 2px);padding:0 10px;border-radius:4px}
+.menubar .mb-btn:hover,.menubar .mb.open .mb-btn{background:rgba(71,85,105,.1)}html.dark .menubar .mb-btn:hover,html.dark .menubar .mb.open .mb-btn{background:rgba(255,255,255,.08)}
+.mb-btn u{text-underline-offset:2px;text-decoration-thickness:1px}
