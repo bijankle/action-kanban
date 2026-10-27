@@ -1249,3 +1249,5 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .mt-szd{white-space:nowrap}.mt-szd .mt-pk+.mt-pk{margin-left:2px}
 .mt-szd:has(.mt-pk+.mt-pk) .mt-pk{display:inline-block;width:calc(50% - 1px)!important}
 .lk-two .lk-o b{font-weight:600;font-size:13px}.lk-two .lk-o.on b{font-weight:700}
+.mt-szd:has(.mt-pk+.mt-pk) .mt-pk{width:auto!important;field-sizing:content;min-width:44px;max-width:calc(100% - 46px)}
+.mt-tbl td.pt-no{white-space:nowrap;overflow:visible;text-overflow:clip}

@@ -260,17 +260,19 @@ const Mto = (() => {
     pipes.forEach(it => { ph += head(it, PC.length, last) + pipeRow(it); last = GROUP(it); });
     /* ---- steel and the rest ---- */
     const hasPart = steel.concat(sdr).some(it => it.part || !type(it));
-    const SC = [["t", "Item"], ["z", "Size"], ["r", "Rating"], ["m", "Material"], ["s", "Std"]].concat(hasPart ? [["part", "Part"]] : []).concat([["qty", "Qty"], ["sq", "Spare"], ["tot", "Total"], ["notes", "Notes"], ["x", ""]]);
+    /* (the same number of columns as the piping table, so the two line up: material and standard share a column, as do the type and part of a row typed in) */
+    /* (steel's third pick is its finish, black, galvanised or primed: a coating, not a rating) */
+    const SC = [["t", "Item"], ["z", "Size"], ["ms", "Material / std"], ["r", "Finish"], ["qty", "Qty"], ["sq", "Spare"], ["tot", "Total"], ["notes", "Notes"], ["x", ""]];
     let sh = ""; last = null;
     const steelRow = it => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it);
       return '<tr data-id="' + it.id + '" class="mt-row' + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res))
         + '<td>' + box(it, "t", "Item") + '</td><td>' + box(it, "z", "Size") + '</td>'
-        + '<td>' + (T && ratings(it).length ? box(it, "r", "Rating") : "") + '</td><td>' + (T ? box(it, "m", "Material") : "") + '</td><td>' + (T ? box(it, "s", "Std", ' data-opt="1"') : "") + '</td>'
-        + (hasPart ? '<td>' + box(it, "part", "Part") + '</td>' : "") + qtyCell(it, !!res) + tail(it) + sub(it, res, SC.length); };
+        + '<td class="mt-szd">' + (T ? box(it, "m", "Material") + box(it, "s", "Std", ' data-opt="1"') : box(it, "part", "Part / model")) + '</td><td>' + (T && ratings(it).length ? box(it, "r", T.rl || "Finish") : "") + '</td>'
+        + qtyCell(it, !!res) + tail(it) + sub(it, res, SC.length); };
     sh = sdr.map(steelRow).join("");
     if (!ro) sh += '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="new0" data-c="t" placeholder="+ Item" autocomplete="off" spellcheck="false"></td><td colspan="' + (SC.length - 1) + '"></td></tr>';
     steel.forEach(it => { sh += head(it, SC.length, last) + steelRow(it); last = GROUP(it); });
-    const thead = cols => '<thead><tr><th class="pt-no" data-col="No.">#</th>' + cols.map(([c, nm]) => '<th data-col="' + (nm || c) + '">' + esc(nm) + (REQ.has(c) || c === "cl" || c === "sz" ? '<span class="mt-rq" title="Needed">*</span>' : "") + '</th>').join("") + '</tr></thead>';
+    const thead = cols => '<thead><tr><th class="pt-no" data-col="No.">#</th>' + cols.map(([c, nm]) => '<th data-col="' + (nm || c) + '">' + esc(nm) + (REQ.has(c) || c === "cl" || c === "sz" || c === "ms" ? '<span class="mt-rq" title="Needed">*</span>' : "") + '</th>').join("") + '</tr></thead>';
     return '<div class="mt-h">Piping' + tipI("To the plant's pipe spec (" + ((PipeSpec.meta() || {}).doc || "loading the spec…") + "): pick the class, the size and the item, and the spec gives the rest. N/A for anything not to a class.") + '</div>'
       + '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-pipe">' + thead(PC) + '<tbody>' + ph + '</tbody></table></div>'
       + '<div class="mt-h">Steel and other</div><div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-steel">' + thead(SC) + '<tbody>' + sh + '</tbody></table></div>'; }
@@ -321,7 +323,7 @@ const Mto = (() => {
       if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?", "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); bolts(); Store.touch(a); }); });
     if (ro) return;
     /* the order the boxes are filled in: to a class, Class Size Item (Ends / type) Qty; N/A, Class Size Item Rating Material Qty; the rest, Item Size Rating Material Qty */
-    const orderOf = it => isInst(it) ? ["cl", "t", "part", "z", "qty"] : isSpec(it) ? ["cl", "dn", "it", "dn2", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : ["t", "z", "r", "m", "qty"];
+    const orderOf = it => isInst(it) ? ["cl", "t", "part", "z", "qty"] : isSpec(it) ? ["cl", "dn", "it", "dn2", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : ["t", "z", "m", "r", "qty"];
     const needs = (it, x) => x === "z" && isInst(it) ? !it.z && (instType(it.desc) || {}).g === "Control valves" : x === "part" ? isInst(it) && !it.part && !!(instType(it.desc) || { mm: [] }).mm.length : x === "cl" ? !it.cl : x === "dn" ? !it.dn : x === "dn2" ? PipeSpec.reducing(it.it) && !it.dn2 : x === "it" ? !it.it : x === "vt" ? specRes(it).need === "ends or type" : x === "qty" ? !String(it.qty || "").trim()
       : x === "t" ? !type(it) && !String(it.desc || "").trim() : x === "z" ? (type(it) || it.cl === "N/A") && !it.z && !(it.desc != null && !type(it)) : x === "r" ? !!type(it) && ratings(it).length > 0 && !it.r : x === "m" ? !!type(it) && !it.m : false;
     /* the next box on the row still to fill in (after a pick, the cursor goes there and its list opens) */
