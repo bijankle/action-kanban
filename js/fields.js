@@ -87,9 +87,9 @@ const Fields = (() => {
         s.style.setProperty("--c", Store.stage(v).color); s.onchange = () => set(a, f, s.value); return s; }
       case "rank": { const n = Store.ranked(a.stage).length; const s = h('<select class="in">' + Array.from({ length: n }, (_, i) => '<option' + (i + 1 === v ? " selected" : "") + '>' + (i + 1) + '</option>').join("") + '</select>');
         s.onchange = () => set(a, f, +s.value); return s; }
-      case "check": { const step = !!f.stage, na = v === Flow.NA, c = h('<label class="ck' + (na ? " na" : "") + '"' + (step ? ' title="' + esc((Flow.who(a, f) ? Flow.who(a, f) + ". " : "") + "Click: done. Click again: not needed. Again: clear") + '"' : "") + '><input type="checkbox"' + (v === true ? " checked" : "") + '><span></span></label>');
+      case "check": { const step = !!f.stage || !!f.table, na = v === Flow.NA, c = h('<label class="ck' + (na ? " na" : "") + '"' + (step ? ' title="' + esc((Flow.who(a, f) ? Flow.who(a, f) + ". " : "") + "Click: done. Click again: not needed. Again: clear") + '"' : "") + '><input type="checkbox"' + (v === true ? " checked" : "") + '><span></span></label>');
         const i = $("input", c); i.indeterminate = na;
-        /* a stage's step has three states, round in turn: empty, done (✓), not needed (–) */
+        /* a step (a stage's, or any tick column of the list) has three states, round in turn: empty, done (✓), not needed (–) */
         i.onchange = () => set(a, f, step ? (v === true ? Flow.NA : na ? false : true) : i.checked); return c; }
       /* choices suggest, they don't restrict: pick one of the list or type your own (which isn't added to the list) */
       case "choice": return combo(a, f, optLabels(f).map(o => ({ v: o, c: optColor(f, o) })).concat(extra(f).map(x => ({ v: x }))), true);
