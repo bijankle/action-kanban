@@ -60,6 +60,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     const mt = await p.evaluate(() => { const it = Mto.fromAi(["ELB 90 LR", "DN50", "SCH40", "A234 WPB", "B16.9", "2", "EA", ""]); Mto.recalc(it); const half = Mto.fromAi(["FLG WN", "DN50", "", "", "", "4", "EA", ""]);
       return Mto.desc(it) + " | " + Mto.missing(it).length + " | " + Mto.missing(half).join(","); });
     check("an MTO line reads into a short form library row", /^ELB 90 LR DN50 SCH40 A234 WPB B16\.9 \| 0 \| .*material/.test(mt), mt);
+    /* another action opens on the tab you were on, and back returns to the one before */
+    const nv = await p.evaluate(async () => { const v = Store.visible(); App.select(v[0]._p + ":" + v[0].u, "mto"); await new Promise(r => setTimeout(r, 500)); App.select(v[1]._p + ":" + v[1].u); await new Promise(r => setTimeout(r, 500));
+      const sub = App.sub; document.querySelector("#navB").click(); await new Promise(r => setTimeout(r, 500)); return sub + " " + (App.selRef === v[0]._p + ":" + v[0].u); });
+    check("another action keeps the tab, and back returns to the last one", nv === "mto true", nv);
     /* admin only */
     check("someone else can't add columns", (await p.$$(".addc")).length === 0 && !(await p.evaluate(() => App.isAdmin())));
     await p.click(".mb-btn >> text=ile"); await p.click(".mi >> text=Parameters"); await p.waitForTimeout(200);

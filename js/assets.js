@@ -152,5 +152,5 @@ const Assets = (() => {
     const m = $(".as-more", body); if (m) m.onclick = () => { more += SHOW; App.render(); };
     $$(".as-tbl tbody tr[data-k]", body).forEach(tr => tr.onclick = () => open(tr.dataset.k));
     gridCols($(".as-tbl", body), "assets", { max: 520, onSort: () => App.render() }); }
-  return { page, filters, fcount, reset: () => { more = 0; } };
+  return { page, filters, fcount, reset: () => { more = 0; }, sel: () => sel, show: k => { sel = k || ""; tab = "d"; lsSet("adAsSel", sel); } };
 })();

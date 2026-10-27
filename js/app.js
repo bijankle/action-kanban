@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.147";
+const APP_VERSION = "1.10.148";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -12,7 +12,7 @@ const App = (() => {
   /* (a deleted action is found too: it can be opened from the Deleted pill, and brought back) */
   const act = ref => { if (!ref) return null; const [pid, u] = ref.split(":"); const a = Store.find(pid, u); if (!a) return null; a._p = pid; return a; };
   let raf = 0; const render = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); };
-  function draw(){ if (!Store.S.config) return; Store.all().forEach(a => Mto.shorten(a.mto));   // (the MTO in short form everywhere, exports too)
+  function draw(){ if (!Store.S.config) return; Nav.note(); if (A.sub && A.sub !== lsGet("adSub", "")) lsSet("adSub", A.sub);   // (the action's tab is remembered, for the next action and the next visit) Store.all().forEach(a => Mto.shorten(a.mto));   // (the MTO in short form everywhere, exports too)
     document.body.classList.toggle("ro", !Store.S.edit);
     if (A.selRef && !act(A.selRef)) A.selRef = null;
     if (A.mobile){ Mobile.render($("#mobile")); return; }
@@ -84,7 +84,21 @@ const App = (() => {
       sp.onpointerup = () => { sp.onpointermove = null; document.body.classList.remove("resizing"); const w = parseFloat(getComputedStyle(m).getPropertyValue("--side-w")); if (w) lsSet("adSideW", Math.round(w)); }; };
     sp.ondblclick = () => { lsSet("adSideW", null); m.style.removeProperty("--side-w"); }; }
   /* open an action (in the side panel or pop up), or close it with null; the list and its tab stay as they are */
-  const select = (ref, sub) => { if (ref !== A.selRef || sub) A.sub = sub || "overview"; if (ref){ if (A.tab !== "kanban" && A.tab !== "actions"){ A.tab = "actions"; lsSet("adTab", "actions"); } A.last = ref; lsSet("adLast", ref); } A.selRef = ref; if (ref) history.replaceState(null, "", "?a=" + encodeURIComponent(ref.split(":")[0] + ":" + (act(ref) || {}).no)); else history.replaceState(null, "", location.pathname); render(); };
+  if (!A.sub) A.sub = lsGet("adSub", "") || "overview";
+  const select = (ref, sub) => { if (sub) A.sub = sub; else if (!A.sub) A.sub = "overview";   // (another action opens on the tab you were on: Materials stays Materials)
+    if (ref){ if (A.tab !== "kanban" && A.tab !== "actions"){ A.tab = "actions"; lsSet("adTab", "actions"); } A.last = ref; lsSet("adLast", ref); } A.selRef = ref; if (ref) history.replaceState(history.state, "", "?a=" + encodeURIComponent(ref.split(":")[0] + ":" + (act(ref) || {}).no)); else history.replaceState(history.state, "", location.pathname); render(); };
+  /* back and forward, just right of the logo as in the Project Library: each change of view (the top tab, the action open and its tab, the
+     Data validation tab, the asset open) is a step. The browser's own back and forward (and a mouse's side buttons) step the same way */
+  const Nav = (() => { let st = [], i = -1, t = 0;
+    const snap = () => { const dv = A.tab === "valid" ? Valid.section() : null; return { tab: A.tab, sel: A.selRef || null, sub: A.selRef ? A.sub || "overview" : null, dv, as: dv === "equip" ? Assets.sel() || null : null }; };
+    const same = (x, y) => !!x && !!y && JSON.stringify(x) === JSON.stringify(y);
+    const btns = () => { const b = $("#navB"), f = $("#navF"); if (b) b.disabled = i <= 0; if (f) f.disabled = i >= st.length - 1; };
+    function note(){ if (same(st[i], snap())) return; clearTimeout(t); t = setTimeout(() => { const s = snap(); if (same(st[i], s)) return;
+      st = st.slice(0, i + 1); st.push(s); i = st.length - 1; if (i === 0) history.replaceState({ nav: 0 }, "", location.href); else history.pushState({ nav: i }, "", location.href); btns(); }, 300); }
+    function show(k){ const s = st[k]; if (!s) return; clearTimeout(t); i = k; A.tab = s.tab; lsSet("adTab", s.tab); A.selRef = s.sel; if (s.sel){ A.last = s.sel; lsSet("adLast", s.sel); A.sub = s.sub; }
+      if (s.dv){ Valid.open(s.dv); if (s.dv === "equip") Assets.show(s.as); } btns(); render(); }
+    addEventListener("popstate", e => { if (e.state && e.state.nav != null) show(e.state.nav); });
+    return { note, btns, back: () => i > 0 && history.back(), fwd: () => i < st.length - 1 && history.forward() }; })();
   /* the MTO link in the table (or the action view or a callout): that action, on its MTO, Spares or Isolations tab */
   const openParts = (ref, kind) => select(ref, kind);
   document.addEventListener("click", e => { const l = e.target.closest(".av [data-parts], .kcall [data-parts]"); if (l){ e.preventDefault(); Fields.closePop(); openParts(l.dataset.ref, l.dataset.parts); } });
@@ -392,7 +406,7 @@ const App = (() => {
   /* with the Details panel open on the Actions tab, it shows an action from the start: the one last looked at if it's
      not deleted (even if the list hides it now), else the top one (closing it with ✕ leaves the panel empty until the next one is picked) */
   function autoPick(){ if (!pref("openLast") || A.mobile || A.selRef || A.tab !== "actions" || !lsGet("adPanel", true)) return; const rows = Table.rows(true), last = act(lsGet("adLast", null));
-    const a = last && !last.del ? last : rows[0]; if (a){ A.selRef = A.last = a._p + ":" + a.u; A.sub = "overview"; } }
+    const a = last && !last.del ? last : rows[0]; if (a){ A.selRef = A.last = a._p + ":" + a.u; A.sub = A.sub || "overview"; } }
   /* the Organizer always opens laid out in full: an action open on the Actions tab doesn't pop up over it */
   function setTab(t){ const was = A.tab; A.tab = t; lsSet("adTab", t); if (t === "kanban" && was !== "kanban" && A.selRef && pref("kbClear")) return select(null); if (t === "actions" && was !== "actions") autoPick(); render(); }
 
@@ -401,6 +415,7 @@ const App = (() => {
     A.mobile = matchMedia("(max-width: 760px), (pointer: coarse) and (max-width: 1100px)").matches; document.body.classList.toggle("mobile", A.mobile);
     const sw = lsGet("adSideW", null); if (sw) $("#main").style.setProperty("--side-w", sw + "px"); splitter(); splitterL();
     $$("[data-fico]").forEach(x => x.outerHTML = fileIco(x.dataset.fico)); $$("[data-ai]").forEach(x => x.outerHTML = aiIco()); $$("[data-upico]").forEach(x => x.outerHTML = upIco(x.dataset.upico)); $("#brand").innerHTML = LOGO(34); $("#brand").setAttribute("aria-label", "Action Database, home");   // (the project box sits where the name was) $("#boot .bl").innerHTML = LOGO(84);
+    $("#navB").onclick = Nav.back; $("#navF").onclick = Nav.fwd; Nav.btns();
     $("#brand").title = "Home"; $("#brand").onclick = () => { A.tab = "actions"; lsSet("adTab", "actions"); select(null); };   // the logo goes home: the Actions list
     if (!A.mobile){ menus();
       $$(".tab").forEach(t => t.onclick = () => setTab(t.dataset.t));

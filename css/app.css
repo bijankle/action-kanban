@@ -1244,3 +1244,4 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .mt-itd .pt-in{padding-right:24px}
 .mt-tbl .mt-mv{height:28px;padding:0 7px;font-size:12px}.mt-tbl .mt-x{width:28px;height:28px}.mt-tbl .mt-ic{padding-left:4px;padding-right:4px}
 .mt-tbl .mt-tot{font-weight:600;white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums}.mt-tbl .mt-sq{width:44px!important}
+.nv-bh{display:flex;gap:6px;flex:none}.nv-b:disabled{opacity:.35;cursor:default}
