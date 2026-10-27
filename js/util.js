@@ -199,6 +199,27 @@ function dateBox(value, opts){ opts = opts || {}; if (TOUCH) return nativeBox("d
       if (d) pick(d.dataset.d); else if (e.target.closest("[data-clr]")) pick(""); else if (e.target.closest("[data-td]")) pick(isoDay(new Date())); };
     draw(); placePick(p, b); };
   return b; }
+/* a date range in one box ("3 Nov 2026 to 10 Nov 2026"): one calendar, the first day picked is the start, the second the
+   end (in either order), with Clear and Today. .from and .to hold the days; it fires change when both are set or cleared */
+function rangeBox(from, to, opts){ opts = opts || {}; let f = from || "", t = to || "", half = "";
+  const b = h('<button type="button" class="dchip drange' + (opts.cls ? " " + opts.cls : "") + '" aria-label="' + esc(opts.label || "Date range") + '">' + ICO_CAL + '<span class="dr-f"></span><span class="dr-to">to</span><span class="dr-t"></span></button>');
+  const show = () => { const a = $(".dr-f", b), z = $(".dr-t", b); a.textContent = f ? fmtDate(f) : "From"; z.textContent = t ? fmtDate(t) : "To"; a.classList.toggle("dc-ph", !f); z.classList.toggle("dc-ph", !t); };
+  Object.defineProperty(b, "from", { get: () => f, set: x => { f = x || ""; show(); } }); Object.defineProperty(b, "to", { get: () => t, set: x => { t = x || ""; show(); } }); show();
+  const fire = () => b.dispatchEvent(new Event("change", { bubbles: true }));
+  b.onclick = () => { if (pickPop && pickPop.__for === b) return closePick(); closePick(); half = ""; let view = /^\d{4}-\d\d/.test(f) ? new Date(f.slice(0, 7) + "-01T12:00") : new Date(); view.setDate(1);
+    const p = pickPop = h('<div class="pop calpop" role="dialog" aria-label="Pick the start and end days"></div>'); p.__for = b; document.body.appendChild(p);
+    const draw = () => { const y = view.getFullYear(), m = view.getMonth(), off = (new Date(y, m, 1).getDay() + 6) % 7, today = isoDay(new Date()), lo = half || f, hi = half ? "" : t; let g = "";
+      for (let k = 0; k < 42; k++){ const d = new Date(y, m, 1 - off + k), id = isoDay(d), inR = lo && hi && id > lo && id < hi;
+        g += '<button type="button" data-d="' + id + '" class="' + (d.getMonth() !== m ? "x " : "") + (id === today ? "td " : "") + (id === lo || id === hi ? "on " : "") + (inR ? "in" : "") + '">' + d.getDate() + '</button>'; }
+      p.innerHTML = '<div class="cal-h"><button type="button" data-mv="-1" aria-label="Previous month">‹</button><span>' + "January February March April May June July August September October November December".split(" ")[m] + " " + y + '</span><button type="button" data-mv="1" aria-label="Next month">›</button></div>'
+        + '<div class="cal-g">' + "Mo Tu We Th Fr Sa Su".split(" ").map(x => "<span>" + x + "</span>").join("") + g + '</div><div class="cal-hint dim">' + (half ? "Now pick the end day" : "Pick the start day") + '</div><div class="cal-f"><button type="button" data-clr>Clear</button><button type="button" data-td>Today</button></div>'; };
+    const pick = x => { if (!half){ half = x; draw(); return; } const a = half < x ? half : x, z = half < x ? x : half; half = ""; closePick(); if (a !== f || z !== t){ f = a; t = z; show(); fire(); } };
+    p.onclick = e => { const mv = e.target.closest("[data-mv]"); if (mv){ view.setMonth(view.getMonth() + +mv.dataset.mv); return draw(); }
+      const d = e.target.closest("[data-d]"); if (d) return pick(d.dataset.d);
+      if (e.target.closest("[data-clr]")){ closePick(); if (f || t){ f = t = ""; show(); fire(); } return; }
+      if (e.target.closest("[data-td]")) pick(isoDay(new Date())); };
+    draw(); placePick(p, b); };
+  return b; }
 function timeBox(value, opts){ opts = opts || {}; if (TOUCH) return nativeBox("time", value, opts);
   const w = h('<span class="dchip tchip">' + ICO_CLK + '<input type="text" inputmode="numeric" maxlength="5" placeholder="' + esc(opts.ph || "Time") + '" aria-label="' + esc(opts.label || "Time, 24 hour") + '" title="24 hour time" autocomplete="off" spellcheck="false"></span>'), i = $("input", w);
   i.value = value || ""; Object.defineProperty(w, "value", { get: () => i.value, set: x => { i.value = x || ""; } });
@@ -276,9 +297,9 @@ function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts)
   const textW = (t, font) => { cv.font = font; return cv.measureText(String(t || "")).width; };
   const rows = [...table.tBodies[0].rows].slice(0, 300);
   /* a column's natural width: its heading or its widest entry (a box measures by what's typed in it, or its hint) */
-  const natural = i => { const th = ths[i], hf = getComputedStyle(th).font; let w = textW(th.textContent.trim(), hf) + 34;
+  const natural = i => { const th = ths[i], hf = getComputedStyle(th).font; let w = textW(th.textContent.trim(), hf) + (opts.hPad || 34);
     rows.forEach(r => { const td = r.cells[i]; if (!td) return; const f = td.querySelector("input,select,textarea"), font = getComputedStyle(f || td).font;
-      const t = f ? (f.tagName === "SELECT" ? (f.options[f.selectedIndex] || {}).text : f.value || f.placeholder) : td.textContent.trim(); w = Math.max(w, textW(t, font) + (f ? (f.tagName === "SELECT" ? 48 : 36) : 20)); });
+      const t = f ? (f.tagName === "SELECT" ? (f.options[f.selectedIndex] || {}).text : f.value || f.placeholder) : td.textContent.trim(); w = Math.max(w, textW(t, font) + (f ? (f.tagName === "SELECT" ? 48 : opts.inPad || 36) : 20)); });
     return Math.min(opts.max || 480, Math.ceil(w)); };
   const id = tblKit.id;
   let cg = table.querySelector("colgroup"); if (!cg){ cg = document.createElement("colgroup"); table.insertBefore(cg, table.firstChild); } cg.innerHTML = ths.map(() => "<col>").join("");
@@ -290,7 +311,7 @@ function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts)
   const used = set.reduce((t, w, i) => t + (w || 0), 0), free = ths.map((th, i) => !set[i] && !fixed[id(th, i)]), natFree = nat.reduce((t, w, i) => t + (free[i] ? w : 0), 0), fix = nat.reduce((t, w, i) => t + (!set[i] && !free[i] ? w : 0), 0);
   /* (more than fits: the columns nobody has set narrow in proportion, each to no less than its heading, and their
      text ends in …; less than fits: each keeps its own width, so there's no blank space) */
-  const minW = i => Math.min(nat[i], Math.ceil(textW(ths[i].textContent.trim(), getComputedStyle(ths[i]).font) + 34)), flo = new Set();
+  const minW = i => Math.min(nat[i], Math.ceil(textW(ths[i].textContent.trim(), getComputedStyle(ths[i]).font) + (opts.hPad || 34))), flo = new Set();
   let k = 1; for (let pass = 0; pass < 4; pass++){ const left = room - used - fix - [...flo].reduce((t, i) => t + minW(i), 0), sc = nat.reduce((t, w, i) => t + (free[i] && !flo.has(i) ? w : 0), 0);
     k = sc ? Math.min(1, opts.scroll ? 1 : left / sc) : 1; let more = false; ths.forEach((th, i) => { if (free[i] && !flo.has(i) && nat[i] * k < minW(i)){ flo.add(i); more = true; } }); if (!more) break; }   // (a column held at its heading's width leaves the rest to share what's left)
   const widths = ths.map((th, i) => Math.round(set[i] || (free[i] ? (flo.has(i) ? minW(i) : nat[i] * k) : nat[i])));

@@ -710,10 +710,7 @@ html.dark .rb-done.on{color:#3ccf8e}html.dark .rb-hold.on{color:#f2b03d}html.dar
 @media (prefers-reduced-motion:reduce){.rb{transition:none}}
 /* the smart MTO rows (js/mto.js) */
 .mt-wrap{overflow-x:auto;margin:0 -2px}
-.mt-tbl{min-width:1500px}.mt-tbl td{vertical-align:middle}
 .mt-tbl .mt-sel{width:100%;min-width:0;padding:4px 4px;cursor:pointer}.mt-tbl select.mt-sel:disabled{cursor:default;opacity:1;appearance:none;border-color:transparent}
-.mt-tbl th:nth-child(2){width:170px}.mt-tbl th:nth-child(3){width:190px}.mt-tbl th:nth-child(4){width:140px}.mt-tbl th:nth-child(5){width:170px}.mt-tbl th:nth-child(6){width:110px}.mt-tbl th:nth-child(7){width:124px}
-.mt-tbl th:nth-child(8){width:70px}.mt-tbl th:nth-child(9){width:84px}.mt-tbl th:nth-child(10){width:34px}.mt-tbl th:nth-child(11){width:132px}
 .mt-tbl .pt-no{white-space:nowrap}
 .mt-tg{border:0;background:var(--panel2);color:var(--th2);border-radius:6px;padding:1px 6px;margin-left:6px;font:700 12px/18px inherit;cursor:pointer;display:inline-flex;gap:3px;align-items:center}
 .mt-tg b{font-size:11px;background:var(--th);color:#fff;border-radius:999px;padding:0 5px;line-height:15px}.mt-tg:hover,.mt-tg.on{background:var(--th-t)}
@@ -1186,3 +1183,24 @@ textarea.in.ta{resize:none;overflow:hidden;min-height:var(--ctl-h,28px)}
 /* the selected row: a faint slate tint across the whole row (no bar down the side); its boxes stay white */
 .tbl tbody tr.on td{background:color-mix(in srgb,var(--th) 13%,var(--panel))!important;box-shadow:none!important}.tbl tbody tr.on td:first-child{box-shadow:none!important}
 .tbl tbody tr.on td .in{background:var(--panel)}
+/* the slim MTO: short codes in narrow columns, thin headings by kind, a row still to fill in tinted yellow with a dot saying what's left */
+.mt-tbl td{padding:1px 3px;height:30px}.mt-tbl .pt-no{white-space:nowrap}
+.mt-tbl .mt-pk{font:12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:-.1px;cursor:pointer;padding:3px 6px}.mt-tbl .mt-pk:focus{cursor:text}
+.mt-tbl .mt-q{text-align:right;font-variant-numeric:tabular-nums}
+.mt-tbl tr.mt-grp td{background:var(--panel2);font:700 11px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);height:22px;padding:2px 8px;cursor:default}
+.mt-tbl tr.mt-grp:hover td{background:var(--panel2)}
+.mt-tbl tr.mt-part td{background:color-mix(in srgb,#d4a017 9%,var(--panel))}
+.mt-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#d4a017;vertical-align:middle;margin:0 3px}
+.mt-rq{color:#f2b03d;margin-left:2px}
+.mt-tbl .pt-act{white-space:nowrap}.mt-tbl .pt-act .ic-b{width:26px;height:26px}
+.mt-tbl td{vertical-align:middle}
+.mt-tbl th{padding-left:6px;padding-right:6px}
+.mt-qu{white-space:nowrap}.mt-qu .mt-q{width:46px!important;display:inline-block}.mt-qu .mt-un{width:40px!important;display:inline-block;margin-left:2px;padding:3px 4px;color:var(--muted)}
+/* rows from AI: the two steps, then the rows read from the reply */
+.pg-win{width:min(640px,calc(100vw - 32px))}.pg-win textarea{width:100%;resize:vertical;min-height:72px}
+.ai-st{font-size:13px;font-weight:600;color:var(--muted);margin:10px 0 4px}.ai-st b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--th);color:#fff;font-size:11px;margin-right:6px}
+.pg-prev{max-height:260px;overflow:auto;margin-top:8px}.pg-prev .tbl td{padding:3px 6px;font:12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.pg-prev .dim{font-family:var(--font);font-size:12.5px;margin-bottom:4px}
+/* the date range in one box: "3 Nov 2026 to 10 Nov 2026" */
+.drange{gap:6px}.drange .dr-to{color:var(--muted)}.drange .dc-ph{color:var(--dim)}
+.cal-g button.in{background:color-mix(in srgb,var(--th) 14%,transparent);border-radius:0}.cal-hint{font-size:12px;text-align:center;margin-top:4px}
+.gd-two{display:inline-flex;gap:6px}

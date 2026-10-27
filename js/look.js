@@ -5,11 +5,11 @@
 "use strict";
 const Look = (() => {
   const CHEV = '<svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg>';
-  let card = null, cardFor = null;
+  let card = null, cardFor = null, openedAt = 0;
   const close = () => { if (card){ card.remove(); card = null; } if (cardFor){ cardFor.setAttribute("aria-expanded", "false"); cardFor = null; } };
   /* the card under a box: options to pick from, the one under the arrow keys lit; typing narrows a long list */
   function open(anchor, items, cur, pick, opts){ close(); opts = opts || {};
-    const c = card = h('<div class="pop lk-card" role="listbox"></div>'); cardFor = anchor; anchor.setAttribute("aria-expanded", "true");
+    const c = card = h('<div class="pop lk-card" role="listbox"></div>'); cardFor = anchor; openedAt = Date.now(); anchor.setAttribute("aria-expanded", "true");
     let q = "", hi = Math.max(0, items.findIndex(x => x.v === cur)), shown = items;
     const draw = () => { shown = q ? items.filter(x => x.t.toLowerCase().includes(q.toLowerCase())) : items; hi = Math.min(hi, Math.max(0, shown.length - 1));
       c.innerHTML = (opts.search ? '<input class="in lk-q" placeholder="Type to narrow" aria-label="Narrow the list" value="' + esc(q) + '">' : "")
@@ -27,7 +27,7 @@ const Look = (() => {
     const qi = $(".lk-q", c); if (qi) qi.focus();
     return key; }
   document.addEventListener("mousedown", e => { if (card && !card.contains(e.target) && e.target !== cardFor && !(cardFor && cardFor.contains(e.target))) close(); }, true);
-  addEventListener("resize", close); document.addEventListener("scroll", e => { if (card && !card.contains(e.target)) close(); }, true);
+  addEventListener("resize", close); document.addEventListener("scroll", e => { if (card && !card.contains(e.target) && Date.now() - openedAt > 400) close(); }, true);   // (not the scroll that brings the box into view as it opens)
 
   /* a <select>: the app's box in its place (the select stays, hidden, so everything reading or listening to it still works) */
   function sel(s){ if (s.__lk || s.multiple || s.closest(".lk-keep")) return; s.__lk = true;
@@ -67,5 +67,6 @@ const Look = (() => {
   window.alert = msg => { const m = modal('<h3 class="lk-msg">' + esc(String(msg == null ? "" : msg)) + '</h3><div class="yn-btns"><button class="yn-yes" type="button">OK</button></div>'); const ok = $(".yn-yes", m); ok.onclick = () => m.close(); ok.focus(); };
   const start = () => { scan(document.body); new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1){ if (TOUCH) return; if (n.tagName === "SELECT") sel(n); else if (n.tagName === "INPUT"){ if (TOUCH) return; if (n.type === "date") dat(n); else sug(n); } else scan(n); } }))).observe(document.body, { childList: true, subtree: true }); };
   if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
-  return { open, close, scan };
+  const closeFor = el => { if (cardFor === el) close(); };
+  return { open, close, closeFor, scan };
 })();

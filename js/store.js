@@ -100,7 +100,7 @@ const Store = (() => {
      the parts ETA (the latest ETA on its MTO rows; an older action's own ETA otherwise) */
   const rowsOf = l => (l || []).filter(it => it && (it.desc || it.part || it.qty));
   const procurement = a => rowsOf(a.mto).length > 0, sparesAvail = a => rowsOf(a.spares).length > 0;
-  const eta = a => { const ds = rowsOf(a.mto).map(it => it.eta).filter(Boolean), d = ds.filter(x => /^\d{4}-\d\d-\d\d$/.test(x)).sort().pop(); return d || (ds.includes("TBC") ? "TBC" : "") || a.f.eta || ""; };
+  const eta = a => { if (a.mtoEta) return a.mtoEta; const ds = rowsOf(a.mto).map(it => it.eta).filter(Boolean), d = ds.filter(x => /^\d{4}-\d\d-\d\d$/.test(x)).sort().pop(); return d || (ds.includes("TBC") ? "TBC" : "") || a.f.eta || ""; };
   const users = () => live(S.users.users);
   /* one entry per person: the same email (any capitals, spaces) is one account, the most recently changed copy kept */
   function oneEach(list){ const m = new Map(); (list || []).forEach(u => { const k = String(u.id || u.email || "").trim().toLowerCase(); if (!k) return; u.id = k; const o = m.get(k); if (!o || (u.mod || 0) >= (o.mod || 0)) m.set(k, o ? Object.assign({}, o, u) : u); }); return [...m.values()]; }

@@ -11,7 +11,7 @@ const Parts = (() => {
   /* one action's list, drawn into its action view tab; keep is where the cursor was before the redraw */
   function renderFor(el, a, kind, keep){ const ro = !Store.S.edit;
     el.innerHTML = '<div class="pt-main">' + pane(a, kind, ro) + '</div>'; wire(el, a, kind, ro);
-    const pt = $(".pt-tbl", el); if (pt) gridCols(pt, kind === "mto" ? "mto" : "spares", { fixed: { Item: 66 }, scroll: true });
+    const pt = $(".pt-tbl", el); if (pt) gridCols(pt, kind === "mto" ? "mto2" : "spares", kind === "mto" ? { fixed: { "No.": 64, Qty: 104, x: 32 }, inPad: 24, hPad: 22, scroll: true } : { fixed: { Item: 66 }, scroll: true });
     if (keep && keep.c){ let r = keep.r, cut = keep.cut; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } if (cut === "new" && created.has("cut:" + r)) cut = created.get("cut:" + r);
       const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]' + (cut ? '[data-cut="' + cut + '"]' : ":not([data-cut])"), el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
 
@@ -22,12 +22,12 @@ const Parts = (() => {
       + '<td class="pt-act">' + (ro ? "" : '<button type="button" class="btn ghost sm pt-mv" title="Move this row to ' + NAME[OTHER[kind]] + '">→ ' + (kind === "mto" ? "Spares" : "MTO") + '</button><button type="button" class="ic-b sm pt-x" title="Remove this row">✕</button>') + '</td></tr>';
     const blank = k => '<tr class="pt-blank"><td class="pt-no"></td>' + cols.map(([c]) => '<td><input class="in pt-in" data-r="new' + k + '" data-c="' + c + '"' + (c === "eta" ? ' type="date"' : "") + (ro ? " readonly" : "") + '></td>').join("") + (kind === "spares" ? '<td></td>' : "") + '<td></td></tr>';
     return '<div class="pt-head"><b class="pt-h">' + NAME[kind] + '</b><span class="grow"></span>'
-      + (ro ? "" : '<button type="button" class="dl dl-ai" data-k="gem" title="Paste a parts list, quote or email. Gemini splits it into rows, and you check them before they are added." aria-label="Make rows from text with AI">' + aiIco() + '</button>')
+      + (ro ? "" : '<button type="button" class="dl dl-ai" data-k="gem" title="Rows from AI: type what is needed, Copy for AI, paste the reply back. Works with Copilot, ChatGPT or Gemini." aria-label="Make rows with AI">' + aiIco() + '</button>')
       + (kind === "mto" && Mto.needsCut(a) ? '<button type="button" class="dl dl-pdf" data-k="cut" title="The cutting list for the trades: which pieces come out of which length or sheet, and the offcuts. It also comes with each RFQ export.">' + fileIco("Cut") + '</button>' : "")
       + '<button type="button" class="dl dl-xl" data-k="xls" title="Export this ' + NAME[kind] + ' to Excel">' + fileIco("XLSX") + '</button>'
       + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF" : "Export the spares list as a PDF") + '">' + fileIco(kind === "mto" ? "RFQ" : "PDF") + '</button></div>'
       /* the MTO's top: who the RFQ goes to on the left, the quotes and the PO on the right */
-      + (kind === "mto" ? '<div class="pt-top"><div class="pt-l">' + Vendors.box(a, ro) + '</div><div class="pt-r">' + docs(a, "quotes", ro) + docs(a, "pos", ro) + '</div></div>' : "")
+      + (kind === "mto" ? '<div class="pt-top"><div class="pt-l">' + Vendors.box(a, ro) + '</div><div class="pt-r">' + docs(a, "quotes", ro) + docs(a, "pos", ro) + '<div class="pt-dk"><div class="pt-dh">ETA' + tipI("When the whole quote is expected on site. It shows as the Parts ETA on the Actions list.") + '</div><input class="in" type="date" data-eta="1" value="' + esc(/^\d{4}-\d\d-\d\d$/.test(Store.eta(a) || "") ? Store.eta(a) : "") + '"' + (ro ? " readonly" : "") + ' aria-label="ETA of the whole quote"></div></div></div>' : "")
       + (kind === "mto" ? Mto.table(a, ro) : '<div class="mt-wrap"><table class="tbl pt-tbl"><thead><tr><th class="pt-no">Item</th>' + cols.map(([k, n]) => '<th class="pt-' + k + '">' + esc(n) + '</th>').join("") + (kind === "spares" ? '<th class="pt-sec">Secured</th>' : "") + '<th class="pt-act"></th></tr></thead><tbody>'
       + items.map(row).join("") + Array.from({ length: blanks }, (_, k) => blank(k)).join("") + '</tbody></table></div>')
       + '<div class="dim pt-foot">' + (kind === "mto" && (a.spares || []).length ? a.spares.length + " more from spares, not on the RFQ" : "") + (kind === "spares" && items.length ? items.filter(x => x.secured).length + " of " + items.length + " secured" : "") + '</div>'; }
@@ -40,12 +40,13 @@ const Parts = (() => {
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
 
   function wire(el, a, kind, ro){ const key = "a:" + a._p, items = list(a, kind); if (kind === "mto"){ Vendors.wire(el, a, ro); Mto.wire(el, a, ro); }
-    $$(kind === "mto" ? ".mt-tbl .pt-in:not(.mt-cin)" : ".pt-in", el).forEach(i => { if (kind === "mto"){ i.addEventListener("keydown", e => { if (e.key === "Enter" && i.tagName === "INPUT"){ e.preventDefault(); i.blur(); } }); return; } i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); const c = i.dataset.c, k = $$('.pt-in[data-c="' + c + '"]').indexOf(i); i.blur();
+    $$(kind === "mto" ? ".mt-tbl .pt-in:not(.mt-cin):not(.mt-pk)" : ".pt-in", el).forEach(i => { if (kind === "mto"){ i.addEventListener("keydown", e => { if (e.key === "Enter" && i.tagName === "INPUT"){ e.preventDefault(); i.blur(); } }); return; } i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); const c = i.dataset.c, k = $$('.pt-in[data-c="' + c + '"]').indexOf(i); i.blur();
         setTimeout(() => { const ins = $$('.pt-in[data-c="' + c + '"]'), n = ins[k + 1] || $('.pt-in[data-r^="new"][data-c="' + c + '"]'); n && n.focus(); }, 40); } };
       if (ro) return;
       i.onchange = () => { const v = i.value.trim(), r = i.dataset.r, c = i.dataset.c;
         if (r.startsWith("new")){ if (!v) return; const it = { id: uid() }; it[c] = v; created.set(r, it.id); Store.mutate(key, () => { items.push(it); Store.touch(a); }); Store.log("Added to the " + NAME[kind] + " of " + Store.actId(a)); return; }
         const it = items.find(x => x.id === r); if (!it || (it[c] || "") === v) return; Store.mutate(key, () => { it[c] = v; Store.touch(a); }); Store.log("Edited the " + NAME[kind] + " of " + Store.actId(a)); }; });
+    $$("[data-eta]", el).forEach(i => i.onchange = () => { const v = i.value || ""; if (v === (a.mtoEta || "")) return; Store.mutate(key, () => { if (v) a.mtoEta = v; else delete a.mtoEta; Store.touch(a); }); Store.log("Set the parts ETA of " + Store.actId(a)); });
     $$("[data-sec]", el).forEach(c => c.onchange = () => { const it = items.find(x => x.id === c.dataset.sec); if (!it) return; Store.mutate(key, () => { if (c.checked) it.secured = true; else delete it.secured; Store.touch(a); }); Store.log((c.checked ? "Secured" : "Unsecured") + " a spare on " + Store.actId(a)); });
     $$(".pt-mv", el).forEach(b => b.onclick = () => { const id = b.closest("tr").dataset.id; Store.mutate(key, () => { const i = items.findIndex(x => x.id === id); const it = items.splice(i, 1)[0]; if (kind === "mto") it.desc = Mto.desc(it); list(a, OTHER[kind]).push(it); Store.touch(a); });
       note("Moved to " + NAME[OTHER[kind]] + " (Ctrl+Z to undo)"); Store.log("Moved a part of " + Store.actId(a) + " to " + NAME[OTHER[kind]]); });
@@ -115,21 +116,42 @@ const Parts = (() => {
     catch (e){ console.error(e); alert("Couldn't make the PDF: " + e.message); } finally { exporting = false; } }
 
   /* ---------- Gemini: paste a list of parts, check the rows, then add them ---------- */
-  function gemini(a, kind){ if (!Store.S.edit) return App.viewOnly(); const cols = COLS[kind];
-    const m = modal('<h3>Paste text into the ' + NAME[kind] + tipI("Paste an email, quote or parts list. Gemini splits it into rows; check them, then add.") + '</h3><textarea class="in ta" rows="8" placeholder="Paste the parts here…"></textarea><div class="nw-pb"><button type="button" class="btn" data-k="go">Split into rows</button><span class="dim nw-msg"></span></div><div class="pg-prev"></div><div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button" disabled>Add rows</button></div>', { cls: "nw-win", sticky: true });
-    let rows = []; const prev = $(".pg-prev", m), add = $(".yn-yes", m);
-    const draw = () => { prev.innerHTML = rows.length ? '<table class="tbl pt-tbl"><thead><tr><th class="pt-no">Add</th>' + cols.map(([k, n]) => '<th>' + esc(n) + '</th>').join("") + '</tr></thead><tbody>' + rows.map((r, i) => '<tr><td class="pt-no"><input type="checkbox" data-i="' + i + '"' + (r._on ? " checked" : "") + '></td>' + cols.map(([k]) => '<td><input class="in pt-in" data-i="' + i + '" data-k="' + k + '" value="' + esc(r[k] || "") + '"></td>').join("") + '</tr>').join("") + '</tbody></table>' : "";
-      $$("input[type=checkbox]", prev).forEach(c => c.onchange = () => { rows[+c.dataset.i]._on = c.checked; count(); });
-      $$("input.pt-in", prev).forEach(i => i.onchange = () => rows[+i.dataset.i][i.dataset.k] = i.value.trim()); count(); };
+  /* rows from any AI (Copilot, ChatGPT, Gemini…): Copy for AI puts what's typed and the instructions on the clipboard; the AI's
+     reply, pasted back, is read line by line into rows to check before they're added. No key, nothing to fail on our side. */
+  const AIF = { mto: "ITEM | SIZE | RATING | MATERIAL | STANDARD | QTY | UNIT | NOTES", spares: "DESCRIPTION | PART NO | QTY | UNIT | NOTES" };
+  function aiPrompt(kind, tx){ const mto = kind === "mto";
+    return "You are writing a " + (mto ? "material take off (MTO)" : "list of spares to take from the store") + " for a maintenance job at a mineral processing plant in Australia.\n"
+      + "From the request at the end, list every item needed.\n\nReply with ONLY these lines inside one code block, one item per line, nothing else:\n" + AIF[kind] + "\n\nRules:\n"
+      + (mto ? "- ITEM is one of these short forms: " + Mto.codes().join(", ") + ". Anything else (a bearing, a motor) is written plainly.\n"
+        + "- SIZE as DN for pipe and fittings (DN50, DN300), M24x85 for a bolt, 100x100x5 for steel sections, 10 for plate thickness.\n"
+        + "- RATING is the schedule, class or finish: SCH40, SCH10S, CL150 RF, CL3000 SW, TBL E, HDG, Black.\n"
+        + "- MATERIAL in short form: A106 GR B, A403 WP316L, A234 WPB, A105, A182 F316L, C350L0, 300, 8.8, B7 / 2H.\n"
+        + "- STANDARD in short form: B36.10M, B36.19M, B16.9, B16.5, B16.11, AS 2129, AS/NZS 1163, AS/NZS 3679.1, AS/NZS 3678.\n"
+        + "- UNIT is one of EA, M, LG (stock length), SHT (sheet), KG, SET.\n- Examples:\n  ELB 90 LR | DN300 | SCH10S | A403 WP316L | B16.9 | 2 | EA |\n  FLG SO | DN300 | TBL E | A182 F316L | AS 2129 | 4 | EA |\n  SHS | 100x100x5 | Black | C350L0 | AS/NZS 1163 | 24 | M | brace\n"
+        : "- DESCRIPTION is short and plain. PART NO exactly as written in the request, or empty.\n- UNIT is one of EA, M, KG, SET, L.\n")
+      + "- Leave a part empty when it doesn't apply, but keep its | separator. Don't guess part numbers.\n\nRequest:\n" + tx; }
+  function aiRead(kind, text){ return String(text || "").split(/\r?\n/).map(l => l.trim().replace(/^```\w*|```$/g, "").trim()).filter(l => (l.match(/\|/g) || []).length >= 2)
+    .map(l => l.replace(/^\|/, "").replace(/\|$/, "").split("|").map(x => x.trim())).filter(p => !/^(ITEM|DESCRIPTION)$/i.test(p[0]) && !/^-+$/.test(p[0])); }
+  function gemini(a, kind){ if (!Store.S.edit) return App.viewOnly(); const cols = COLS[kind], mto = kind === "mto";
+    const m = modal('<h3>Rows from AI' + tipI("Works with any AI: Copilot, ChatGPT, Gemini. Nothing is sent from here.") + '</h3>'
+      + '<div class="ai-st"><b>1</b> Type or paste what\'s needed</div><textarea class="in ta" rows="4" data-k="tx" placeholder="e.g. replace the DN300 spool on the tails line: 1.2 m of pipe, 1 elbow, 2 flanges, gaskets and bolts"></textarea>'
+      + '<div class="nw-pb"><button type="button" class="btn" data-k="cp">Copy for AI</button><span class="dim nw-msg">Then paste it into the AI and copy its whole reply.</span></div>'
+      + '<div class="ai-st"><b>2</b> Paste the AI\'s reply here</div><textarea class="in ta" rows="4" data-k="re" placeholder="Paste the whole reply (Ctrl+V)"></textarea>'
+      + '<div class="pg-prev"></div><div class="yn-btns"><button type="button" class="yn-no">Cancel</button><button type="button" class="yn-yes" disabled>Add rows</button></div>', { cls: "pg-win" });
+    let rows = []; const prev = $(".pg-prev", m), add = $(".yn-yes", m), msg = $(".nw-msg", m);
+    $("[data-k=cp]", m).onclick = () => { const tx = $("[data-k=tx]", m).value.trim(); if (!tx){ msg.textContent = "Type what's needed first."; return; }
+      const done = ok => { msg.textContent = ok ? "Copied. Paste it into Copilot, ChatGPT or Gemini, then copy its whole reply." : "Couldn't copy: select the text in the box and copy it yourself."; };
+      navigator.clipboard.writeText(aiPrompt(kind, tx)).then(() => done(true), () => done(false)); };
     const count = () => { const n = rows.filter(r => r._on).length; add.disabled = !n; add.textContent = "Add " + n + " row" + (n === 1 ? "" : "s"); };
-    $("[data-k=go]", m).onclick = async () => { const tx = $("textarea", m).value.trim(), msg = $(".nw-msg", m), b = $("[data-k=go]", m); if (!tx) return; b.disabled = true; msg.textContent = "Asking Gemini…";
-      try { const out = await Intake.ask("Turn this text into a parts list (a material take off) for a maintenance action at a processing plant.\nReturn ONLY a JSON object: {\"items\": [{\"desc\": description, \"part\": part number or equipment tag, \"qty\": quantity as a number or string, \"unit\": unit such as ea, m, kg, L, set, \"notes\": anything else useful such as supplier, size or rating}]}."
-          + " One item per distinct part. If the text doesn't give a value, use an empty string. Do not guess. Keep part numbers and tags exactly as written.\n\nTEXT:\n" + tx);
-        rows = (out.items || out.parts || []).map(r => { const o = { _on: true }; cols.forEach(([k]) => { const v = r[k]; o[k] = v == null ? "" : String(v).trim(); }); return o; }).filter(r => cols.some(([k]) => r[k]));
-        msg.textContent = rows.length ? "Found " + rows.length + ". Check them, untick any you don't want, then add." : "No parts found in that text."; draw(); }
-      catch (e){ msg.textContent = e.message; } finally { b.disabled = false; } };
+    const read = () => { const ps = aiRead(kind, $("[data-k=re]", m).value);
+      rows = ps.map(p => mto ? Object.assign({ _on: true }, Mto.fromAi(p)) : (o => o)({ _on: true, desc: p[0] || "", part: p[1] || "", qty: p[2] || "", unit: (p[3] || "").toLowerCase(), notes: p[4] || "" }));
+      prev.innerHTML = rows.length ? '<div class="dim">Read ' + rows.length + ' row' + (rows.length === 1 ? "" : "s") + '. Untick any you don\'t want.' + (mto && rows.some(r => Mto.missing(r).length) ? ' Rows with a yellow dot still need a pick in the MTO.' : "") + '</div><table class="tbl pt-tbl"><tbody>'
+        + rows.map((r, i) => '<tr><td class="pt-no"><input type="checkbox" class="ck" data-i="' + i + '"' + (r._on ? " checked" : "") + '></td><td>' + (mto && Mto.missing(r).length ? '<span class="mt-dot" title="Still to pick: ' + esc(Mto.missing(r).join(", ")) + '"></span> ' : "") + esc(mto ? Mto.desc(r) : r.desc) + '</td><td class="dim">' + esc((r.qty || "") + " " + (r.unit || "")) + '</td></tr>').join("") + '</tbody></table>'
+        : ($("[data-k=re]", m).value.trim() ? '<div class="dim">No rows found in that reply. Paste the whole reply, with the lines that have | between the parts.</div>' : "");
+      $$("input[type=checkbox]", prev).forEach(c => c.onchange = () => { rows[+c.dataset.i]._on = c.checked; count(); }); count(); };
+    $("[data-k=re]", m).oninput = read;
     $(".yn-no", m).onclick = () => m.close();
-    add.onclick = () => { const take = rows.filter(r => r._on).map(r => { const o = { id: uid() }; cols.forEach(([k]) => { if (r[k]) o[k] = r[k]; }); return o; }); if (!take.length) return;
+    add.onclick = () => { const take = rows.filter(r => r._on).map(r => { const o = Object.assign({ id: uid() }, r); delete o._on; if (mto) Mto.recalc(o); else cols.forEach(([k]) => { if (!o[k]) delete o[k]; }); return o; }); if (!take.length) return;
       Store.mutate("a:" + a._p, () => { list(a, kind).push(...take); Store.touch(a); }); Store.log("Added " + take.length + " parts to the " + NAME[kind] + " of " + Store.actId(a)); m.close(); }; }
   return { renderFor, NAME, loadPdf, created };
 })();

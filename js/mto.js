@@ -25,9 +25,6 @@ const Mto = (() => {
   const sheet = L => { const m = String(L || "").match(/^(\d+)x(\d+)$/); return m ? { l: +m[1], w: +m[2] } : null; };
   /* mass: kg per metre for lengths, kg per m2 for plate */
   function kg(it){ const z = sz(it); if (!z) return null; if (z.r){ const r = z.r[it.r]; return r ? r.kg : null; } return z.kg == null ? null : z.kg; }
-  function desc(it){ const T = type(it), S = std(it); if (!T) return it.desc || "";
-    const fin = T.rl === "Finish", ab = (T.n.match(/\(([A-Z]+)/) || [])[1], z = ab && it.z ? it.z.replace(new RegExp("\\s*" + ab + "$"), "") : it.z;   // ("(SHS) 100x100x5", not "(SHS) 100x100x5 SHS")
-    return [T.n + (z ? " " + z : "") + (!fin && it.r ? " " + it.r : ""), it.m, fin && it.r, S && S.n, it.L && (T.k === "len" ? lenTxt(it.L) + " lengths" : T.k === "plate" ? lenTxt(it.L) + " mm sheets" : "")].filter(Boolean).join(", "); }
 
   /* ---------- packing ---------- */
   /* lengths: biggest piece first, each into the first length it fits (first fit decreasing), a saw cut between pieces */
@@ -73,38 +70,71 @@ const Mto = (() => {
       + (k ? " Weight about " + Math.round((n + sp) * s.l * s.w / 1e6 * k).toLocaleString() + " kg (" + k + " kg/m²)." : "")
       + (res.big.length ? " " + res.big.length + " piece" + (res.big.length === 1 ? " is" : "s are") + " bigger than the sheet and " + (res.big.length === 1 ? "isn't" : "aren't") + " counted." : ""); }
 
-  /* ---------- the table ---------- */
-  const typeOpts = cur => '<option value="other"' + (!TY[cur] ? " selected" : "") + '>Other (type it in)</option>' + [...new Set(TYPES.map(t => t.g))].map(g => '<optgroup label="' + esc(g) + '">' + TYPES.filter(t => t.g === g).map(t => '<option value="' + t.id + '"' + (t.id === cur ? " selected" : "") + '>' + esc(t.n) + '</option>').join("") + '</optgroup>').join("");
-  const opts = (list, cur, lab) => list.map(v => '<option value="' + esc(v) + '"' + (String(v) === String(cur) ? " selected" : "") + '>' + esc(lab ? lab(v) : v) + '</option>').join("");
-  const sel = (it, c, inner, ro, cls) => '<select class="in pt-in mt-sel' + (cls || "") + '" data-r="' + it.id + '" data-c="' + c + '"' + (ro ? " disabled" : "") + '>' + inner + '</select>';
-  const inp = (it, c, v, ro, ex) => '<input class="in pt-in' + (v === "TBC" ? " tbc" : "") + '" data-r="' + it.id + '" data-c="' + c + '"' + (ex || "") + (ro ? " readonly" : "") + ' value="' + esc(v == null ? "" : v) + '">';
-  const UNITS = ["ea", "m", "lengths", "kg", "sheets", "m2", "set", "pairs", "L", "box", "roll", "lot"];
-  const COLS = ["Type", "Standard", "Size", "Material", "Rating", "Stock length", "Qty", "Unit", "", "ETA", "Notes"];
-  function table(a, ro){ const items = a.mto || (a.mto = []), lists = new Map();
-    const blanks = ro ? 0 : 1;
-    const row = (it, i) => { const T = type(it), S = std(it), res = T && pack(it), on = open.has(it.id), many = T && (T.k === "len" || T.k === "plate");
+  /* ---------- short form (standard MTO wording: ELB 90 LR, FLG WN, CL150 RF, A403 WP316L, B16.9) ---------- */
+  const SHORT = { pipe: "PIPE", sspipe: "PIPE", sstube: "TUBE", pe: "PIPE PE", ub: "UB", uc: "UC", wb: "WB", pfc: "PFC", tfb: "TFB", ea: "EA", ua: "UA", shs: "SHS", rhs: "RHS", chs: "CHS",
+    flat: "FLT", round: "RND BAR", square: "SQ BAR", rod: "THD ROD", plate: "PL", el90: "ELB 90 LR", el90s: "ELB 90 SR", el45: "ELB 45", tee: "TEE EQ", cap: "CAP", rtee: "TEE RED", rcon: "RED CONC",
+    recc: "RED ECC", stub: "STUB END", coup: "CPLG", union: "UNION", nip: "NIP", plug: "PLUG", bush: "BUSH", olet: "OLET", flwn: "FLG WN", flso: "FLG SO", flbl: "FLG BL", flpl: "FLG PL", fllj: "FLG LJ",
+    flsw: "FLG SW", flth: "FLG THD", gksw: "GK SPWD", gkring: "GK RING", gkff: "GK FF", gkrj: "GK RTJ", bolt: "HB", screw: "SET SCR", stud: "SB", nut: "NUT", washer: "WSHR", anchor: "ANCHOR" };
+  const rShort = r => String(r || "").replace(/^AS 2129 Table /, "TBL ").replace(/^Table /, "TBL ").replace(/^AS 4087 /, "").replace(/^Class (\d+)/, "CL$1").replace(/ socket weld$/, " SW").replace(/ threaded$/, " THD")
+    .replace(/^Hot dip galvanised$/, "HDG").replace(/^Zinc plated$/, "ZP").replace(/^Galvanised$/, "GALV").replace(/^PTFE coated \(Xylan\)$/, "PTFE CTD").replace(/^Sockolet /, "SOL ").replace(/^Threadolet /, "TOL ").replace(/^Weldolet /, "WOL ");
+  function mShort(m){ let s = String(m || "").replace(/^ASTM /, ""); if (!s) return "";
+    const g = s.match(/^(\d+) \/ (graphite|PTFE), (.*)$/); if (g) return g[1] + "/" + (g[2] === "graphite" ? "GRAPH" : "PTFE") + " " + g[3].replace(/316 inner and /, "316 IR ").replace(/CS outer ring/, "CS OR");
+    s = s.replace(/^Compressed fibre \(CNAF\) ([\d.]+) mm$/, "CNAF $1").replace(/ (\d+(\.\d+)?) mm$/, " $1");
+    const p = s.match(/^(.*?)\s*\(([^)]*)\)\s*(.*)$/); if (p){ const inner = p[2].replace(/^ASTM /, ""); s = /^A\d{3} (TP|WP|F)/.test(inner) ? inner : /^(A\d{3}|A\d-\d\d)$/.test(inner) ? p[1] + " " + inner : (p[1] + " " + p[3]).trim(); }
+    return s.replace(/\bGr /, "GR ").replace(/\bgalvanised\b/i, "GALV"); }
+  const stShort = n => String(n || "").replace(/^Stainless, /, "").replace(/\bASME /g, "").replace(/\bASTM /g, "").replace(/ butt weld$/, "").replace(/ forged \(threaded \/ socket weld\)$/, "").replace(/ \(China\)$/, " CN").replace(/ \((hot rolled|water|water, gas, air)\)$/, "").replace(/ \(Bisalloy, Hardox\)$/, "");
+  const UNIT = { ea: "EA", m: "M", lengths: "LG", sheets: "SHT", m2: "M2", kg: "KG", pairs: "PR", sets: "SET", boxes: "BOX", set: "SET", box: "BOX", roll: "ROLL", lot: "LOT", L: "L" };
+  const uShort = u => UNIT[u] || String(u || "").toUpperCase();
+  /* a size without its section's letters repeated ("100x100x5", not "100x100x5 SHS") */
+  const zShort = it => { const T = type(it), ab = T && (T.n.match(/\(([A-Z]+)/) || [])[1]; return ab && it.z ? String(it.z).replace(new RegExp("\\s*" + ab + "$"), "") : it.z || ""; };
+  /* the short form, used on the MTO, the RFQ and the exports: item, size, rating, material, standard, stock length */
+  function desc(it){ const T = type(it), S = std(it); if (!T) return it.desc || "";
+    const L = it.L && (T.k === "len" ? lenTxt(it.L).replace(" m", "m") + " LG" : T.k === "plate" ? String(it.L).replace("x", "×") + " SHT" : "");
+    return [SHORT[T.id] || T.n, zShort(it), rShort(it.r), mShort(it.m), S && stShort(S.n), L].filter(Boolean).join(" "); }
+
+  /* ---------- the table: one row per item, under thin headings by kind; each pick is a box that only offers what fits ---------- */
+  const COLS = [["t", "Item"], ["z", "Size"], ["r", "Rating"], ["m", "Material"], ["s", "Std"], ["qty", "Qty"], ["notes", "Notes"], ["x", ""]];
+  const REQ = new Set(["t", "z", "r", "m", "qty"]);
+  /* what a row still needs picked: its item, size, schedule or class, material and quantity (for one typed in: what it is and how many) */
+  function missing(it){ const T = type(it), out = []; if (!T){ if (!String(it.desc || "").trim()) out.push("item"); }
+    else { if (!it.z) out.push("size"); if (ratings(it).length && !it.r) out.push(T.rl ? T.rl.toLowerCase() : "rating"); if ((std(it) || {}).mats && std(it).mats.length && !it.m) out.push("material"); }
+    if (!String(it.qty || "").trim()) out.push("quantity"); return out; }
+  const GROUP = it => { const T = type(it); return T ? T.g : "Other"; };
+  /* the boxes' lists */
+  function choices(it, c){ const T = type(it), S = std(it);
+    if (c === "t") return [{ v: "other", t: "Other", sub: "type it in (a bearing, a motor)" }].concat(TYPES.map(x => ({ v: x.id, t: SHORT[x.id] || x.n, sub: x.n, g: x.g })));
+    if (!T) return [];
+    if (c === "z"){ const seen = new Set(), out = []; [S].concat(T.stds.filter(s => s !== S)).forEach(s => s.sizes.forEach(z => { if (seen.has(z.n)) return; seen.add(z.n); out.push({ v: z.n, t: z.n, sub: [z.a, s !== S ? stShort(s.n) : ""].filter(Boolean).join("  ·  ") }); })); return out; }
+    if (c === "r") return ratings(it).map(r => ({ v: r, t: rShort(r), sub: rShort(r) !== r ? r : "" }));
+    if (c === "m") return (S.mats || []).map(m => ({ v: m, t: mShort(m), sub: mShort(m) !== m ? m : "" }));
+    if (c === "s") return T.stds.filter(s => !it.z || s.sizes.some(z => z.n === it.z)).map(s => ({ v: s.id, t: stShort(s.n), sub: (s.o !== "INT" ? ORIGIN[s.o] + ", " : "") + s.n }));
+    if (c === "unit") return (T.units || []).map(u => ({ v: u, t: uShort(u), sub: u }));
+    return []; }
+  const shown = (it, c) => { const T = type(it), S = std(it);
+    if (c === "t") return T ? SHORT[T.id] || T.n : it.desc || ""; if (!T) return c === "z" ? it.part || "" : c === "unit" ? it.unit || "" : it[c] || "";
+    if (c === "z") return zShort(it); if (c === "r") return rShort(it.r); if (c === "m") return mShort(it.m); if (c === "s") return S ? stShort(S.n) : ""; if (c === "unit") return uShort(it.unit); return it[c] == null ? "" : it[c]; };
+  const titleOf = (it, c) => { const T = type(it), S = std(it), z = sz(it); return c === "t" ? (T ? T.n : "") : c === "z" ? (z && z.a ? z.a : "") : c === "r" ? it.r || "" : c === "m" ? it.m || "" : c === "s" ? (S ? S.n : "") : ""; };
+  let focusNext = null;   // (after a pick, the next box still to fill in on that row)
+  function table(a, ro){ const items = a.mto || (a.mto = []); let last = null, n = 0; shorten(items);
+    const row = it => { const T = type(it), res = T && pack(it), on = open.has(it.id), many = T && (T.k === "len" || T.k === "plate"), miss = ro ? [] : missing(it), auto = !!res;
       const tg = many ? '<button type="button" class="mt-tg' + (on ? " on" : "") + '" data-tg="' + it.id + '" title="' + (on ? "Hide" : "Show") + ' the pieces to cut">' + (on ? "▾" : "▸") + (cuts(it).length ? '<b>' + cuts(it).reduce((t, c) => t + Math.max(1, Math.round(+c.n || 1)), 0) + '</b>' : "") + '</button>' : "";
-      let h = '<tr data-id="' + it.id + '" class="mt-row' + (on ? " open" : "") + '"><td class="pt-no">' + (i + 1) + tg + '</td><td>' + sel(it, "t", typeOpts(it.t), ro) + '</td>';
-      if (!T) h += '<td colspan="3">' + inp(it, "desc", it.desc, ro, ' placeholder="Description"') + '</td><td colspan="2">' + inp(it, "part", it.part, ro, ' placeholder="Part / tag no."') + '</td><td></td>';
-      else { const key = "mtz-" + T.id + "-" + S.id; lists.set(key, S); const rs = ratings(it);
-        h += '<td>' + sel(it, "s", T.stds.map(s => '<option value="' + s.id + '"' + (s === S ? " selected" : "") + '>' + esc((s.o === "INT" ? "" : s.o + " · ") + s.n) + '</option>').join(""), ro, " mt-std") + '</td>'
-          + '<td>' + inp(it, "z", it.z, ro, ' list="' + key + '" placeholder="Pick or type" autocomplete="off"' + (it.z && !sz(it) ? ' title="Not in the library, check the size"' : "")) + '</td>'
-          + '<td>' + sel(it, "m", opts(S.mats.includes(it.m) || !it.m ? S.mats : S.mats.concat(it.m), it.m), ro) + '</td>'
-          + '<td>' + (rs.length ? sel(it, "r", opts(rs, it.r), ro) : '<span class="dim">—</span>') + '</td>'
-          + '<td>' + (S.lens ? sel(it, "L", opts(S.lens, it.L, lenTxt), ro) : "") + '</td>'; }
-      const auto = !!res;
-      h += '<td>' + inp(it, "qty", it.qty, ro || auto, ' inputmode="decimal"' + (auto ? ' title="Worked out from the pieces (▸)"' : "")) + '</td>'
-        + '<td>' + (T ? sel(it, "unit", opts(T.units.includes(it.unit) || !it.unit ? T.units : T.units.concat(it.unit), it.unit), ro) : inp(it, "unit", it.unit, ro, ' list="mt-units"')) + '</td>'
-        + '<td class="mt-ic"><button type="button" class="mt-i' + (it.info || res || (T && sz(it)) ? " on" : "") + '" data-info="' + it.id + '" title="More about this item: sizes, weight, how the total was worked out, and notes">' + INFO_I + '</button></td>'
-        + '<td>' + inp(it, "eta", it.eta, ro, ' type="date" title="When this part is expected on site"') + '</td><td>' + inp(it, "notes", it.notes, ro) + '</td>'
-        + '<td class="pt-act">' + (ro ? "" : '<button type="button" class="btn ghost sm pt-mv" title="Move this row to Spares">→ Spares</button><button type="button" class="ic-b sm pt-x" title="Remove this row">✕</button>') + '</td></tr>';
-      if (on && many) h += '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="13"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>';
+      const box = (c, ph, ex) => '<input class="in pt-in mt-pk" data-r="' + it.id + '" data-c="' + c + '" value="' + esc(shown(it, c)) + '" placeholder="' + ph + '" title="' + esc(titleOf(it, c)) + '"' + (ex || "") + (ro ? " readonly" : "") + ' autocomplete="off" spellcheck="false">';
+      let h = (GROUP(it) !== last ? '<tr class="mt-grp nosort"><td colspan="' + COLS.length + '">' + esc(last = GROUP(it)) + '</td></tr>' : "")
+        + '<tr data-id="' + it.id + '" class="mt-row' + (on ? " open" : "") + (miss.length ? " mt-part" : "") + '"><td class="pt-no">' + (miss.length ? '<span class="mt-dot" title="Still to pick: ' + esc(miss.join(", ")) + '"></span>' : ++n) + tg + '</td>'
+        + '<td>' + box("t", "Item") + '</td>'
+        + '<td>' + (T ? box("z", "Size") : box("part", "Part no.")) + '</td>'
+        + '<td>' + (T && !ratings(it).length ? "" : T ? box("r", "Sch") : "") + '</td>'
+        + '<td>' + (T ? box("m", "Material") : "") + '</td>'
+        + '<td>' + (T ? box("s", "Std", ' data-opt="1"') : "") + '</td>'
+        + '<td class="mt-qu"><input class="in pt-in mt-q" data-r="' + it.id + '" data-c="qty" inputmode="decimal" value="' + esc(it.qty || "") + '" placeholder="Qty"' + (ro || auto ? " readonly" : "") + (auto ? ' title="Worked out from the pieces (▸)"' : "") + '>'
+          + (T ? box("unit", "", ' data-opt="1"').replace("mt-pk", "mt-pk mt-un") : '<input class="in pt-in mt-u mt-un" data-r="' + it.id + '" data-c="unit" value="' + esc(uShort(it.unit)) + '" placeholder="EA"' + (ro ? " readonly" : "") + '>') + '</td>'
+        + '<td><input class="in pt-in" data-r="' + it.id + '" data-c="notes" value="' + esc(it.notes || "") + '"' + (ro ? " readonly" : "") + '></td>'
+        + '<td class="mt-ic"><button type="button" class="ic-b sm mt-more' + (it.info ? " on" : "") + '" data-more="' + it.id + '" title="About this item, move it to Spares, or remove it" aria-label="More for this row" aria-haspopup="true">⋯</button></td></tr>';
+      if (on && many) h += '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="' + COLS.length + '"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>';
       return h; };
-    const blank = k => '<tr class="pt-blank"><td class="pt-no"></td><td><select class="in pt-in mt-sel" data-r="new' + k + '" data-c="t"' + (ro ? " disabled" : "") + '><option value="" selected>Choose a type…</option>' + typeOpts("~").replace(' selected', "") + '</select></td><td colspan="3"><input class="in pt-in" data-r="new' + k + '" data-c="desc" placeholder="or type a description"' + (ro ? " readonly" : "") + '></td><td colspan="9"></td></tr>';
-    const body = items.map(row).join("") + Array.from({ length: blanks }, (_, k) => blank(k)).join("");
-    return '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl"><thead><tr><th class="pt-no">Item</th>' + COLS.map(n => '<th>' + esc(n) + '</th>').join("") + '<th class="pt-act"></th></tr></thead><tbody>' + body + '</tbody></table></div>'
-      + [...lists].map(([k, S]) => '<datalist id="' + k + '">' + S.sizes.map(z => '<option value="' + esc(z.n) + '">' + esc(z.a ? z.a + (z.od ? ", " + z.od + " OD" : "") : z.kg ? z.kg + " kg/m" : "") + '</option>').join("") + '</datalist>').join("")
-      + '<datalist id="mt-units">' + UNITS.map(u => '<option value="' + u + '">').join("") + '</datalist>'; }
+    const blank = ro ? "" : '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="new0" data-c="t" placeholder="+ Item" autocomplete="off" spellcheck="false"></td><td colspan="' + (COLS.length - 2) + '"></td></tr>';
+    return '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl"><thead><tr><th class="pt-no" data-col="No.">#</th>' + COLS.map(([c, n]) => '<th data-col="' + (n || c) + '">' + esc(n) + (REQ.has(c) ? '<span class="mt-rq" title="Needed">*</span>' : "") + '</th>').join("") + '</tr></thead><tbody>'
+      + items.map(row).join("") + blank + '</tbody></table></div>'; }
 
   /* the pieces under a row, with the packing drawn */
   function piecesHtml(it, res, ro){ const pl = isPlate(it), cs = it.cuts || [];
@@ -144,17 +174,53 @@ const Mto = (() => {
       const ro2 = new ResizeObserver(() => wrap.isConnected ? fit() : ro2.disconnect()); ro2.observe(wrap); }
     $$(".mt-tg", el).forEach(b => b.onclick = () => { const id = b.dataset.tg; open.has(id) ? open.delete(id) : open.add(id); App.render(); });
     $$("[data-info]", el).forEach(b => b.onclick = e => { e.stopPropagation(); info(a, find(b.dataset.info), b, ro); });
+    /* the ⋯ at the row's end: about this item (sizes, weight, how the total was worked out, notes), move it to Spares, remove it */
+    $$("[data-more]", el).forEach(b => b.onclick = e => { e.stopPropagation(); const it = find(b.dataset.more); if (!it) return;
+      if (ro) return info(a, it, b, ro);
+      Look.open(b, [{ v: "info", t: "About this item", sub: "sizes, weight, how the total was worked out, notes" }, { v: "mv", t: "Move to Spares" }, { v: "x", t: "Remove this row" }], null, async x => {
+        if (x.v === "info") return info(a, it, b, ro);
+        if (x.v === "mv"){ Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); it.desc = desc(it); (a.spares || (a.spares = [])).push(it); Store.touch(a); }); note("Moved to Spares (Ctrl+Z to undo)"); Store.log("Moved a part of " + Store.actId(a) + " to Spares"); return; }
+        if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?", "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); Store.touch(a); }); }); });
     if (ro) return;
-    $$(".mt-tbl .pt-in", el).forEach(i => { if (i.classList.contains("mt-cin")) return;
-      i.onchange = () => { const v = i.value.trim(), r = i.dataset.r, c = i.dataset.c;
-        if (r.startsWith("new")){ if (!v) return; const it = { id: uid() };
-          if (c === "t"){ if (v !== "other"){ it.t = v; settle(it, "t"); } else it.desc = ""; } else it[c] = v;
-          Parts.created.set(r, it.id); if (it.t && (TY[it.t].k === "len" || TY[it.t].k === "plate")) open.add(it.id);
-          recalc(it); Store.mutate(key, () => { items.push(it); Store.touch(a); }); Store.log("Added to the MTO of " + Store.actId(a)); return; }
-        const it = find(r); if (!it) return; const was = c === "L" ? String(it.L) : it[c] == null ? "" : String(it[c]); if (was === v) return;
-        Store.mutate(key, () => { if (c === "t"){ if (v === "other"){ const d = desc(it); ["t", "s", "z", "m", "r", "L", "cuts", "spare"].forEach(k => delete it[k]); it.desc = d; } else { it.t = v; settle(it, "t"); if (TY[v].k === "len" || TY[v].k === "plate") open.add(it.id); } }
-          else if (c === "spare") it.spare = Math.max(0, Math.round(+v || 0)) || undefined; else { it[c] = v; settle(it, c); }
-          recalc(it); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); }; });
+    const ORDER = ["t", "z", "r", "m", "qty"];
+    /* the next box on the row still to fill in (after a pick, the cursor goes there and its list opens) */
+    const after = (id, c) => { const it = find(id); if (!it) return null; const miss = missing(it); if (!miss.length) return null; const from = ORDER.indexOf(c);
+      for (const x of ORDER.slice(Math.max(0, from + 1)).concat(ORDER)){ const need = x === "t" ? !type(it) && !String(it.desc || "").trim() : x === "z" ? type(it) && !it.z : x === "r" ? type(it) && ratings(it).length && !it.r : x === "m" ? type(it) && !it.m : !String(it.qty || "").trim(); if (need) return { id, c: x }; } return null; };
+    const set = (it, c, v) => { const T = type(it);
+      if (c === "t"){ if (v === "other"){ const d = T ? desc(it) : it.desc || ""; ["t", "s", "z", "m", "r", "L", "cuts", "spare"].forEach(k => delete it[k]); it.desc = d; it.unit = it.unit || "ea"; return; }
+        it.t = v; const T2 = TY[v], S = T2.stds[0]; it.s = S.id; it.z = ""; delete it.m; delete it.r; it.L = S.lens ? S.defl : undefined; it.unit = T2.units[0]; if (T2.k !== "len" && T2.k !== "plate") delete it.cuts;
+        if (S.mats.length === 1) it.m = S.mats[0]; const rs = ratings(it); if (rs.length === 1) it.r = rs[0]; if (T2.k === "len" || T2.k === "plate") open.add(it.id); return; }
+      if (c === "z"){ const S0 = std(it); let S = S0.sizes.some(z => z.n === v) ? S0 : T.stds.find(s => s.sizes.some(z => z.n === v)) || S0; it.s = S.id; it.z = v;
+        if (it.m && !S.mats.includes(it.m)) delete it.m; if (!it.m && S.mats.length === 1) it.m = S.mats[0]; if (S.lens && !S.lens.includes(it.L)) it.L = S.defl;
+        const rs = ratings(it); if (it.r && !rs.includes(it.r)) delete it.r; if (!it.r && rs.length === 1) it.r = rs[0]; return; }
+      if (c === "s"){ const S = T.stds.find(s => s.id === v); if (!S) return; it.s = S.id; if (it.z && !S.sizes.some(z => z.n === it.z)) it.z = ""; if (it.m && !S.mats.includes(it.m)) delete it.m; if (S.lens && !S.lens.includes(it.L)) it.L = S.defl; const rs = ratings(it); if (it.r && !rs.includes(it.r)) delete it.r; return; }
+      it[c] = v; };
+    const save = (id, c, v) => { const isNew = String(id).startsWith("new"); let it = isNew ? { id: uid(), qty: "" } : find(id); if (!it) return;
+      Store.mutate(key, () => { set(it, c, v); recalc(it); if (isNew){ const g = GROUP(it), at = items.map(GROUP).lastIndexOf(g); items.splice(at < 0 ? items.length : at + 1, 0, it); } Store.touch(a); });
+      Store.log((isNew ? "Added to" : "Edited") + " the MTO of " + Store.actId(a)); focusNext = after(it.id, c) || (isNew || !missing(it).length ? { id: "new0", c: "t", quiet: true } : null); };
+    /* the pick boxes: the app's card with what fits; typing narrows it */
+    $$(".mt-pk", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c, it = find(r) || { qty: "" }; let key2 = null;
+      const free = c === "part" || (c === "t" && !type(it) && it.desc != null && r !== "new0");
+      const show = () => { if (free && c === "part") return; const all = choices(it, c); if (!all.length) return Look.close();
+        const q = i.value.trim().toLowerCase(), typed = q && q !== String(shown(it, c)).toLowerCase(), ws = typed ? q.split(/\s+/) : [];
+        const list = (ws.length ? all.filter(x => ws.every(w => (x.t + " " + (x.sub || "") + " " + (x.g || "")).toLowerCase().includes(w))) : all).slice(0, 300);
+        key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], it[c === "s" ? "s" : c], x => { if (x.v === "") return; i.value = x.t; save(r, c, x.v); App.render(); }); };
+      i.onfocus = () => { i.select(); show(); };
+      i.oninput = () => { if (free) return; show(); };
+      i.onkeydown = e => { if (key2 && /^(ArrowDown|ArrowUp|Escape)$/.test(e.key)) return key2(e);
+        if (e.key === "Enter" || e.key === "Tab"){ const v = i.value.trim(); const lit = document.querySelector(".lk-card .lk-o.hi:not(.dis)");
+          if (lit && !free){ e.preventDefault(); lit.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })); return; }
+          if (c === "t" && v && (r === "new0" || !type(it))){ e.preventDefault(); Look.close(); Store.mutate(key, () => { let x = r === "new0" ? null : find(r); if (!x){ x = { id: uid(), desc: v, unit: "ea", qty: "" }; items.push(x); } else x.desc = v; Store.touch(a); focusNext = { id: x.id, c: "qty" }; }); App.render(); return; }
+          if (free && v !== String(it[c] || "")){ e.preventDefault(); save(r, c, v); App.render(); } } };
+      i.onblur = () => { setTimeout(() => { if (document.activeElement !== i) Look.closeFor(i); }, 150);
+        if (free){ const v = i.value.trim(); if (v !== String((c === "t" ? it.desc : it[c]) || "")) { save(r, c === "t" ? "desc" : c, v); } } }; });
+    /* quantity, unit (for one typed in) and notes: typed */
+    $$(".mt-tbl .pt-in:not(.mt-pk):not(.mt-cin)", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c;
+      i.onchange = () => { const v = i.value.trim(), it = find(r); if (!it || String(it[c] == null ? "" : it[c]) === v) return; if (c === "spare"){ Store.mutate(key, () => { it.spare = Math.max(0, Math.round(+v || 0)) || undefined; recalc(it); Store.touch(a); }); return; }
+        Store.mutate(key, () => { it[c] = v; recalc(it); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "qty" && !missing(it).length) focusNext = { id: "new0", c: "t", quiet: true }; };
+      i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }; });
+    /* after a pick: the next box still to fill in on that row */
+    if (focusNext){ const f = focusNext; focusNext = null; const t = $('.mt-tbl [data-r="' + f.id + '"][data-c="' + f.c + '"]', el); if (t) setTimeout(() => { t.focus(); if (f.quiet) Look.closeFor(t); }, 0); }
     /* the pieces */
     $$(".mt-cin", el).forEach(i => { i.onchange = () => { const it = find(i.dataset.r), c = i.dataset.c, id = i.dataset.cut; if (!it) return; let v = i.value.trim();
         if (c !== "mk"){ if (v === "") { if (id === "new") return; } else { const x = c === "n" ? Math.round(+v) : num(v); if (!(x > 0)){ i.classList.add("bad"); i.title = c === "n" ? "A whole number" : "A length in mm, or in m with an m (2.4m)"; return; } v = x; } }
@@ -225,5 +291,25 @@ const Mto = (() => {
   async function cutList(a, rev){ try { const blob = await cutPdf(a), name = Store.actId(a) + " Cutting list" + (rev ? " Rev " + rev : "") + ".pdf"; Excel.save(blob, name); Local.saveOriginal(a, name, blob); return name; }
     catch (e){ console.error(e); alert("Couldn't make the cutting list: " + e.message); } }
 
-  return { table, wire, recalc, desc, pack, explain, needsCut, cutList, info, TY };
+  /* the short form for rows saved before it (in memory only: they save that way at their next change) */
+  const seen = new WeakSet(); function shorten(list){ (list || []).forEach(it => { if (!it || seen.has(it)) return; seen.add(it); if (type(it)) it.desc = desc(it); }); }
+  /* a line from the AI (item, size, rating, material, standard, qty, unit, notes) as a row: matched to the library where
+     it can be, the rest left to pick (the row shows its yellow dot); an item not in the library is typed in as it came */
+  const norm = x => String(x || "").toUpperCase().replace(/\s+/g, " ").replace(/[×]/g, "X").trim();
+  function fromAi(p){ const [ci, cz, cr, cm, cs, cq, cu, cn] = p.map(x => x || ""), it = { qty: cq.replace(/[^\d.]/g, ""), notes: cn };
+    /* (several kinds can share a short form, PIPE for carbon and stainless: the one whose standard, material and size fit best) */
+    const want = norm(cz).replace(/^DN\s*/, "DN").replace(/^(\d+)$/, "DN$1"), sizeIn = s => s.sizes.find(x => norm(x.n) === want || norm(x.n).replace(/ [A-Z]+$/, "") === norm(cz) || (x.a && norm(x.a) === norm(cz)));
+    let cands = TYPES.filter(t => norm(SHORT[t.id]) === norm(ci)); if (!cands.length) cands = TYPES.filter(t => norm(ci).startsWith(norm(SHORT[t.id]) + " ") || norm(t.n) === norm(ci));
+    const score = t => t.stds.reduce((best, s) => Math.max(best, (cs && norm(stShort(s.n)) === norm(cs) ? 2 : 0) + (cm && (s.mats || []).some(x => norm(mShort(x)) === norm(cm) || norm(x).includes(norm(cm))) ? 2 : 0) + (sizeIn(s) ? 1 : 0)), 0);
+    const T = cands.sort((x, y) => score(y) - score(x))[0];
+    const U = { EA: "ea", M: "m", LG: "lengths", SHT: "sheets", KG: "kg", SET: "sets", M2: "m2", PR: "pairs" };
+    if (!T){ it.desc = [ci, cz, cr, cm, cs].filter(Boolean).join(" "); it.unit = U[norm(cu)] || cu.toLowerCase() || "ea"; return it; }
+    it.t = T.id;
+    const S = T.stds.find(s => cs && norm(stShort(s.n)) === norm(cs) && sizeIn(s)) || T.stds.find(s => sizeIn(s)) || T.stds.find(s => cs && norm(stShort(s.n)) === norm(cs)) || T.stds[0], z = sizeIn(S);
+    it.s = S.id; if (z) it.z = z.n; it.L = S.lens ? S.defl : undefined;
+    const rs = ratings(it), r = rs.find(x => norm(rShort(x)) === norm(cr) || norm(x) === norm(cr)); if (r) it.r = r; else if (rs.length === 1) it.r = rs[0];
+    const ms = S.mats || [], mm = ms.find(x => norm(mShort(x)) === norm(cm) || norm(x) === norm(cm)) || (cm && ms.find(x => norm(x).includes(norm(cm)))); if (mm) it.m = mm; else if (ms.length === 1) it.m = ms[0];
+    it.unit = U[norm(cu)] && (T.units || []).includes(U[norm(cu)]) ? U[norm(cu)] : T.units[0]; return it; }
+  const codes = () => [...new Set(TYPES.map(t => SHORT[t.id]).filter(Boolean))];
+  return { table, wire, recalc, desc, pack, explain, needsCut, cutList, info, TY, shorten, missing, fromAi, codes };
 })();
