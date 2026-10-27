@@ -307,7 +307,8 @@ function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts)
   /* a column's natural width: its heading or its widest entry (a box measures by what's typed in it, or its hint) */
   const natural = i => { const th = ths[i], hf = getComputedStyle(th).font; let w = textW(th.textContent.trim(), hf) + (opts.hPad || 34);
     rows.forEach(r => { const td = r.cells[i]; if (!td) return; const f = td.querySelector("input,select,textarea"), font = getComputedStyle(f || td).font;
-      const t = f ? (f.tagName === "SELECT" ? (f.options[f.selectedIndex] || {}).text : f.value || f.placeholder) : td.textContent.trim(); w = Math.max(w, textW(t, font) + (f ? (f.tagName === "SELECT" ? 48 : opts.inPad || 36) : 20)); });
+      const t = f ? (f.tagName === "SELECT" ? (f.options[f.selectedIndex] || {}).text : f.value || f.placeholder) : td.textContent.trim(); const more = [...td.querySelectorAll("input:not([type=checkbox]):not([hidden])")].slice(1).reduce((t2, g) => t2 + textW(g.value || g.placeholder, getComputedStyle(g).font) + (opts.inPad || 36) + 2, 0);   // (two boxes in a cell, a reducing fitting's sizes: room for both)
+      w = Math.max(w, textW(t, font) + (f ? (f.tagName === "SELECT" ? 48 : opts.inPad || 36) : 20) + more); });
     return Math.min(opts.max || 480, Math.ceil(w + ((opts.extra || {})[tblKit.id(th, i)] || 0))); };   // (extra: room for something inside a column's boxes, like the MTO's (i))
   const id = tblKit.id;
   let cg = table.querySelector("colgroup"); if (!cg){ cg = document.createElement("colgroup"); table.insertBefore(cg, table.firstChild); } cg.innerHTML = ths.map(() => "<col>").join("");

@@ -109,7 +109,7 @@ const Mto = (() => {
     [/\bfemale\b/gi, "F"], [/\bmale\b/gi, "M"], [/\bseamless\b/gi, "SMLS"], [/\bsch (\d+\w*)/gi, "SCH$1"], [/\bhot dip(ped)? galvanised\b/gi, "HDG"], [/\bgalvanised\b/gi, "GALV"], [/\bstainless steel\b/gi, "SS"], [/\bcarbon steel\b/gi, "CS"], [/\bmodel\b/gi, "MDL"],
     [/\bASTM /g, ""], [/\bASME /g, ""], [/\bGr\.? /g, "GR "], [/\bmanufacturers?'?s? (std|standard)\b/gi, ""]];
   const spShort = t => { let o = PipeSpec.clean(t); SPW.forEach(([re, w]) => o = o.replace(re, w)); return o.replace(/\s*,\s*/g, " ").replace(/\s+/g, " ").trim().toUpperCase(); };
-  function specShort(it){ const R = specRes(it), dn = it.dn ? "DN" + it.dn : "";
+  function specShort(it){ const R = specRes(it), dn = it.dn ? "DN" + it.dn + (it.dn2 && PipeSpec.reducing(it.it) ? " X DN" + it.dn2 : "") : "";
     if (R.v) return [spShort(PipeSpec.clean((R.rows.find(x => x[0] === "Type") || [, ""])[1]).split(" - ")[0]).replace(/\bBALL VALVE\b/, "BV").replace(/\bGATE VALVE\b/, "GV").replace(/\bGLOBE VALVE\b/, "GLV").replace(/\bBUTTERFLY VALVE\b/, "BFV").replace(/\bCHECK VALVE\b/, "CV"), dn, spShort(R.auto), R.v, it.cl].filter(Boolean).join(" ");
     if (R.g) return ["GK", dn, R.g, it.cl].filter(Boolean).join(" ");
     if (!R.c) return [it.cl, dn, it.it && itName(it.it)].filter(Boolean).join(" ").toUpperCase();
@@ -189,6 +189,7 @@ const Mto = (() => {
     if (isInst(it) && c === "part"){ const e = instType(it.desc); return e ? e.mm.map(([m, n]) => ({ v: m, t: m, sub: n + " " + (n === 1 ? "tag" : "tags") + " in the plant lists" })) : []; }
     if (c === "cl") return [{ v: "N/A", t: "N/A", sub: "not to a piping class: the general choices" }, { v: "cat:inst", t: "Instrument or control valve", sub: "from the instrument index and the control valve list" }].concat(PipeSpec.classes().map(x => ({ v: x, t: x, sub: PipeSpec.title(x).slice(0, 110) }))); const T = type(it), S = std(it);
     if (c === "dn") return PipeSpec.sizes(it.cl).map(n => ({ v: n, t: "DN" + n }));
+    if (c === "dn2") return PipeSpec.branches(it.cl, it.dn, it.it).map(x => ({ v: x.v, t: "x DN" + x.v, sub: x.sub }));
     if (c === "it") return PipeSpec.items(it.cl, it.dn).map(x => ({ v: x.v, t: x.t, sub: x.sub || "", g: x.g }));
     if (c === "vt") return (specRes(it).vs || []).map(x => ({ v: x.v, t: x.t }));
     /* N/A piping: the size first (DN), then the library's piping kinds that come in it */
@@ -208,7 +209,7 @@ const Mto = (() => {
     return []; }
   const itName = v => !v ? "" : /^V:/.test(v) ? v.slice(2) : /^G:/.test(v) ? "Gasket " + v.slice(2) : v;
   const shown = (it, c) => { const T = type(it), S = std(it);
-    if (c === "cl") return it.cl || ""; if (c === "dn") return it.dn ? "DN" + it.dn : ""; if (c === "it") return itName(it.it); if (c === "vt") return it.vt || "";
+    if (c === "cl") return it.cl || ""; if (c === "dn") return it.dn ? "DN" + it.dn : ""; if (c === "dn2") return it.dn2 ? "x DN" + it.dn2 : ""; if (c === "it") return itName(it.it); if (c === "vt") return it.vt || "";
     if (c === "t") return itemCode(it); if (!T) return c === "unit" ? it.unit || "" : it[c] || "";
     if (c === "z") return zShort(it); if (c === "r") return rShort(it.r); if (c === "m") return mShort(it.m); if (c === "s") return S && !it.sx ? stShort(S.n) : ""; if (c === "unit") return uShort(it.unit); return it[c] == null ? "" : it[c]; };
   const titleOf = (it, c) => { const T = type(it), S = std(it), z = sz(it); return c === "t" ? (T ? T.n : "") : c === "z" ? (z && z.a ? z.a : "") : c === "r" ? it.r || "" : c === "m" ? it.m || "" : c === "s" ? (S ? S.n : "") : ""; };
@@ -240,7 +241,7 @@ const Mto = (() => {
     const pipeRow = it => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it); let ph = "";
       ph += '<tr data-id="' + it.id + '" class="mt-row' + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res));
       if (isSpec(it)){ const R = specRes(it);
-        ph += '<td>' + box(it, "cl", "Class") + '</td><td>' + box(it, "dn", "Size") + '</td><td>' + box(it, "it", "Item") + '</td>'
+        ph += '<td>' + box(it, "cl", "Class") + '</td><td class="mt-szd">' + box(it, "dn", "Size") + (PipeSpec.reducing(it.it) ? box(it, "dn2", "x small") : "") + '</td><td>' + box(it, "it", "Item") + '</td>'
           + '<td>' + ((R.vs || []).length ? box(it, "vt", "Pick one") : '<span class="mt-auto" title="From the spec">' + esc(R.auto || "") + '</span>') + '</td>'; }
       else if (T || it.cl === "N/A" && !it.cat && it.desc == null){
         ph += '<td>' + box(it, "cl", "Class", "", "N/A") + '</td><td>' + box(it, "z", "Size") + '</td><td>' + box(it, "t", "Item") + '</td>'
@@ -315,8 +316,8 @@ const Mto = (() => {
       if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?", "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); Store.touch(a); }); });
     if (ro) return;
     /* the order the boxes are filled in: to a class, Class Size Item (Ends / type) Qty; N/A, Class Size Item Rating Material Qty; the rest, Item Size Rating Material Qty */
-    const orderOf = it => isInst(it) ? ["cl", "t", "part", "z", "qty"] : isSpec(it) ? ["cl", "dn", "it", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : ["t", "z", "r", "m", "qty"];
-    const needs = (it, x) => x === "z" && isInst(it) ? !it.z && (instType(it.desc) || {}).g === "Control valves" : x === "part" ? isInst(it) && !it.part && !!(instType(it.desc) || { mm: [] }).mm.length : x === "cl" ? !it.cl : x === "dn" ? !it.dn : x === "it" ? !it.it : x === "vt" ? specRes(it).need === "ends or type" : x === "qty" ? !String(it.qty || "").trim()
+    const orderOf = it => isInst(it) ? ["cl", "t", "part", "z", "qty"] : isSpec(it) ? ["cl", "dn", "it", "dn2", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : ["t", "z", "r", "m", "qty"];
+    const needs = (it, x) => x === "z" && isInst(it) ? !it.z && (instType(it.desc) || {}).g === "Control valves" : x === "part" ? isInst(it) && !it.part && !!(instType(it.desc) || { mm: [] }).mm.length : x === "cl" ? !it.cl : x === "dn" ? !it.dn : x === "dn2" ? PipeSpec.reducing(it.it) && !it.dn2 : x === "it" ? !it.it : x === "vt" ? specRes(it).need === "ends or type" : x === "qty" ? !String(it.qty || "").trim()
       : x === "t" ? !type(it) && !String(it.desc || "").trim() : x === "z" ? (type(it) || it.cl === "N/A") && !it.z && !(it.desc != null && !type(it)) : x === "r" ? !!type(it) && ratings(it).length > 0 && !it.r : x === "m" ? !!type(it) && !it.m : false;
     /* the next box on the row still to fill in (after a pick, the cursor goes there and its list opens) */
     const after = (id, c) => { const it = find(id); if (!it || !missing(it).length) return null; const O = orderOf(it), from = O.indexOf(c);
@@ -328,8 +329,9 @@ const Mto = (() => {
       if (isInst(it) && c === "t" && /^tag:/.test(v)){ const x = (inst() || { tags: new Map() }).tags.get(v.slice(4)); if (!x) return; it.desc = x.ty; if (x.m) it.part = x.m; if (x.sz && !it.z) it.z = "DN" + x.sz; if (!String(it.notes || "").includes(x.tag)) it.notes = [it.notes, x.tag].filter(Boolean).join(", "); return; }
       if (c === "cl"){ if (v === "N/A"){ if (isSpec(it)) ["dn", "it", "vt"].forEach(k => delete it[k]); it.cl = "N/A"; return; }
         ["t", "s", "z", "m", "r", "L", "mk", "end", "sx", "cuts", "cat", "desc"].forEach(k => delete it[k]); it.cl = v; if (it.dn && !PipeSpec.sizes(v).includes(it.dn)) delete it.dn; delete it.it; delete it.vt; return; }
-      if (c === "dn"){ it.dn = +v; if (it.it && !PipeSpec.items(it.cl, it.dn).some(x => x.v === it.it)) delete it.it; delete it.vt; return; }
-      if (c === "it"){ it.it = v; delete it.vt; const R = specRes(it); it.unit = R.unit || "ea"; return; }
+      if (c === "dn2"){ it.dn2 = +v; return; }
+      if (c === "dn"){ it.dn = +v; if (it.dn2 && it.dn2 >= it.dn) delete it.dn2; if (it.it && !PipeSpec.items(it.cl, it.dn).some(x => x.v === it.it)) delete it.it; delete it.vt; return; }
+      if (c === "it"){ it.it = v; delete it.vt; if (!PipeSpec.reducing(v)) delete it.dn2; const R = specRes(it); it.unit = R.unit || "ea"; return; }
       if (c === "vt"){ it.vt = v; return; }
       if (c === "t" && /^cat:/.test(v)){ ["t", "s", "m", "r", "L", "mk", "end", "sx", "cuts"].forEach(k => delete it[k]); it.cat = v.slice(4); it.desc = ""; it.unit = it.unit || "ea"; return; }
       if (c === "t"){ if (v === "other"){ const d = T ? desc(it) : it.desc || ""; ["t", "s", "z", "m", "r", "L", "cuts", "spare"].forEach(k => delete it[k]); it.desc = d; it.unit = it.unit || "ea"; return; }

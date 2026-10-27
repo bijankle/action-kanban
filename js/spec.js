@@ -30,6 +30,11 @@ const PipeSpec = (() => {
     c0.comps.forEach(c => { const d = clean(c.d); if ((dn == null || (dn >= c.lo && dn <= c.hi)) && !seen.has(d)){ seen.add(d); out.push({ v: d, t: d, g: "Components" }); } });
     valves(cl).filter(v => dn == null || (dn >= D.valve[v].lo && dn <= D.valve[v].hi)).forEach(v => out.push({ v: "V:" + v, t: v + " " + vrow(v, "Type").split(" - ")[0], sub: vrow(v, "Type"), g: "Valves" }));
     gaskets(cl).forEach(g => out.push({ v: "G:" + g, t: "Gasket " + g, sub: "to suit " + cl + " flanges", g: "Gaskets" })); return out; }
+  /* a reducing fitting (reducing tee, reducer, olet, swage, bush) has a second, smaller size: the branch or small end. Its choices are the class's
+     sizes below the main size that the spec line still covers; where the class has a branch table, it says how the branch is made */
+  const RED = /reduc|olet|swage|bush/i, reducing = it => !!it && !/^[VG]:/.test(it) && RED.test(it);
+  function branches(cl, dn, it){ const ls = C(cl) ? C(cl).comps.filter(c => clean(c.d) === it && dn >= c.lo && dn <= c.hi) : [], lo = Math.min(...ls.map(c => c.lo), dn), B = (C(cl) || {}).branch;
+    return sizes(cl).filter(n => n < dn && n >= Math.min(lo, 15)).reverse().map(n => { const code = B && B.g && B.g[dn] && B.g[dn][n]; return { v: n, t: "DN" + n, sub: code ? clean(B.codes[code] || code) : "" }; }); }
   /* 3 the spec lines left for that item at that size; when more than one, what tells them apart is the last pick */
   const lines = (cl, dn, it) => !C(cl) || !it || /^[VG]:/.test(it) ? [] : C(cl).comps.filter(c => clean(c.d) === it && dn >= c.lo && dn <= c.hi);
   function variants(ls){ if (ls.length < 2) return []; const ends = new Set(ls.map(c => clean(c.ends))), types = new Set(ls.map(c => clean(c.type)));
@@ -40,12 +45,14 @@ const PipeSpec = (() => {
       const R = k => vrow(v, k); return { v, auto: R("End Connections"), unit: "ea", line: "DN" + r.dn + " " + R("Type") + ", " + R("End Connections") + ", body " + R("Body Material") + (R("Manufacturer") ? ", " + R("Manufacturer") + " " + R("Model") : "") + ", valve datasheet " + v,
         rows: [["Valve datasheet", v + " (spec page " + V.page + ")"], ["Type", R("Type")], ["Ends", R("End Connections")], ["Body", R("Body Material")], ["Seats", R("Seat Material")], ["Made by", [R("Manufacturer"), R("Model")].filter(Boolean).join(" ")], ["Size range", R("Size Range (mm)")]].filter(x => x[1]) }; }
     if (/^G:/.test(r.it)){ const g = r.it.slice(2); return { g, auto: "to suit " + r.cl, unit: "ea", line: "DN" + r.dn + " gasket " + g + ", to suit piping class " + r.cl + " flanges", rows: [["Gasket", g], ["To suit", r.cl + " flanges"]] }; }
-    const ls = lines(r.cl, r.dn, r.it); if (!ls.length) return { need: "item" }; const vs = variants(ls), c = ls.length === 1 ? ls[0] : (vs.find(x => x.v === r.vt) || {}).c;
+    const ls = lines(r.cl, r.dn, r.it); if (!ls.length) return { need: "item" };
+    if (reducing(r.it) && !r.dn2) return { need: "small end size", vs: variants(ls) };
+    const sz = "DN" + r.dn + (reducing(r.it) && r.dn2 ? " x DN" + r.dn2 : ""); const vs = variants(ls), c = ls.length === 1 ? ls[0] : (vs.find(x => x.v === r.vt) || {}).c;
     if (!c) return { need: "ends or type", vs };
     return { c, vs, auto: vs.length ? "" : [clean(c.type), clean(c.ends)].filter(Boolean).join(", "), unit: /^pipe/i.test(clean(c.d)) ? "m" : "ea",
-      line: "DN" + r.dn + " " + clean(c.d) + ", " + clean(c.type) + ", " + clean(c.ends) + ", " + clean(c.mat) + (/manufacturer/i.test(c.mat) && /manufacturer/i.test(c.dim) ? "" : ", " + clean(c.dim)) + ", to piping class " + r.cl,
-      rows: [["Piping class", r.cl + ": " + clean(c0.title)], ["Item", clean(c.d)], ["Size", "DN" + r.dn + " (the spec line covers " + clean(c.size) + ")"], ["Type", clean(c.type)], ["Ends", clean(c.ends)], ["Material", clean(c.mat)], ["Standard", clean(c.dim)],
+      line: sz + " " + clean(c.d) + ", " + clean(c.type) + ", " + clean(c.ends) + ", " + clean(c.mat) + (/manufacturer/i.test(c.mat) && /manufacturer/i.test(c.dim) ? "" : ", " + clean(c.dim)) + ", to piping class " + r.cl,
+      rows: [["Piping class", r.cl + ": " + clean(c0.title)], ["Item", clean(c.d)], ["Size", sz + (reducing(r.it) ? " (run x branch, or large x small end)" : "") + " (the spec line covers " + clean(c.size) + ")"], ["Type", clean(c.type)], ["Ends", clean(c.ends)], ["Material", clean(c.mat)], ["Standard", clean(c.dim)],
         ["Spec", (D.meta.doc || "") + " Rev " + (D.meta.rev || "") + ", page " + c0.page]].filter(x => x[1]) }; }
   const title = cl => C(cl) ? clean(C(cl).title) : "";
-  return { load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
+  return { reducing, branches, load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
 })();
