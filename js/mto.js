@@ -378,6 +378,8 @@ const Mto = (() => {
         const q = i.value.trim().toLowerCase(), cur0 = String(c === "t" && isInst(it) ? it.desc || "" : shown(it, c)).toLowerCase(), typed = q && q !== cur0, ws = typed ? q.split(/\s+/) : [];
         const all = choices(it, c, typed ? q : ""); if (!all.length && !(pt && typed)) return Look.close();
         let list = (ws.length ? all.filter(x => x.tagHit || ws.every(w => (x.t + " " + (x.sub || "") + " " + (x.g || "")).toLowerCase().includes(w))) : all).slice(0, 300);
+        /* (what you typed in the name itself comes first: "tee red" lights Tee, reducing, not a choice that only mentions it underneath) */
+        if (ws.length){ const inName = x => ws.every(w => x.t.toLowerCase().includes(w)); list = list.filter(inName).concat(list.filter(x => !inName(x))); }
         /* the headings in the list (the class list by material, the items by kind) when there is more than one */
         if (new Set(list.map(x => x.g).filter(Boolean)).size > 1){ const o = []; let g0 = null; list.forEach(x => { if (x.g && x.g !== g0){ o.push({ grp: true, t: x.g }); g0 = x.g; } o.push(x); }); list = o; }
         if (pt && typed && !list.some(x => x.t.toLowerCase() === q)) list = list.concat([{ v: "typed:" + i.value.trim(), t: "Use “" + i.value.trim() + "” as typed", sub: "not in the plant lists" }]);
