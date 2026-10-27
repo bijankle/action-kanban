@@ -81,7 +81,7 @@ const Mto = (() => {
     recc: "RED ECC", stub: "STUB END", coup: "CPLG", union: "UNION", nip: "NIP", plug: "PLUG", bush: "BUSH", olet: "OLET", flwn: "FLG WN", flso: "FLG SO", flbl: "FLG BL", flpl: "FLG PL", fllj: "FLG LJ",
     flsw: "FLG SW", flth: "FLG THD", gksw: "GK SPWD", gkring: "GK RING", gkff: "GK FF", gkrj: "GK RTJ", bolt: "HB", screw: "SET SCR", stud: "SB", nut: "NUT", washer: "WSHR", anchor: "ANCHOR" };
   const rShort = r => String(r || "").replace(/^AS 2129 Table /, "TBL ").replace(/^Table /, "TBL ").replace(/^AS 4087 /, "").replace(/^Class (\d+)/, "CL$1").replace(/ socket weld$/, " SW").replace(/ threaded$/, " THD")
-    .replace(/^Hot dip galvanised$/, "HDG").replace(/^Zinc plated$/, "ZP").replace(/^Galvanised$/, "GALV").replace(/^PTFE coated \(Xylan\)$/, "PTFE CTD").replace(/^Sockolet /, "SOL ").replace(/^Threadolet /, "TOL ").replace(/^Weldolet /, "WOL ");
+    .replace(/^Hot dip galvanised$/, "HDG").replace(/^Cold galvanised \(zinc rich paint\)$/, "COLD GALV").replace(/^Zinc plated$/, "ZP").replace(/^Galvanised$/, "GALV").replace(/^PTFE coated \(Xylan\)$/, "PTFE CTD").replace(/^Sockolet /, "SOL ").replace(/^Threadolet /, "TOL ").replace(/^Weldolet /, "WOL ");
   function mShort(m){ let s = String(m || "").replace(/^ASTM /, ""); if (!s) return "";
     const g = s.match(/^(\d+) \/ (graphite|PTFE), (.*)$/); if (g) return g[1] + "/" + (g[2] === "graphite" ? "GRAPH" : "PTFE") + " " + g[3].replace(/316 inner and /, "316 IR ").replace(/CS outer ring/, "CS OR");
     s = s.replace(/^Compressed fibre \(CNAF\) ([\d.]+) mm$/, "CNAF $1").replace(/ (\d+(\.\d+)?) mm$/, " $1");
@@ -97,7 +97,7 @@ const Mto = (() => {
   const itemCode = it => { const T = type(it); return T ? [SHORT[T.id] || T.n, PIPEK.has(T.id) && it.mk, PIPEK.has(T.id) && it.end].filter(Boolean).join(" ") : it.desc || ""; };
   /* abbreviations written out, for the (i) of a row typed in */
   const ABBR = { BV: "ball valve", GV: "gate valve", CV: "check valve", BFV: "butterfly valve", GLV: "globe valve", FB: "full bore", RB: "reduced bore", "3PC": "3 piece body", BSPT: "British standard pipe thread, taper", BSP: "British standard pipe thread", NPT: "national pipe thread",
-    F: "female", M: "male", SMLS: "seamless", ERW: "electric resistance welded", BE: "bevelled ends", PE: "plain ends", THD: "threaded", TOE: "threaded one end", HDG: "hot dip galvanised", GALV: "galvanised", SS: "stainless steel", CS: "carbon steel",
+    F: "female", M: "male", SMLS: "seamless", ERW: "electric resistance welded", BE: "bevelled ends", PE: "plain ends", THD: "threaded", TOE: "threaded one end", HDG: "hot dip galvanised", "COLD GALV": "cold galvanised (zinc rich paint)", GALV: "galvanised", SS: "stainless steel", CS: "carbon steel",
     ELB: "elbow", LR: "long radius", SR: "short radius", CPLG: "coupling", NIP: "nipple", FLG: "flange", WN: "weld neck", SO: "slip on", BL: "blind", RF: "raised face", FF: "flat face", GK: "gasket", SPWD: "spiral wound", HB: "hex bolt", SB: "stud bolt", PL: "plate", FLT: "flat bar", PFC: "parallel flange channel", EA: "equal angle", SHS: "square hollow section", RHS: "rectangular hollow section", CHS: "circular hollow section", "U-BOLT": "U bolt", TAG: "tag" };
   const unAbbr = t => String(t || "").split(/(\s+|,)/).map(w => ABBR[w.toUpperCase()] ? ABBR[w.toUpperCase()] : w).join("");
   /* a spec row in the same short MTO form, in capitals: item, size, type, ends, material, standard, then the class (the (i) has it in full).

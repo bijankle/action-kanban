@@ -209,7 +209,7 @@ rods = [size("M%d" % m, r1(math.pi / 4 * (m * 0.88) ** 2 * ST)) for m in [6, 8, 
 
 # ---------------------------------------------------------------- the library
 AU, CN, INT = "AU", "CN", "INT"
-FIN = ["Black", "Hot dip galvanised", "Primed"]
+FIN = ["Black", "Hot dip galvanised", "Cold galvanised (zinc rich paint)", "Primed"]
 LEN_U, PLATE_U, EA_U = ["m", "lengths", "kg"], ["sheets", "m2", "kg"], ["ea", "pairs", "sets", "boxes"]
 def std(id, n, o, sizes, mats, rat=None, rl=None, lens=None, defl=None, note=None):
     d = {"id": id, "n": n, "o": o, "sizes": sizes, "mats": mats}
@@ -268,7 +268,7 @@ typ("chs", "Circular hollow section (CHS)", "Structural", "len", [std("au", "AS/
 typ("flat", "Flat bar", "Bar", "len", [std("au", "AS/NZS 3679.1", AU, flats(), ["300 (AS/NZS 3679.1)", "350"], FIN, "Finish", [6000, 9000], 6000),
     std("cn", "GB/T 702 (China)", CN, flats(), CN_STRUCT, FIN, "Finish", [6000, 9000], 6000),
     std("ss", "Stainless, ASTM A276", INT, flats(SS, [20, 25, 32, 40, 50, 65, 75, 100, 150], [3, 5, 6, 8, 10, 12, 16, 20, 25]), STAINLESS, ["Hot rolled, annealed, pickled", "Bright"], "Finish", [6000], 6000)], LEN_U, "Finish")
-typ("round", "Round bar", "Bar", "len", [std("au", "AS/NZS 3679.1 (hot rolled)", AU, rounds(), ["300 (AS/NZS 3679.1)", "1020 bright", "1045 bright", "4140 (high tensile)"], ["Black", "Bright", "Hot dip galvanised"], "Finish", [6000, 3660], 6000),
+typ("round", "Round bar", "Bar", "len", [std("au", "AS/NZS 3679.1 (hot rolled)", AU, rounds(), ["300 (AS/NZS 3679.1)", "1020 bright", "1045 bright", "4140 (high tensile)"], ["Black", "Bright", "Hot dip galvanised", "Cold galvanised (zinc rich paint)"], "Finish", [6000, 3660], 6000),
     std("cn", "GB/T 702 (China)", CN, rounds(), ["Q235B", "45#", "40Cr", "42CrMo"], ["Black", "Bright"], "Finish", [6000, 9000], 6000),
     std("ss", "Stainless, ASTM A276", INT, rounds(SS, [6, 8, 10, 12, 16, 20, 25, 30, 32, 40, 50, 60, 75, 100]), STAINLESS, ["Bright", "Peeled"], "Finish", [6000, 3000], 6000)], LEN_U, "Finish")
 typ("square", "Square bar", "Bar", "len", [std("au", "AS/NZS 3679.1", AU, squares(), ["300 (AS/NZS 3679.1)", "1020 bright"], FIN, "Finish", [6000], 6000)], LEN_U, "Finish")
