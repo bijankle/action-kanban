@@ -71,7 +71,7 @@ const Mto = (() => {
       + (res.big.length ? " " + res.big.length + " piece" + (res.big.length === 1 ? " is" : "s are") + " bigger than the sheet and " + (res.big.length === 1 ? "isn't" : "aren't") + " counted." : ""); }
 
   /* ---------- short form (standard MTO wording: ELB 90 LR, FLG WN, CL150 RF, A403 WP316L, B16.9) ---------- */
-  const SHORT = { pipe: "PIPE", sspipe: "PIPE", sstube: "TUBE", pe: "PIPE PE", ub: "UB", uc: "UC", wb: "WB", pfc: "PFC", tfb: "TFB", ea: "EA", ua: "UA", shs: "SHS", rhs: "RHS", chs: "CHS",
+  const SHORT = { pipe: "PIPE", sspipe: "PIPE", sstube: "TUBE", pe: "PIPE HDPE", ub: "UB", uc: "UC", wb: "WB", pfc: "PFC", tfb: "TFB", ea: "EA", ua: "UA", shs: "SHS", rhs: "RHS", chs: "CHS",
     flat: "FLT", round: "RND BAR", square: "SQ BAR", rod: "THD ROD", plate: "PL", el90: "ELB 90 LR", el90s: "ELB 90 SR", el45: "ELB 45", tee: "TEE EQ", cap: "CAP", rtee: "TEE RED", rcon: "RED CONC",
     recc: "RED ECC", stub: "STUB END", coup: "CPLG", union: "UNION", nip: "NIP", plug: "PLUG", bush: "BUSH", olet: "OLET", flwn: "FLG WN", flso: "FLG SO", flbl: "FLG BL", flpl: "FLG PL", fllj: "FLG LJ",
     flsw: "FLG SW", flth: "FLG THD", gksw: "GK SPWD", gkring: "GK RING", gkff: "GK FF", gkrj: "GK RTJ", bolt: "HB", screw: "SET SCR", stud: "SB", nut: "NUT", washer: "WSHR", anchor: "ANCHOR" };
