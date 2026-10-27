@@ -22,7 +22,7 @@ const ActionView = (() => {
     const list = Table.rows(), i = list.indexOf(a), n = k => (a[k] || []).length;
     /* nothing about this action, its tab or the settings has changed (a save finishing, a redraw for something else):
        leave the panel as it is, so its photos and map don't flash */
-    const sig = JSON.stringify([stable(a), Media.pendingOf(a).length, sub, ro, i, list.length, Store.S.config.mod, (Store.S.config.contacts || []).length, Store.S.vendors && Store.S.vendors.mod, Equip.count, Isol.ready(), Store.projects().length]);
+    const sig = JSON.stringify([stable(a), Media.pendingOf(a).length, sub, ro, i, list.length, Store.S.config.mod, (Store.S.config.contacts || []).length, Store.S.vendors && Store.S.vendors.mod, Equip.count, Isol.ready(), PipeSpec.ready(), Store.projects().length]);
     if (el.__sig === sig && el.isConnected && $(".av", el)) return; el.__sig = sig;
     /* the header: the ID with its PDF button on the far left, in line with the title, then the hold, complete and delete buttons; the arrows and close sit at the right */
     el.innerHTML = '<div class="av"><div class="av-head" data-ref="' + esc(a._p + ":" + a.u) + '">' + Table.idBox(a, true) + Table.rowBtns(a) + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "") + '<span class="grow"></span>'

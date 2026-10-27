@@ -96,7 +96,8 @@ const Mto = (() => {
     ELB: "elbow", LR: "long radius", SR: "short radius", CPLG: "coupling", NIP: "nipple", FLG: "flange", WN: "weld neck", SO: "slip on", BL: "blind", RF: "raised face", FF: "flat face", GK: "gasket", SPWD: "spiral wound", HB: "hex bolt", SB: "stud bolt", PL: "plate", FLT: "flat bar", PFC: "parallel flange channel", EA: "equal angle", SHS: "square hollow section", RHS: "rectangular hollow section", CHS: "circular hollow section", "U-BOLT": "U bolt", TAG: "tag" };
   const unAbbr = t => String(t || "").split(/(\s+|,)/).map(w => ABBR[w.toUpperCase()] ? ABBR[w.toUpperCase()] : w).join("");
   /* the short form, used on the MTO, the RFQ and the exports: item, size, rating, material, standard, stock length */
-  function desc(it){ const T = type(it), S = std(it); if (!T) return it.desc || "";
+  function desc(it){ if (isSpec(it)){ const R = specRes(it); return R.line || [it.cl, it.dn && "DN" + it.dn, it.it && it.it.replace(/^[VG]:/, "")].filter(Boolean).join(" "); }
+    const T = type(it), S = std(it); if (!T) return it.desc || "";
     const L = it.L && (T.k === "len" ? lenTxt(it.L).replace(" m", "m") + " LG" : T.k === "plate" ? String(it.L).replace("x", "×") + " SHT" : "");
     return [itemCode(it), zShort(it), rShort(it.r), mShort(it.m), S && !it.sx && stShort(S.n), L].filter(Boolean).join(" "); }
 
@@ -108,7 +109,8 @@ const Mto = (() => {
   const rFull = r => String(r || "").replace(/^SCH(\d+)S$/, "Schedule $1S (stainless wall)").replace(/^SCH(\d+)$/, "Schedule $1").replace(/^STD$/, "Standard wall").replace(/^XS$/, "Extra strong wall").replace(/^XXS$/, "Double extra strong wall")
     .replace(/ RF$/, ", raised face").replace(/ FF$/, ", flat face").replace(/ RJ$/, ", ring joint").replace(/^SDR (\d+)/, "SDR $1 (wall ratio)").replace(/^PN(\d+)/, "PN$1 (pressure rating $1 bar)");
   const mFull = m => String(m || "").replace(/\(CS\)/, "(carbon steel)").replace(/\bGr\b/, "Grade").replace(/\bCNAF\b/, "compressed non asbestos fibre");
-  function inFull(it){ const T = type(it), S = std(it), z = sz(it);
+  function inFull(it){ if (isSpec(it)){ const R = specRes(it); return { line: R.line || "Still to pick: " + missing(it).join(", "), rows: R.rows || [] }; }
+    const T = type(it), S = std(it), z = sz(it);
     if (!T) return { line: unAbbr([it.desc, it.z, it.r, it.m].filter(Boolean).join(", ")), rows: [["Item", unAbbr(it.desc || "")], ["Size", it.z || ""], ["Part / model", it.part || ""], ["Line class", it.spec || ""]].filter(r => r[1]) };
     const sk = S ? stShort(S.n) : "", sx = Object.keys(STDX).find(k => sk === k || sk.startsWith(k + " ") || sk.includes(k));
     const nm = T.n + (PIPEK.has(T.id) ? [it.mk && MK[it.mk], it.end && EN[it.end]].filter(Boolean).map(x => ", " + x).join("") : "");
@@ -119,13 +121,35 @@ const Mto = (() => {
   const COLS = [["t", "Item"], ["z", "Size"], ["r", "Rating"], ["m", "Material"], ["s", "Std"], ["spec", "Class"], ["part", "Part"], ["qty", "Qty"], ["notes", "Notes"], ["x", ""]];
   const REQ = new Set(["t", "z", "r", "m", "qty"]);
   /* what a row still needs picked: its item, size, schedule or class, material and quantity (for one typed in: what it is and how many) */
-  function missing(it){ const T = type(it), out = []; if (!T){ if (!String(it.desc || "").trim()) out.push("item"); }
+  function missing(it){ if (isSpec(it)){ const R = specRes(it), out = R.need ? [R.need] : []; if (!String(it.qty || "").trim()) out.push("quantity"); return out; }
+    const T = type(it), out = []; if (it.cl === "N/A" && !T){ if (!it.z) out.push("size"); out.push("item"); if (!String(it.qty || "").trim()) out.push("quantity"); return out; } if (!T){ if (!String(it.desc || "").trim()) out.push("item"); }
     else { if (PIPEK.has(T.id) && (!it.mk || !it.end)) out.push("how it's made and its ends"); if (!it.z) out.push("size"); if (ratings(it).length && !it.r) out.push(T.rl ? T.rl.toLowerCase() : "rating"); if ((std(it) || {}).mats && std(it).mats.length && !it.m) out.push("material"); if (it.sx) out.push("standard"); }
     if (!String(it.qty || "").trim()) out.push("quantity"); return out; }
-  const GROUP = it => { const T = type(it); return T ? T.g : "Other"; };
+  /* piping (to a class of the pipe spec, or N/A: the general library) sits in its own table above the steel and the rest */
+  const PIPEG = new Set(["Pipe and tube", "Pipe fittings", "Flanges", "Gaskets", "Bolting"]);
+  const isSpec = it => !!it.cl && it.cl !== "N/A";
+  const isPipe = it => isSpec(it) || it.cl === "N/A" || !!it.cat || (!!type(it) && PIPEG.has(type(it).g));
+  /* the headings of a typical MTO: piping first, then the steel and the rest */
+  const HEADS = ["Pipes", "Flanges", "Fittings", "Valves", "Gaskets", "Bolts", "Instruments and control valves", "Specials", "Structural", "Bar", "Plate and sheet", "Other"];
+  const LIBH = { "Pipe and tube": "Pipes", "Pipe fittings": "Fittings", Flanges: "Flanges", Gaskets: "Gaskets", Bolting: "Bolts" };
+  const CATS = { inst: "Instruments and control valves", spec: "Specials" };
+  function GROUP(it){ if (it.cat) return CATS[it.cat] || "Specials";
+    if (isSpec(it)){ const v = it.it || ""; return /^V:/.test(v) ? "Valves" : /^G:/.test(v) ? "Gaskets" : /^pipe/i.test(v) ? "Pipes" : /flange/i.test(v) ? "Flanges" : /bolt|stud|nut/i.test(v) ? "Bolts" : v ? "Fittings" : "Pipes"; }
+    const T = type(it); if (T) return LIBH[T.g] || T.g; return it.cl === "N/A" ? "Specials" : "Other"; }
+  const order = items => items.map((it, i) => [HEADS.indexOf(GROUP(it)), i, it]).sort((x, y) => (x[0] < 0 ? 99 : x[0]) - (y[0] < 0 ? 99 : y[0]) || x[1] - y[1]).map(x => x[2]);
+  const specRes = it => PipeSpec.resolve(it);
   /* the boxes' lists */
   function choices(it, c){ const T = type(it), S = std(it);
-    if (c === "t") return [{ v: "other", t: "Other", sub: "type it in (a valve, a bearing, press fittings)" }].concat(...TYPES.map(x => PIPEK.has(x.id)
+    if (c === "cl") return [{ v: "N/A", t: "N/A", sub: "not to a piping class: the general choices" }].concat(PipeSpec.classes().map(x => ({ v: x, t: x, sub: PipeSpec.title(x).slice(0, 110) })));
+    if (c === "dn") return PipeSpec.sizes(it.cl).map(n => ({ v: n, t: "DN" + n }));
+    if (c === "it") return PipeSpec.items(it.cl, it.dn).map(x => ({ v: x.v, t: x.t, sub: x.sub || "", g: x.g }));
+    if (c === "vt") return (specRes(it).vs || []).map(x => ({ v: x.v, t: x.t }));
+    /* N/A piping: the size first (DN), then the library's piping kinds that come in it */
+    if (it.cl === "N/A" && c === "z" && !T) return PipeSpec.DNS.map(n => ({ v: "DN" + n, t: "DN" + n }));
+    if (it.cl === "N/A" && c === "t") return TYPES.filter(x => PIPEG.has(x.g) && (!it.z || x.stds.some(st => st.sizes.some(z => z.n === it.z)))).flatMap(x => PIPEK.has(x.id)
+      ? ["SMLS", "ERW"].flatMap(mk => ["BE", "PE", "THD"].map(en => ({ v: x.id + "|" + mk + "|" + en, t: SHORT[x.id] + " " + mk + " " + en, sub: x.n + ", " + MK[mk] + ", " + EN[en], g: x.g })))
+      : [{ v: x.id, t: SHORT[x.id] || x.n, sub: x.n, g: x.g }]).concat([{ v: "cat:inst", t: "Instrument or control valve", sub: "type it in", g: "Type it in" }, { v: "cat:spec", t: "Special", sub: "type it in (a strainer, a hose, an expansion joint)", g: "Type it in" }, { v: "other", t: "Other", sub: "type it in", g: "Type it in" }]);
+    if (c === "t") return [{ v: "other", t: "Other", sub: "type it in (a bearing, a motor)" }].concat(...TYPES.filter(x => !PIPEG.has(x.g) || type(it) === x).map(x => PIPEK.has(x.id)
       ? ["SMLS", "ERW"].flatMap(mk => ["BE", "PE", "THD"].map(en => ({ v: x.id + "|" + mk + "|" + en, t: SHORT[x.id] + " " + mk + " " + en, sub: x.n + ", " + MK[mk] + ", " + EN[en], g: x.g })))
       : [{ v: x.id, t: SHORT[x.id] || x.n, sub: x.n, g: x.g }]));
     if (!T) return [];
@@ -135,35 +159,55 @@ const Mto = (() => {
     if (c === "s") return T.stds.filter(s => !it.z || s.sizes.some(z => z.n === it.z)).map(s => ({ v: s.id, t: stShort(s.n), sub: (s.o !== "INT" ? ORIGIN[s.o] + ", " : "") + s.n }));
     if (c === "unit") return (T.units || []).map(u => ({ v: u, t: uShort(u), sub: u }));
     return []; }
+  const itName = v => !v ? "" : /^V:/.test(v) ? v.slice(2) : /^G:/.test(v) ? "Gasket " + v.slice(2) : v;
   const shown = (it, c) => { const T = type(it), S = std(it);
+    if (c === "cl") return it.cl || ""; if (c === "dn") return it.dn ? "DN" + it.dn : ""; if (c === "it") return itName(it.it); if (c === "vt") return it.vt || "";
     if (c === "t") return itemCode(it); if (!T) return c === "unit" ? it.unit || "" : it[c] || "";
     if (c === "z") return zShort(it); if (c === "r") return rShort(it.r); if (c === "m") return mShort(it.m); if (c === "s") return S && !it.sx ? stShort(S.n) : ""; if (c === "unit") return uShort(it.unit); return it[c] == null ? "" : it[c]; };
   const titleOf = (it, c) => { const T = type(it), S = std(it), z = sz(it); return c === "t" ? (T ? T.n : "") : c === "z" ? (z && z.a ? z.a : "") : c === "r" ? it.r || "" : c === "m" ? it.m || "" : c === "s" ? (S ? S.n : "") : ""; };
   let focusNext = null;   // (after a pick, the next box still to fill in on that row)
-  function table(a, ro){ const items = a.mto || (a.mto = []); let last = null, n = 0; shorten(items);
-    /* the line class and part / model columns only show when a row has one (or a row is typed in, for its part) */
-    const hasSpec = items.some(it => it.spec), hasPart = items.some(it => it.part || !type(it));
-    const CS = COLS.filter(([c]) => c !== "spec" || hasSpec).filter(([c]) => c !== "part" || hasPart);
-    const row = it => { const T = type(it), res = T && pack(it), on = open.has(it.id), many = T && (T.k === "len" || T.k === "plate"), miss = ro ? [] : missing(it), auto = !!res;
-      const tg = many ? '<button type="button" class="mt-tg' + (on ? " on" : "") + '" data-tg="' + it.id + '" title="' + (on ? "Hide" : "Show") + ' the pieces to cut">' + (on ? "▾" : "▸") + (cuts(it).length ? '<b>' + cuts(it).reduce((t, c) => t + Math.max(1, Math.round(+c.n || 1)), 0) + '</b>' : "") + '</button>' : "";
-      const box = (c, ph, ex) => '<input class="in pt-in mt-pk" data-r="' + it.id + '" data-c="' + c + '" value="' + esc(shown(it, c)) + '" placeholder="' + ph + '" title="' + esc(titleOf(it, c)) + '"' + (ex || "") + (ro ? " readonly" : "") + ' autocomplete="off" spellcheck="false">';
-      let h = (GROUP(it) !== last ? '<tr class="mt-grp nosort"><td colspan="' + (CS.length + 1) + '">' + esc(last = GROUP(it)) + '</td></tr>' : "")
-        + '<tr data-id="' + it.id + '" class="mt-row' + (on ? " open" : "") + (miss.length ? " mt-part" : "") + '"><td class="pt-no">' + (miss.length ? '<span class="mt-dot" title="Still to pick: ' + esc(miss.join(", ")) + '"></span>' : ++n) + tg + '</td>'
-        + '<td class="mt-itd">' + box("t", "Item") + ((T || it.desc) ? '<button type="button" class="mt-ii" data-info="' + it.id + '" title="This item in full, no abbreviations" aria-label="This item in full">' + INFO_I + '</button>' : "") + '</td>'
-        + '<td>' + box("z", "Size") + '</td>'
-        + '<td>' + (T && !ratings(it).length ? "" : T ? box("r", "Sch") : "") + '</td>'
-        + '<td>' + (T ? box("m", "Material") : "") + '</td>'
-        + '<td>' + (T ? box("s", "Std", ' data-opt="1"') : "") + '</td>'
-        + (hasSpec ? '<td>' + box("spec", "Class") + '</td>' : "") + (hasPart ? '<td>' + box("part", "Part") + '</td>' : "")
-        + '<td class="mt-qu"><input class="in pt-in mt-q" data-r="' + it.id + '" data-c="qty" inputmode="decimal" value="' + esc(it.qty || "") + '" placeholder="Qty"' + (ro || auto ? " readonly" : "") + (auto ? ' title="Worked out from the pieces (▸)"' : "") + '>'
-          + (T ? box("unit", "", ' data-opt="1"').replace("mt-pk", "mt-pk mt-un") : '<input class="in pt-in mt-u mt-un" data-r="' + it.id + '" data-c="unit" value="' + esc(uShort(it.unit)) + '" placeholder="EA"' + (ro ? " readonly" : "") + '>') + '</td>'
-        + '<td><input class="in pt-in" data-r="' + it.id + '" data-c="notes" value="' + esc(it.notes || "") + '"' + (ro ? " readonly" : "") + '></td>'
-        + '<td class="mt-ic"><button type="button" class="ic-b sm mt-more' + (it.info ? " on" : "") + '" data-more="' + it.id + '" title="About this item, move it to Spares, or remove it" aria-label="More for this row" aria-haspopup="true">⋯</button></td></tr>';
-      if (on && many) h += '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="' + (CS.length + 1) + '"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>';
-      return h; };
-    const blank = ro ? "" : '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="new0" data-c="t" placeholder="+ Item" autocomplete="off" spellcheck="false"></td><td colspan="' + (CS.length - 1) + '"></td></tr>';
-    return '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl"><thead><tr><th class="pt-no" data-col="No.">#</th>' + CS.map(([c, n]) => '<th data-col="' + (n || c) + '">' + esc(n) + (REQ.has(c) ? '<span class="mt-rq" title="Needed">*</span>' : "") + '</th>').join("") + '</tr></thead><tbody>'
-      + items.map(row).join("") + blank + '</tbody></table></div>'; }
+  function table(a, ro){ const items = a.mto || (a.mto = []); shorten(items); if (!PipeSpec.ready()) PipeSpec.load();
+    /* (shown and exported in the MTO's order: piping by heading, then the steel and the rest; in memory, it saves that way at the next change) */
+    const ord = order(items); if (ord.some((it, i) => it !== items[i])) items.splice(0, items.length, ...ord);
+    const pipes = items.filter(isPipe), steel = items.filter(it => !isPipe(it)); let n = 0;
+    const box = (it, c, ph, ex, v) => '<input class="in pt-in mt-pk" data-r="' + it.id + '" data-c="' + c + '" value="' + esc(v != null ? v : shown(it, c)) + '" placeholder="' + ph + '" title="' + esc(titleOf(it, c)) + '"' + (ex || "") + (ro ? " readonly" : "") + ' autocomplete="off" spellcheck="false">';
+    const iBtn = it => '<button type="button" class="mt-ii" data-info="' + it.id + '" title="This item in full, no abbreviations" aria-label="This item in full">' + INFO_I + '</button>';
+    const qtyCell = (it, auto) => '<td class="mt-qu"><input class="in pt-in mt-q" data-r="' + it.id + '" data-c="qty" inputmode="decimal" value="' + esc(it.qty || "") + '" placeholder="Qty"' + (ro || auto ? " readonly" : "") + (auto ? ' title="Worked out from the pieces (▸)"' : "") + '>'
+      + (type(it) ? box(it, "unit", "", ' data-opt="1"').replace("mt-pk", "mt-pk mt-un") : '<input class="in pt-in mt-u mt-un" data-r="' + it.id + '" data-c="unit" value="' + esc(uShort(it.unit)) + '" placeholder="EA"' + (ro ? " readonly" : "") + '>') + '</td>';
+    const tail = it => '<td><input class="in pt-in" data-r="' + it.id + '" data-c="notes" value="' + esc(it.notes || "") + '"' + (ro ? " readonly" : "") + '></td>'
+      + '<td class="mt-ic"><button type="button" class="ic-b sm mt-more' + (it.info ? " on" : "") + '" data-more="' + it.id + '" title="About this item, move it to Spares, or remove it" aria-label="More for this row" aria-haspopup="true">⋯</button></td></tr>';
+    const head = (it, cols, last) => GROUP(it) !== last ? '<tr class="mt-grp nosort"><td colspan="' + (cols + 1) + '">' + esc(GROUP(it)) + '</td></tr>' : "";
+    const no = (it, miss, tg) => '<td class="pt-no">' + (miss.length ? '<span class="mt-dot" title="Still to pick: ' + esc(miss.join(", ")) + '"></span>' : ++n) + (it.chk ? '<span class="mt-chk" title="Check: ' + esc(it.chk) + '">?</span>' : "") + (tg || "") + '</td>';
+    const toggle = (it, res) => { const T = type(it), on = open.has(it.id); return T && (T.k === "len" || T.k === "plate") ? '<button type="button" class="mt-tg' + (on ? " on" : "") + '" data-tg="' + it.id + '" title="' + (on ? "Hide" : "Show") + ' the pieces to cut">' + (on ? "▾" : "▸") + (cuts(it).length ? '<b>' + cuts(it).reduce((t, c) => t + Math.max(1, Math.round(+c.n || 1)), 0) + '</b>' : "") + '</button>' : ""; };
+    const sub = (it, res, cols) => { const T = type(it); return open.has(it.id) && T && (T.k === "len" || T.k === "plate") ? '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="' + (cols + 1) + '"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>' : ""; };
+    /* ---- piping: Class, Size, Item, Ends / type, Qty ---- */
+    const PC = [["cl", "Class"], ["sz", "Size"], ["t", "Item"], ["et", "Ends / type"], ["qty", "Qty"], ["notes", "Notes"], ["x", ""]];
+    let last = null, ph = "";
+    pipes.forEach(it => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it); ph += head(it, PC.length, last); last = GROUP(it);
+      ph += '<tr data-id="' + it.id + '" class="mt-row' + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res));
+      if (isSpec(it)){ const R = specRes(it);
+        ph += '<td>' + box(it, "cl", "Class") + '</td><td>' + box(it, "dn", "Size") + '</td><td class="mt-itd">' + box(it, "it", "Item") + (it.it ? iBtn(it) : "") + '</td>'
+          + '<td>' + ((R.vs || []).length ? box(it, "vt", "Pick one") : '<span class="mt-auto" title="From the spec">' + esc(R.auto || "") + '</span>') + '</td>'; }
+      else if (T || it.cl === "N/A" && !it.cat && it.desc == null){
+        ph += '<td>' + box(it, "cl", "Class", "", "N/A") + '</td><td>' + box(it, "z", "Size") + '</td><td class="mt-itd">' + box(it, "t", "Item") + (T ? iBtn(it) : "") + '</td>'
+          + '<td class="mt-rms">' + (T ? (ratings(it).length ? box(it, "r", "Sch") : "") + box(it, "m", "Material") + box(it, "s", "Std", ' data-opt="1"') : "") + '</td>'; }
+      else ph += '<td>' + box(it, "cl", "Class", "", it.cl || "N/A") + '</td><td>' + box(it, "z", "Size") + '</td><td class="mt-itd">' + box(it, "t", it.cat === "inst" ? "Instrument or control valve" : "Item") + (it.desc ? iBtn(it) : "") + '</td><td>' + box(it, "part", "Part / model") + '</td>';
+      ph += qtyCell(it, !!res) + tail(it) + sub(it, res, PC.length); });
+    if (!ro) ph += '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="newp" data-c="cl" placeholder="+ Class" autocomplete="off" spellcheck="false"></td><td colspan="' + (PC.length - 1) + '"></td></tr>';
+    /* ---- steel and the rest ---- */
+    const hasPart = steel.some(it => it.part || !type(it));
+    const SC = [["t", "Item"], ["z", "Size"], ["r", "Rating"], ["m", "Material"], ["s", "Std"]].concat(hasPart ? [["part", "Part"]] : []).concat([["qty", "Qty"], ["notes", "Notes"], ["x", ""]]);
+    let sh = ""; last = null;
+    steel.forEach(it => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it); sh += head(it, SC.length, last); last = GROUP(it);
+      sh += '<tr data-id="' + it.id + '" class="mt-row' + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res))
+        + '<td class="mt-itd">' + box(it, "t", "Item") + ((T || it.desc) ? iBtn(it) : "") + '</td><td>' + box(it, "z", "Size") + '</td>'
+        + '<td>' + (T && ratings(it).length ? box(it, "r", "Rating") : "") + '</td><td>' + (T ? box(it, "m", "Material") : "") + '</td><td>' + (T ? box(it, "s", "Std", ' data-opt="1"') : "") + '</td>'
+        + (hasPart ? '<td>' + box(it, "part", "Part") + '</td>' : "") + qtyCell(it, !!res) + tail(it) + sub(it, res, SC.length); });
+    if (!ro) sh += '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="new0" data-c="t" placeholder="+ Item" autocomplete="off" spellcheck="false"></td><td colspan="' + (SC.length - 1) + '"></td></tr>';
+    const thead = cols => '<thead><tr><th class="pt-no" data-col="No.">#</th>' + cols.map(([c, nm]) => '<th data-col="' + (nm || c) + '">' + esc(nm) + (REQ.has(c) || c === "cl" || c === "sz" ? '<span class="mt-rq" title="Needed">*</span>' : "") + '</th>').join("") + '</tr></thead>';
+    return '<div class="mt-h">Piping' + tipI("To the plant's pipe spec (" + ((PipeSpec.meta() || {}).doc || "loading the spec…") + "): pick the class, the size and the item, and the spec gives the rest. N/A for anything not to a class.") + '</div>'
+      + '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-pipe">' + thead(PC) + '<tbody>' + ph + '</tbody></table></div>'
+      + '<div class="mt-h">Steel and other</div><div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-steel">' + thead(SC) + '<tbody>' + sh + '</tbody></table></div>'; }
 
   /* the pieces under a row, with the packing drawn */
   function piecesHtml(it, res, ro){ const pl = isPlate(it), cs = it.cuts || [];
@@ -211,13 +255,22 @@ const Mto = (() => {
         if (x.v === "mv"){ Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); it.desc = desc(it); (a.spares || (a.spares = [])).push(it); Store.touch(a); }); note("Moved to Spares (Ctrl+Z to undo)"); Store.log("Moved a part of " + Store.actId(a) + " to Spares"); return; }
         if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?", "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); Store.touch(a); }); }); });
     if (ro) return;
-    const ORDER = ["t", "z", "r", "m", "qty"];
+    /* the order the boxes are filled in: to a class, Class Size Item (Ends / type) Qty; N/A, Class Size Item Rating Material Qty; the rest, Item Size Rating Material Qty */
+    const orderOf = it => isSpec(it) ? ["cl", "dn", "it", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : ["t", "z", "r", "m", "qty"];
+    const needs = (it, x) => x === "cl" ? !it.cl : x === "dn" ? !it.dn : x === "it" ? !it.it : x === "vt" ? specRes(it).need === "ends or type" : x === "qty" ? !String(it.qty || "").trim()
+      : x === "t" ? !type(it) && !String(it.desc || "").trim() : x === "z" ? (type(it) || it.cl === "N/A") && !it.z && !(it.desc != null && !type(it)) : x === "r" ? !!type(it) && ratings(it).length > 0 && !it.r : x === "m" ? !!type(it) && !it.m : false;
     /* the next box on the row still to fill in (after a pick, the cursor goes there and its list opens) */
-    const after = (id, c) => { const it = find(id); if (!it) return null; const miss = missing(it); if (!miss.length) return null; const from = ORDER.indexOf(c);
-      for (const x of ORDER.slice(Math.max(0, from + 1)).concat(ORDER)){ const need = x === "t" ? !type(it) && !String(it.desc || "").trim() : x === "z" ? type(it) && !it.z : x === "r" ? type(it) && ratings(it).length && !it.r : x === "m" ? type(it) && !it.m : !String(it.qty || "").trim(); if (need) return { id, c: x }; } return null; };
+    const after = (id, c) => { const it = find(id); if (!it || !missing(it).length) return null; const O = orderOf(it), from = O.indexOf(c);
+      for (const x of O.slice(Math.max(0, from + 1)).concat(O)) if (needs(it, x)) return { id, c: x }; return null; };
     const set = (it, c, v) => { const T = type(it);
+      if (c === "cl"){ if (v === "N/A"){ if (isSpec(it)) ["dn", "it", "vt"].forEach(k => delete it[k]); it.cl = "N/A"; return; }
+        ["t", "s", "z", "m", "r", "L", "mk", "end", "sx", "cuts", "cat", "desc"].forEach(k => delete it[k]); it.cl = v; if (it.dn && !PipeSpec.sizes(v).includes(it.dn)) delete it.dn; delete it.it; delete it.vt; return; }
+      if (c === "dn"){ it.dn = +v; if (it.it && !PipeSpec.items(it.cl, it.dn).some(x => x.v === it.it)) delete it.it; delete it.vt; return; }
+      if (c === "it"){ it.it = v; delete it.vt; const R = specRes(it); it.unit = R.unit || "ea"; return; }
+      if (c === "vt"){ it.vt = v; return; }
+      if (c === "t" && /^cat:/.test(v)){ ["t", "s", "m", "r", "L", "mk", "end", "sx", "cuts"].forEach(k => delete it[k]); it.cat = v.slice(4); it.desc = ""; it.unit = it.unit || "ea"; return; }
       if (c === "t"){ if (v === "other"){ const d = T ? desc(it) : it.desc || ""; ["t", "s", "z", "m", "r", "L", "cuts", "spare"].forEach(k => delete it[k]); it.desc = d; it.unit = it.unit || "ea"; return; }
-        const [tv, mk, en] = String(v).split("|"); v = tv; it.t = v; if (mk){ it.mk = mk; it.end = en; } else { delete it.mk; delete it.end; } delete it.sx; const T2 = TY[v], S = T2.stds[0]; it.s = S.id; it.z = ""; delete it.m; delete it.r; it.L = S.lens ? S.defl : undefined; it.unit = T2.units[0]; if (T2.k !== "len" && T2.k !== "plate") delete it.cuts;
+        const [tv, mk, en] = String(v).split("|"); v = tv; it.t = v; if (mk){ it.mk = mk; it.end = en; } else { delete it.mk; delete it.end; } delete it.sx; const T2 = TY[v], keepZ = it.cl === "N/A" && it.z ? T2.stds.find(st => st.sizes.some(z => z.n === it.z)) : null, S = keepZ || T2.stds[0]; it.s = S.id; if (!keepZ) it.z = ""; delete it.m; delete it.r; it.L = S.lens ? S.defl : undefined; it.unit = T2.units[0]; if (T2.k !== "len" && T2.k !== "plate") delete it.cuts;
         if (S.mats.length === 1) it.m = S.mats[0]; const rs = ratings(it); if (rs.length === 1) it.r = rs[0]; return; }
       if (c === "z"){ const S0 = std(it); let S = S0.sizes.some(z => z.n === v) ? S0 : T.stds.find(s => s.sizes.some(z => z.n === v)) || S0; it.s = S.id; it.z = v;
         if (it.m && !S.mats.includes(it.m)) delete it.m; if (!it.m && S.mats.length === 1) it.m = S.mats[0]; if (S.lens && !S.lens.includes(it.L)) it.L = S.defl;
@@ -225,15 +278,15 @@ const Mto = (() => {
       if (c === "s"){ const S = T.stds.find(s => s.id === v); if (!S) return; it.s = S.id; delete it.sx; if (it.z && !S.sizes.some(z => z.n === it.z)) it.z = ""; if (it.m && !S.mats.includes(it.m)) delete it.m; if (S.lens && !S.lens.includes(it.L)) it.L = S.defl; const rs = ratings(it); if (it.r && !rs.includes(it.r)) delete it.r; return; }
       it[c] = v; };
     const save = (id, c, v) => { const isNew = String(id).startsWith("new"); let it = isNew ? { id: uid(), qty: "" } : find(id); if (!it) return;
-      Store.mutate(key, () => { set(it, c, v); recalc(it); if (isNew){ const g = GROUP(it), at = items.map(GROUP).lastIndexOf(g); items.splice(at < 0 ? items.length : at + 1, 0, it); } Store.touch(a); });
-      Store.log((isNew ? "Added to" : "Edited") + " the MTO of " + Store.actId(a)); focusNext = after(it.id, c) || (isNew || !missing(it).length ? { id: "new0", c: "t", quiet: true } : null); };
+      Store.mutate(key, () => { set(it, c, v); recalc(it); if (isNew) items.push(it); const o = order(items); items.splice(0, items.length, ...o); Store.touch(a); });
+      Store.log((isNew ? "Added to" : "Edited") + " the MTO of " + Store.actId(a)); focusNext = after(it.id, c) || (!missing(it).length ? (isPipe(it) ? { id: "newp", c: "cl", quiet: true } : { id: "new0", c: "t", quiet: true }) : null); };
     /* the pick boxes: the app's card with what fits; typing narrows it */
     $$(".mt-pk", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c, it = find(r) || { qty: "" }; let key2 = null;
-      const free = c === "part" || c === "spec" || (c === "z" && !type(it)) || (c === "t" && !type(it) && it.desc != null && r !== "new0");
+      const free = c === "part" || c === "spec" || (c === "z" && !type(it) && !(it.cl === "N/A" && it.desc == null)) || (c === "t" && !type(it) && it.desc != null && r !== "new0");
       const show = () => { if (free && c !== "t") return; const all = choices(it, c); if (!all.length) return Look.close();
         const q = i.value.trim().toLowerCase(), typed = q && q !== String(shown(it, c)).toLowerCase(), ws = typed ? q.split(/\s+/) : [];
         const list = (ws.length ? all.filter(x => ws.every(w => (x.t + " " + (x.sub || "") + " " + (x.g || "")).toLowerCase().includes(w))) : all).slice(0, 300);
-        key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], c === "t" ? [it.t, it.mk, it.end].filter(Boolean).join("|") : it[c], x => { if (x.v === "") return; i.value = x.t; save(r, c, x.v); App.render(); }); };
+        key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], c === "t" ? [it.t, it.mk, it.end].filter(Boolean).join("|") : c === "dn" ? it.dn : it[c], x => { if (x.v === "") return; i.value = x.t; save(r, c, x.v); App.render(); }); };
       i.onfocus = () => { i.select(); show(); };
       i.oninput = () => { if (free) return; show(); };
       i.onkeydown = e => { if (key2 && /^(ArrowDown|ArrowUp|Escape)$/.test(e.key)) return key2(e);
@@ -246,7 +299,7 @@ const Mto = (() => {
     /* quantity, unit (for one typed in) and notes: typed */
     $$(".mt-tbl .pt-in:not(.mt-pk):not(.mt-cin)", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c;
       i.onchange = () => { const v = i.value.trim(), it = find(r); if (!it || String(it[c] == null ? "" : it[c]) === v) return; if (c === "spare"){ Store.mutate(key, () => { it.spare = Math.max(0, Math.round(+v || 0)) || undefined; recalc(it); Store.touch(a); }); return; }
-        Store.mutate(key, () => { it[c] = v; recalc(it); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "qty" && !missing(it).length) focusNext = { id: "new0", c: "t", quiet: true }; };
+        Store.mutate(key, () => { it[c] = v; recalc(it); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "qty" && !missing(it).length) focusNext = isPipe(it) ? { id: "newp", c: "cl", quiet: true } : { id: "new0", c: "t", quiet: true }; };
       i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }; });
     /* after a pick: the next box still to fill in on that row */
     if (focusNext){ const f = focusNext; focusNext = null; const t = $('.mt-tbl [data-r="' + f.id + '"][data-c="' + f.c + '"]', el); if (t) setTimeout(() => { t.focus(); if (f.quiet) Look.closeFor(t); }, 0); }
@@ -355,7 +408,7 @@ const Mto = (() => {
     if (T.k === "plate"){ const d = String(cn).match(/(\d{2,5})\s*(?:mm)?\s*[x×]\s*(\d{2,5})/i); if (d){ it.cuts = [{ id: uid(), l: +d[1], w: +d[2], n: Math.max(1, Math.round(+it.qty || 1)) }]; cn = cn.replace(d[0], "").replace(/^[\s,]*(mm)?[\s,]*|[\s,]+$/g, ""); it.unit = "sheets"; } }
     it.notes = cn; return it; }
   /* put a new row with the others of its kind, so each heading shows once */
-  function place(items, it){ const g = GROUP(it), at = items.map(GROUP).lastIndexOf(g); items.splice(at < 0 ? items.length : at + 1, 0, it); }
+  function place(items, it){ items.push(it); const o = order(items); items.splice(0, items.length, ...o); }
   const codes = () => [...new Set(TYPES.map(t => SHORT[t.id]).filter(Boolean))];
   return { table, wire, recalc, desc, pack, explain, needsCut, cutList, info, TY, shorten, missing, fromAi, codes, place };
 })();
