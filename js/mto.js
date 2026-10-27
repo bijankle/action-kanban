@@ -81,7 +81,7 @@ const Mto = (() => {
   const UNITS = ["ea", "m", "lengths", "kg", "sheets", "m2", "set", "pairs", "L", "box", "roll", "lot"];
   const COLS = ["Type", "Standard", "Size", "Material", "Rating", "Stock length", "Qty", "Unit", "", "ETA", "Notes"];
   function table(a, ro){ const items = a.mto || (a.mto = []), lists = new Map();
-    const blanks = Math.max(ro ? 0 : 1, 3 - items.length);
+    const blanks = ro ? 0 : 1;
     const row = (it, i) => { const T = type(it), S = std(it), res = T && pack(it), on = open.has(it.id), many = T && (T.k === "len" || T.k === "plate");
       const tg = many ? '<button type="button" class="mt-tg' + (on ? " on" : "") + '" data-tg="' + it.id + '" title="' + (on ? "Hide" : "Show") + ' the pieces to cut">' + (on ? "▾" : "▸") + (cuts(it).length ? '<b>' + cuts(it).reduce((t, c) => t + Math.max(1, Math.round(+c.n || 1)), 0) + '</b>' : "") + '</button>' : "";
       let h = '<tr data-id="' + it.id + '" class="mt-row' + (on ? " open" : "") + '"><td class="pt-no">' + (i + 1) + tg + '</td><td>' + sel(it, "t", typeOpts(it.t), ro) + '</td>';

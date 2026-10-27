@@ -98,7 +98,7 @@ const Fields = (() => {
         Store.contacts().slice().sort((x, y) => ((y.company || "").toLowerCase() === co) - ((x.company || "").toLowerCase() === co)).forEach(c => { seen.add(c.name.toLowerCase()); its.push({ v: c.name, sub: [c.company, c.mobile].filter(Boolean).join("  ") }); });
         if (f.id === "contractorContact") Store.all().forEach(x => { const n = x.f.contractorContact; if (n && !seen.has(n.toLowerCase()) && !/^(TBC|N\/A)$/.test(n)){ seen.add(n.toLowerCase()); its.push({ v: n, sub: [x.f.contractor, x.f.contractorPhone].filter(Boolean).join("  ") }); } });
         return combo(a, f, its.concat(extra(f).map(x => ({ v: x })))); }
-      case "longtext": { const t = h('<textarea class="in ta' + (tbc(v) ? " tbc" : "") + '" rows="3"></textarea>'); t.value = v || ""; grow(t); t.oninput = () => grow(t); t.onchange = () => set(a, f, t.value); return t; }
+      case "longtext": { const t = h('<textarea class="in ta' + (tbc(v) ? " tbc" : "") + '" rows="1" placeholder="' + esc("Add " + (f.id === "notes" ? "notes" : "the " + f.label.toLowerCase())) + '"></textarea>'); t.value = v || ""; grow(t); t.oninput = () => grow(t); t.onchange = () => set(a, f, t.value); return t; }
       /* a date, or with the field's time option a date and time in one box (2026-11-03T07:30); TBC and N/A only when the field offers them */
       case "date": if (f.time) return dateTime(a, f, v); { const w = h('<div class="dt">' + (f.tbc ? '<button type="button" class="mini">TBC</button>' : "") + (f.na ? '<button type="button" class="mini">N/A</button>' : "") + '</div>');
         const d = dateBox(v && /^\d{4}-\d\d-\d\d/.test(v) ? v.slice(0, 10) : v || "", { label: f.label }); w.prepend(d); d.addEventListener("change", () => set(a, f, d.value));
@@ -108,7 +108,7 @@ const Fields = (() => {
         if (f.suggest){ const id = "dl_" + f.id; let dl = document.getElementById(id); if (!dl){ dl = h('<datalist id="' + id + '"></datalist>'); document.body.appendChild(dl); }
           dl.innerHTML = [...new Set(Store.all().map(x => x.f[f.id]).filter(Boolean).concat(f.id === "location" ? [...Equip.areas().values()] : f.id === "contractor" ? Store.contacts().map(c => c.company) : []).filter(Boolean))].sort().map(x => '<option value="' + esc(x) + '">').join(""); i.setAttribute("list", id); }
         i.onchange = () => set(a, f, i.value.trim()); i.onkeydown = e => { if (e.key === "Enter") i.blur(); }; return i; } } }
-  function grow(t){ requestAnimationFrame(() => { t.style.height = "auto"; t.style.height = Math.min(420, t.scrollHeight + 2) + "px"; }); }
+  function grow(t){ requestAnimationFrame(() => { t.style.height = "auto"; t.style.height = Math.min(420, t.scrollHeight + 2) + "px"; t.style.overflowY = t.scrollHeight > 420 ? "auto" : "hidden"; }); }
 
   /* combo box: type or pick (contacts) */
   function combo(a, f, items, all){ const v = val(a, f) || "";

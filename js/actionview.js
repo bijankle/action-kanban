@@ -85,7 +85,7 @@ const ActionView = (() => {
       + '<div class="ov-r">'
       + '<h4>Status</h4><div class="stk-g"></div><h4>Details</h4><div class="det"></div><h4 class="det-h2" hidden>Contractor</h4><div class="det det-c"></div><h4 class="det-h2">Record</h4><div class="det det-m"></div><div class="sd-foot">' + (a.by ? "Last edited by " + esc(a.by) + " " + esc(fmtDate(a.mod)) + " · " : "") + '<button type="button" class="link ch-ln" data-k="hist">Change history</button>' + (a.gps ? ' · <a target="_blank" rel="noopener" href="https://maps.google.com/?q=' + a.gps.lat + "," + a.gps.lng + '">Map pin</a>' : "") + '</div></div></div>';
     $$("[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
-    $$("[data-f=problem] textarea,[data-f=solution] textarea,[data-f=notes] textarea", el).forEach(t => t.rows = 4);
+    $$("[data-f=problem] textarea,[data-f=solution] textarea,[data-f=notes] textarea", el).forEach(t => { t.rows = 1; t.dispatchEvent(new Event("input")); });   // (each fits its text)
     photos(a, $(".ph-fill", el), ro);
     files(a, $(".att-l", el), ro);
     /* (the expected location map is for the work pack only, not shown here) */

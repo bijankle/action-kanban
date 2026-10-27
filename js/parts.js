@@ -16,7 +16,7 @@ const Parts = (() => {
       const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]' + (cut ? '[data-cut="' + cut + '"]' : ":not([data-cut])"), el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
 
   function pane(a, kind, ro){ const s = Store.stage(a.stage), items = list(a, kind), cols = COLS[kind];
-    const blanks = Math.max(ro ? 0 : 1, 5 - items.length);
+    const blanks = ro ? 0 : 1;   // (one blank row to type the next item in)
     const row = (it, i) => '<tr data-id="' + it.id + '"><td class="pt-no">' + (i + 1) + '</td>' + cols.map(([k]) => '<td><input class="in pt-in' + (it[k] === "TBC" ? " tbc" : "") + '" data-r="' + it.id + '" data-c="' + k + '"' + (k === "qty" ? ' inputmode="decimal"' : k === "eta" ? ' type="date" title="When this part is expected on site"' : "") + (ro ? " readonly" : "") + ' value="' + esc(it[k] == null ? "" : it[k]) + '"></td>').join("")
       + (kind === "spares" ? '<td class="pt-sec"><input type="checkbox" class="ck pt-ck" data-sec="' + it.id + '"' + (it.secured ? " checked" : "") + (ro ? " disabled" : "") + ' title="Tick when this spare is secured: found in the store and set aside for the job" aria-label="Secured"></td>' : "")
       + '<td class="pt-act">' + (ro ? "" : '<button type="button" class="btn ghost sm pt-mv" title="Move this row to ' + NAME[OTHER[kind]] + '">→ ' + (kind === "mto" ? "Spares" : "MTO") + '</button><button type="button" class="ic-b sm pt-x" title="Remove this row">✕</button>') + '</td></tr>';
@@ -30,7 +30,7 @@ const Parts = (() => {
       + (kind === "mto" ? '<div class="pt-top"><div class="pt-l">' + Vendors.box(a, ro) + '</div><div class="pt-r">' + docs(a, "quotes", ro) + docs(a, "pos", ro) + '</div></div>' : "")
       + (kind === "mto" ? Mto.table(a, ro) : '<div class="mt-wrap"><table class="tbl pt-tbl"><thead><tr><th class="pt-no">Item</th>' + cols.map(([k, n]) => '<th class="pt-' + k + '">' + esc(n) + '</th>').join("") + (kind === "spares" ? '<th class="pt-sec">Secured</th>' : "") + '<th class="pt-act"></th></tr></thead><tbody>'
       + items.map(row).join("") + Array.from({ length: blanks }, (_, k) => blank(k)).join("") + '</tbody></table></div>')
-      + '<div class="dim pt-foot">' + (items.length ? items.length + " item" + (items.length > 1 ? "s" : "") : "") + (kind === "mto" && (a.spares || []).length ? " · " + a.spares.length + " more from spares, not on the RFQ" : "") + (kind === "spares" && items.length ? " · " + items.filter(x => x.secured).length + " of " + items.length + " secured" : "") + '</div>'; }
+      + '<div class="dim pt-foot">' + (kind === "mto" && (a.spares || []).length ? a.spares.length + " more from spares, not on the RFQ" : "") + (kind === "spares" && items.length ? items.filter(x => x.secured).length + " of " + items.length + " secured" : "") + '</div>'; }
   /* the quotes or the PO: each file on a line, then a dashed bar to upload another (or drop one on it) */
   const DOC = { quotes: ["Quote", "rfq"], pos: ["PO", "po"] };
   const docs = (a, k, ro) => { const fs = a[k] || [];

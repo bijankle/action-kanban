@@ -2,7 +2,7 @@
    Click a row to open it in the side panel. Drag a header to reorder columns, drag its edge to resize. */
 "use strict";
 const Table = (() => {
-  const NEED = { act: 144, id: 200, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
+  const NEED = { act: 120, id: 200, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
   let cv = null; const TICK = new Set(["check", "complete"]);
   /* a tick column's heading is one word (its short name); the i beside it says what it means */
   const head = c => TICK.has(c.type) && c.short ? c.short : c.label;
@@ -53,8 +53,8 @@ const Table = (() => {
   /* (a deleted action is neither on hold nor complete: those two stay off, and only its red bin, to bring it back, works) */
   function rowBtns(a){ const gone = !!a.del, dn = !gone && Store.stage(a.stage).kind === "done", hd = !gone && Hold.on(a), id = esc(Store.actId(a)), dis = Store.S.edit ? "" : " disabled";
     const b = (k, on, tip) => '<button type="button" class="rb rb-' + k + (on ? " on" : "") + '" data-rb="' + k + '" aria-pressed="' + on + '" title="' + (gone && k !== "del" ? "Deleted: bring it back with the red bin first" : tip) + '" aria-label="' + tip + '"' + (gone && k !== "del" ? " disabled" : dis) + '>' + IC[k] + '</button>';
-    /* the hold i first (who it's waiting on, red while details are missing), then on hold, complete and delete */
-    return '<span class="rbs"><span class="rb-hi">' + (gone ? "" : Hold.btn(a)) + '</span>' + b("hold", hd, hd ? "On hold: click to take " + id + " off hold" : "Put " + id + " on hold") + b("done", dn, dn ? "Complete: click to reopen " + id : "Mark " + id + " complete") + b("del", !!a.del, a.del ? "Deleted: click to bring " + id + " back" : "Delete " + id) + '</span>'; }
+    /* on hold (its i, who it's waiting on, red while details are missing, sits on the hold square's top right corner), complete and delete */
+    return '<span class="rbs"><span class="rb-hw">' + b("hold", hd, hd ? "On hold: click to take " + id + " off hold" : "Put " + id + " on hold") + (gone ? "" : Hold.btn(a)) + '</span>' + b("done", dn, dn ? "Complete: click to reopen " + id : "Mark " + id + " complete") + b("del", !!a.del, a.del ? "Deleted: click to bring " + id + " back" : "Delete " + id) + '</span>'; }
   /* the ID in a box; in the Details header it carries the PDF button too (the list shows just the ID) */
   const IDI = { copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>',
     tick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5 9.5-10"/></svg>',
