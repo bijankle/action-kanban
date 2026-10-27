@@ -64,6 +64,12 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     const nv = await p.evaluate(async () => { const v = Store.visible(); App.select(v[0]._p + ":" + v[0].u, "mto"); await new Promise(r => setTimeout(r, 500)); App.select(v[1]._p + ":" + v[1].u); await new Promise(r => setTimeout(r, 500));
       const sub = App.sub; document.querySelector("#navB").click(); await new Promise(r => setTimeout(r, 500)); return sub + " " + (App.selRef === v[0]._p + ":" + v[0].u); });
     check("another action keeps the tab, and back returns to the last one", nv === "mto true", nv);
+    /* the steps run in the order of their tick columns, and a step marked not needed is skipped */
+    const wf = await p.evaluate(() => { const st = Store.stages().filter(s => s.kind === "open").map(s => s.id), fl = Store.fields().filter(f => f.stage && st.includes(f.stage)).map(f => f.stage);
+      const same = JSON.stringify(st.filter(id => fl.includes(id))) === JSON.stringify(fl), f1 = Store.fields().find(f => f.stage && f.type === "check"); if (!f1) return same + " no ticks";
+      const a = { f: {}, stage: st[0] }; Store.fields().filter(f => f.stage).forEach(f => a.f[f.id] = f.type === "choice" ? "x" : true); a.f[f1.id] = false; const s1 = Flow.where(a).id; a.f[f1.id] = Flow.NA; const s2 = Flow.where(a).id;
+      return same + " " + (s1 === f1.stage) + " " + (s2 !== f1.stage); });
+    check("the steps follow the tick columns, and not needed skips one", wf === "true true true", wf);
     /* admin only */
     check("someone else can't add columns", (await p.$$(".addc")).length === 0 && !(await p.evaluate(() => App.isAdmin())));
     await p.click(".mb-btn >> text=ile"); await p.click(".mi >> text=Parameters"); await p.waitForTimeout(200);

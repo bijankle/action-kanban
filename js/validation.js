@@ -42,7 +42,7 @@ const Valid = (() => {
       r.ondragover = e => { if ([...e.dataTransfer.types].includes("text/row")){ e.preventDefault(); r.classList.add("dover"); } };
       r.ondragleave = () => r.classList.remove("dover");
       r.ondrop = e => { r.classList.remove("dover"); const from = e.dataTransfer.getData("text/row"); if (!from || from === r.dataset.id) return; e.preventDefault();
-        Store.mutate("config", () => { const A = arr(); const i = A.findIndex(x => x.id === from), b0 = A.findIndex(x => x.id === r.dataset.id), m = A.splice(i, 1)[0]; A.splice(A.findIndex(x => x.id === r.dataset.id) + (i < b0 ? 1 : 0), 0, m); Store.touch(m); Store.S.config.mod = now(); }); }; }); }
+        Store.mutate("config", () => { const A = arr(); const i = A.findIndex(x => x.id === from), b0 = A.findIndex(x => x.id === r.dataset.id), m = A.splice(i, 1)[0]; A.splice(A.findIndex(x => x.id === r.dataset.id) + (i < b0 ? 1 : 0), 0, m); if (A === Store.S.config.stages) Store.alignFields(); Store.touch(m); Store.S.config.mod = now(); }); }; }); }
 
   function fields(body){ const all = Store.fields(), hits = pf("fields", all.filter(f => hit(...SRCH.fields(f)))), fs = hits.length ? hits : all; if (!Store.field(cur)) cur = fs[0].id; const f = Store.field(cur);
     body.innerHTML = '<div class="dv-cols"><div class="dv-list"><div class="dv-h">Fields <span class="dim">drag to reorder</span></div>' + fs.map(x => '<button type="button" class="dv-f' + (x.id === cur ? " on" : "") + '" data-id="' + x.id + '"><span>' + esc(x.label) + '</span><small>' + esc(tname(x)) + '</small></button>').join("")

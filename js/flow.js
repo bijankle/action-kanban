@@ -56,5 +56,26 @@ const Flow = (() => {
   /* deleting an action: it goes to the Deleted pill, off hold and out of complete (to the step its ticks say), so
      bringing it back carries on from there */
   function remove(a){ Store.mutate("a:" + a._p, () => { const k = Store.stage(a.stage).kind; if (k === "hold" || k === "done"){ const to = where(a); leave(a, Store.stage(a.stage), to); Store.place(a, to.id); } a.del = true; Store.touch(a); }); Store.log("Deleted " + Store.actId(a)); }
-  return { NA, remove, where, sync, mark, who, moveTo, stepOf, state, leave };
+  /* every tick column is a step: one with no stage yet gets one (the admin is asked first, with exactly what changes) */
+  const loose = () => Store.fields().filter(f => f.type === "check" && f.table && !f.stage && f.id !== "onhold");
+  const TODO = f => { const l = f.label.trim(), m = l.match(/^(.*?)\s+(sent|arrived|received|created|done|engaged|secured|issued|approved)$/i), V = { sent: "Send", arrived: "Receive", received: "Receive", created: "Create", done: "Do", engaged: "Engage", secured: "Secure", issued: "Issue", approved: "Approve" };
+    const t = m ? V[m[2].toLowerCase()] + " " + m[1] : l; return t.replace(/\b\w/g, c => c.toUpperCase()); };
+  async function linkAll(){ const fs = loose(); if (!fs.length || !App.isAdmin()) return;
+    const plan = fs.map(f => ({ f, id: "st" + uid(), name: TODO(f) }));
+    /* who moves: worked out with the new steps in place, then put back */
+    plan.forEach(p => { Store.S.config.stages.push({ id: p.id, name: p.name, todo: p.name, kind: "open", color: "#64748b" }); p.f.stage = p.id; });
+    const moves = Store.all().filter(a => Store.stage(a.stage).kind === "open").map(a => ({ a, to: where(a) })).filter(m => m.to && m.to.id !== a0(m.a));
+    plan.forEach(p => { delete p.f.stage; Store.S.config.stages.splice(Store.S.config.stages.findIndex(s => s.id === p.id), 1); });
+    const ok = await new Promise(res => { const m = modal('<h3>Make every tick column a step</h3><p class="dim">Each tick column is a step, done in the order of the columns; a tick marked not needed is skipped. These ticks have no step yet:</p>'
+      + plan.map(p => '<div class="fw-r"><span>' + esc(p.f.label) + '</span><span class="dim">new step: <b>' + esc(p.name) + '</b></span></div>').join("")
+      + '<p class="dim">The Organizer gets a column for each, in the list\'s order.</p>'
+      + (moves.length ? '<div class="fw-h">Actions that move to the step their ticks now say</div>' + moves.map(x => '<div class="fw-r"><span>' + esc(Store.actId(x.a)) + '</span><span class="dim">' + esc(Store.todo(Store.stage(x.a.stage))) + ' → ' + esc(x.to.name) + '</span></div>').join("") : '<p class="dim">No action changes step.</p>')
+      + '<div class="yn-btns"><button class="yn-no" type="button">Not now</button><button class="yn-yes" type="button">Add the steps</button></div>', { cls: "fw-win", onClose: () => res(false) });
+      $(".yn-no", m).onclick = () => m.close(); $(".yn-yes", m).onclick = () => { res(true); m.close(); }; });
+    if (!ok) return;
+    Store.mutate("config", () => { const A = Store.S.config.stages, at = A.findIndex(s => !s.del && s.kind !== "open"); plan.forEach(p => { A.splice(at < 0 ? A.length : at, 0, Store.touch({ id: p.id, name: p.name, todo: p.name, kind: "open", color: "#64748b" })); p.f.stage = p.id; Store.touch(p.f); }); Store.S.config.mod = now(); });
+    Store.projects().forEach(pj => Store.mutate("a:" + pj.id, () => Store.actsOf(pj.id).forEach(a => { const s0 = a.stage; sync(a); if (a.stage !== s0) Store.touch(a); })));
+    Store.log("Made every tick column a step: " + plan.map(p => p.name).join(", ")); App.render(); }
+  const a0 = a => a.stage;
+  return { NA, remove, linkAll, loose, where, sync, mark, who, moveTo, stepOf, state, leave };
 })();

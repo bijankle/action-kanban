@@ -54,7 +54,7 @@ const Kanban = (() => {
           const shown = $$(".kc:not(.ghost)", list).map(c => App.act(c.dataset.ref)), before = shown[i - 1], full = Store.ranked(st).filter(x => x !== a);
           const at = before ? full.indexOf(before) + 1 : shown[i] ? full.indexOf(shown[i]) : full.length;
           Flow.moveTo(a, st, at); return; }   // (to another stage it asks which steps change; within its own it just reorders)
-        if (sid && sid !== st){ e.preventDefault(); Store.mutate("config", () => { const ss = Store.S.config.stages, a = ss.findIndex(x => x.id === sid), b0 = ss.findIndex(x => x.id === st), m = ss.splice(a, 1)[0]; ss.splice(ss.findIndex(x => x.id === st) + (a < b0 ? 1 : 0), 0, m); Store.S.config.mod = now(); Store.touch(m); }); } };
+        if (sid && sid !== st){ e.preventDefault(); Store.mutate("config", () => { const ss = Store.S.config.stages, a = ss.findIndex(x => x.id === sid), b0 = ss.findIndex(x => x.id === st), m = ss.splice(a, 1)[0]; ss.splice(ss.findIndex(x => x.id === st) + (a < b0 ? 1 : 0), 0, m); Store.alignFields(); Store.S.config.mod = now(); Store.touch(m); }); } };
       const hd = $(".kb-h", col); hd.ondragstart = e => { if (e.target !== hd || col.classList.contains("kb-row")) return; e.dataTransfer.setData("text/stage", st); };
       $(".kb-n", col).ondblclick = () => { if (App.isAdmin()) rename(st); };
       const km = $(".kb-m", col); if (km) km.onclick = e => menu(e.currentTarget, st); });

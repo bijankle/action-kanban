@@ -47,7 +47,14 @@ const Store = (() => {
   const live = a => (a || []).filter(x => !x.del);
 
   /* ---------- reading ---------- */
-  const stages = () => live(S.config.stages);
+  /* the steps run in the order of their tick columns (as in Data validation, Columns): an Organizer column for each step, in that
+     order, then On Hold and Done. (Moving a stage about moves its column too, see alignFields: one order, never two) */
+  function stages(){ const ss = live(S.config.stages), at = new Map(); S.config.fields.forEach((f, i) => { if (f.stage && !f.del && !at.has(f.stage)) at.set(f.stage, i); });
+    const op = ss.filter(s => s.kind === "open"), sorted = op.map((s, i) => [s, at.has(s.id) ? at.get(s.id) : -1, i]).sort((x, y) => x[1] - y[1] || x[2] - y[2]).map(x => x[0]); let k = 0;
+    return ss.map(s => s.kind === "open" ? sorted[k++] : s); }
+  /* after the stages were put in a new order: the step columns follow it */
+  function alignFields(){ const F = S.config.fields, ord = S.config.stages.filter(s => !s.del && s.kind === "open").map(s => s.id), slots = [], steps = [];
+    F.forEach((f, i) => { if (f.stage && !f.del && ord.includes(f.stage)){ slots.push(i); steps.push(f); } }); steps.sort((x, y) => ord.indexOf(x.stage) - ord.indexOf(y.stage)); slots.forEach((k, j) => { if (F[k] !== steps[j]){ F[k] = steps[j]; touch(steps[j]); } }); }
   const fields = () => live(S.config.fields).filter(f => f.id !== "priority");   // (no priority: the order in an Organizer column is just the order)
   const field = id => S.config.fields.find(f => f.id === id && !f.del);
   const stage = id => S.config.stages.find(s => s.id === id && !s.del) || stages()[0];
@@ -298,6 +305,6 @@ const Store = (() => {
     /* Action complete stays the very last field */
     const i = c.fields.findIndex(f => f.id === "complete"); if (i >= 0 && i !== c.fields.length - 1) c.fields.push(c.fields.splice(i, 1)[0]); }
 
-  return { S, copyInfo, clearCopy, enter, stages, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, deleted, find, findRef, actId, ranked, priority,
+  return { S, copyInfo, clearCopy, enter, stages, alignFields, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, deleted, find, findRef, actId, ranked, priority,
     stashNow: () => stash.flush ? stash.flush() : stash(), vendors: () => S.vendors, owner, people, fullName, addPerson, procurement, sparesAvail, eta, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();
