@@ -38,7 +38,7 @@ const Word = (() => {
       [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([, v]) => o.blanks || String(v || "").trim()).forEach(([k, v]) => body.push(H(k), ...lines(String(v || "").trim() ? v : "–")));
       const tb = (title, cols, rows) => { if (rows.length) body.push(H(title), table(cols, rows)); };
       tb("Isolations", ["No.", "Equipment number", "Equipment name", "Note"], (a.isol || []).map((it, k) => [k + 1, it.tag, it.name, it.note]));
-      tb("MTO", ["Item", "Description", "Part / tag no.", "Qty", "Unit", "Notes"], (a.mto || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes]));
+      tb("MTO", ["Item", "Description", "Part / tag no.", "Qty", "Unit", "Notes"], (a.mto || []).map((it, k) => [k + 1, it.desc, it.part, Mto.ord(it), it.unit, it.notes]));
       tb("From spares", ["Item", "Description", "Part / tag no.", "Qty", "Unit", "Store location / notes", "Secured"], (a.spares || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes, it.secured ? "Yes" : ""]));
       if (a.files.length){ body.push(H("Attachments")); a.files.forEach(f => body.push(new Paragraph({ children: [new ExternalHyperlink({ link: links.get(f) || Media.fileUrlOnline(a, f), children: [new TextRun({ text: f.name, style: "Hyperlink" })] }), new TextRun({ text: "  " + fmtSize(f.size || 0), color: "7A8591" })] }))); }
       if (o.photos && a.photos.length){ body.push(H("Photos")); const per = Math.max(1, o.per || 2), w = (640 - (per - 1) * 8) / per, ims = [];

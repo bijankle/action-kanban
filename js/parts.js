@@ -11,7 +11,7 @@ const Parts = (() => {
   /* one action's list, drawn into its action view tab; keep is where the cursor was before the redraw */
   function renderFor(el, a, kind, keep){ const ro = !Store.S.edit;
     el.innerHTML = '<div class="pt-main">' + pane(a, kind, ro) + '</div>'; wire(el, a, kind, ro);
-    if (kind === "mto") $$(".mt-tbl", el).forEach(t => gridCols(t, t.classList.contains("mt-pipe") ? "mtoP" : "mtoS", { fixed: { "No.": 44, Qty: 96, x: $(".mt-done", t) ? 168 : 102 }, extra: { Notes: 24, "Ends / type": 0 }, inPad: 24, hPad: 22, scroll: true }));
+    if (kind === "mto") $$(".mt-tbl", el).forEach(t => gridCols(t, t.classList.contains("mt-pipe") ? "mtoP" : "mtoS", { fixed: { "No.": 44, Qty: 96, Spare: 56, Total: 76, x: $(".mt-done", t) ? 168 : 102 }, extra: { Notes: 24, "Ends / type": 0 }, inPad: 24, hPad: 22, scroll: true }));
     else { const pt = $(".pt-tbl", el); if (pt) gridCols(pt, "spares", { fixed: { Item: 66 }, scroll: true }); }
     if (keep && keep.c){ let r = keep.r, cut = keep.cut; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } if (cut === "new" && created.has("cut:" + r)) cut = created.get("cut:" + r);
       const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]' + (cut ? '[data-cut="' + cut + '"]' : ":not([data-cut])"), el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
@@ -73,7 +73,7 @@ const Parts = (() => {
   /* ---------- exports ---------- */
   const fname = (a, kind) => Store.actId(a) + " " + (kind === "mto" ? "RFQ" : "Spares") + " " + new Date().toISOString().slice(0, 10) + ".pdf";
   function excel(a, kind){ const items = list(a, kind); if (!items.length) return alert("Nothing to export yet.");
-    const sec = kind === "spares", head = ["Item"].concat(COLS[kind].map(c => c[1]), sec ? ["Secured"] : []), rows = items.map((it, i) => [String(i + 1)].concat(COLS[kind].map(([k]) => it[k] || ""), sec ? [it.secured ? "Yes" : "No"] : []));
+    const sec = kind === "spares", head = ["Item"].concat(COLS[kind].map(c => c[1]), sec ? ["Secured"] : []), rows = items.map((it, i) => [String(i + 1)].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), sec ? [it.secured ? "Yes" : "No"] : []));
     Excel.save(Excel.book(head, rows, Store.actId(a) + " " + NAME[kind]), Store.actId(a) + " " + NAME[kind] + " " + new Date().toISOString().slice(0, 10) + ".xlsx"); }
   let pdfP = null;
   const loadPdf = () => pdfP || (pdfP = new Promise((res, rej) => { const add = (src, next) => { const s = document.createElement("script"); s.src = src; s.onload = next; s.onerror = () => { pdfP = null; rej(new Error("Couldn't load the PDF maker")); }; document.head.appendChild(s); };
@@ -97,7 +97,7 @@ const Parts = (() => {
       doc.setDrawColor(217, 222, 229); doc.setLineWidth(0.3); doc.roundedRect(14, y0, 90, hb, 1.5, 1.5); doc.roundedRect(108, y0, 88, hb, 1.5, 1.5); y0 += hb + 5; }
     const meta = ["Date: " + fmtDate(now()), kind !== "mto" && Profile.name() ? "Issued by: " + Profile.name() + (pf.role ? ", " + pf.role : "") : "", kind !== "mto" && pf.mobile ? "Mobile: " + pf.mobile : "", kind !== "mto" && pf.email ? "Email: " + pf.email : "", a.f.location ? "Location: " + a.f.location : "", Array.isArray(a.f.equipment) && a.f.equipment.length ? "Equipment: " + a.f.equipment.join(", ") : ""].filter(Boolean);
     doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(90); const ml = doc.splitTextToSize(meta.join("     "), 182); doc.text(ml, 14, y0 + 2); y0 += ml.length * 4.4 + 4;
-    doc.autoTable({ startY: y0, head: [["Item"].concat(COLS[kind].map(c => c[1]), kind === "spares" ? ["Secured"] : [])], body: items.map((it, i) => [i + 1].concat(COLS[kind].map(([k]) => it[k] || ""), kind === "spares" ? [it.secured ? "Yes" : "No"] : [])),
+    doc.autoTable({ startY: y0, head: [["Item"].concat(COLS[kind].map(c => c[1]), kind === "spares" ? ["Secured"] : [])], body: items.map((it, i) => [i + 1].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), kind === "spares" ? [it.secured ? "Yes" : "No"] : [])),
       styles: { font: "helvetica", fontSize: 9.5, cellPadding: 2.2, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" }, headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 62 }, 3: { cellWidth: 14, halign: "right" }, 4: { cellWidth: 16 } }, margin: { left: 14, right: 14 } });
     let y = doc.lastAutoTable.finalY + 8; doc.setFontSize(9); doc.setTextColor(110);

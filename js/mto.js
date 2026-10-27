@@ -52,6 +52,11 @@ const Mto = (() => {
   function total(it, res){ const n = stockN(res) + Math.max(0, Math.round(+it.spare || 0)), k = kg(it);
     if (res.kind === "len"){ const m = n * res.L / 1000; return it.unit === "lengths" ? n : it.unit === "kg" ? (k ? Math.ceil(m * k) : "") : n1(m); }
     const a = n * res.sh.l * res.sh.w / 1e6; return it.unit === "m2" ? n1(a) : it.unit === "kg" ? (k ? Math.ceil(a * k) : "") : n; }
+  /* what's ordered: the quantity needed plus the spares (a row cut from stock lengths or sheets: its spare lengths or sheets are already in its quantity) */
+  const nq = v => { const x = parseFloat(String(v == null ? "" : v).replace(/,/g, "")); return isFinite(x) ? x : 0; };
+  const need = it => { const res = pack(it); return res ? String(total(Object.assign({}, it, { spare: 0 }), res)) : it.qty || ""; };
+  const spareOf = it => pack(it) ? Math.max(0, Math.round(+it.spare || 0)) || "" : it.sq || "";
+  function ord(it){ if (pack(it)) return it.qty || ""; if (!String(it.qty || "").trim() && !String(it.sq || "").trim()) return ""; return String(+(nq(it.qty) + nq(it.sq)).toFixed(3)); }
   /* after any change: the quantity (when the pieces set it) and the description */
   function recalc(it){ if (!type(it)) return; const res = pack(it); if (res) it.qty = String(total(it, res)); it.desc = desc(it); }
 
@@ -159,15 +164,16 @@ const Mto = (() => {
   let INS = null, INSof = null;
   function inst(){ const d = Equip.raw(); if (!d || !d.data) return null; if (INS && INSof === d) return INS; INSof = d;
     const T = new Map(), tags = new Map(), add = (g, ty, mk, md, tag, ex) => { ty = String(ty || "").trim(); if (!ty || NOTI.test(ty)) return;
-      const k = ty.toLowerCase(); if (!T.has(k)) T.set(k, { t: ty, g, n: 0, mm: new Map() }); const e = T.get(k); e.n++;
+      const k = ty.toLowerCase(); if (!T.has(k)) T.set(k, { t: ty, g, n: 0, mm: new Map(), sz: new Map() }); const e = T.get(k); e.n++;
+      const dn = parseInt(String((ex || {}).sz || "").replace(/^DN\s*/i, ""), 10); if (PipeSpec.DNS.includes(dn)) e.sz.set(dn, (e.sz.get(dn) || 0) + 1);
       mk = String(mk || "").trim(); md = String(md || "").trim(); const good = !NOMM.test(mk) || !NOMM.test(md), m = [NOMM.test(mk) ? "" : mk, NOMM.test(md) ? "" : md].filter(Boolean).join(" ");
       if (good && m){ e.mm.set(m, (e.mm.get(m) || 0) + 1); } if (tag) tags.set(String(tag).toUpperCase(), { tag, ty, m: good ? m : "", g, ...ex }); };
     const F = t => ((d.types || {})[t] || { f: [] }).f, ix = (t, n) => F(t).indexOf(n);
-    const fi = { ty: ix("ins", "Instrument type"), mk: ix("ins", "Make"), md: ix("ins", "Model"), cn: ix("ins", "Process connection"), ds: ix("ins", "Description") };
-    (d.data.ins || []).forEach(r => add("Instruments", r[fi.ty], r[fi.mk], r[fi.md], r[0], { cn: r[fi.cn] || "", ds: r[fi.ds] || "" }));
+    const fi = { ty: ix("ins", "Instrument type"), mk: ix("ins", "Make"), md: ix("ins", "Model"), cn: ix("ins", "Process connection"), ds: ix("ins", "Description"), sz: ix("ins", "Valve size") };
+    (d.data.ins || []).forEach(r => add("Instruments", r[fi.ty], r[fi.mk], r[fi.md], r[0], { cn: r[fi.cn] || "", ds: r[fi.ds] || "", sz: fi.sz >= 0 ? r[fi.sz] || "" : "" }));
     const fv = { ty: ix("cv", "Valve type"), mk: ix("cv", "Valve make"), md: ix("cv", "Valve model"), sz: ix("cv", "Valve size (mm)"), ds: ix("cv", "Location") };
     (d.data.cv || []).forEach(r => { const c = String(r[fv.ty] || "").trim().toUpperCase(); add("Control valves", CVT[c] ? CVT[c] + " (" + c + ")" : c, r[fv.mk], r[fv.md], r[0], { sz: r[fv.sz] || "", ds: r[fv.ds] || "" }); });
-    const types = [...T.values()].map(e => ({ t: e.t, g: e.g, n: e.n, mm: [...e.mm].sort((x, y) => y[1] - x[1]) })).sort((x, y) => x.g.localeCompare(y.g) || y.n - x.n);
+    const types = [...T.values()].map(e => ({ t: e.t, g: e.g, n: e.n, mm: [...e.mm].sort((x, y) => y[1] - x[1]), sz: e.sz })).sort((x, y) => x.g.localeCompare(y.g) || y.n - x.n);
     return INS = { types, tags }; }
   const instType = t => { const L = inst(); return L && L.types.find(x => x.t.toLowerCase() === String(t || "").trim().toLowerCase()); };
   const isInst = it => it.cat === "inst";
@@ -177,6 +183,9 @@ const Mto = (() => {
       const out = L.types.map(x => ({ v: "ity:" + x.t, t: x.t, sub: x.g + ", " + x.n + " in the plant lists", g: x.g }));
       const qq = String(q || "").replace(/[\s-]/g, "").toUpperCase(); if (qq.length >= 3){ const hits = []; for (const [k, x] of L.tags){ if (k.replace(/[\s-]/g, "").includes(qq)){ hits.push({ v: "tag:" + k, t: x.tag, sub: [x.ty, x.m, x.ds].filter(Boolean).join(", "), g: "Tags", tagHit: 1 }); if (hits.length > 40) break; } } return hits.concat(out); }
       return out; }
+    /* an instrument's or control valve's size: the standard DN sizes, the ones that type comes in on the plant lists first */
+    if (isInst(it) && c === "z"){ const e = instType(it.desc), used = e ? [...e.sz].sort((x, y) => y[1] - x[1]) : [], u = new Set(used.map(x => x[0]));
+      return used.map(([n, k]) => ({ v: "DN" + n, t: "DN" + n, sub: k + " " + (k === 1 ? "tag" : "tags") + " of this type in the plant lists" })).concat(PipeSpec.DNS.filter(n => !u.has(n)).map(n => ({ v: "DN" + n, t: "DN" + n }))); }
     if (isInst(it) && c === "part"){ const e = instType(it.desc); return e ? e.mm.map(([m, n]) => ({ v: m, t: m, sub: n + " " + (n === 1 ? "tag" : "tags") + " in the plant lists" })) : []; }
     if (c === "cl") return [{ v: "N/A", t: "N/A", sub: "not to a piping class: the general choices" }, { v: "cat:inst", t: "Instrument or control valve", sub: "from the instrument index and the control valve list" }].concat(PipeSpec.classes().map(x => ({ v: x, t: x, sub: PipeSpec.title(x).slice(0, 110) }))); const T = type(it), S = std(it);
     if (c === "dn") return PipeSpec.sizes(it.cl).map(n => ({ v: n, t: "DN" + n }));
@@ -208,15 +217,17 @@ const Mto = (() => {
   const lastCl = new Map(), akey = a => a._p + ":" + a.u;   // (after a pick, the next box still to fill in on that row)
   function table(a, ro){ const items = a.mto || (a.mto = []); shorten(items); if (!PipeSpec.ready()) PipeSpec.load();
     /* (shown and exported in the MTO's order: piping by heading, then the steel and the rest; in memory, it saves that way at the next change) */
-    const ord = order(items); if (ord.some((it, i) => it !== items[i])) items.splice(0, items.length, ...ord);
+    const sorted = order(items); if (sorted.some((it, i) => it !== items[i])) items.splice(0, items.length, ...sorted);
     /* a row being entered stays at the top of its table until all of it is picked and Done is pressed; only then does it go under its heading
        (rows already part filled when this came in start there too) */
     if (!a.mtoDr){ items.forEach(it => { if (missing(it).length) it.draft = 1; }); a.mtoDr = 1; }
     const pipes = items.filter(it => isPipe(it) && !it.draft), steel = items.filter(it => !isPipe(it) && !it.draft), pdr = items.filter(it => isPipe(it) && it.draft), sdr = items.filter(it => !isPipe(it) && it.draft); let n = 0;
     const box = (it, c, ph, ex, v) => '<input class="in pt-in mt-pk" data-r="' + it.id + '" data-c="' + c + '" value="' + esc(v != null ? v : shown(it, c)) + '" placeholder="' + ph + '" title="' + esc(titleOf(it, c)) + '"' + (ex || "") + (ro ? " readonly" : "") + ' autocomplete="off" spellcheck="false">';
     const iBtn = it => '<button type="button" class="mt-ii" data-info="' + it.id + '" title="About this item: in full, no abbreviations, sizes, weight, how the total was worked out" aria-label="About this item">' + INFO_I + '</button>';
-    const qtyCell = (it, auto) => '<td class="mt-qu"><input class="in pt-in mt-q" data-r="' + it.id + '" data-c="qty" inputmode="decimal" value="' + esc(it.qty || "") + '" placeholder="Qty"' + (ro || auto ? " readonly" : "") + (auto ? ' title="Worked out from the pieces (▸)"' : "") + '>'
-      + (type(it) ? box(it, "unit", "", ' data-opt="1"').replace("mt-pk", "mt-pk mt-un") : '<input class="in pt-in mt-u mt-un" data-r="' + it.id + '" data-c="unit" value="' + esc(uShort(it.unit)) + '" placeholder="EA"' + (ro ? " readonly" : "") + '>') + '</td>';
+    const qtyCell = (it, auto) => '<td class="mt-qu"><input class="in pt-in mt-q" data-r="' + it.id + '" data-c="qty" inputmode="decimal" value="' + esc(need(it)) + '" placeholder="Qty"' + (ro || auto ? " readonly" : "") + (auto ? ' title="Worked out from the pieces (▸)"' : "") + '>'
+      + (type(it) ? box(it, "unit", "", ' data-opt="1" tabindex="-1"').replace("mt-pk", "mt-pk mt-un") : '<input class="in pt-in mt-u mt-un" tabindex="-1" data-r="' + it.id + '" data-c="unit" value="' + esc(uShort(it.unit)) + '" placeholder="EA"' + (ro ? " readonly" : "") + '>') + '</td>'
+      + '<td><input class="in pt-in mt-q mt-sq" data-r="' + it.id + '" data-c="' + (auto ? "spare" : "sq") + '" inputmode="decimal" value="' + esc(spareOf(it)) + '" placeholder="0"' + (ro ? " readonly" : "") + ' title="' + (auto ? "Spare whole " + (isPlate(it) ? "sheets" : "lengths") + ", on top of what the pieces need" : "Spares on top of the quantity needed") + '"></td>'
+      + '<td class="mt-tot" title="Quantity plus spares: what is ordered">' + esc(ord(it)) + (ord(it) ? ' <span class="dim">' + esc(uShort(it.unit) || "EA") + '</span>' : "") + '</td>';
     const tail = it => '<td class="mt-itd"><input class="in pt-in" data-r="' + it.id + '" data-c="notes" value="' + esc(it.notes || "") + '"' + (ro ? " readonly" : "") + '>' + (type(it) || (isSpec(it) && it.it) || it.desc ? iBtn(it) : "") + '</td>'
       + '<td class="mt-ic">' + (it.draft && !ro && !missing(it).length ? '<button type="button" class="btn sm mt-done" data-done="' + it.id + '" title="Put it under its heading in the MTO">Done</button>' : "") + '' + (ro ? "" : '<button type="button" class="btn ghost sm pt-mv mt-mv" data-mv="' + it.id + '" title="Move this row to Spares">→ Spares</button><button type="button" class="ic-b sm pt-x mt-x" data-x="' + it.id + '" title="Remove this row">✕</button>') + '</td></tr>';
     const head = (it, cols, last) => GROUP(it) !== last ? '<tr class="mt-grp nosort"><td colspan="' + (cols + 1) + '">' + esc(GROUP(it)) + '</td></tr>' : "";
@@ -224,7 +235,7 @@ const Mto = (() => {
     const toggle = (it, res) => { const T = type(it), on = open.has(it.id); return T && (T.k === "len" || T.k === "plate") ? '<button type="button" class="mt-tg' + (on ? " on" : "") + '" data-tg="' + it.id + '" title="' + (on ? "Hide" : "Show") + ' the pieces to cut">' + (on ? "▾" : "▸") + (cuts(it).length ? '<b>' + cuts(it).reduce((t, c) => t + Math.max(1, Math.round(+c.n || 1)), 0) + '</b>' : "") + '</button>' : ""; };
     const sub = (it, res, cols) => { const T = type(it); return open.has(it.id) && T && (T.k === "len" || T.k === "plate") ? '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="' + (cols + 1) + '"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>' : ""; };
     /* ---- piping: Class, Size, Item, Ends / type, Qty ---- */
-    const PC = [["cl", "Class"], ["sz", "Size"], ["t", "Item"], ["et", "Ends / type"], ["qty", "Qty"], ["notes", "Notes"], ["x", ""]];
+    const PC = [["cl", "Class"], ["sz", "Size"], ["t", "Item"], ["et", "Ends / type"], ["qty", "Qty"], ["sq", "Spare"], ["tot", "Total"], ["notes", "Notes"], ["x", ""]];
     let last = null, ph = "";
     const pipeRow = it => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it); let ph = "";
       ph += '<tr data-id="' + it.id + '" class="mt-row' + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res));
@@ -243,7 +254,7 @@ const Mto = (() => {
     pipes.forEach(it => { ph += head(it, PC.length, last) + pipeRow(it); last = GROUP(it); });
     /* ---- steel and the rest ---- */
     const hasPart = steel.concat(sdr).some(it => it.part || !type(it));
-    const SC = [["t", "Item"], ["z", "Size"], ["r", "Rating"], ["m", "Material"], ["s", "Std"]].concat(hasPart ? [["part", "Part"]] : []).concat([["qty", "Qty"], ["notes", "Notes"], ["x", ""]]);
+    const SC = [["t", "Item"], ["z", "Size"], ["r", "Rating"], ["m", "Material"], ["s", "Std"]].concat(hasPart ? [["part", "Part"]] : []).concat([["qty", "Qty"], ["sq", "Spare"], ["tot", "Total"], ["notes", "Notes"], ["x", ""]]);
     let sh = ""; last = null;
     const steelRow = it => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it);
       return '<tr data-id="' + it.id + '" class="mt-row' + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res))
@@ -264,7 +275,7 @@ const Mto = (() => {
     return '<div class="mt-cuts"><table class="mt-ct"><thead><tr><th>Piece</th><th>Length (mm)</th>' + (pl ? '<th>Width (mm)</th>' : "") + '<th>Qty</th><th>Mark / where it goes</th><th></th></tr></thead><tbody>'
       + cs.map((c, i) => '<tr><td class="pt-no">' + (i + 1) + '</td><td>' + cin(c.id, "l", c.l) + '</td>' + (pl ? '<td>' + cin(c.id, "w", c.w) + '</td>' : "") + '<td>' + cin(c.id, "n", c.n || 1) + '</td><td>' + cin(c.id, "mk", c.mk, "e.g. A, or chute brace") + '</td><td>' + (ro ? "" : '<button type="button" class="ic-b sm" data-cx="' + c.id + '" data-r="' + it.id + '" title="Remove this piece">✕</button>') + '</td></tr>').join("")
       + (ro ? "" : '<tr class="pt-blank"><td class="pt-no"></td><td>' + cin("new", "l", "", pl ? "e.g. 600" : "e.g. 2400") + '</td>' + (pl ? '<td>' + cin("new", "w", "", "e.g. 400") + '</td>' : "") + '<td>' + cin("new", "n", "", "1") + '</td><td>' + cin("new", "mk", "") + '</td><td></td></tr>')
-      + '</tbody></table><div class="mt-side"><label class="mt-sp">Spare ' + (pl ? "sheets" : "lengths") + ' <input class="in pt-in" data-r="' + it.id + '" data-c="spare" inputmode="numeric" value="' + esc(it.spare || "") + '" placeholder="0"' + (ro ? " readonly" : "") + '></label>'
+      + '</tbody></table><div class="mt-side">'
       + '<button type="button" class="mt-i' + (res ? " on" : "") + '" data-info="' + it.id + '" title="How the total is worked out">' + INFO_I + '</button>'
       + '</div></div>' + (res ? '<div class="mt-draw">' + (res.kind === "len" ? barsSvg(res) : sheetsSvg(res)) + '</div>' : ""); }
   /* bars the same are drawn once, "× 3" */
@@ -299,20 +310,20 @@ const Mto = (() => {
     /* the ⋯ at the row's end: about this item (sizes, weight, how the total was worked out, notes), move it to Spares, remove it */
     /* the row's end: move it to Spares, or remove it (asks first) */
     $$("[data-mv]", el).forEach(b => b.onclick = () => { const it = find(b.dataset.mv); if (!it) return;
-      Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); it.desc = desc(it); delete it.draft; (a.spares || (a.spares = [])).push(it); Store.touch(a); }); note("Moved to Spares (Ctrl+Z to undo)"); Store.log("Moved a part of " + Store.actId(a) + " to Spares"); });
+      Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); it.desc = desc(it); it.qty = ord(it); delete it.sq; delete it.draft; (a.spares || (a.spares = [])).push(it); Store.touch(a); }); note("Moved to Spares (Ctrl+Z to undo)"); Store.log("Moved a part of " + Store.actId(a) + " to Spares"); });
     $$("[data-x]", el).forEach(b => b.onclick = async () => { const it = find(b.dataset.x); if (!it) return;
       if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?", "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); Store.touch(a); }); });
     if (ro) return;
     /* the order the boxes are filled in: to a class, Class Size Item (Ends / type) Qty; N/A, Class Size Item Rating Material Qty; the rest, Item Size Rating Material Qty */
     const orderOf = it => isInst(it) ? ["cl", "t", "part", "z", "qty"] : isSpec(it) ? ["cl", "dn", "it", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : ["t", "z", "r", "m", "qty"];
-    const needs = (it, x) => x === "part" ? isInst(it) && !it.part && !!(instType(it.desc) || { mm: [] }).mm.length : x === "cl" ? !it.cl : x === "dn" ? !it.dn : x === "it" ? !it.it : x === "vt" ? specRes(it).need === "ends or type" : x === "qty" ? !String(it.qty || "").trim()
+    const needs = (it, x) => x === "z" && isInst(it) ? !it.z && (instType(it.desc) || {}).g === "Control valves" : x === "part" ? isInst(it) && !it.part && !!(instType(it.desc) || { mm: [] }).mm.length : x === "cl" ? !it.cl : x === "dn" ? !it.dn : x === "it" ? !it.it : x === "vt" ? specRes(it).need === "ends or type" : x === "qty" ? !String(it.qty || "").trim()
       : x === "t" ? !type(it) && !String(it.desc || "").trim() : x === "z" ? (type(it) || it.cl === "N/A") && !it.z && !(it.desc != null && !type(it)) : x === "r" ? !!type(it) && ratings(it).length > 0 && !it.r : x === "m" ? !!type(it) && !it.m : false;
     /* the next box on the row still to fill in (after a pick, the cursor goes there and its list opens) */
     const after = (id, c) => { const it = find(id); if (!it || !missing(it).length) return null; const O = orderOf(it), from = O.indexOf(c);
       for (const x of O.slice(Math.max(0, from + 1)).concat(O)) if (needs(it, x)) return { id, c: x }; return null; };
     const set = (it, c, v) => { const T = type(it);
       if (c === "cl" && v === "cat:inst"){ ["dn", "it", "vt", "t", "s", "m", "r", "L", "mk", "end", "sx", "cuts"].forEach(k => delete it[k]); it.cl = "N/A"; it.cat = "inst"; it.desc = it.desc || ""; it.unit = it.unit || "ea"; return; }
-      if (isInst(it) && (c === "t" || c === "part") && /^typed:/.test(v)){ it[c === "t" ? "desc" : "part"] = v.slice(6); return; }
+      if (isInst(it) && (c === "t" || c === "part" || c === "z") && /^typed:/.test(v)){ it[c === "t" ? "desc" : c] = v.slice(6); return; }
       if (isInst(it) && c === "t" && /^ity:/.test(v)){ it.desc = v.slice(4); const e = instType(it.desc); if (e && e.mm.length === 1) it.part = e.mm[0][0]; else if (e && it.part && !e.mm.some(m => m[0] === it.part)) delete it.part; return; }
       if (isInst(it) && c === "t" && /^tag:/.test(v)){ const x = (inst() || { tags: new Map() }).tags.get(v.slice(4)); if (!x) return; it.desc = x.ty; if (x.m) it.part = x.m; if (x.sz && !it.z) it.z = "DN" + x.sz; if (!String(it.notes || "").includes(x.tag)) it.notes = [it.notes, x.tag].filter(Boolean).join(", "); return; }
       if (c === "cl"){ if (v === "N/A"){ if (isSpec(it)) ["dn", "it", "vt"].forEach(k => delete it[k]); it.cl = "N/A"; return; }
@@ -324,6 +335,7 @@ const Mto = (() => {
       if (c === "t"){ if (v === "other"){ const d = T ? desc(it) : it.desc || ""; ["t", "s", "z", "m", "r", "L", "cuts", "spare"].forEach(k => delete it[k]); it.desc = d; it.unit = it.unit || "ea"; return; }
         const [tv, mk, en] = String(v).split("|"); v = tv; it.t = v; if (mk){ it.mk = mk; it.end = en; } else { delete it.mk; delete it.end; } delete it.sx; const T2 = TY[v], keepZ = it.cl === "N/A" && it.z ? T2.stds.find(st => st.sizes.some(z => z.n === it.z)) : null, S = keepZ || T2.stds[0]; it.s = S.id; if (!keepZ) it.z = ""; delete it.m; delete it.r; it.L = S.lens ? S.defl : undefined; it.unit = T2.units[0]; if (T2.k !== "len" && T2.k !== "plate") delete it.cuts;
         if (S.mats.length === 1) it.m = S.mats[0]; const rs = ratings(it); if (rs.length === 1) it.r = rs[0]; return; }
+      if (c === "z" && !T){ it.z = v; return; }
       if (c === "z"){ const S0 = std(it); let S = S0.sizes.some(z => z.n === v) ? S0 : T.stds.find(s => s.sizes.some(z => z.n === v)) || S0; it.s = S.id; it.z = v;
         if (it.m && !S.mats.includes(it.m)) delete it.m; if (!it.m && S.mats.length === 1) it.m = S.mats[0]; if (S.lens && !S.lens.includes(it.L)) it.L = S.defl;
         const rs = ratings(it); if (it.r && !rs.includes(it.r)) delete it.r; if (!it.r && rs.length === 1) it.r = rs[0]; return; }
@@ -339,7 +351,7 @@ const Mto = (() => {
       Store.mutate(key, () => { delete it.draft; const o = order(items); items.splice(0, items.length, ...o); Store.touch(a); }); Store.log("Added to the MTO of " + Store.actId(a)); focusNext = doneNext(it); App.render(); });
     /* the pick boxes: the app's card with what fits; typing narrows it */
     $$(".mt-pk", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c, it = find(r) || (r === "newp" && lastCl.get(akey(a)) ? { qty: "", cl: lastCl.get(akey(a)) } : { qty: "" }); let key2 = null;
-      const pt = isInst(it) && (c === "t" || c === "part");   // (an instrument's type and make / model: pick from the plant lists, or type it in)
+      const pt = isInst(it) && (c === "t" || c === "part" || c === "z");   // (an instrument's type and make / model: pick from the plant lists, or type it in)
       const free = c === "part" || c === "spec" || (c === "z" && !type(it) && !(it.cl === "N/A" && it.desc == null)) || (c === "t" && !type(it) && it.desc != null && r !== "new0");
       const show = () => { if (free && c !== "t" && !pt) return;
         const q = i.value.trim().toLowerCase(), cur0 = String(c === "t" && isInst(it) ? it.desc || "" : shown(it, c)).toLowerCase(), typed = q && q !== cur0, ws = typed ? q.split(/\s+/) : [];
@@ -361,6 +373,8 @@ const Mto = (() => {
       i.onchange = () => { const v = i.value.trim(), it = find(r); if (!it || String(it[c] == null ? "" : it[c]) === v) return; if (c === "spare"){ Store.mutate(key, () => { it.spare = Math.max(0, Math.round(+v || 0)) || undefined; recalc(it); Store.touch(a); }); return; }
         Store.mutate(key, () => { it[c] = v; recalc(it); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "qty" && !missing(it).length) focusNext = doneNext(it); };
       i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }; });
+    /* the total follows the spare as it's typed */
+    $$(".mt-sq", el).forEach(i => i.addEventListener("input", () => { const it = find(i.dataset.r), td = i.closest("td").nextElementSibling; if (!it || !td || i.dataset.c !== "sq") return; const t = ord(Object.assign({}, it, { sq: i.value })); td.innerHTML = esc(t) + (t ? ' <span class="dim">' + esc(uShort(it.unit) || "EA") + '</span>' : ""); }));
     /* after a pick: the next box still to fill in on that row */
     if (focusNext){ const f = focusNext; focusNext = null; const t = f.done ? $('.mt-tbl [data-done="' + f.id + '"]', el) : $('.mt-tbl [data-r="' + f.id + '"][data-c="' + f.c + '"]', el); if (t) setTimeout(() => { t.focus(); if (f.quiet) Look.closeFor(t); }, 0); }
     /* the pieces */
@@ -470,5 +484,5 @@ const Mto = (() => {
   /* put a new row with the others of its kind, so each heading shows once */
   function place(items, it){ items.push(it); const o = order(items); items.splice(0, items.length, ...o); }
   const codes = () => [...new Set(TYPES.map(t => SHORT[t.id]).filter(Boolean))];
-  return { table, wire, recalc, desc, pack, explain, needsCut, cutList, info, TY, shorten, missing, fromAi, codes, place };
+  return { table, wire, recalc, desc, ord, pack, explain, needsCut, cutList, info, TY, shorten, missing, fromAi, codes, place };
 })();
