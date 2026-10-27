@@ -1204,3 +1204,8 @@ textarea.in.ta{resize:none;overflow:hidden;min-height:var(--ctl-h,28px)}
 .drange{gap:6px}.drange .dr-to{color:var(--muted)}.drange .dc-ph{color:var(--dim)}
 .cal-g button.in{background:color-mix(in srgb,var(--th) 14%,transparent);border-radius:0}.cal-hint{font-size:12px;text-align:center;margin-top:4px}
 .gd-two{display:inline-flex;gap:6px}
+/* the row's (i): the item in full, inside the Item box at its right */
+.mt-itd{position:relative}.mt-itd .mt-pk{padding-right:24px}
+.mt-ii{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:18px;height:18px;border:0;background:none;padding:0;cursor:pointer;color:var(--th);display:grid;place-items:center}
+.mt-ii svg{width:16px;height:16px}.mt-ii:hover{filter:brightness(1.3)}
+.mt-full{margin:4px 0 8px;font-size:13.5px;line-height:1.4;color:var(--ink)}.mt-fl{margin-bottom:8px}.mt-pop{max-width:420px}

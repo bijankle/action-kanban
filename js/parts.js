@@ -11,7 +11,7 @@ const Parts = (() => {
   /* one action's list, drawn into its action view tab; keep is where the cursor was before the redraw */
   function renderFor(el, a, kind, keep){ const ro = !Store.S.edit;
     el.innerHTML = '<div class="pt-main">' + pane(a, kind, ro) + '</div>'; wire(el, a, kind, ro);
-    const pt = $(".pt-tbl", el); if (pt) gridCols(pt, kind === "mto" ? "mto2" : "spares", kind === "mto" ? { fixed: { "No.": 64, Qty: 104, x: 32 }, inPad: 24, hPad: 22, scroll: true } : { fixed: { Item: 66 }, scroll: true });
+    const pt = $(".pt-tbl", el); if (pt) gridCols(pt, kind === "mto" ? "mto2" : "spares", kind === "mto" ? { fixed: { "No.": 64, Qty: 104, x: 32 }, extra: { Item: 20 }, inPad: 24, hPad: 22, scroll: true } : { fixed: { Item: 66 }, scroll: true });
     if (keep && keep.c){ let r = keep.r, cut = keep.cut; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } if (cut === "new" && created.has("cut:" + r)) cut = created.get("cut:" + r);
       const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]' + (cut ? '[data-cut="' + cut + '"]' : ":not([data-cut])"), el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
 

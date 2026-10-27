@@ -92,6 +92,19 @@ const Mto = (() => {
     const L = it.L && (T.k === "len" ? lenTxt(it.L).replace(" m", "m") + " LG" : T.k === "plate" ? String(it.L).replace("x", "×") + " SHT" : "");
     return [SHORT[T.id] || T.n, zShort(it), rShort(it.r), mShort(it.m), S && stShort(S.n), L].filter(Boolean).join(" "); }
 
+  /* ---------- in full, no abbreviations (the row's (i)) ---------- */
+  const STDX = { "B16.9": "butt weld fittings (elbows, tees, reducers, caps)", "B16.11": "forged socket weld and threaded fittings", "B16.5": "pipe flanges, Class 150 to 2500", "B16.20": "metal gaskets for flanges (spiral wound, ring joint)",
+    "B16.21": "non metallic flat gaskets for flanges", "B36.10M": "carbon steel pipe sizes and wall thicknesses", "B36.19M": "stainless steel pipe sizes and wall thicknesses", "AS 2129": "Australian flanges (Tables D, E, F, H)",
+    "AS/NZS 1163": "Australian cold formed hollow sections (SHS, RHS, CHS)", "AS/NZS 3679.1": "Australian hot rolled sections and bar", "AS/NZS 3679.2": "Australian welded beams and columns", "AS/NZS 3678": "Australian hot rolled plate",
+    "AS/NZS 4130": "Australian polyethylene (PE) pressure pipe", "AS 4087": "Australian flanges for waterworks", "AS 1074": "Australian steel pipe for water, gas and air", "MSS SP-97": "branch outlet fittings (weldolets, sockolets)" };
+  const rFull = r => String(r || "").replace(/^SCH(\d+)S$/, "Schedule $1S (stainless wall)").replace(/^SCH(\d+)$/, "Schedule $1").replace(/^STD$/, "Standard wall").replace(/^XS$/, "Extra strong wall").replace(/^XXS$/, "Double extra strong wall")
+    .replace(/ RF$/, ", raised face").replace(/ FF$/, ", flat face").replace(/ RJ$/, ", ring joint").replace(/^SDR (\d+)/, "SDR $1 (wall ratio)").replace(/^PN(\d+)/, "PN$1 (pressure rating $1 bar)");
+  const mFull = m => String(m || "").replace(/\(CS\)/, "(carbon steel)").replace(/\bGr\b/, "Grade").replace(/\bCNAF\b/, "compressed non asbestos fibre");
+  function inFull(it){ const T = type(it), S = std(it), z = sz(it); if (!T) return { line: it.desc || "", rows: [["Item", it.desc || ""], ["Part / tag no.", it.part || ""]] };
+    const sk = S ? stShort(S.n) : "", sx = Object.keys(STDX).find(k => sk === k || sk.startsWith(k + " ") || sk.includes(k));
+    const rows = [["Item", T.n], ["Size", it.z ? it.z + (z && z.a ? " (" + z.a + ")" : "") + (z && z.od ? ", " + z.od + " mm outside diameter" : "") : ""], [T.rl || "Rating", rFull(it.r)], ["Material", mFull(it.m)],
+      ["Standard", S ? S.n + (sx ? ": " + STDX[sx] : "") : ""], ["Stock " + (T.k === "plate" ? "sheet" : "length"), it.L && (T.k === "len" || T.k === "plate") ? (T.k === "len" ? lenTxt(it.L) : String(it.L).replace("x", " x ") + " mm") : ""]].filter(r => r[1]);
+    return { line: [T.n, it.z && rows[1][1], rFull(it.r), mFull(it.m), S && "to " + S.n].filter(Boolean).join(", "), rows }; }
   /* ---------- the table: one row per item, under thin headings by kind; each pick is a box that only offers what fits ---------- */
   const COLS = [["t", "Item"], ["z", "Size"], ["r", "Rating"], ["m", "Material"], ["s", "Std"], ["qty", "Qty"], ["notes", "Notes"], ["x", ""]];
   const REQ = new Set(["t", "z", "r", "m", "qty"]);
@@ -121,7 +134,7 @@ const Mto = (() => {
       const box = (c, ph, ex) => '<input class="in pt-in mt-pk" data-r="' + it.id + '" data-c="' + c + '" value="' + esc(shown(it, c)) + '" placeholder="' + ph + '" title="' + esc(titleOf(it, c)) + '"' + (ex || "") + (ro ? " readonly" : "") + ' autocomplete="off" spellcheck="false">';
       let h = (GROUP(it) !== last ? '<tr class="mt-grp nosort"><td colspan="' + COLS.length + '">' + esc(last = GROUP(it)) + '</td></tr>' : "")
         + '<tr data-id="' + it.id + '" class="mt-row' + (on ? " open" : "") + (miss.length ? " mt-part" : "") + '"><td class="pt-no">' + (miss.length ? '<span class="mt-dot" title="Still to pick: ' + esc(miss.join(", ")) + '"></span>' : ++n) + tg + '</td>'
-        + '<td>' + box("t", "Item") + '</td>'
+        + '<td class="mt-itd">' + box("t", "Item") + ((T || it.desc) ? '<button type="button" class="mt-ii" data-info="' + it.id + '" title="This item in full, no abbreviations" aria-label="This item in full">' + INFO_I + '</button>' : "") + '</td>'
         + '<td>' + (T ? box("z", "Size") : box("part", "Part no.")) + '</td>'
         + '<td>' + (T && !ratings(it).length ? "" : T ? box("r", "Sch") : "") + '</td>'
         + '<td>' + (T ? box("m", "Material") : "") + '</td>'
@@ -234,17 +247,16 @@ const Mto = (() => {
   /* ---------- the i callout ---------- */
   function info(a, it, anchor, ro){ if (!it) return; Fields.closePop(); const T = type(it), z = sz(it), res = T && pack(it), k = kg(it), S = std(it);
     const facts = [];
-    if (T){ if (S) facts.push(["Standard", S.n + (S.o !== "INT" ? " (" + ORIGIN[S.o] + ")" : "")]);
-      if (z && z.a) facts.push(["Nominal size", z.n + ", " + z.a]);
-      if (z && z.od) facts.push(["Outside diameter", z.od + " mm"]);
+    if (T){ if (S && S.o !== "INT") facts.push(["Made to", ORIGIN[S.o] + " standard"]);
       if (z && z.r && z.r[it.r]) { facts.push(["Wall", z.r[it.r].t + " mm"]); if (z.r[it.r].pn) facts.push(["Pressure rating", z.r[it.r].pn]); }
       if (z && z.d && !z.od) facts.push(["Size", [z.d && "depth " + z.d, z.b && "width " + z.b, z.t && "thickness " + z.t, z.tf && "flange " + z.tf, z.tw && "web " + z.tw].filter(Boolean).join(", ") + " mm"]);
       if (z && z.g) facts.push(["Grades made", z.g.join(", ")]);
       if (z && z.bolts){ const cls = Object.keys(z.bolts).find(c => String(it.r || "").startsWith(c)); if (cls && z.bolts[cls]) facts.push(["Bolting", z.bolts[cls] + " (ASME B16.5 " + cls + ")"]); }
       if (k) facts.push(["Mass", "about " + k + (T.k === "plate" ? " kg/m²" : " kg/m")]);
       if (S && S.note) facts.push(["Note", S.note]); }
-    const p = document.createElement("div"); p.className = "pop mt-pop";
-    p.innerHTML = '<b>' + esc(desc(it) || "Item") + '</b>' + (facts.length ? '<dl>' + facts.map(([t, v]) => '<dt>' + esc(t) + '</dt><dd>' + esc(v) + '</dd>').join("") + '</dl>' : "")
+    const p = document.createElement("div"); p.className = "pop mt-pop";   // (in full first, then the sizes, weight and how the total was worked out)
+    const F = inFull(it);
+    p.innerHTML = '<b>' + esc(desc(it) || "Item") + '</b><p class="mt-full">' + esc(F.line) + '</p><dl class="mt-fl">' + F.rows.map(([t, v]) => '<dt>' + esc(t) + '</dt><dd>' + esc(v) + '</dd>').join("") + '</dl>' + (facts.length ? '<dl>' + facts.map(([t, v]) => '<dt>' + esc(t) + '</dt><dd>' + esc(v) + '</dd>').join("") + '</dl>' : "")
       + (res ? '<div class="lbl">How the total was worked out</div><p>' + esc(explain(it, res)) + '</p>'
         : T && (T.k === "len" || T.k === "plate") ? '<div class="lbl">How the total is worked out</div><p>' + esc(!it.L ? "Pick a stock " + (T.k === "plate" ? "sheet size" : "length") + " first." : "Add the pieces the job needs (▸). They're packed onto the fewest " + (T.k === "plate" ? "sheets" : "stock lengths, keeping offcuts of " + rules().keep + " mm or more,") + " with a " + rules().kerf + " mm saw cut between pieces, and Qty becomes the total.") + '</p>' : "")
       + (T && !z && it.z ? '<p class="bad">' + esc(it.z) + " isn't in the library for " + esc(S.n) + ". Check the size.</p>" : "")
