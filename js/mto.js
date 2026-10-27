@@ -56,6 +56,11 @@ const Mto = (() => {
   const nq = v => { const x = parseFloat(String(v == null ? "" : v).replace(/,/g, "")); return isFinite(x) ? x : 0; };
   const need = it => { const res = pack(it); return res ? String(total(Object.assign({}, it, { spare: 0 }), res)) : it.qty || ""; };
   const spareOf = it => pack(it) ? Math.max(0, Math.round(+it.spare || 0)) || "" : it.sq || "";
+  /* the spare a row gets by itself (File, Parameters, MTO spares): a share of the quantity by heading, rounded up */
+  function autoSpare(it){ const q = nq(it.qty); if (!(q > 0)) return ""; const g = GROUP(it), n = isSpec(it) ? (PipeSpec.U(it.cl) === "OD" ? it.dn * 50 / 63 : it.dn) : parseFloat(String(it.z || "").replace(/^DN/i, "")) || 0, sb = n > 0 && n <= 50;
+    const k = { Pipes: sb ? "spPipeSB" : "spPipe", Fittings: sb ? "spFitSB" : "spFit", Flanges: "spFlg", Gaskets: "spGk", Bolts: "spBolt", Valves: "spValve", "Instruments and control valves": "spInst", Structural: "spSteel", Bar: "spSteel", "Plate and sheet": "spPlate" }[g], pc = k ? +pref(k) || 0 : 0;
+    if (!pc) return ""; const x = q * pc / 100, m = String(it.unit || "").toLowerCase() === "m"; return String(m ? Math.ceil(x * 10) / 10 : Math.ceil(x)); }
+  const spareTip = it => { const v = autoSpare(it); return v ? "Worked out: " + v + " (File, Parameters, MTO spares). Type over it to change it" : "Spares on top of the quantity needed"; };
   function ord(it){ if (pack(it)) return it.qty || ""; if (!String(it.qty || "").trim() && !String(it.sq || "").trim()) return ""; return String(+(nq(it.qty) + nq(it.sq)).toFixed(3)); }
   /* after any change: the quantity (when the pieces set it) and the description */
   function recalc(it){ if (!type(it)) return; const res = pack(it); if (res) it.qty = String(total(it, res)); it.desc = desc(it); }
@@ -231,7 +236,7 @@ const Mto = (() => {
     const iBtn = it => '<button type="button" class="mt-ii" data-info="' + it.id + '" title="About this item: in full, no abbreviations, sizes, weight, how the total was worked out" aria-label="About this item">' + INFO_I + '</button>';
     const qtyCell = (it, auto) => '<td class="mt-qu"><input class="in pt-in mt-q" data-r="' + it.id + '" data-c="qty" inputmode="decimal" value="' + esc(need(it)) + '" placeholder="Qty"' + (ro || auto ? " readonly" : "") + (auto ? ' title="Worked out from the pieces (▸)"' : "") + '>'
       + (type(it) ? box(it, "unit", "", ' data-opt="1" tabindex="-1"').replace("mt-pk", "mt-pk mt-un") : '<input class="in pt-in mt-u mt-un" tabindex="-1" data-r="' + it.id + '" data-c="unit" value="' + esc(uShort(it.unit)) + '" placeholder="EA"' + (ro ? " readonly" : "") + '>') + '</td>'
-      + '<td><input class="in pt-in mt-q mt-sq" data-r="' + it.id + '" data-c="' + (auto ? "spare" : "sq") + '" inputmode="decimal" value="' + esc(spareOf(it)) + '" placeholder="0"' + (ro ? " readonly" : "") + ' title="' + (auto ? "Spare whole " + (isPlate(it) ? "sheets" : "lengths") + ", on top of what the pieces need" : "Spares on top of the quantity needed") + '"></td>'
+      + '<td><input class="in pt-in mt-q mt-sq" data-r="' + it.id + '" data-c="' + (auto ? "spare" : "sq") + '" inputmode="decimal" value="' + esc(spareOf(it)) + '" placeholder="0"' + (ro ? " readonly" : "") + ' title="' + (auto ? "Spare whole " + (isPlate(it) ? "sheets" : "lengths") + ", on top of what the pieces need" : it.sqm ? "Set by hand. Clear it to have it worked out again" : spareTip(it)) + '"></td>'
       + '<td class="mt-tot" title="Quantity plus spares: what is ordered">' + esc(ord(it)) + (ord(it) ? ' <span class="dim">' + esc(uShort(it.unit) || "EA") + '</span>' : "") + '</td>';
     const tail = it => '<td class="mt-itd"><input class="in pt-in" data-r="' + it.id + '" data-c="notes" value="' + esc(it.notes || "") + '"' + (it.auto ? ' placeholder="' + esc(it.an || "from the flanges") + '"' : "") + (ro ? " readonly" : "") + '>' + (type(it) || (isSpec(it) && it.it) || it.desc ? iBtn(it) : "") + '</td>'
       + '<td class="mt-ic">' + (it.draft && !ro && !missing(it).length ? '<button type="button" class="btn sm mt-done" data-done="' + it.id + '" title="Put it under its heading in the MTO">Done</button>' : "") + '' + (ro ? "" : '<button type="button" class="btn ghost sm pt-mv mt-mv" data-mv="' + it.id + '" title="Move this row to Spares">→ Spares</button><button type="button" class="ic-b sm pt-x mt-x" data-x="' + it.id + '" title="Remove this row">✕</button>') + '</td></tr>';
@@ -357,13 +362,14 @@ const Mto = (() => {
     /* the studs and nuts follow the flanges: for each class and size, the flange rows (not still being entered) make joints, flange on
        flange (two flanges a joint, a blind or an odd one counted as a joint too), and each joint takes the table's bolts and two nuts a stud.
        A quantity typed over an automatic row stays; a row whose flanges are gone goes */
+    const fillSpare = it => { if (pref("spAuto") && !it.sqm && !pack(it)) it.sq = autoSpare(it); };
     function bolts(){ const want = new Map(), F = PipeSpec.FLG;
       items.filter(it => isSpec(it) && !it.draft && !it.auto && it.it && F.test(it.it) && it.dn).forEach(it => { const k = it.cl + "|" + it.dn, w = want.get(k) || { cl: it.cl, dn: it.dn, n: 0 }; w.n += nq(ord(it)); want.set(k, w); });
       const has = new Map(items.filter(it => it.auto).map(it => [it.auto, it]));
       want.forEach(w => { const J = PipeSpec.joint(w.cl, w.dn), joints = Math.ceil(w.n / 2), cs = (PipeSpec.spec(w.cl) || { comps: [] }).comps, nm = re => { const c = cs.find(c => re.test(PipeSpec.clean(c.d))); return c ? PipeSpec.clean(c.d) : null; };
         [["stud", nm(/^stud bolts/i) || "B:stud", J.n ? joints * J.n : ""], ["nut", nm(/^nuts?\b/i) || "B:nut", J.n ? joints * J.n * 2 : ""]].forEach(([k, itn, q]) => { const key = "bolts|" + w.cl + "|" + w.dn + "|" + k; let r = has.get(key);
           if (!r){ r = { id: uid(), cl: w.cl, dn: w.dn, it: itn, qty: "", unit: "ea", auto: key }; items.push(r); } has.delete(key);
-          if (!r.qman) r.qty = String(q); r.an = "from " + w.n + " flange" + (w.n === 1 ? "" : "s") + " (" + joints + " joint" + (joints === 1 ? "" : "s") + ")" + (J.n ? ", " + J.n + " per joint" : ""); }); });
+          if (!r.qman) r.qty = String(q); fillSpare(r); r.an = "from " + w.n + " flange" + (w.n === 1 ? "" : "s") + " (" + joints + " joint" + (joints === 1 ? "" : "s") + ")" + (J.n ? ", " + J.n + " per joint" : ""); }); });
       has.forEach(r => { if (!r.qman){ const k = items.indexOf(r); if (k >= 0) items.splice(k, 1); } });
       const o = order(items); items.splice(0, items.length, ...o); }
     const save = (id, c, v) => { const isNew = String(id).startsWith("new"); let it = isNew ? { id: uid(), qty: "", draft: 1 } : find(id); if (!it) return;
@@ -400,7 +406,7 @@ const Mto = (() => {
     /* quantity, unit (for one typed in) and notes: typed */
     $$(".mt-tbl .pt-in:not(.mt-pk):not(.mt-cin)", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c;
       i.onchange = () => { const v = i.value.trim(), it = find(r); if (!it || String(it[c] == null ? "" : it[c]) === v) return; if (c === "spare"){ Store.mutate(key, () => { it.spare = Math.max(0, Math.round(+v || 0)) || undefined; recalc(it); Store.touch(a); }); return; }
-        Store.mutate(key, () => { it[c] = v; if (it.auto && c === "qty") it.qman = v !== ""; recalc(it); bolts(); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "qty" && !missing(it).length) focusNext = doneNext(it); };
+        Store.mutate(key, () => { it[c] = v; if (it.auto && c === "qty") it.qman = v !== ""; if (c === "sq") it.sqm = v !== ""; recalc(it); bolts(); fillSpare(it); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "qty" && !missing(it).length) focusNext = doneNext(it); };
       i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }; });
     /* the total follows the spare as it's typed */
     $$(".mt-sq", el).forEach(i => i.addEventListener("input", () => { const it = find(i.dataset.r), td = i.closest("td").nextElementSibling; if (!it || !td || i.dataset.c !== "sq") return; const t = ord(Object.assign({}, it, { sq: i.value })); td.innerHTML = esc(t) + (t ? ' <span class="dim">' + esc(uShort(it.unit) || "EA") + '</span>' : ""); }));
