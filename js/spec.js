@@ -27,7 +27,8 @@ const PipeSpec = (() => {
   const sizes = cl => !C(cl) ? [] : DNS.filter(n => C(cl).comps.some(c => n >= c.lo && n <= c.hi) || valves(cl).some(v => n >= D.valve[v].lo && n <= D.valve[v].hi));
   /* 2 the items the spec has at that size: its components, then its valves and gasket */
   function items(cl, dn){ const c0 = C(cl); if (!c0) return []; const out = [], seen = new Set();
-    c0.comps.forEach(c => { const d = clean(c.d); if ((dn == null || (dn >= c.lo && dn <= c.hi)) && !seen.has(d)){ seen.add(d); out.push({ v: d, t: d, g: "Components" }); } });
+    c0.comps.forEach(c => { const d = clean(c.d); if (dn != null && reducing(d) && !branches(cl, dn, d).length) return;   // (a reducing fitting at the class's smallest size has nothing to reduce to)
+      if ((dn == null || (dn >= c.lo && dn <= c.hi)) && !seen.has(d)){ seen.add(d); out.push({ v: d, t: d, g: "Components" }); } });
     valves(cl).filter(v => dn == null || (dn >= D.valve[v].lo && dn <= D.valve[v].hi)).forEach(v => out.push({ v: "V:" + v, t: v + " " + vrow(v, "Type").split(" - ")[0], sub: vrow(v, "Type"), g: "Valves" }));
     gaskets(cl).forEach(g => out.push({ v: "G:" + g, t: "Gasket " + g, sub: "to suit " + cl + " flanges", g: "Gaskets" })); return out; }
   /* a reducing fitting (reducing tee, reducer, olet, swage, bush) has a second, smaller size: the branch or small end. Its choices are the class's
@@ -53,6 +54,9 @@ const PipeSpec = (() => {
       line: sz + " " + clean(c.d) + ", " + clean(c.type) + ", " + clean(c.ends) + ", " + clean(c.mat) + (/manufacturer/i.test(c.mat) && /manufacturer/i.test(c.dim) ? "" : ", " + clean(c.dim)) + ", to piping class " + r.cl,
       rows: [["Piping class", r.cl + ": " + clean(c0.title)], ["Item", clean(c.d)], ["Size", sz + (reducing(r.it) ? " (run x branch, or large x small end)" : "") + " (the spec line covers " + clean(c.size) + ")"], ["Type", clean(c.type)], ["Ends", clean(c.ends)], ["Material", clean(c.mat)], ["Standard", clean(c.dim)],
         ["Spec", (D.meta.doc || "") + " Rev " + (D.meta.rev || "") + ", page " + c0.page]].filter(x => x[1]) }; }
+  /* the material family a class belongs to, for the headings in the class list */
+  const FAM = [["Carbon steel", /^(MS\d|XS)/], ["Galvanised steel", /^MSG/], ["Lined steel", /^(CL|RL)\d/], ["Stainless steel", /^SS\d/], ["Poly (HDPE)", /^PE/], ["Other plastic", /./]];
+  const family = cl => (FAM.find(([, re]) => re.test(cl)) || FAM[FAM.length - 1])[0], FAMS = FAM.map(f => f[0]);
   const title = cl => C(cl) ? clean(C(cl).title) : "";
-  return { reducing, branches, load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
+  return { family, FAMS, reducing, branches, load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
 })();

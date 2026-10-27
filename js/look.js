@@ -13,7 +13,7 @@ const Look = (() => {
     /* (the words typed, in bold and underlined in each choice, as on the tags box) */
     const mk = t => { let o = esc(t); (opts.mark || []).concat(q ? [q] : []).filter(Boolean).forEach(w => { const re = new RegExp("(" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "i"); o = o.replace(re, "<mark>$1</mark>"); }); return o; };
     let q = "", hi = Math.max(0, items.findIndex(x => x.v === cur)), shown = items;
-    const draw = () => { shown = q ? items.filter(x => x.t.toLowerCase().includes(q.toLowerCase())) : items; hi = Math.min(hi, Math.max(0, shown.length - 1));
+    const draw = () => { shown = q ? items.filter(x => x.t.toLowerCase().includes(q.toLowerCase())) : items; hi = Math.min(hi, Math.max(0, shown.length - 1)); while (shown[hi] && shown[hi].grp && hi < shown.length - 1) hi++;   // (a heading is never the lit choice)
       c.innerHTML = (opts.search ? '<input class="in lk-q" placeholder="Type to narrow" aria-label="Narrow the list" value="' + esc(q) + '">' : "")
         + '<div class="lk-ol">' + (shown.length ? shown.map((x, k) => x.grp ? '<div class="lk-g">' + esc(x.t) + '</div>' : '<button type="button" class="lk-o' + (k === hi ? " hi" : "") + (x.v === cur ? " on" : "") + (x.dis ? " dis" : "") + (x.sub ? " lk-2" : "") + '" data-k="' + k + '"' + (x.dis ? " disabled" : "") + '>' + (x.k ? kindSym(x.k) : "") + '<span class="lk-x"><b>' + mk(x.t) + '</b>' + (x.sub ? '<small>' + mk(x.sub) + '</small>' : "") + '</span></button>').join("") : '<div class="dim lk-none">Nothing matches</div>') + '</div>';
       $$(".lk-o", c).forEach(b => b.onmousedown = e => { e.preventDefault(); const x = shown[+b.dataset.k]; close(); pick(x); });

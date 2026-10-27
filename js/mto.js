@@ -187,7 +187,8 @@ const Mto = (() => {
     if (isInst(it) && c === "z"){ const e = instType(it.desc), used = e ? [...e.sz].sort((x, y) => y[1] - x[1]) : [], u = new Set(used.map(x => x[0]));
       return used.map(([n, k]) => ({ v: "DN" + n, t: "DN" + n, sub: k + " " + (k === 1 ? "tag" : "tags") + " of this type in the plant lists" })).concat(PipeSpec.DNS.filter(n => !u.has(n)).map(n => ({ v: "DN" + n, t: "DN" + n }))); }
     if (isInst(it) && c === "part"){ const e = instType(it.desc); return e ? e.mm.map(([m, n]) => ({ v: m, t: m, sub: n + " " + (n === 1 ? "tag" : "tags") + " in the plant lists" })) : []; }
-    if (c === "cl") return [{ v: "N/A", t: "N/A", sub: "not to a piping class: the general choices" }, { v: "cat:inst", t: "Instrument or control valve", sub: "from the instrument index and the control valve list" }].concat(PipeSpec.classes().map(x => ({ v: x, t: x, sub: PipeSpec.title(x).slice(0, 110) }))); const T = type(it), S = std(it);
+    if (c === "cl") return [{ v: "N/A", t: "N/A", sub: "not to a piping class: the general choices", g: "Not to a class" }, { v: "cat:inst", t: "Instrument or control valve", sub: "from the instrument index and the control valve list", g: "Not to a class" }]
+      .concat(PipeSpec.classes().map(x => ({ v: x, t: x, sub: PipeSpec.title(x).slice(0, 110), g: PipeSpec.family(x) })).sort((x, y) => PipeSpec.FAMS.indexOf(x.g) - PipeSpec.FAMS.indexOf(y.g))); const T = type(it), S = std(it);
     if (c === "dn") return PipeSpec.sizes(it.cl).map(n => ({ v: n, t: "DN" + n }));
     if (c === "dn2") return PipeSpec.branches(it.cl, it.dn, it.it).map(x => ({ v: x.v, t: "x DN" + x.v, sub: x.sub }));
     if (c === "it") return PipeSpec.items(it.cl, it.dn).map(x => ({ v: x.v, t: x.t, sub: x.sub || "", g: x.g }));
@@ -359,6 +360,8 @@ const Mto = (() => {
         const q = i.value.trim().toLowerCase(), cur0 = String(c === "t" && isInst(it) ? it.desc || "" : shown(it, c)).toLowerCase(), typed = q && q !== cur0, ws = typed ? q.split(/\s+/) : [];
         const all = choices(it, c, typed ? q : ""); if (!all.length && !(pt && typed)) return Look.close();
         let list = (ws.length ? all.filter(x => x.tagHit || ws.every(w => (x.t + " " + (x.sub || "") + " " + (x.g || "")).toLowerCase().includes(w))) : all).slice(0, 300);
+        /* the headings in the list (the class list by material, the items by kind) when there is more than one */
+        if (new Set(list.map(x => x.g).filter(Boolean)).size > 1){ const o = []; let g0 = null; list.forEach(x => { if (x.g && x.g !== g0){ o.push({ grp: true, t: x.g }); g0 = x.g; } o.push(x); }); list = o; }
         if (pt && typed && !list.some(x => x.t.toLowerCase() === q)) list = list.concat([{ v: "typed:" + i.value.trim(), t: "Use “" + i.value.trim() + "” as typed", sub: "not in the plant lists" }]);
         key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], c === "t" ? [it.t, it.mk, it.end].filter(Boolean).join("|") : c === "dn" ? it.dn : it[c], x => { if (x.v === "") return; if (!String(r).startsWith("new")) i.value = x.t; save(r, c, x.v); App.render(); }, { mark: ws }); };
       i.onfocus = () => { i.select(); show(); };
