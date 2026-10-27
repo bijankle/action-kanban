@@ -1251,3 +1251,5 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .lk-two .lk-o b{font-weight:600;font-size:13px}.lk-two .lk-o.on b{font-weight:700}
 .mt-szd:has(.mt-pk+.mt-pk) .mt-pk{width:auto!important;field-sizing:content;min-width:44px;max-width:calc(100% - 46px)}
 .mt-tbl td.pt-no{white-space:nowrap;overflow:visible;text-overflow:clip}
+/* a spare the app worked out (File, Parameters, MTO spares): a faint blue fill until you type over it */
+.mt-tbl .mt-sqa{background:color-mix(in srgb,#2563eb 13%,var(--panel))}html.dark .mt-tbl .mt-sqa{background:color-mix(in srgb,#3b82f6 22%,var(--panel))}
