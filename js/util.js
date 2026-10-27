@@ -291,6 +291,14 @@ function tblKit(table, key, opts){ const hr = table.tHead && table.tHead.rows[0]
     th.ondrop = e => { th.classList.remove("dover"); const [k, from] = (e.dataTransfer.getData("text/tcol") || "").split("|"); const to = cid(th, i); if (k !== key || !from || from === to) return; e.preventDefault();
       const ids = ths.map(cid), a = ids.indexOf(from), b0 = ids.indexOf(to); ids.splice(a, 1); let b = ids.indexOf(to); b = a < b0 ? b + 1 : b; ids.splice(b, 0, from);
       const all = lsGet("adTO", {}) || {}; all[key] = ids; lsSet("adTO", all); App.render(); }; }); }
+/* numbers sit in the middle of their column in every table (a quantity, a size, a count); only section numbers (1.2, 1.1.2) stay on the left */
+const NUMV = /^[-+]?(\d{1,3}(,\d{3})+|\d+)?(\.\d+)?\s*(%|mm|m|kg|t|kw|kpag?|°c|ea|no\.?)?$/i;
+function numCols(table){ const ths = [...(table.tHead ? table.tHead.rows[0].cells : [])], rows = [...table.tBodies[0].rows].filter(r => r.cells.length === ths.length).slice(0, 300);
+  ths.forEach((th, i) => { let n = 0, bad = false, sec = /\b(section|clause|item no)\b/i.test(th.textContent);
+    rows.forEach(r => { if (bad) return; const td = r.cells[i], f = td && td.querySelector("input:not([type=checkbox]),select,textarea"); if (f && f.tagName !== "INPUT") return bad = true;
+      const v = (f ? f.value : td ? td.textContent : "").trim(); if (f && /decimal|numeric/.test(f.inputMode)){ n++; return; } if (!v) return;
+      if (!NUMV.test(v) || !/\d/.test(v)) return bad = true; n++; if (/^\d+\.\d+\.\d/.test(v)) sec = true; });
+    const on = n > 0 && !bad && !sec; th.classList.toggle("tc-n", on); rows.forEach(r => r.cells[i] && r.cells[i].classList.toggle("tc-n", on)); }); }
 function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts); const ths = [...(table.tHead ? table.tHead.rows[0].cells : [])]; if (!ths.length) return;
   const store = lsGet("adTW", {}) || {}, W = store[key] = store[key] || {}, fixed = opts.fixed || {};
   const cv = gridCols.cv || (gridCols.cv = document.createElement("canvas").getContext("2d"));
@@ -317,6 +325,7 @@ function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts)
   const widths = ths.map((th, i) => Math.round(set[i] || (free[i] ? (flo.has(i) ? minW(i) : nat[i] * k) : nat[i])));
   cols.forEach((c, i) => c.style.width = widths[i] + "px"); table.classList.add("tw"); table.style.width = widths.reduce((t, w) => t + w, 0) + "px";
   rows.forEach(r => [...r.cells].forEach(td => { if (!td.title && !td.querySelector("input,select,textarea,button")) td.title = td.textContent.trim(); }));
+  numCols(table);
   const save = () => lsSet("adTW", store);
   ths.forEach((th, i) => { if (th.querySelector(".tw-r")) return; const h = document.createElement("i"); h.className = "tw-r"; th.appendChild(h);
     h.onclick = e => e.stopPropagation();

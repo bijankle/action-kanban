@@ -11,7 +11,7 @@ const Parts = (() => {
   /* one action's list, drawn into its action view tab; keep is where the cursor was before the redraw */
   function renderFor(el, a, kind, keep){ const ro = !Store.S.edit;
     el.innerHTML = '<div class="pt-main">' + pane(a, kind, ro) + '</div>'; wire(el, a, kind, ro);
-    if (kind === "mto") $$(".mt-tbl", el).forEach(t => gridCols(t, t.classList.contains("mt-pipe") ? "mtoP" : "mtoS", { fixed: { "No.": 64, Qty: 104, x: $(".mt-done", t) ? 96 : 32 }, extra: { Item: 20, "Ends / type": 0 }, inPad: 24, hPad: 22, scroll: true }));
+    if (kind === "mto") $$(".mt-tbl", el).forEach(t => gridCols(t, t.classList.contains("mt-pipe") ? "mtoP" : "mtoS", { fixed: { "No.": 44, Qty: 96, x: $(".mt-done", t) ? 168 : 102 }, extra: { Notes: 24, "Ends / type": 0 }, inPad: 24, hPad: 22, scroll: true }));
     else { const pt = $(".pt-tbl", el); if (pt) gridCols(pt, "spares", { fixed: { Item: 66 }, scroll: true }); }
     if (keep && keep.c){ let r = keep.r, cut = keep.cut; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } if (cut === "new" && created.has("cut:" + r)) cut = created.get("cut:" + r);
       const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]' + (cut ? '[data-cut="' + cut + '"]' : ":not([data-cut])"), el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }

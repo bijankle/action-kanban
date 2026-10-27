@@ -95,8 +95,22 @@ const Mto = (() => {
     F: "female", M: "male", SMLS: "seamless", ERW: "electric resistance welded", BE: "bevelled ends", PE: "plain ends", THD: "threaded", TOE: "threaded one end", HDG: "hot dip galvanised", GALV: "galvanised", SS: "stainless steel", CS: "carbon steel",
     ELB: "elbow", LR: "long radius", SR: "short radius", CPLG: "coupling", NIP: "nipple", FLG: "flange", WN: "weld neck", SO: "slip on", BL: "blind", RF: "raised face", FF: "flat face", GK: "gasket", SPWD: "spiral wound", HB: "hex bolt", SB: "stud bolt", PL: "plate", FLT: "flat bar", PFC: "parallel flange channel", EA: "equal angle", SHS: "square hollow section", RHS: "rectangular hollow section", CHS: "circular hollow section", "U-BOLT": "U bolt", TAG: "tag" };
   const unAbbr = t => String(t || "").split(/(\s+|,)/).map(w => ABBR[w.toUpperCase()] ? ABBR[w.toUpperCase()] : w).join("");
+  /* a spec row in the same short MTO form, in capitals: item, size, type, ends, material, standard, then the class (the (i) has it in full).
+     The spec's own words are shortened the usual way; "manufacturer's standard" is left out (it says nothing a supplier needs) */
+  const SPW = [[/\bstreet elbow\b/gi, "ST ELB"], [/\belbow\b/gi, "ELB"], [/(\d+)°/g, "$1"], [/\bshort radius\b/gi, "SR"], [/\blong radius\b/gi, "LR"], [/\btees?\b/gi, "TEE"], [/\bequal\b/gi, "EQ"], [/\breducing\b/gi, "RED"], [/\breducer\b/gi, "RED"],
+    [/\bconcentric\b/gi, "CONC"], [/\beccentric\b/gi, "ECC"], [/\bcoupling\b/gi, "CPLG"], [/\bsliding\b/gi, "SLDG"], [/\bstandard\b(?! *$)/gi, "STD"], [/\bflange\b/gi, "FLG"], [/\bblind\b/gi, "BL"], [/\bslip-on\b/gi, "SO"], [/\bweld neck\b/gi, "WN"], [/\bada[pt][tp]er\b|\badaptor\b/gi, "ADPT"],
+    [/\bnipple\b/gi, "NIP"], [/\bgaskets?\b/gi, "GK"], [/\bstud bolts?\b/gi, "SB"], [/\bmachine bolts?\b/gi, "MACH BOLT"], [/\bnuts\b/gi, "NUT"], [/\bhex head bushing\b/gi, "HEX BUSH"], [/\bhex head plug\b/gi, "HEX PLUG"], [/\(fabricated\)|\bfabricated\b/gi, "FAB"],
+    [/\bplain ends?\b/gi, "PE"], [/\bbevelled ends?\b|\bbevelled\b/gi, "BE"], [/\bpress connector\b/gi, "PRESS"], [/\bsocket weld\b/gi, "SW"], [/\braised face\b/gi, "RF"], [/\belectrofusion sockets?\b/gi, "EF SKT"], [/\bthreaded\b/gi, "THD"],
+    [/\bfemale\b/gi, "F"], [/\bmale\b/gi, "M"], [/\bseamless\b/gi, "SMLS"], [/\bsch (\d+\w*)/gi, "SCH$1"], [/\bhot dip(ped)? galvanised\b/gi, "HDG"], [/\bgalvanised\b/gi, "GALV"], [/\bstainless steel\b/gi, "SS"], [/\bcarbon steel\b/gi, "CS"], [/\bmodel\b/gi, "MDL"],
+    [/\bASTM /g, ""], [/\bASME /g, ""], [/\bGr\.? /g, "GR "], [/\bmanufacturers?'?s? (std|standard)\b/gi, ""]];
+  const spShort = t => { let o = PipeSpec.clean(t); SPW.forEach(([re, w]) => o = o.replace(re, w)); return o.replace(/\s*,\s*/g, " ").replace(/\s+/g, " ").trim().toUpperCase(); };
+  function specShort(it){ const R = specRes(it), dn = it.dn ? "DN" + it.dn : "";
+    if (R.v) return [spShort(PipeSpec.clean((R.rows.find(x => x[0] === "Type") || [, ""])[1]).split(" - ")[0]).replace(/\bBALL VALVE\b/, "BV").replace(/\bGATE VALVE\b/, "GV").replace(/\bGLOBE VALVE\b/, "GLV").replace(/\bBUTTERFLY VALVE\b/, "BFV").replace(/\bCHECK VALVE\b/, "CV"), dn, spShort(R.auto), R.v, it.cl].filter(Boolean).join(" ");
+    if (R.g) return ["GK", dn, R.g, it.cl].filter(Boolean).join(" ");
+    if (!R.c) return [it.cl, dn, it.it && itName(it.it)].filter(Boolean).join(" ").toUpperCase();
+    const c = R.c, seen = new Set(); return [spShort(c.d), dn, spShort(c.type), spShort(c.ends), spShort(c.mat), spShort(c.dim), it.cl].filter(x => x && !seen.has(x) && seen.add(x)).join(" "); }
   /* the short form, used on the MTO, the RFQ and the exports: item, size, rating, material, standard, stock length */
-  function desc(it){ if (isSpec(it)){ const R = specRes(it); return R.line || [it.cl, it.dn && "DN" + it.dn, it.it && it.it.replace(/^[VG]:/, "")].filter(Boolean).join(" "); }
+  function desc(it){ if (isSpec(it)) return specShort(it);
     const T = type(it), S = std(it); if (!T) return it.desc || "";
     const L = it.L && (T.k === "len" ? lenTxt(it.L).replace(" m", "m") + " LG" : T.k === "plate" ? String(it.L).replace("x", "×") + " SHT" : "");
     return [itemCode(it), zShort(it), rShort(it.r), mShort(it.m), S && !it.sx && stShort(S.n), L].filter(Boolean).join(" "); }
@@ -200,11 +214,11 @@ const Mto = (() => {
     if (!a.mtoDr){ items.forEach(it => { if (missing(it).length) it.draft = 1; }); a.mtoDr = 1; }
     const pipes = items.filter(it => isPipe(it) && !it.draft), steel = items.filter(it => !isPipe(it) && !it.draft), pdr = items.filter(it => isPipe(it) && it.draft), sdr = items.filter(it => !isPipe(it) && it.draft); let n = 0;
     const box = (it, c, ph, ex, v) => '<input class="in pt-in mt-pk" data-r="' + it.id + '" data-c="' + c + '" value="' + esc(v != null ? v : shown(it, c)) + '" placeholder="' + ph + '" title="' + esc(titleOf(it, c)) + '"' + (ex || "") + (ro ? " readonly" : "") + ' autocomplete="off" spellcheck="false">';
-    const iBtn = it => '<button type="button" class="mt-ii" data-info="' + it.id + '" title="This item in full, no abbreviations" aria-label="This item in full">' + INFO_I + '</button>';
+    const iBtn = it => '<button type="button" class="mt-ii" data-info="' + it.id + '" title="About this item: in full, no abbreviations, sizes, weight, how the total was worked out" aria-label="About this item">' + INFO_I + '</button>';
     const qtyCell = (it, auto) => '<td class="mt-qu"><input class="in pt-in mt-q" data-r="' + it.id + '" data-c="qty" inputmode="decimal" value="' + esc(it.qty || "") + '" placeholder="Qty"' + (ro || auto ? " readonly" : "") + (auto ? ' title="Worked out from the pieces (▸)"' : "") + '>'
       + (type(it) ? box(it, "unit", "", ' data-opt="1"').replace("mt-pk", "mt-pk mt-un") : '<input class="in pt-in mt-u mt-un" data-r="' + it.id + '" data-c="unit" value="' + esc(uShort(it.unit)) + '" placeholder="EA"' + (ro ? " readonly" : "") + '>') + '</td>';
-    const tail = it => '<td><input class="in pt-in" data-r="' + it.id + '" data-c="notes" value="' + esc(it.notes || "") + '"' + (ro ? " readonly" : "") + '></td>'
-      + '<td class="mt-ic">' + (it.draft && !ro && !missing(it).length ? '<button type="button" class="btn sm mt-done" data-done="' + it.id + '" title="Put it under its heading in the MTO">Done</button>' : "") + '<button type="button" class="ic-b sm mt-more' + (it.info ? " on" : "") + '" data-more="' + it.id + '" title="About this item, move it to Spares, or remove it" aria-label="More for this row" aria-haspopup="true">⋯</button></td></tr>';
+    const tail = it => '<td class="mt-itd"><input class="in pt-in" data-r="' + it.id + '" data-c="notes" value="' + esc(it.notes || "") + '"' + (ro ? " readonly" : "") + '>' + (type(it) || (isSpec(it) && it.it) || it.desc ? iBtn(it) : "") + '</td>'
+      + '<td class="mt-ic">' + (it.draft && !ro && !missing(it).length ? '<button type="button" class="btn sm mt-done" data-done="' + it.id + '" title="Put it under its heading in the MTO">Done</button>' : "") + '' + (ro ? "" : '<button type="button" class="btn ghost sm pt-mv mt-mv" data-mv="' + it.id + '" title="Move this row to Spares">→ Spares</button><button type="button" class="ic-b sm pt-x mt-x" data-x="' + it.id + '" title="Remove this row">✕</button>') + '</td></tr>';
     const head = (it, cols, last) => GROUP(it) !== last ? '<tr class="mt-grp nosort"><td colspan="' + (cols + 1) + '">' + esc(GROUP(it)) + '</td></tr>' : "";
     const no = (it, miss, tg) => '<td class="pt-no">' + (miss.length ? '<span class="mt-dot" title="Still to pick: ' + esc(miss.join(", ")) + '"></span>' : it.draft ? "" : ++n) + (it.chk ? '<span class="mt-chk" title="Check: ' + esc(it.chk) + '">?</span>' : "") + (tg || "") + '</td>';
     const toggle = (it, res) => { const T = type(it), on = open.has(it.id); return T && (T.k === "len" || T.k === "plate") ? '<button type="button" class="mt-tg' + (on ? " on" : "") + '" data-tg="' + it.id + '" title="' + (on ? "Hide" : "Show") + ' the pieces to cut">' + (on ? "▾" : "▸") + (cuts(it).length ? '<b>' + cuts(it).reduce((t, c) => t + Math.max(1, Math.round(+c.n || 1)), 0) + '</b>' : "") + '</button>' : ""; };
@@ -215,12 +229,12 @@ const Mto = (() => {
     const pipeRow = it => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it); let ph = "";
       ph += '<tr data-id="' + it.id + '" class="mt-row' + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res));
       if (isSpec(it)){ const R = specRes(it);
-        ph += '<td>' + box(it, "cl", "Class") + '</td><td>' + box(it, "dn", "Size") + '</td><td class="mt-itd">' + box(it, "it", "Item") + (it.it ? iBtn(it) : "") + '</td>'
+        ph += '<td>' + box(it, "cl", "Class") + '</td><td>' + box(it, "dn", "Size") + '</td><td>' + box(it, "it", "Item") + '</td>'
           + '<td>' + ((R.vs || []).length ? box(it, "vt", "Pick one") : '<span class="mt-auto" title="From the spec">' + esc(R.auto || "") + '</span>') + '</td>'; }
       else if (T || it.cl === "N/A" && !it.cat && it.desc == null){
-        ph += '<td>' + box(it, "cl", "Class", "", "N/A") + '</td><td>' + box(it, "z", "Size") + '</td><td class="mt-itd">' + box(it, "t", "Item") + (T ? iBtn(it) : "") + '</td>'
+        ph += '<td>' + box(it, "cl", "Class", "", "N/A") + '</td><td>' + box(it, "z", "Size") + '</td><td>' + box(it, "t", "Item") + '</td>'
           + '<td class="mt-rms">' + (T ? (ratings(it).length ? box(it, "r", "Sch") : "") + box(it, "m", "Material") + box(it, "s", "Std", ' data-opt="1"') : "") + '</td>'; }
-      else ph += '<td>' + box(it, "cl", "Class", "", it.cl || "N/A") + '</td><td>' + box(it, "z", "Size") + '</td><td class="mt-itd">' + box(it, "t", it.cat === "inst" ? "Instrument or control valve" : "Item") + (it.desc ? iBtn(it) : "") + '</td><td>' + box(it, "part", "Part / model") + '</td>';
+      else ph += '<td>' + box(it, "cl", "Class", "", it.cl || "N/A") + '</td><td>' + box(it, "z", "Size") + '</td><td>' + box(it, "t", it.cat === "inst" ? "Instrument or control valve" : "Item") + '</td><td>' + box(it, "part", "Part / model") + '</td>';
       return ph + qtyCell(it, !!res) + tail(it) + sub(it, res, PC.length); };
     ph = pdr.map(pipeRow).join("");
     const lc = lastCl.get(akey(a));
@@ -233,7 +247,7 @@ const Mto = (() => {
     let sh = ""; last = null;
     const steelRow = it => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it);
       return '<tr data-id="' + it.id + '" class="mt-row' + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res))
-        + '<td class="mt-itd">' + box(it, "t", "Item") + ((T || it.desc) ? iBtn(it) : "") + '</td><td>' + box(it, "z", "Size") + '</td>'
+        + '<td>' + box(it, "t", "Item") + '</td><td>' + box(it, "z", "Size") + '</td>'
         + '<td>' + (T && ratings(it).length ? box(it, "r", "Rating") : "") + '</td><td>' + (T ? box(it, "m", "Material") : "") + '</td><td>' + (T ? box(it, "s", "Std", ' data-opt="1"') : "") + '</td>'
         + (hasPart ? '<td>' + box(it, "part", "Part") + '</td>' : "") + qtyCell(it, !!res) + tail(it) + sub(it, res, SC.length); };
     sh = sdr.map(steelRow).join("");
@@ -283,12 +297,11 @@ const Mto = (() => {
     $$(".mt-tg", el).forEach(b => b.onclick = () => { const id = b.dataset.tg; open.has(id) ? open.delete(id) : open.add(id); App.render(); });
     $$("[data-info]", el).forEach(b => b.onclick = e => { e.stopPropagation(); info(a, find(b.dataset.info), b, ro); });
     /* the ⋯ at the row's end: about this item (sizes, weight, how the total was worked out, notes), move it to Spares, remove it */
-    $$("[data-more]", el).forEach(b => b.onclick = e => { e.stopPropagation(); const it = find(b.dataset.more); if (!it) return;
-      if (ro) return info(a, it, b, ro);
-      Look.open(b, [{ v: "info", t: "About this item", sub: "sizes, weight, how the total was worked out, notes" }, { v: "mv", t: "Move to Spares" }, { v: "x", t: "Remove this row" }], null, async x => {
-        if (x.v === "info") return info(a, it, b, ro);
-        if (x.v === "mv"){ Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); it.desc = desc(it); (a.spares || (a.spares = [])).push(it); Store.touch(a); }); note("Moved to Spares (Ctrl+Z to undo)"); Store.log("Moved a part of " + Store.actId(a) + " to Spares"); return; }
-        if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?", "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); Store.touch(a); }); }); });
+    /* the row's end: move it to Spares, or remove it (asks first) */
+    $$("[data-mv]", el).forEach(b => b.onclick = () => { const it = find(b.dataset.mv); if (!it) return;
+      Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); it.desc = desc(it); delete it.draft; (a.spares || (a.spares = [])).push(it); Store.touch(a); }); note("Moved to Spares (Ctrl+Z to undo)"); Store.log("Moved a part of " + Store.actId(a) + " to Spares"); });
+    $$("[data-x]", el).forEach(b => b.onclick = async () => { const it = find(b.dataset.x); if (!it) return;
+      if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?", "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); Store.touch(a); }); });
     if (ro) return;
     /* the order the boxes are filled in: to a class, Class Size Item (Ends / type) Qty; N/A, Class Size Item Rating Material Qty; the rest, Item Size Rating Material Qty */
     const orderOf = it => isInst(it) ? ["cl", "t", "part", "z", "qty"] : isSpec(it) ? ["cl", "dn", "it", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : ["t", "z", "r", "m", "qty"];

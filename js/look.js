@@ -17,6 +17,7 @@ const Look = (() => {
       c.innerHTML = (opts.search ? '<input class="in lk-q" placeholder="Type to narrow" aria-label="Narrow the list" value="' + esc(q) + '">' : "")
         + '<div class="lk-ol">' + (shown.length ? shown.map((x, k) => x.grp ? '<div class="lk-g">' + esc(x.t) + '</div>' : '<button type="button" class="lk-o' + (k === hi ? " hi" : "") + (x.v === cur ? " on" : "") + (x.dis ? " dis" : "") + (x.sub ? " lk-2" : "") + '" data-k="' + k + '"' + (x.dis ? " disabled" : "") + '>' + (x.k ? kindSym(x.k) : "") + '<span class="lk-x"><b>' + mk(x.t) + '</b>' + (x.sub ? '<small>' + mk(x.sub) + '</small>' : "") + '</span></button>').join("") : '<div class="dim lk-none">Nothing matches</div>') + '</div>';
       $$(".lk-o", c).forEach(b => b.onmousedown = e => { e.preventDefault(); const x = shown[+b.dataset.k]; close(); pick(x); });
+      $$(".lk-o", c).forEach(b => b.onmousemove = () => { const k = +b.dataset.k; if (hi === k || b.disabled) return; hi = k; $$(".lk-o", c).forEach(o => o.classList.toggle("hi", +o.dataset.k === k)); });   // (one choice lit at a time: the mouse moves it like the arrow keys)
       const qi = $(".lk-q", c); if (qi){ qi.oninput = () => { q = qi.value; hi = 0; draw(); const n = $(".lk-q", c); n.focus(); n.setSelectionRange(q.length, q.length); }; qi.onkeydown = key; }
       const o = $(".lk-o.hi", c); if (o) o.scrollIntoView({ block: "nearest" }); };
     const key = e => { const real = shown.filter(x => !x.grp && !x.dis);

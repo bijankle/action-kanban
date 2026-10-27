@@ -43,7 +43,7 @@ const PipeSpec = (() => {
     const ls = lines(r.cl, r.dn, r.it); if (!ls.length) return { need: "item" }; const vs = variants(ls), c = ls.length === 1 ? ls[0] : (vs.find(x => x.v === r.vt) || {}).c;
     if (!c) return { need: "ends or type", vs };
     return { c, vs, auto: vs.length ? "" : [clean(c.type), clean(c.ends)].filter(Boolean).join(", "), unit: /^pipe/i.test(clean(c.d)) ? "m" : "ea",
-      line: "DN" + r.dn + " " + clean(c.d) + ", " + clean(c.type) + ", " + clean(c.ends) + ", " + clean(c.mat) + ", " + clean(c.dim) + ", to piping class " + r.cl,
+      line: "DN" + r.dn + " " + clean(c.d) + ", " + clean(c.type) + ", " + clean(c.ends) + ", " + clean(c.mat) + (/manufacturer/i.test(c.mat) && /manufacturer/i.test(c.dim) ? "" : ", " + clean(c.dim)) + ", to piping class " + r.cl,
       rows: [["Piping class", r.cl + ": " + clean(c0.title)], ["Item", clean(c.d)], ["Size", "DN" + r.dn + " (the spec line covers " + clean(c.size) + ")"], ["Type", clean(c.type)], ["Ends", clean(c.ends)], ["Material", clean(c.mat)], ["Standard", clean(c.dim)],
         ["Spec", (D.meta.doc || "") + " Rev " + (D.meta.rev || "") + ", page " + c0.page]].filter(x => x[1]) }; }
   const title = cl => C(cl) ? clean(C(cl).title) : "";

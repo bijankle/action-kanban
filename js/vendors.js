@@ -13,9 +13,8 @@ const Vendors = (() => {
   /* ---------- the box on the MTO tab ---------- */
   function box(a, ro){ const c = a.rfqCat || "", to = a.rfqTo || [];
     if (!all().length) return '<div class="vd-box"><div class="dim">No approved vendor list yet. Import it on the Data validation tab, Suppliers.</div></div>';
-    return '<div class="vd-box">' + (a.rfqCatAI ? '<span class="vd-ai" title="' + esc(a.rfqCatWhy || "") + '">✨ Category picked by Gemini from the MTO</span>' : "")
-      + '<div class="vd-row"><label class="fl vd-cat">Supplier category<select class="in" data-k="cat"' + (ro ? " disabled" : "") + '><option value="">' + (hasKey() ? "Pick, or let Gemini suggest" : "Pick a category") + '</option>' + cats().map(x => '<option' + (x.name === c ? " selected" : "") + ' title="' + esc(x.look) + '">' + esc(x.name) + '</option>').join("") + '</select></label>'
-      + (ro || !hasKey() ? "" : '<button type="button" class="btn ghost sm vd-sug" data-k="sug" title="Ask Gemini which category fits the MTO">✨ Suggest</button>')
+    return '<div class="vd-box">' + ""
+      + '<div class="vd-row"><label class="fl vd-cat">Supplier category<select class="in" data-k="cat"' + (ro ? " disabled" : "") + '><option value="">' + "Pick a category" + '</option>' + cats().map(x => '<option' + (x.name === c ? " selected" : "") + ' title="' + esc(x.look) + '">' + esc(x.name) + '</option>').join("") + '</select></label>'
       + '<label class="fl vd-pick">Supplier<div class="combo"><input class="in" data-k="ven" autocomplete="off" placeholder="' + (c ? "Pick from " + inCat(c).length + " approved suppliers" : "Search all approved suppliers") + '"' + (ro ? " readonly" : "") + '></div></label></div>'
       + (c ? '<div class="dim vd-look">' + esc((cats().find(x => x.name === c) || {}).look || "") + '</div>' : "")
       + '<div class="vd-to">' + (to.length ? to.map(n => { const v = byName(n) || {}; const has = !!(v.contact || v.email || v.phone); return '<span class="vd-chip" title="' + esc([v.cat, v.ordered, v.po ? v.po + " POs, last " + fmtDate(v.last) : ""].filter(Boolean).join("\n")) + '"><b>' + esc(n) + '</b>' + (v.type ? '<i>' + esc(v.type) + '</i>' : "")
@@ -40,8 +39,7 @@ const Vendors = (() => {
     i.onfocus = () => draw(); i.oninput = () => { hi = 0; draw(); }; i.onblur = () => setTimeout(close, 120);
     i.onkeydown = e => { if (dd && (e.key === "ArrowDown" || e.key === "ArrowUp")){ e.preventDefault(); hi = (hi + (e.key === "ArrowDown" ? 1 : -1) + res.length) % res.length; $$(".vd-o", dd).forEach((o, k) => o.classList.toggle("on", k === hi)); const o = $$(".vd-o", dd)[hi]; o && o.scrollIntoView({ block: "nearest" }); }
       else if (e.key === "Enter"){ e.preventDefault(); if (dd && res[hi]) pick(res[hi]); } else if (e.key === "Escape"){ e.stopPropagation(); close(); i.blur(); } };
-    /* first time the MTO is opened with items and no category: let Gemini pick one */
-    if (hasKey() && !a.rfqCat && (a.mto || []).length && !asked.has(a.u)) suggest(a, false); }
+    }
 
   /* Gemini picks the vendor category that fits the MTO items */
   async function suggest(a, loud){ asked.add(a.u); const items = (a.mto || []).map(it => [it.desc, it.part, it.qty && it.qty + " " + (it.unit || ""), it.notes].filter(Boolean).join(", ")).filter(Boolean);

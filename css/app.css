@@ -1238,3 +1238,8 @@ textarea.in.ta{resize:none;overflow:hidden;min-height:var(--ctl-h,28px)}
 .lk-o small{margin-left:0;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lk-o .ksym{flex:none;width:18px}
 .lk-o mark{background:none;color:inherit;font-weight:700;padding:0;text-decoration:underline;text-decoration-color:var(--focus);text-decoration-thickness:1px;text-underline-offset:2px}
+.tbl .tc-n{text-align:center}.tbl .tc-n input{text-align:center}.mt-tbl .mt-q{text-align:center}
+table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
+.lk-o:hover:not(.hi){background:none}
+.mt-itd .pt-in{padding-right:24px}
+.mt-tbl .mt-mv{height:24px;padding:0 7px;font-size:12px}.mt-tbl .mt-x{width:24px;height:24px}.mt-tbl .mt-ic{padding-left:4px;padding-right:4px}
