@@ -118,18 +118,23 @@ const Parts = (() => {
   /* ---------- Gemini: paste a list of parts, check the rows, then add them ---------- */
   /* rows from any AI (Copilot, ChatGPT, Gemini…): Copy for AI puts what's typed and the instructions on the clipboard; the AI's
      reply, pasted back, is read line by line into rows to check before they're added. No key, nothing to fail on our side. */
-  const AIF = { mto: "ITEM | SIZE | RATING | MATERIAL | STANDARD | QTY | UNIT | NOTES", spares: "DESCRIPTION | PART NO | QTY | UNIT | NOTES" };
+  const AIF = { mto: "ITEM | SIZE | RATING | MATERIAL | STANDARD | CLASS | PART | QTY | UNIT | NOTES", spares: "DESCRIPTION | PART NO | QTY | UNIT | NOTES" };
   function aiPrompt(kind, tx){ const mto = kind === "mto";
     return "You are writing a " + (mto ? "material take off (MTO)" : "list of spares to take from the store") + " for a maintenance job at a mineral processing plant in Australia.\n"
       + "From the request at the end, list every item needed.\n\nReply with ONLY these lines inside one code block, one item per line, nothing else:\n" + AIF[kind] + "\n\nRules:\n"
-      + (mto ? "- ITEM is one of these short forms: " + Mto.codes().join(", ") + ". Anything else (a bearing, a motor) is written plainly.\n"
+      + (mto ? "- ITEM is one of these short forms, for steel pipe and fittings to ASME or AS standards: " + Mto.codes().join(", ") + ".\n"
+        + "- Pipe ITEM says how it is made and its ends: PIPE SMLS BE, PIPE SMLS PE, PIPE ERW BE, PIPE SMLS THD.\n"
+        + "- Press fit, grooved, compression or any maker's own fittings, valves and anything else (a bearing, a motor) have ITEM written plainly with short forms where they exist, e.g. Press tee equal, BV FB 3PC THD BSPT F, Air filter regulator.\n"
+        + "- CLASS is the plant's piping class or line spec exactly as given (e.g. MSG3), or empty.\n"
+        + "- PART keeps every model, part, valve or tag code exactly as given (e.g. Model 4318, VB03S1, SMC AW60-K-10-D). Never drop them.\n"
+        + "- Plate asked for as pieces: SIZE is the thickness, UNIT is EA, and NOTES starts with the piece size, e.g. 290 x 290.\n"
         + "- SIZE as DN for pipe and fittings (DN50, DN300), M24x85 for a bolt, 100x100x5 for steel sections, 10 for plate thickness.\n"
         + "- RATING is the schedule, class or finish: SCH40, SCH10S, CL150 RF, CL3000 SW, TBL E, HDG, Black.\n"
         + "- MATERIAL in short form: A106 GR B, A403 WP316L, A234 WPB, A105, A182 F316L, C350L0, 300, 8.8, B7 / 2H.\n"
         + "- STANDARD in short form: B36.10M, B36.19M, B16.9, B16.5, B16.11, AS 2129, AS/NZS 1163, AS/NZS 3679.1, AS/NZS 3678.\n"
-        + "- UNIT is one of EA, M, LG (stock length), SHT (sheet), KG, SET.\n- Examples:\n  ELB 90 LR | DN300 | SCH10S | A403 WP316L | B16.9 | 2 | EA |\n  FLG SO | DN300 | TBL E | A182 F316L | AS 2129 | 4 | EA |\n  SHS | 100x100x5 | Black | C350L0 | AS/NZS 1163 | 24 | M | brace\n"
+        + "- UNIT is one of EA, M, LG (stock length), SHT (sheet), KG, SET.\n- Examples:\n  ELB 90 LR | DN300 | SCH10S | A403 WP316L | B16.9 | MSG3 | | 2 | EA |\n  PIPE SMLS PE | DN25 | SCH40 | A53 GR B | B36.10M | MSG3 | | 11 | M |\n  Press tee equal | DN25 | | | | MSG3 | Model 4318 | 1 | EA |\n  PL | 16 | HDG | 250 | AS/NZS 3678 | | | 1 | EA | 290 x 290\n"
         : "- DESCRIPTION is short and plain. PART NO exactly as written in the request, or empty.\n- UNIT is one of EA, M, KG, SET, L.\n")
-      + "- Leave a part empty when it doesn't apply, but keep its | separator. Don't guess part numbers.\n\nRequest:\n" + tx; }
+      + "- Leave a part empty when it doesn't apply, but keep its | separator. Never invent a code that isn't in the request.\n\nRequest:\n" + tx; }
   function aiRead(kind, text){ return String(text || "").split(/\r?\n/).map(l => l.trim().replace(/^```\w*|```$/g, "").trim()).filter(l => (l.match(/\|/g) || []).length >= 2)
     .map(l => l.replace(/^\|/, "").replace(/\|$/, "").split("|").map(x => x.trim())).filter(p => !/^(ITEM|DESCRIPTION)$/i.test(p[0]) && !/^-+$/.test(p[0])); }
   function gemini(a, kind){ if (!Store.S.edit) return App.viewOnly(); const cols = COLS[kind], mto = kind === "mto";
@@ -152,6 +157,6 @@ const Parts = (() => {
     $("[data-k=re]", m).oninput = read;
     $(".yn-no", m).onclick = () => m.close();
     add.onclick = () => { const take = rows.filter(r => r._on).map(r => { const o = Object.assign({ id: uid() }, r); delete o._on; if (mto) Mto.recalc(o); else cols.forEach(([k]) => { if (!o[k]) delete o[k]; }); return o; }); if (!take.length) return;
-      Store.mutate("a:" + a._p, () => { list(a, kind).push(...take); Store.touch(a); }); Store.log("Added " + take.length + " parts to the " + NAME[kind] + " of " + Store.actId(a)); m.close(); }; }
+      Store.mutate("a:" + a._p, () => { const L = list(a, kind); if (mto) take.forEach(it => Mto.place(L, it)); else L.push(...take); Store.touch(a); }); Store.log("Added " + take.length + " parts to the " + NAME[kind] + " of " + Store.actId(a)); m.close(); }; }
   return { renderFor, NAME, loadPdf, created };
 })();

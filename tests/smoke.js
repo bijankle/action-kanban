@@ -59,7 +59,7 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     /* the MTO: a line from the AI becomes a library row in short form; a row missing a pick says what's left */
     const mt = await p.evaluate(() => { const it = Mto.fromAi(["ELB 90 LR", "DN50", "SCH40", "A234 WPB", "B16.9", "2", "EA", ""]); Mto.recalc(it); const half = Mto.fromAi(["FLG WN", "DN50", "", "", "", "4", "EA", ""]);
       return Mto.desc(it) + " | " + Mto.missing(it).length + " | " + Mto.missing(half).join(","); });
-    check("an MTO line reads into a short form library row", /^ELB 90 LR DN50 SCH40 A234 WPB B16\.9 \| 0 \| \S*class\S*,material$/i.test(mt) || /^ELB 90 LR DN50 SCH40 A234 WPB B16\.9 \| 0 \| .*material$/.test(mt), mt);
+    check("an MTO line reads into a short form library row", /^ELB 90 LR DN50 SCH40 A234 WPB B16\.9 \| 0 \| .*material/.test(mt), mt);
     /* admin only */
     check("someone else can't add columns", (await p.$$(".addc")).length === 0 && !(await p.evaluate(() => App.isAdmin())));
     await p.click(".mb-btn >> text=ile"); await p.click(".mi >> text=Parameters"); await p.waitForTimeout(200);
