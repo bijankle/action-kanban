@@ -1138,7 +1138,7 @@ html.dark .menubar{box-shadow:none}
 .cts-t{width:auto;max-width:100%;table-layout:fixed}.cts{padding:10px 14px 20px}
 /* the other tables, like the Actions list: one line a row, columns you drag or double click to fit */
 .tbl.tw{table-layout:fixed}.tbl.tw td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:auto;vertical-align:middle}.tbl.tw td .in{width:100%;min-width:0}
-.tbl.tw th{position:relative;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbl.tw th{position:sticky;top:0;z-index:3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tw-r{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;z-index:2}.tw-r:hover{background:rgba(255,255,255,.35)}
 .tw-wrap{overflow-x:auto}.vd-tbl td{white-space:nowrap;vertical-align:middle}
 .dv-body:has(.vd-tbl){max-width:none}   /* (the vendor list uses the whole width) */
@@ -1214,3 +1214,20 @@ textarea.in.ta{resize:none;overflow:hidden;min-height:var(--ctl-h,28px)}
 .mt-auto{display:block;padding:3px 6px;color:var(--dim);font:12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mt-rms{white-space:nowrap}.mt-rms .mt-pk{width:33%!important;display:inline-block;margin-right:1px}
 .mt-chk{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#c2410c;color:#fff;font:800 10px var(--font);margin-left:3px;vertical-align:middle;cursor:help}
+/* table headings stay in view while the list scrolls (the Data validation lists scroll in their page, so their box doesn't hold them) */
+.dv-body .tw-wrap,.dv-body .cts{overflow:visible}
+/* Assets: one asset, as the Project Library shows it */
+.as-tbl tbody tr[data-k]{cursor:pointer}
+.as-dt{max-width:900px}
+.as-hd{display:flex;gap:10px;align-items:flex-start;margin:2px 0 8px}
+.as-back{width:28px;height:28px;font-size:20px;line-height:1;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer;flex:none}
+.as-kind{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.as-tag{font-size:18px;font-weight:700}
+.as-tabs{margin-bottom:8px}
+.as-dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:0 0 10px}
+.as-dl dt{color:var(--dim)}
+.as-dl dd{margin:0;word-break:break-word}
+.as-go{background:none;border:0;padding:0;color:var(--accent);font-weight:600;cursor:pointer;font:inherit;text-decoration:underline;text-underline-offset:2px}
+.as-sp p{margin:2px 0 8px}
+.as-ct tr.as-fit td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.as-ct td{white-space:normal;overflow:visible;text-overflow:clip}

@@ -47,5 +47,5 @@ const PipeSpec = (() => {
       rows: [["Piping class", r.cl + ": " + clean(c0.title)], ["Item", clean(c.d)], ["Size", "DN" + r.dn + " (the spec line covers " + clean(c.size) + ")"], ["Type", clean(c.type)], ["Ends", clean(c.ends)], ["Material", clean(c.mat)], ["Standard", clean(c.dim)],
         ["Spec", (D.meta.doc || "") + " Rev " + (D.meta.rev || "") + ", page " + c0.page]].filter(x => x[1]) }; }
   const title = cl => C(cl) ? clean(C(cl).title) : "";
-  return { load, ready, classes, title, sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
+  return { load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
 })();

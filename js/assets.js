@@ -31,7 +31,7 @@ const Assets = (() => {
   let rows = null, built = null, B = { areas: {}, equip: {}, inst: {}, svc: {}, spec: {} }, elNames = {}, loadingB = null;
   const SHOW = 500; let more = 0;
   let path = lsGet("adAsP", []) || [];
-  const keepPath = () => lsSet("adAsP", path);
+  const keepPath = () => { lsSet("adAsP", path); sel = ""; lsSet("adAsSel", ""); };
 
   /* the names list (browse.json), from where the plant lists come from, kept on this device */
   function names(){ if (loadingB) return loadingB;
@@ -58,15 +58,17 @@ const Assets = (() => {
       case "elec": { const m = /^F(\d{2,3})/.exec(k); return [m ? "F" + m[1] : "", elCode(k)]; }
       case "cable": { const m = /^F(\d{2,3})/.exec(k), c = /-([A-Z]{1,2})\d{1,2}(?:-[A-Z]{1,2})?$/.exec(k); return [m ? "F" + m[1] : "", c ? (CBK[c[1]] ? c[1] : "?") : "?"]; }
     } return null; }
+  let FF = {}, IX = new Map(); const kx = k => String(k || "").toUpperCase().replace(/\s+/g, "");
   function build(){ const d = Equip.raw(); if (!d || !d.data) return null; if (rows && built === d) return rows; rows = []; built = d; const ec = {};
     TYPES.forEach(([t]) => { const ty = (d.types || {})[t], list = (d.data || {})[t] || []; if (!ty) return; const f = ty.f || [];
       list.forEach(r => { const g = n => { const i = f.indexOf(n); return i < 0 ? "" : String(r[i] == null ? "" : r[i]).trim(); }, key = String(r[0] || "").trim(); if (!key) return;
         const fc = facet(t, key, g); if (!fc) return;
         const name = t === "line" ? [g("Service description"), g("From") && "from " + g("From"), g("To") && "to " + g("To")].filter(Boolean).join(", ") : t === "cable" ? [g("From name") || g("From"), g("To name") || g("To")].filter(Boolean).join(" → ") : g(NAMEF[t]);
-        rows.push({ t, key, name, a: fc[0] || "?", k: fc[1] || "?", sp: t === "line" ? g("Pipe spec") || "?" : "", sz: SIZE[t] ? g(SIZE[t]) || "?" : "" });
+        rows.push({ rw: r, t, key, name, a: fc[0] || "?", k: fc[1] || "?", sp: t === "line" ? g("Pipe spec") || "?" : "", sz: SIZE[t] ? g(SIZE[t]) || "?" : "" });
         if (t === "elec"){ const ty2 = g("Type"); if (ty2){ const c = elCode(key); (ec[c] = ec[c] || {})[ty2] = (ec[c][ty2] || 0) + 1; } } }); });
     elNames = {}; for (const c in ec){ const n = Object.entries(ec[c]).sort((a, b) => b[1] - a[1])[0][0]; elNames[c] = n === n.toUpperCase() && n.length > 4 ? n.charAt(0) + n.slice(1).toLowerCase() : n; }
-    const col = new Intl.Collator(undefined, { numeric: true }); rows.sort((x, y) => col.compare(x.key, y.key)); return rows; }
+    const col = new Intl.Collator(undefined, { numeric: true }); rows.sort((x, y) => col.compare(x.key, y.key));
+    FF = {}; TYPES.forEach(([t]) => { const ty2 = (d.types || {})[t]; if (ty2) FF[t] = { f: ty2.f || [], n: ty2.n || TN[t] }; }); IX = new Map(rows.map(r => [kx(r.key), r])); return rows; }
 
   const insName = p => { if (!p || p === "?") return "No letter code"; if (INS[p]) return INS[p]; const L = B.inst || {};
     const out = [L[p[0]] ? L[p[0]][0] : p[0]]; let rest = p.slice(1); if (rest[0] === "D" && rest.length > 1){ out.push("Differential"); rest = rest.slice(1); }
@@ -112,8 +114,31 @@ const Assets = (() => {
     $$(".as-cr", body).forEach(b => b.onclick = () => { path = path.slice(0, +b.dataset.i); more = 0; keepPath(); App.render(); });
     const fa = $(".fall", body); if (fa) fa.onclick = () => { path = []; more = 0; keepPath(); App.render(); }; }
 
+  /* one asset, as the Project Library shows it: its kind and tag, then Details (every field with a value; a tag in a value
+     opens that asset) and, for a line, its Pipe spec; the arrow goes back to the list as it was */
+  let sel = lsGet("adAsSel", ""), tab = "d";
+  const open = k => { sel = k || ""; tab = "d"; lsSet("adAsSel", sel); App.render(); };
+  function detail(body, r){ const F = FF[r.t] || { f: [], n: TN[r.t] }, spec = r.t === "line" && r.sp && r.sp !== "?" ? r.sp : "", hasSpec = spec && PipeSpec.ready() && PipeSpec.classes().includes(spec);
+    if (spec && !PipeSpec.ready()) PipeSpec.load();
+    const val = v => { const s = String(v == null ? "" : v).trim(); if (!s) return ""; return s.split(/(,\s*)/).map(part => IX.has(kx(part)) && kx(part) !== kx(r.key) ? '<button type="button" class="as-go" data-k="' + esc(IX.get(kx(part)).key) + '">' + esc(part) + '</button>' : esc(part)).join(""); };
+    const det = F.f.map((f, i) => [f, r.rw[i]]).filter(([f, v], i) => i > 0 && v != null && String(v).trim() !== "");
+    let html = '<div class="as-dt"><div class="as-hd"><button type="button" class="ic-b as-back" title="Back to the list" aria-label="Back to the list">‹</button><div><div class="as-kind">' + esc(F.n) + '</div><div class="as-tag">' + esc(r.key) + '</div>' + (r.name ? '<div class="dim as-nm">' + esc(r.name) + '</div>' : "") + '</div></div>'
+      + '<div class="av-sub as-tabs"><button type="button" data-tb="d"' + (tab === "d" ? ' class="on"' : "") + '>Details</button>' + (spec ? '<button type="button" data-tb="s"' + (tab === "s" ? ' class="on"' : "") + '>Pipe spec</button>' : "") + '</div>';
+    if (tab === "s" && spec){ const C = hasSpec ? PipeSpec.spec(spec) : null;
+      html += !C ? '<p class="dim">' + (PipeSpec.ready() ? "Pipe spec " + esc(spec) + " isn't in the spec." : "Loading the pipe spec…") + '</p>'
+        : '<div class="as-sp"><div class="as-kind">Piping class ' + esc(spec) + '</div><p>' + esc(PipeSpec.clean(C.title)) + '</p><dl class="as-dl"><dt>Material</dt><dd>' + esc(PipeSpec.clean(C.material)) + '</dd><dt>Code</dt><dd>' + esc(PipeSpec.clean(C.codes)) + '</dd>'
+          + (C.design || []).map(x => '<dt>' + esc(PipeSpec.clean(x[0])) + '</dt><dd>' + esc(x.slice(1).map(PipeSpec.clean).join(" to ")) + '</dd>').join("") + '<dt>Corrosion allowance</dt><dd>' + esc(C.ca) + ' mm</dd><dt>Testing</dt><dd>' + esc(PipeSpec.clean(C.test)) + '</dd><dt>NDE</dt><dd>' + esc(PipeSpec.clean(C.nde)) + '</dd></dl>'
+          + '<div class="tw-wrap"><table class="tbl ct vd-tbl as-ct"><thead><tr><th>Description</th><th>Size range</th><th>Standard</th><th>Type</th><th>Ends</th><th>Material</th></tr></thead><tbody>'
+          + C.comps.map(c => '<tr' + (r.rw && +String(r.sz).replace(/\D/g, "") >= c.lo && +String(r.sz).replace(/\D/g, "") <= c.hi ? ' class="as-fit"' : "") + '><td>' + [c.d, c.size, c.dim, c.type, c.ends, c.mat].map(x => esc(PipeSpec.clean(x))).join("</td><td>") + '</td></tr>').join("") + '</tbody></table></div></div>'; }
+    else html += '<dl class="as-dl">' + det.map(([f, v]) => '<dt>' + esc(f) + '</dt><dd>' + val(v) + '</dd>').join("") + '</dl>';
+    body.innerHTML = html + '</div>';
+    $(".as-back", body).onclick = () => open("");
+    $$("[data-tb]", body).forEach(b => b.onclick = () => { tab = b.dataset.tb; App.render(); });
+    $$(".as-go", body).forEach(b => b.onclick = () => open(b.dataset.k));
+    const ct = $(".as-ct", body); if (ct) gridCols(ct, "assetSpec", { max: 360 }); }
   /* the matching assets, as a table like every other (sort, fit, resize, move a column) */
   function page(body){ names(); const list = current();
+    if (list && sel){ const r = IX.get(kx(sel)); if (r) return detail(body, r); }
     if (!list){ body.innerHTML = '<p class="dim">Loading the plant lists…</p>'; if (!Equip.raw()) Equip.load().then(() => App.render()); return; }
     const t = ty(), cols = [["key", "Tag"], ["name", "Name"]].concat(t ? [] : [["t", "Type"]]).concat((t ? steps() : [["a", "Area"]]).map(([f, n]) => [f, n]));
     const cell = (r, f) => f === "t" ? TN[r.t] : f === "key" || f === "name" ? r[f] : (r[f] === "?" ? "" : r[f]) + (f === "a" || f === "k" || f === "sp" ? (s => s ? " " + s : "")(r[f] === "?" ? "" : shortName(nameOf(f, r.t, r[f]))) : "");
@@ -122,9 +147,10 @@ const Assets = (() => {
     const sorted = ci < 0 ? list : list.slice().sort((x, y) => st.d * ALPHA.compare(String(cell(x, cols[ci][0]) || "~"), String(cell(y, cols[ci][0]) || "~")));
     const n = Math.min(sorted.length, SHOW + more);
     body.innerHTML = '<div class="tw-wrap"><table class="tbl ct vd-tbl as-tbl"><thead><tr>' + cols.map(([f, nm]) => '<th data-col="' + esc(nm) + '">' + esc(nm) + '</th>').join("") + '</tr></thead><tbody>'
-      + sorted.slice(0, n).map(r => '<tr>' + cols.map(([f]) => '<td>' + (f === "key" ? '<b>' + esc(r.key) + '</b>' : esc(cell(r, f))) + '</td>').join("") + '</tr>').join("") + '</tbody></table></div>'
+      + sorted.slice(0, n).map(r => '<tr data-k="' + esc(r.key) + '" title="Open ' + esc(r.key) + '">' + cols.map(([f]) => '<td>' + (f === "key" ? '<b>' + esc(r.key) + '</b>' : esc(cell(r, f))) + '</td>').join("") + '</tr>').join("") + '</tbody></table></div>'
       + (sorted.length > n ? '<button type="button" class="link as-more">' + (sorted.length - n).toLocaleString() + ' more…</button>' : "");
     const m = $(".as-more", body); if (m) m.onclick = () => { more += SHOW; App.render(); };
+    $$(".as-tbl tbody tr[data-k]", body).forEach(tr => tr.onclick = () => open(tr.dataset.k));
     gridCols($(".as-tbl", body), "assets", { max: 520, onSort: () => App.render() }); }
   return { page, filters, fcount, reset: () => { more = 0; } };
 })();
