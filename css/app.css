@@ -1231,3 +1231,4 @@ textarea.in.ta{resize:none;overflow:hidden;min-height:var(--ctl-h,28px)}
 .as-sp p{margin:2px 0 8px}
 .as-ct tr.as-fit td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .as-ct td{white-space:normal;overflow:visible;text-overflow:clip}
+.mt-tbl .mt-ic{white-space:nowrap}.mt-tbl .mt-done{height:28px;padding:0 12px;margin-right:2px;vertical-align:middle}
