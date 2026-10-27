@@ -122,7 +122,7 @@ const Mto = (() => {
   const REQ = new Set(["t", "z", "r", "m", "qty"]);
   /* what a row still needs picked: its item, size, schedule or class, material and quantity (for one typed in: what it is and how many) */
   function missing(it){ if (isSpec(it)){ const R = specRes(it), out = R.need ? [R.need] : []; if (!String(it.qty || "").trim()) out.push("quantity"); return out; }
-    const T = type(it), out = []; if (it.cl === "N/A" && !T){ if (!it.z) out.push("size"); out.push("item"); if (!String(it.qty || "").trim()) out.push("quantity"); return out; } if (!T){ if (!String(it.desc || "").trim()) out.push("item"); }
+    const T = type(it), out = []; if (it.cl === "N/A" && !T && it.desc == null){ if (!it.z) out.push("size"); out.push("item"); if (!String(it.qty || "").trim()) out.push("quantity"); return out; } if (!T){ if (!String(it.desc || "").trim()) out.push("item"); }
     else { if (PIPEK.has(T.id) && (!it.mk || !it.end)) out.push("how it's made and its ends"); if (!it.z) out.push("size"); if (ratings(it).length && !it.r) out.push(T.rl ? T.rl.toLowerCase() : "rating"); if ((std(it) || {}).mats && std(it).mats.length && !it.m) out.push("material"); if (it.sx) out.push("standard"); }
     if (!String(it.qty || "").trim()) out.push("quantity"); return out; }
   /* piping (to a class of the pipe spec, or N/A: the general library) sits in its own table above the steel and the rest */
@@ -138,9 +138,33 @@ const Mto = (() => {
     const T = type(it); if (T) return LIBH[T.g] || T.g; return it.cl === "N/A" ? "Specials" : "Other"; }
   const order = items => items.map((it, i) => [HEADS.indexOf(GROUP(it)), i, it]).sort((x, y) => (x[0] < 0 ? 99 : x[0]) - (y[0] < 0 ? 99 : y[0]) || x[1] - y[1]).map(x => x[2]);
   const specRes = it => PipeSpec.resolve(it);
+  /* instruments and control valves, from the plant lists (the instrument index and the control valve list): each type with the makes and
+     models it is bought as, most used first, and each tag, so a tag typed in fills in its type, make and model */
+  const CVT = { XV: "On/off valve", FCV: "Flow control valve", PCV: "Pressure control valve", LCV: "Level control valve", TCV: "Temperature control valve", DCV: "Density control valve", SV: "Solenoid valve", PRV: "Pressure relief valve", PSV: "Pressure safety valve", HV: "Hand valve with feedback", BDV: "Blowdown valve" };
+  const NOTI = /^(soft tag|signal|dry contact|tags reserved.*|spare|)$/i, NOMM = /^(tba|tbc|vta|n\/a|na|-|tags reserved.*|)$/i;
+  let INS = null, INSof = null;
+  function inst(){ const d = Equip.raw(); if (!d || !d.data) return null; if (INS && INSof === d) return INS; INSof = d;
+    const T = new Map(), tags = new Map(), add = (g, ty, mk, md, tag, ex) => { ty = String(ty || "").trim(); if (!ty || NOTI.test(ty)) return;
+      const k = ty.toLowerCase(); if (!T.has(k)) T.set(k, { t: ty, g, n: 0, mm: new Map() }); const e = T.get(k); e.n++;
+      mk = String(mk || "").trim(); md = String(md || "").trim(); const good = !NOMM.test(mk) || !NOMM.test(md), m = [NOMM.test(mk) ? "" : mk, NOMM.test(md) ? "" : md].filter(Boolean).join(" ");
+      if (good && m){ e.mm.set(m, (e.mm.get(m) || 0) + 1); } if (tag) tags.set(String(tag).toUpperCase(), { tag, ty, m: good ? m : "", g, ...ex }); };
+    const F = t => ((d.types || {})[t] || { f: [] }).f, ix = (t, n) => F(t).indexOf(n);
+    const fi = { ty: ix("ins", "Instrument type"), mk: ix("ins", "Make"), md: ix("ins", "Model"), cn: ix("ins", "Process connection"), ds: ix("ins", "Description") };
+    (d.data.ins || []).forEach(r => add("Instruments", r[fi.ty], r[fi.mk], r[fi.md], r[0], { cn: r[fi.cn] || "", ds: r[fi.ds] || "" }));
+    const fv = { ty: ix("cv", "Valve type"), mk: ix("cv", "Valve make"), md: ix("cv", "Valve model"), sz: ix("cv", "Valve size (mm)"), ds: ix("cv", "Location") };
+    (d.data.cv || []).forEach(r => { const c = String(r[fv.ty] || "").trim().toUpperCase(); add("Control valves", CVT[c] ? CVT[c] + " (" + c + ")" : c, r[fv.mk], r[fv.md], r[0], { sz: r[fv.sz] || "", ds: r[fv.ds] || "" }); });
+    const types = [...T.values()].map(e => ({ t: e.t, g: e.g, n: e.n, mm: [...e.mm].sort((x, y) => y[1] - x[1]) })).sort((x, y) => x.g.localeCompare(y.g) || y.n - x.n);
+    return INS = { types, tags }; }
+  const instType = t => { const L = inst(); return L && L.types.find(x => x.t.toLowerCase() === String(t || "").trim().toLowerCase()); };
+  const isInst = it => it.cat === "inst";
   /* the boxes' lists */
-  function choices(it, c){ const T = type(it), S = std(it);
-    if (c === "cl") return [{ v: "N/A", t: "N/A", sub: "not to a piping class: the general choices" }].concat(PipeSpec.classes().map(x => ({ v: x, t: x, sub: PipeSpec.title(x).slice(0, 110) })));
+  function choices(it, c, q){
+    if (isInst(it) && c === "t"){ const L = inst(); if (!L){ if (!Equip.raw()) Equip.load().then(() => App.render()); return []; }
+      const out = L.types.map(x => ({ v: "ity:" + x.t, t: x.t, sub: x.g + ", " + x.n + " in the plant lists", g: x.g }));
+      const qq = String(q || "").replace(/[\s-]/g, "").toUpperCase(); if (qq.length >= 3){ const hits = []; for (const [k, x] of L.tags){ if (k.replace(/[\s-]/g, "").includes(qq)){ hits.push({ v: "tag:" + k, t: x.tag, sub: [x.ty, x.m, x.ds].filter(Boolean).join(", "), g: "Tags", tagHit: 1 }); if (hits.length > 40) break; } } return hits.concat(out); }
+      return out; }
+    if (isInst(it) && c === "part"){ const e = instType(it.desc); return e ? e.mm.map(([m, n]) => ({ v: m, t: m, sub: n + " " + (n === 1 ? "tag" : "tags") + " in the plant lists" })) : []; }
+    if (c === "cl") return [{ v: "N/A", t: "N/A", sub: "not to a piping class: the general choices" }, { v: "cat:inst", t: "Instrument or control valve", sub: "from the instrument index and the control valve list" }].concat(PipeSpec.classes().map(x => ({ v: x, t: x, sub: PipeSpec.title(x).slice(0, 110) }))); const T = type(it), S = std(it);
     if (c === "dn") return PipeSpec.sizes(it.cl).map(n => ({ v: n, t: "DN" + n }));
     if (c === "it") return PipeSpec.items(it.cl, it.dn).map(x => ({ v: x.v, t: x.t, sub: x.sub || "", g: x.g }));
     if (c === "vt") return (specRes(it).vs || []).map(x => ({ v: x.v, t: x.t }));
@@ -148,7 +172,7 @@ const Mto = (() => {
     if (it.cl === "N/A" && c === "z" && !T) return PipeSpec.DNS.map(n => ({ v: "DN" + n, t: "DN" + n }));
     if (it.cl === "N/A" && c === "t") return TYPES.filter(x => PIPEG.has(x.g) && (!it.z || x.stds.some(st => st.sizes.some(z => z.n === it.z)))).flatMap(x => PIPEK.has(x.id)
       ? ["SMLS", "ERW"].flatMap(mk => ["BE", "PE", "THD"].map(en => ({ v: x.id + "|" + mk + "|" + en, t: SHORT[x.id] + " " + mk + " " + en, sub: x.n + ", " + MK[mk] + ", " + EN[en], g: x.g })))
-      : [{ v: x.id, t: SHORT[x.id] || x.n, sub: x.n, g: x.g }]).concat([{ v: "cat:inst", t: "Instrument or control valve", sub: "type it in", g: "Type it in" }, { v: "cat:spec", t: "Special", sub: "type it in (a strainer, a hose, an expansion joint)", g: "Type it in" }, { v: "other", t: "Other", sub: "type it in", g: "Type it in" }]);
+      : [{ v: x.id, t: SHORT[x.id] || x.n, sub: x.n, g: x.g }]).concat([{ v: "cat:inst", t: "Instrument or control valve", sub: "from the plant lists, or type it in", g: "Type it in" }, { v: "cat:spec", t: "Special", sub: "type it in (a strainer, a hose, an expansion joint)", g: "Type it in" }, { v: "other", t: "Other", sub: "type it in", g: "Type it in" }]);
     if (c === "t") return [{ v: "other", t: "Other", sub: "type it in (a bearing, a motor)" }].concat(...TYPES.filter(x => !PIPEG.has(x.g) || type(it) === x).map(x => PIPEK.has(x.id)
       ? ["SMLS", "ERW"].flatMap(mk => ["BE", "PE", "THD"].map(en => ({ v: x.id + "|" + mk + "|" + en, t: SHORT[x.id] + " " + mk + " " + en, sub: x.n + ", " + MK[mk] + ", " + EN[en], g: x.g })))
       : [{ v: x.id, t: SHORT[x.id] || x.n, sub: x.n, g: x.g }]));
@@ -165,7 +189,9 @@ const Mto = (() => {
     if (c === "t") return itemCode(it); if (!T) return c === "unit" ? it.unit || "" : it[c] || "";
     if (c === "z") return zShort(it); if (c === "r") return rShort(it.r); if (c === "m") return mShort(it.m); if (c === "s") return S && !it.sx ? stShort(S.n) : ""; if (c === "unit") return uShort(it.unit); return it[c] == null ? "" : it[c]; };
   const titleOf = (it, c) => { const T = type(it), S = std(it), z = sz(it); return c === "t" ? (T ? T.n : "") : c === "z" ? (z && z.a ? z.a : "") : c === "r" ? it.r || "" : c === "m" ? it.m || "" : c === "s" ? (S ? S.n : "") : ""; };
-  let focusNext = null;   // (after a pick, the next box still to fill in on that row)
+  let focusNext = null;
+  /* the class last picked on an action's MTO: new piping rows start in it (rows already there keep theirs), and it can still be changed */
+  const lastCl = new Map(), akey = a => a._p + ":" + a.u;   // (after a pick, the next box still to fill in on that row)
   function table(a, ro){ const items = a.mto || (a.mto = []); shorten(items); if (!PipeSpec.ready()) PipeSpec.load();
     /* (shown and exported in the MTO's order: piping by heading, then the steel and the rest; in memory, it saves that way at the next change) */
     const ord = order(items); if (ord.some((it, i) => it !== items[i])) items.splice(0, items.length, ...ord);
@@ -197,7 +223,9 @@ const Mto = (() => {
       else ph += '<td>' + box(it, "cl", "Class", "", it.cl || "N/A") + '</td><td>' + box(it, "z", "Size") + '</td><td class="mt-itd">' + box(it, "t", it.cat === "inst" ? "Instrument or control valve" : "Item") + (it.desc ? iBtn(it) : "") + '</td><td>' + box(it, "part", "Part / model") + '</td>';
       return ph + qtyCell(it, !!res) + tail(it) + sub(it, res, PC.length); };
     ph = pdr.map(pipeRow).join("");
-    if (!ro) ph += '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="newp" data-c="cl" placeholder="+ Class" autocomplete="off" spellcheck="false"></td><td colspan="' + (PC.length - 1) + '"></td></tr>';
+    const lc = lastCl.get(akey(a));
+    if (!ro) ph += '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="newp" data-c="cl" placeholder="+ Class" value="' + esc(lc || "") + '" title="' + (lc ? "New rows start in " + esc(lc) + ", the class last picked; pick another to change it" : "") + '" autocomplete="off" spellcheck="false"></td>'
+      + (lc ? '<td><input class="in pt-in mt-pk" data-r="newp" data-c="dn" placeholder="+ Size" autocomplete="off" spellcheck="false"></td><td colspan="' + (PC.length - 2) + '"></td></tr>' : '<td colspan="' + (PC.length - 1) + '"></td></tr>');
     pipes.forEach(it => { ph += head(it, PC.length, last) + pipeRow(it); last = GROUP(it); });
     /* ---- steel and the rest ---- */
     const hasPart = steel.concat(sdr).some(it => it.part || !type(it));
@@ -263,13 +291,17 @@ const Mto = (() => {
         if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?", "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); Store.touch(a); }); }); });
     if (ro) return;
     /* the order the boxes are filled in: to a class, Class Size Item (Ends / type) Qty; N/A, Class Size Item Rating Material Qty; the rest, Item Size Rating Material Qty */
-    const orderOf = it => isSpec(it) ? ["cl", "dn", "it", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : ["t", "z", "r", "m", "qty"];
-    const needs = (it, x) => x === "cl" ? !it.cl : x === "dn" ? !it.dn : x === "it" ? !it.it : x === "vt" ? specRes(it).need === "ends or type" : x === "qty" ? !String(it.qty || "").trim()
+    const orderOf = it => isInst(it) ? ["cl", "t", "part", "z", "qty"] : isSpec(it) ? ["cl", "dn", "it", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : ["t", "z", "r", "m", "qty"];
+    const needs = (it, x) => x === "part" ? isInst(it) && !it.part && !!(instType(it.desc) || { mm: [] }).mm.length : x === "cl" ? !it.cl : x === "dn" ? !it.dn : x === "it" ? !it.it : x === "vt" ? specRes(it).need === "ends or type" : x === "qty" ? !String(it.qty || "").trim()
       : x === "t" ? !type(it) && !String(it.desc || "").trim() : x === "z" ? (type(it) || it.cl === "N/A") && !it.z && !(it.desc != null && !type(it)) : x === "r" ? !!type(it) && ratings(it).length > 0 && !it.r : x === "m" ? !!type(it) && !it.m : false;
     /* the next box on the row still to fill in (after a pick, the cursor goes there and its list opens) */
     const after = (id, c) => { const it = find(id); if (!it || !missing(it).length) return null; const O = orderOf(it), from = O.indexOf(c);
       for (const x of O.slice(Math.max(0, from + 1)).concat(O)) if (needs(it, x)) return { id, c: x }; return null; };
     const set = (it, c, v) => { const T = type(it);
+      if (c === "cl" && v === "cat:inst"){ ["dn", "it", "vt", "t", "s", "m", "r", "L", "mk", "end", "sx", "cuts"].forEach(k => delete it[k]); it.cl = "N/A"; it.cat = "inst"; it.desc = it.desc || ""; it.unit = it.unit || "ea"; return; }
+      if (isInst(it) && (c === "t" || c === "part") && /^typed:/.test(v)){ it[c === "t" ? "desc" : "part"] = v.slice(6); return; }
+      if (isInst(it) && c === "t" && /^ity:/.test(v)){ it.desc = v.slice(4); const e = instType(it.desc); if (e && e.mm.length === 1) it.part = e.mm[0][0]; else if (e && it.part && !e.mm.some(m => m[0] === it.part)) delete it.part; return; }
+      if (isInst(it) && c === "t" && /^tag:/.test(v)){ const x = (inst() || { tags: new Map() }).tags.get(v.slice(4)); if (!x) return; it.desc = x.ty; if (x.m) it.part = x.m; if (x.sz && !it.z) it.z = "DN" + x.sz; if (!String(it.notes || "").includes(x.tag)) it.notes = [it.notes, x.tag].filter(Boolean).join(", "); return; }
       if (c === "cl"){ if (v === "N/A"){ if (isSpec(it)) ["dn", "it", "vt"].forEach(k => delete it[k]); it.cl = "N/A"; return; }
         ["t", "s", "z", "m", "r", "L", "mk", "end", "sx", "cuts", "cat", "desc"].forEach(k => delete it[k]); it.cl = v; if (it.dn && !PipeSpec.sizes(v).includes(it.dn)) delete it.dn; delete it.it; delete it.vt; return; }
       if (c === "dn"){ it.dn = +v; if (it.it && !PipeSpec.items(it.cl, it.dn).some(x => x.v === it.it)) delete it.it; delete it.vt; return; }
@@ -285,24 +317,28 @@ const Mto = (() => {
       if (c === "s"){ const S = T.stds.find(s => s.id === v); if (!S) return; it.s = S.id; delete it.sx; if (it.z && !S.sizes.some(z => z.n === it.z)) it.z = ""; if (it.m && !S.mats.includes(it.m)) delete it.m; if (S.lens && !S.lens.includes(it.L)) it.L = S.defl; const rs = ratings(it); if (it.r && !rs.includes(it.r)) delete it.r; return; }
       it[c] = v; };
     const save = (id, c, v) => { const isNew = String(id).startsWith("new"); let it = isNew ? { id: uid(), qty: "", draft: 1 } : find(id); if (!it) return;
-      Store.mutate(key, () => { set(it, c, v); recalc(it); if (isNew) items.push(it); const o = order(items); items.splice(0, items.length, ...o); Store.touch(a); });
+      if (c === "cl" && PipeSpec.classes().includes(v)) lastCl.set(akey(a), v);
+      Store.mutate(key, () => { if (id === "newp" && c !== "cl" && lastCl.get(akey(a))) set(it, "cl", lastCl.get(akey(a))); set(it, c, v); recalc(it); if (isNew) items.push(it); const o = order(items); items.splice(0, items.length, ...o); Store.touch(a); });
       Store.log((isNew ? "Added to" : "Edited") + " the MTO of " + Store.actId(a)); focusNext = after(it.id, c) || (!missing(it).length ? doneNext(it) : null); };
-    const doneNext = it => it.draft ? { id: it.id, done: 1 } : isPipe(it) ? { id: "newp", c: "cl", quiet: true } : { id: "new0", c: "t", quiet: true };
+    const doneNext = it => it.draft ? { id: it.id, done: 1 } : isPipe(it) ? { id: "newp", c: lastCl.get(akey(a)) ? "dn" : "cl", quiet: true } : { id: "new0", c: "t", quiet: true };
     /* Done: the row goes under its heading, and the cursor back to a new row */
     $$("[data-done]", el).forEach(b => b.onclick = () => { const it = find(b.dataset.done); if (!it) return;
       Store.mutate(key, () => { delete it.draft; const o = order(items); items.splice(0, items.length, ...o); Store.touch(a); }); Store.log("Added to the MTO of " + Store.actId(a)); focusNext = doneNext(it); App.render(); });
     /* the pick boxes: the app's card with what fits; typing narrows it */
-    $$(".mt-pk", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c, it = find(r) || { qty: "" }; let key2 = null;
+    $$(".mt-pk", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c, it = find(r) || (r === "newp" && lastCl.get(akey(a)) ? { qty: "", cl: lastCl.get(akey(a)) } : { qty: "" }); let key2 = null;
+      const pt = isInst(it) && (c === "t" || c === "part");   // (an instrument's type and make / model: pick from the plant lists, or type it in)
       const free = c === "part" || c === "spec" || (c === "z" && !type(it) && !(it.cl === "N/A" && it.desc == null)) || (c === "t" && !type(it) && it.desc != null && r !== "new0");
-      const show = () => { if (free && c !== "t") return; const all = choices(it, c); if (!all.length) return Look.close();
-        const q = i.value.trim().toLowerCase(), typed = q && q !== String(shown(it, c)).toLowerCase(), ws = typed ? q.split(/\s+/) : [];
-        const list = (ws.length ? all.filter(x => ws.every(w => (x.t + " " + (x.sub || "") + " " + (x.g || "")).toLowerCase().includes(w))) : all).slice(0, 300);
-        key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], c === "t" ? [it.t, it.mk, it.end].filter(Boolean).join("|") : c === "dn" ? it.dn : it[c], x => { if (x.v === "") return; i.value = x.t; save(r, c, x.v); App.render(); }); };
+      const show = () => { if (free && c !== "t" && !pt) return;
+        const q = i.value.trim().toLowerCase(), cur0 = String(c === "t" && isInst(it) ? it.desc || "" : shown(it, c)).toLowerCase(), typed = q && q !== cur0, ws = typed ? q.split(/\s+/) : [];
+        const all = choices(it, c, typed ? q : ""); if (!all.length && !(pt && typed)) return Look.close();
+        let list = (ws.length ? all.filter(x => x.tagHit || ws.every(w => (x.t + " " + (x.sub || "") + " " + (x.g || "")).toLowerCase().includes(w))) : all).slice(0, 300);
+        if (pt && typed && !list.some(x => x.t.toLowerCase() === q)) list = list.concat([{ v: "typed:" + i.value.trim(), t: "Use “" + i.value.trim() + "” as typed", sub: "not in the plant lists" }]);
+        key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], c === "t" ? [it.t, it.mk, it.end].filter(Boolean).join("|") : c === "dn" ? it.dn : it[c], x => { if (x.v === "") return; if (!String(r).startsWith("new")) i.value = x.t; save(r, c, x.v); App.render(); }, { mark: ws }); };
       i.onfocus = () => { i.select(); show(); };
-      i.oninput = () => { if (free) return; show(); };
+      i.oninput = () => { if (free && !pt) return; show(); };
       i.onkeydown = e => { if (key2 && /^(ArrowDown|ArrowUp|Escape)$/.test(e.key)) return key2(e);
         if (e.key === "Enter" || e.key === "Tab"){ const v = i.value.trim(); const lit = document.querySelector(".lk-card .lk-o.hi:not(.dis)");
-          if (lit && !free){ e.preventDefault(); lit.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })); return; }
+          if (lit && (!free || pt)){ e.preventDefault(); lit.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })); return; }
           if (c === "t" && v && (r === "new0" || !type(it))){ e.preventDefault(); Look.close(); Store.mutate(key, () => { let x = r === "new0" ? null : find(r); if (!x){ x = { id: uid(), desc: v, unit: "ea", qty: "", draft: 1 }; items.push(x); } else x.desc = v; Store.touch(a); focusNext = { id: x.id, c: "qty" }; }); App.render(); return; }
           if (free && v !== String(it[c] || "")){ e.preventDefault(); save(r, c, v); App.render(); } } };
       i.onblur = () => { setTimeout(() => { if (document.activeElement !== i) Look.closeFor(i); }, 150);

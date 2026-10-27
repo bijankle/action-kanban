@@ -1232,3 +1232,9 @@ textarea.in.ta{resize:none;overflow:hidden;min-height:var(--ctl-h,28px)}
 .as-ct tr.as-fit td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .as-ct td{white-space:normal;overflow:visible;text-overflow:clip}
 .mt-tbl .mt-ic{white-space:nowrap}.mt-tbl .mt-done{height:28px;padding:0 12px;margin-right:2px;vertical-align:middle}
+/* every dropdown card reads like the tags box's: the choice in semibold, what it is under it, the typed words underlined */
+.lk-o{align-items:flex-start;gap:8px}.lk-x{display:flex;flex-direction:column;min-width:0;flex:1}
+.lk-o b{font-weight:400}.lk-o.lk-2 b{font-weight:600;font-size:13px}.lk-o.on b{font-weight:700}
+.lk-o small{margin-left:0;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lk-o .ksym{flex:none;width:18px}
+.lk-o mark{background:none;color:inherit;font-weight:700;padding:0;text-decoration:underline;text-decoration-color:var(--focus);text-decoration-thickness:1px;text-underline-offset:2px}

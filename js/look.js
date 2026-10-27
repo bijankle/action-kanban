@@ -10,10 +10,12 @@ const Look = (() => {
   /* the card under a box: options to pick from, the one under the arrow keys lit; typing narrows a long list */
   function open(anchor, items, cur, pick, opts){ close(); opts = opts || {};
     const c = card = h('<div class="pop lk-card" role="listbox"></div>'); cardFor = anchor; openedAt = Date.now(); anchor.setAttribute("aria-expanded", "true");
+    /* (the words typed, in bold and underlined in each choice, as on the tags box) */
+    const mk = t => { let o = esc(t); (opts.mark || []).concat(q ? [q] : []).filter(Boolean).forEach(w => { const re = new RegExp("(" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "i"); o = o.replace(re, "<mark>$1</mark>"); }); return o; };
     let q = "", hi = Math.max(0, items.findIndex(x => x.v === cur)), shown = items;
     const draw = () => { shown = q ? items.filter(x => x.t.toLowerCase().includes(q.toLowerCase())) : items; hi = Math.min(hi, Math.max(0, shown.length - 1));
       c.innerHTML = (opts.search ? '<input class="in lk-q" placeholder="Type to narrow" aria-label="Narrow the list" value="' + esc(q) + '">' : "")
-        + '<div class="lk-ol">' + (shown.length ? shown.map((x, k) => x.grp ? '<div class="lk-g">' + esc(x.t) + '</div>' : '<button type="button" class="lk-o' + (k === hi ? " hi" : "") + (x.v === cur ? " on" : "") + (x.dis ? " dis" : "") + '" data-k="' + k + '"' + (x.dis ? " disabled" : "") + '>' + esc(x.t) + (x.sub ? '<small>' + esc(x.sub) + '</small>' : "") + '</button>').join("") : '<div class="dim lk-none">Nothing matches</div>') + '</div>';
+        + '<div class="lk-ol">' + (shown.length ? shown.map((x, k) => x.grp ? '<div class="lk-g">' + esc(x.t) + '</div>' : '<button type="button" class="lk-o' + (k === hi ? " hi" : "") + (x.v === cur ? " on" : "") + (x.dis ? " dis" : "") + (x.sub ? " lk-2" : "") + '" data-k="' + k + '"' + (x.dis ? " disabled" : "") + '>' + (x.k ? kindSym(x.k) : "") + '<span class="lk-x"><b>' + mk(x.t) + '</b>' + (x.sub ? '<small>' + mk(x.sub) + '</small>' : "") + '</span></button>').join("") : '<div class="dim lk-none">Nothing matches</div>') + '</div>';
       $$(".lk-o", c).forEach(b => b.onmousedown = e => { e.preventDefault(); const x = shown[+b.dataset.k]; close(); pick(x); });
       const qi = $(".lk-q", c); if (qi){ qi.oninput = () => { q = qi.value; hi = 0; draw(); const n = $(".lk-q", c); n.focus(); n.setSelectionRange(q.length, q.length); }; qi.onkeydown = key; }
       const o = $(".lk-o.hi", c); if (o) o.scrollIntoView({ block: "nearest" }); };
@@ -22,7 +24,7 @@ const Look = (() => {
       else if (e.key === "Enter"){ e.preventDefault(); const x = shown[hi]; if (x && !x.grp){ close(); pick(x); } }
       else if (e.key === "Escape"){ e.stopPropagation(); close(); anchor.focus(); } else if (e.key === "Tab") close(); };
     c.__key = key; document.body.appendChild(c); draw();
-    const r = anchor.getBoundingClientRect(); c.style.minWidth = Math.max(r.width, 160) + "px"; c.style.left = Math.max(8, Math.min(r.left, innerWidth - c.offsetWidth - 8)) + "px";
+    const r = anchor.getBoundingClientRect(); c.style.minWidth = Math.min(innerWidth - 16, Math.max(r.width, items.some(x => x.sub) ? 420 : 160)) + "px"; c.style.left = Math.max(8, Math.min(r.left, innerWidth - c.offsetWidth - 8)) + "px";
     const below = innerHeight - r.bottom > Math.min(300, c.offsetHeight + 8); c.style.top = (below ? r.bottom + 3 : Math.max(8, r.top - c.offsetHeight - 3)) + "px";
     const qi = $(".lk-q", c); if (qi) qi.focus();
     return key; }
