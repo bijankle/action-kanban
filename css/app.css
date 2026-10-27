@@ -1248,3 +1248,4 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .mt-tbl td.mt-ic{overflow:visible;text-overflow:clip}
 .mt-szd{white-space:nowrap}.mt-szd .mt-pk+.mt-pk{margin-left:2px}
 .mt-szd:has(.mt-pk+.mt-pk) .mt-pk{display:inline-block;width:calc(50% - 1px)!important}
+.lk-two .lk-o b{font-weight:600;font-size:13px}.lk-two .lk-o.on b{font-weight:700}

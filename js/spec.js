@@ -157,6 +157,10 @@ const PipeSpec = (() => {
   /* the material family a class belongs to, for the headings in the class list */
   const FAM = [["Carbon steel", /^(MS\d|XS)/], ["Galvanised steel", /^MSG/], ["Lined steel", /^(CL|RL)\d/], ["Stainless steel", /^SS\d/], ["Poly (HDPE)", /^PE/], ["Other plastic", /./]];
   const family = cl => (FAM.find(([, re]) => re.test(cl)) || FAM[FAM.length - 1])[0], FAMS = FAM.map(f => f[0]);
+  /* non-preferred sizes: the ones the spec's branch tables mark with a *, per class, and across the DN classes (DN32, DN65, DN90, DN125, DN550) */
+  const starred = cl => { const B = (C(cl) || {}).branch; return new Set(B && B.g ? Object.keys(B.g).concat(...Object.values(B.g).map(Object.keys)).filter(k => /\*$/.test(k)).map(parseFloat) : []); };
+  const nonPref = (cl, n) => starred(cl).has(n);
+  let NPDN = null; const nonPrefDN = () => NPDN || (NPDN = !D ? new Set() : new Set(classes().filter(cl => U(cl) === "DN").flatMap(cl => [...starred(cl)])));
   const title = cl => C(cl) ? clean(C(cl).title) : "";
-  return { lab, U, dnOf, joint, branchPlan, branchy, BOLTS, FLG, family, FAMS, reducing, branches, load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
+  return { nonPref, nonPrefDN, lab, U, dnOf, joint, branchPlan, branchy, BOLTS, FLG, family, FAMS, reducing, branches, load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
 })();

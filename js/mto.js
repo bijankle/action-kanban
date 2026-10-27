@@ -186,11 +186,13 @@ const Mto = (() => {
       return out; }
     /* an instrument's or control valve's size: the standard DN sizes, the ones that type comes in on the plant lists first */
     if (isInst(it) && c === "z"){ const e = instType(it.desc), used = e ? [...e.sz].sort((x, y) => y[1] - x[1]) : [], u = new Set(used.map(x => x[0]));
-      return used.map(([n, k]) => ({ v: "DN" + n, t: "DN" + n, sub: k + " " + (k === 1 ? "tag" : "tags") + " of this type in the plant lists" })).concat(PipeSpec.DNS.filter(n => !u.has(n)).map(n => ({ v: "DN" + n, t: "DN" + n }))); }
+      /* in size order: each size the plant has that type in says how many tags; the non-preferred sizes (DN32, DN65, DN90, DN125) only when the plant has one */
+      const np = PipeSpec.nonPrefDN(), cnt = new Map(used); return [...new Set(PipeSpec.DNS.filter(n => !np.has(n)).concat([...cnt.keys()]))].sort((x, y) => x - y)
+        .map(n => ({ v: "DN" + n, t: "DN" + n, sub: cnt.has(n) ? cnt.get(n) + " " + (cnt.get(n) === 1 ? "tag" : "tags") + " of this type in the plant lists" + (np.has(n) ? ", a non-preferred size" : "") : "" })); }
     if (isInst(it) && c === "part"){ const e = instType(it.desc); return e ? e.mm.map(([m, n]) => ({ v: m, t: m, sub: n + " " + (n === 1 ? "tag" : "tags") + " in the plant lists" })) : []; }
     if (c === "cl") return [{ v: "N/A", t: "N/A", sub: "not to a piping class: the general choices", g: "Not to a class" }, { v: "cat:inst", t: "Instrument or control valve", sub: "from the instrument index and the control valve list", g: "Not to a class" }]
       .concat(PipeSpec.classes().map(x => ({ v: x, t: x, sub: PipeSpec.title(x).slice(0, 110), g: PipeSpec.family(x) })).sort((x, y) => PipeSpec.FAMS.indexOf(x.g) - PipeSpec.FAMS.indexOf(y.g))); const T = type(it), S = std(it);
-    if (c === "dn") return PipeSpec.sizes(it.cl).map(n => ({ v: n, t: PipeSpec.lab(it.cl, n), sub: PipeSpec.U(it.cl) === "OD" && PipeSpec.dnOf(it.cl, n) ? "DN" + PipeSpec.dnOf(it.cl, n) + " flanges and valves" : "" }));
+    if (c === "dn") return PipeSpec.sizes(it.cl).map(n => ({ v: n, t: PipeSpec.lab(it.cl, n), sub: [PipeSpec.U(it.cl) === "OD" && PipeSpec.dnOf(it.cl, n) ? "DN" + PipeSpec.dnOf(it.cl, n) + " flanges and valves" : "", PipeSpec.nonPref(it.cl, n) ? "non-preferred size" : ""].filter(Boolean).join(", ") }));
     if (c === "dn2") return PipeSpec.branches(it.cl, it.dn, it.it).map(x => ({ v: x.v, t: x.t, sub: x.sub, dis: x.dis }));
     if (c === "it") return PipeSpec.items(it.cl, it.dn).map(x => ({ v: x.v, t: x.t, sub: x.sub || "", g: x.g }));
     if (c === "vt") return (specRes(it).vs || []).map(x => ({ v: x.v, t: x.t }));

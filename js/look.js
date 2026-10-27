@@ -24,7 +24,7 @@ const Look = (() => {
       if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); let k = hi; do { k = (k + (e.key === "ArrowDown" ? 1 : -1) + shown.length) % shown.length; } while ((shown[k].grp || shown[k].dis) && real.length); hi = k; draw(); }
       else if (e.key === "Enter"){ e.preventDefault(); const x = shown[hi]; if (x && !x.grp){ close(); pick(x); } }
       else if (e.key === "Escape"){ e.stopPropagation(); close(); anchor.focus(); } else if (e.key === "Tab") close(); };
-    c.__key = key; document.body.appendChild(c); draw();
+    c.__key = key; c.classList.toggle("lk-two", items.some(x => x.sub)); document.body.appendChild(c); draw();   // (a list where some choices have a line under them: every choice in the same bold type)
     const r = anchor.getBoundingClientRect(); c.style.minWidth = Math.min(innerWidth - 16, Math.max(r.width, items.some(x => x.sub) ? 420 : 160)) + "px"; c.style.left = Math.max(8, Math.min(r.left, innerWidth - c.offsetWidth - 8)) + "px";
     const below = innerHeight - r.bottom > Math.min(300, c.offsetHeight + 8); c.style.top = (below ? r.bottom + 3 : Math.max(8, r.top - c.offsetHeight - 3)) + "px";
     const qi = $(".lk-q", c); if (qi) qi.focus();
