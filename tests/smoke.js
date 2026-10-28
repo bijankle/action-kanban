@@ -63,8 +63,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     /* steel cut from stock lengths: the rows of one stock item become one parent (what's ordered, in whole lengths with spare), only the parent is exported */
     const st = await p.evaluate(() => { const S = Mto.TY.wb.stds[0], base = { t: "wb", s: S.id, z: S.sizes[0].n, m: S.mats[0], r: Mto.TY.wb.rl ? "" : undefined, L: S.defl, unit: "m" };
       const a = { mto: [3, 4, 5].map((q, i) => Object.assign({ id: "s" + i, qty: String(q) }, base)).concat([{ id: "e", desc: "GASKET", qty: "2", unit: "ea" }]), mtoG: {} };
+      const P = Mto.TY.plate.stds[0], pb = { t: "plate", s: P.id, z: P.sizes[0].n, m: P.mats[0], L: P.defl, unit: "sheets" };
+      a.mto = a.mto.concat([[1200, 600], [800, 400]].map((d, i) => Object.assign({ id: "p" + i, pl: String(d[0]), pw: String(d[1]) }, pb)));
       const o = Mto.orderRows(a); return o.length + " | " + o.map(r => Mto.ord(r) + " " + r.unit).join(", ") + " | " + Mto.hasCuts(a); });
-    check("steel cuts group under one parent, and only the parent is exported", /^2 \| [1-9]\d* lengths, 2 ea \| true$/.test(st), st);
+    check("steel cuts and plate pieces group under their parents, and only the parents are exported", /^3 \| [1-9]\d* lengths, 2 ea, [1-9]\d* sheets \| true$/.test(st), st);
     /* another action opens on the tab you were on, and back returns to the one before */
     const nv = await p.evaluate(async () => { const v = Store.visible(); App.select(v[0]._p + ":" + v[0].u, "mto"); await new Promise(r => setTimeout(r, 500)); App.select(v[1]._p + ":" + v[1].u); await new Promise(r => setTimeout(r, 500));
       const sub = App.sub; document.querySelector("#navB").click(); await new Promise(r => setTimeout(r, 500)); return sub + " " + (App.selRef === v[0]._p + ":" + v[0].u); });

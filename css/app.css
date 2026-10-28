@@ -1282,3 +1282,5 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .mt-tbl tr.mt-par{cursor:pointer}.mt-tbl tr.mt-par>td{font-weight:700;background:var(--panel);border-bottom:1.5px solid color-mix(in srgb,var(--th) 45%,var(--line))}.mt-tbl tr.mt-par:hover>td{background:color-mix(in srgb,var(--th) 5%,var(--panel))}
 .mt-tbl .mt-pv{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;white-space:nowrap}.mt-tbl .mt-pq{font-weight:700;white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums}.mt-tbl .mt-par .mt-tg{pointer-events:none}
 .mt-tbl tr.mt-kid>td{background:color-mix(in srgb,var(--th) 4%,var(--panel2))}.mt-tbl tr.mt-kid>td:first-child{padding-left:22px}.mt-tbl tr.mt-kid>td:first-child::before{content:"↳";color:var(--dim);margin-right:4px}
+/* a plate piece: length × width in the Qty cell */
+.mt-tbl .mt-dims{white-space:nowrap}.mt-tbl .mt-dm{width:58px!important}.mt-tbl .mt-dims .dim{margin:0 3px}.mt-tbl .mt-mm{font-size:11.5px}

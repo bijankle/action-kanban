@@ -51,7 +51,7 @@ const Mto = (() => {
     return { kind: "plate", sh, sheets, big, pieces: ps.length, need: ps.reduce((t, p) => t + p.w * p.h, 0) }; }
   const pack = it => !cuts(it).length || !it.L ? null : isLen(it) ? packLen(it) : isPlate(it) ? packPlate(it) : null;
   /* (a piece longer than a stock length is counted as the lengths it takes joined end to end, so the order covers it) */
-  const stockN = res => res ? (res.kind === "len" ? res.bars.length + (res.long || []).reduce((t, p) => t + Math.ceil(p.t / res.L), 0) : res.sheets.length) : 0;
+  const stockN = res => res ? (res.kind === "len" ? res.bars.length + (res.long || []).reduce((t, p) => t + Math.ceil(p.t / res.L), 0) : res.sheets.length + (res.big || []).reduce((t, p) => t + Math.ceil(p.l * p.w / (res.sh.l * res.sh.w)), 0)) : 0;
   const n1 = x => +(+x).toFixed(x < 10 ? 2 : 1);
   /* the row's quantity from its pieces, in its unit */
   function total(it, res){ const n = stockN(res) + Math.max(0, Math.round(+it.spare || 0)), k = kg(it);
@@ -79,11 +79,11 @@ const Mto = (() => {
         + (keepO.length ? " Offcuts kept (" + keep + " mm or more): " + keepO.map(b => mm(b.off)).join(", ") + "." : "") + (scrap.length ? " Scrap: " + scrap.map(b => mm(b.off)).join(", ") + "." : "")
         + (k ? " Weight about " + Math.round((N + sp) * res.L / 1000 * k).toLocaleString() + " kg (" + k + " kg/m)." : "")
         + (res.long.length ? " " + res.long.length + " piece" + (res.long.length === 1 ? " is" : "s are") + " longer than a stock length (" + res.long.map(p => mm(p.l)).join(", ") + "), so " + (res.long.length === 1 ? "it needs" : "they need") + " a joint or a longer stock length: " + (res.long.length === 1 ? "it is" : "they are") + " counted as " + res.long.map(p => Math.ceil(p.t / res.L) + " lengths joined").join(", ") + "." : ""); }
-    const n = res.sheets.length, s = res.sh;
+    const n = res.sheets.length, s = res.sh, N = stockN(res), big = res.big || [];
     return res.pieces + " piece" + (res.pieces === 1 ? "" : "s") + ", " + n1(res.need / 1e6) + " m² in all. They nest onto " + n + " × " + s.l + " x " + s.w + " sheet" + (n === 1 ? "" : "s") + " with a " + kerf + " mm cut between pieces"
-      + (sp ? ", plus " + sp + " spare sheet" + (sp === 1 ? "" : "s") : "") + ". Use: " + res.sheets.map((x, i) => "sheet " + (i + 1) + " " + Math.round(x.use * 100) + "%").join(", ") + "."
-      + (k ? " Weight about " + Math.round((n + sp) * s.l * s.w / 1e6 * k).toLocaleString() + " kg (" + k + " kg/m²)." : "")
-      + (res.big.length ? " " + res.big.length + " piece" + (res.big.length === 1 ? " is" : "s are") + " bigger than the sheet and " + (res.big.length === 1 ? "isn't" : "aren't") + " counted." : ""); }
+      + (N > n ? ", plus " + (N - n) + " for the piece" + (big.length === 1 ? "" : "s") + " bigger than a sheet (" + big.map(p => p.l + " x " + p.w).join(", ") + ": " + (big.length === 1 ? "it needs" : "they need") + " a joint, or pick a bigger sheet)" : "")
+      + (sp ? ", plus " + sp + " spare sheet" + (sp === 1 ? "" : "s") : "") + ", so " + (N + sp) + " sheet" + (N + sp === 1 ? "" : "s") + " to order. Use: " + res.sheets.map((x, i) => "sheet " + (i + 1) + " " + Math.round(x.use * 100) + "%").join(", ") + "."
+      + (k ? " Weight about " + Math.round((N + sp) * s.l * s.w / 1e6 * k).toLocaleString() + " kg (" + k + " kg/m²)." : ""); }
 
   /* ---------- short form (standard MTO wording: ELB 90 LR, FLG WN, CL150 RF, A403 WP316L, B16.9) ---------- */
   const SHORT = { pipe: "PIPE", sspipe: "PIPE", sstube: "TUBE", pe: "PIPE HDPE", ub: "UB", uc: "UC", wb: "WB", pfc: "PFC", tfb: "TFB", ea: "EA", ua: "UA", shs: "SHS", rhs: "RHS", chs: "CHS",
@@ -160,6 +160,7 @@ const Mto = (() => {
     if (isSpec(it)){ const R = specRes(it), out = R.need ? [R.need] : []; if (!String(it.qty || "").trim()) out.push("quantity"); return out; }
     const T = type(it), out = []; if (it.cl === "N/A" && !T && it.desc == null){ if (!it.z) out.push("size"); out.push("item"); if (!String(it.qty || "").trim()) out.push("quantity"); return out; } if (!T){ if (!String(it.desc || "").trim()) out.push("item"); }
     else { if (PIPEK.has(T.id) && (!it.mk || !it.end)) out.push("how it's made and its ends"); if (!it.z) out.push("size"); if (ratings(it).length && !it.r) out.push(T.rl ? T.rl.toLowerCase() : "rating"); if ((std(it) || {}).mats && std(it).mats.length && !it.m) out.push("material"); if (it.sx) out.push("standard"); }
+    if (isPlate(it) && !cuts(it).length){ if (!(+it.pl > 0 && +it.pw > 0)) out.push("piece length and width"); return out; }
     if (!String(it.qty || "").trim()) out.push("quantity"); return out; }
   /* piping (to a class of the pipe spec, or N/A: the general library) sits in its own table above the steel and the rest */
   const PIPEG = new Set(["Pipe and tube", "Pipe fittings", "Flanges", "Gaskets", "Bolting"]);
@@ -240,13 +241,13 @@ const Mto = (() => {
      what's ordered; each row entered is one cut of it (its length in Qty, the green from Settings, its notes as the mark). The parent
      packs the cuts onto stock lengths with the green and the saw cuts, and adds the spare lengths. Only parents go to the supplier */
   const skey = x => [x.t, x.s, x.z, x.r, x.m, x.L, x.mk, x.end].join("|");
-  const isCut = it => { const T = type(it); return !!T && T.k === "len" && !isPipe(it) && !it.draft; };
-  const piecesOf = it => cuts(it).length ? it.cuts : nq(it.qty) > 0 ? [{ id: it.id, l: Math.round(nq(it.qty) * (String(it.unit || "m") === "m" ? 1000 : 1)), n: 1, g: it.g != null ? it.g : rules().green, mk: it.notes || "" }] : [];
+  const isCut = it => { const T = type(it); return !!T && (T.k === "len" || T.k === "plate") && !isPipe(it) && !it.draft; };
+  const piecesOf = it => cuts(it).length ? it.cuts : isPlate(it) ? (+it.pl > 0 && +it.pw > 0 ? [{ id: it.id, l: +it.pl, w: +it.pw, n: 1, mk: it.notes || "" }] : []) : nq(it.qty) > 0 ? [{ id: it.id, l: Math.round(nq(it.qty) * (String(it.unit || "m") === "m" ? 1000 : 1)), n: 1, g: it.g != null ? it.g : rules().green, mk: it.notes || "" }] : [];
   function groupsOf(items){ const g = new Map(); items.forEach(it => { if (!isCut(it)) return; const k = skey(it); if (!g.has(k)) g.set(k, { key: k, rows: [] }); g.get(k).rows.push(it); });
     g.forEach(G => { G.first = G.rows[0]; G.v = Object.assign({}, G.first, { cuts: G.rows.flatMap(piecesOf) }); G.res = pack(G.v); G.n = stockN(G.res); }); return g; }
   /* a parent's spare lengths: the team's share for its heading, rounded up, unless typed over (kept with the action, by stock item) */
-  function gSpare(a, G){ const st = (a.mtoG || {})[G.key] || {}; if (st.sqm) return +st.sq || 0; return pref("spAuto") && G.n ? Math.ceil(G.n * (+pref("spSteel") || 0) / 100) : 0; }
-  const lenTot = (G, n) => G.res ? n + " LG (" + n1(n * G.res.L / 1000) + " m)" : "? LG";
+  function gSpare(a, G){ const st = (a.mtoG || {})[G.key] || {}; if (st.sqm) return +st.sq || 0; return pref("spAuto") && G.n ? Math.ceil(G.n * (+pref(isPlate(G.first) ? "spPlate" : "spSteel") || 0) / 100) : 0; }
+  const lenTot = (G, n) => !G.res ? (isPlate(G.first) ? "? SHT" : "? LG") : G.res.kind === "plate" ? n + " SHT (" + n1(n * G.res.sh.l * G.res.sh.w / 1e6) + " m²)" : n + " LG (" + n1(n * G.res.L / 1000) + " m)";
   /* everything cut from stock, as the cutting list draws it: each parent (its cuts, spare lengths) and each plate row with pieces */
   function packs(a){ const items = a.mto || [], gs = groupsOf(items), done = new Set(), out = [];
     items.forEach(it => { if (!isCut(it)){ const res = pack(it); if (res) out.push({ it, res }); return; } const G = gs.get(skey(it)); if (done.has(G.key)) return; done.add(G.key);
@@ -254,7 +255,7 @@ const Mto = (() => {
   /* what goes to the supplier: each parent in place of its cuts (as stock lengths), everything else as it is */
   function orderRows(a){ const items = a.mto || [], gs = groupsOf(items), done = new Set(), out = [];
     items.forEach(it => { if (!isCut(it)) return out.push(it); const G = gs.get(skey(it)); if (done.has(G.key)) return; done.add(G.key); const n = G.n + gSpare(a, G);
-      out.push({ id: "g:" + G.key, desc: desc(G.first), part: G.first.part || "", qty: String(n), unit: "lengths", notes: "", grp: G }); }); return out; }
+      out.push({ id: "g:" + G.key, desc: desc(G.first), part: G.first.part || "", qty: String(n), unit: isPlate(G.first) ? "sheets" : "lengths", notes: "", grp: G }); }); return out; }
   function table(a, ro){ const items = a.mto || (a.mto = []); shorten(items); if (!PipeSpec.ready()) PipeSpec.load();
     /* (shown and exported in the MTO's order: piping by heading, then the steel and the rest; in memory, it saves that way at the next change) */
     const sorted = order(items); if (sorted.some((it, i) => it !== items[i])) items.splice(0, items.length, ...sorted);
@@ -264,7 +265,8 @@ const Mto = (() => {
     const pipes = items.filter(it => isPipe(it) && !it.draft), steel = items.filter(it => !isPipe(it) && !it.draft), pdr = items.filter(it => isPipe(it) && it.draft), sdr = items.filter(it => !isPipe(it) && it.draft); let n = 0;
     const box = (it, c, ph, ex, v) => '<input class="in pt-in mt-pk" data-r="' + it.id + '" data-c="' + c + '" value="' + esc(v != null ? v : shown(it, c)) + '" placeholder="' + ph + '" title="' + esc(titleOf(it, c)) + '"' + (ex || "") + (ro ? " readonly" : "") + ' autocomplete="off" spellcheck="false">';
     const iBtn = it => '<button type="button" class="mt-ii" data-info="' + it.id + '" title="About this item: in full, no abbreviations, sizes, weight, how the total was worked out" aria-label="About this item">' + INFO_I + '</button>';
-    const qtyCell = (it, auto, kid) => '<td class="mt-qu"><input class="in pt-in mt-q" data-r="' + it.id + '" data-c="qty" inputmode="decimal" value="' + esc(need(it)) + '" placeholder="' + (kid ? "Length" : "Qty") + '"' + (ro || auto ? " readonly" : "") + (auto ? ' title="Worked out from the pieces (▸)"' : kid ? ' title="The length of this cut (the green from Settings is added for site trimming)"' : "") + '>'
+    const dims = it => '<td class="mt-qu mt-dims"><input class="in pt-in mt-q mt-dm" data-r="' + it.id + '" data-c="pl" inputmode="numeric" value="' + esc(it.pl || "") + '" placeholder="L"' + (ro ? " readonly" : "") + ' title="Length of the piece, mm"><span class="dim">×</span><input class="in pt-in mt-q mt-dm" data-r="' + it.id + '" data-c="pw" inputmode="numeric" value="' + esc(it.pw || "") + '" placeholder="W"' + (ro ? " readonly" : "") + ' title="Width of the piece, mm"><span class="dim mt-mm">mm</span></td><td></td><td></td>';
+    const qtyCell = (it, auto, kid) => isPlate(it) && !cuts(it).length ? dims(it) : '<td class="mt-qu"><input class="in pt-in mt-q" data-r="' + it.id + '" data-c="qty" inputmode="decimal" value="' + esc(need(it)) + '" placeholder="' + (kid ? "Length" : "Qty") + '"' + (ro || auto ? " readonly" : "") + (auto ? ' title="Worked out from the pieces (▸)"' : kid ? ' title="The length of this cut (the green from Settings is added for site trimming)"' : "") + '>'
       + (type(it) ? box(it, "unit", "", ' data-opt="1" tabindex="-1"').replace("mt-pk", "mt-pk mt-un") : '<input class="in pt-in mt-u mt-un" tabindex="-1" data-r="' + it.id + '" data-c="unit" value="' + esc(uShort(it.unit)) + '" placeholder="EA"' + (ro ? " readonly" : "") + '>') + '</td>'
       + (kid ? '<td></td><td></td>' : '<td><input class="in pt-in mt-q mt-sq' + (!auto && !it.sqm && String(it.sq || "") !== "" ? " mt-sqa" : "") + '" data-r="' + it.id + '" data-c="' + (auto ? "spare" : "sq") + '" inputmode="decimal" value="' + esc(spareOf(it)) + '" placeholder="0"' + (ro ? " readonly" : "") + ' title="' + (auto ? "Spare whole " + (isPlate(it) ? "sheets" : "lengths") + ", on top of what the pieces need" : it.sqm ? "Set by hand. Clear it to have it worked out again" : spareTip(it)) + '"></td>'
       + '<td class="mt-tot" title="Quantity plus spares: what is ordered">' + esc(ord(it)) + (ord(it) ? ' <span class="dim">' + esc(uShort(it.unit) || "EA") + '</span>' : "") + '</td>');
@@ -272,8 +274,8 @@ const Mto = (() => {
       + '<td class="mt-ic">' + (it.draft && !ro && !missing(it).length ? '<button type="button" class="btn sm mt-done" data-done="' + it.id + '" title="Put it under its heading in the MTO">Done</button>' : "") + '' + (ro ? "" : (it.auto ? "" : '<button type="button" class="ic-b sm mt-dup" data-dup="' + it.id + '" title="Duplicate this row" aria-label="Duplicate this row">' + DUP_I + '</button>') + '<button type="button" class="ic-b sm pt-x mt-x" data-x="' + it.id + '" title="Remove this row">✕</button>') + '</td></tr>';
     const head = (it, cols, last) => GROUP(it) !== last ? '<tr class="mt-grp nosort"><td colspan="' + (cols + 1) + '">' + esc(GROUP(it)) + '</td></tr>' : "";
     const no = (it, miss, tg, kid) => '<td class="pt-no">' + (miss.length ? '<span class="mt-dot" title="Still to pick: ' + esc(miss.join(", ")) + '"></span>' : it.draft ? "" : kid || ++n) + ((c => c ? '<span class="mt-chk" title="Check: ' + esc(c) + '">' + WARN + '</span>' : "")(it.chk || (isSpec(it) ? specRes(it).chk : ((pack(it) || {}).long || []).length ? "a piece is longer than the stock length: it needs a joint, or pick a longer stock length" : ""))) + (tg || "") + '</td>';
-    const toggle = (it, res) => { const T = type(it), on = open.has(it.id); return T && (T.k === "plate" || (T.k === "len" && cuts(it).length && !isCut(it))) ? '<button type="button" class="mt-tg' + (on ? " on" : "") + '" data-tg="' + it.id + '" title="' + (on ? "Hide" : "Show") + ' the pieces to cut">' + CHEV + (cuts(it).length ? '<b>' + cuts(it).reduce((t, c) => t + Math.max(1, Math.round(+c.n || 1)), 0) + '</b>' : "") + '</button>' : ""; };
-    const sub = (it, res, cols) => { const T = type(it); return open.has(it.id) && T && (T.k === "plate" || (T.k === "len" && !isCut(it))) ? '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="' + (cols + 1) + '"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>' : ""; };
+    const toggle = (it, res) => { const T = type(it), on = open.has(it.id); return T && (T.k === "len" || T.k === "plate") && cuts(it).length && !isCut(it) ? '<button type="button" class="mt-tg' + (on ? " on" : "") + '" data-tg="' + it.id + '" title="' + (on ? "Hide" : "Show") + ' the pieces to cut">' + CHEV + (cuts(it).length ? '<b>' + cuts(it).reduce((t, c) => t + Math.max(1, Math.round(+c.n || 1)), 0) + '</b>' : "") + '</button>' : ""; };
+    const sub = (it, res, cols) => { const T = type(it); return open.has(it.id) && T && (T.k === "len" || T.k === "plate") && !isCut(it) ? '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="' + (cols + 1) + '"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>' : ""; };
     /* ---- piping: Class, Size, Item, Ends / type, Qty ---- */
     const PC = [["cl", "Class"], ["sz", "Size"], ["t", "Item"], ["et", "Details"], ["qty", "Qty"], ["sq", "Spare"], ["tot", "Total"], ["notes", "Notes"], ["x", ""]];
     let last = null, ph = "";
@@ -308,10 +310,10 @@ const Mto = (() => {
     /* a parent row: the stock to order (worked out), its spare lengths, the total; clicking it shows or hides its cuts */
     const gs = groupsOf(items), drawn = new Set();
     const parentRow = G => { const sp = gSpare(a, G), st = (a.mtoG || {})[G.key] || {}, on = openG.has(G.key), R = G.res, f = G.first, T = type(f), S = std(f);
-      return '<tr class="mt-par' + (on ? " on" : "") + '" data-g="' + esc(G.key) + '"><td class="pt-no">' + (++n) + '<span class="mt-tg' + (on ? " on" : "") + '" title="' + (on ? "Hide" : "Show") + ' the cuts">' + CHEV + '<b>' + G.rows.length + '</b></span>' + (R && R.long.length ? '<span class="mt-chk" title="Check: a cut is longer than the stock length, so it needs a joint (counted as lengths joined), or pick a longer stock length">' + WARN + '</span>' : "") + '</td>'
+      return '<tr class="mt-par' + (on ? " on" : "") + '" data-g="' + esc(G.key) + '"><td class="pt-no">' + (++n) + '<span class="mt-tg' + (on ? " on" : "") + '" title="' + (on ? "Hide" : "Show") + ' the ' + (isPlate(f) ? "pieces" : "cuts") + '">' + CHEV + '<b>' + G.rows.length + '</b></span>' + (R && (R.long || R.big || []).length ? '<span class="mt-chk" title="' + (R.kind === "plate" ? "Check: a piece is bigger than the sheet, so it needs a joint (counted by its area), or pick a bigger sheet" : "Check: a cut is longer than the stock length, so it needs a joint (counted as lengths joined), or pick a longer stock length") + '">' + WARN + '</span>' : "") + '</td>'
         + '<td class="mt-pv">' + esc(itemCode(f)) + '</td><td class="mt-pv">' + esc(zShort(f)) + '</td><td class="mt-pv">' + esc([mShort(f.m), S && !f.sx ? stShort(S.n) : ""].filter(Boolean).join("  ")) + '</td><td class="mt-pv">' + esc(rShort(f.r)) + '</td>'
-        + '<td class="mt-qu mt-pq" title="Stock lengths to cut the ' + G.rows.length + ' cut' + (G.rows.length === 1 ? "" : "s") + ' from">' + esc(lenTot(G, G.n)) + '</td>'
-        + '<td><input class="in pt-in mt-q mt-sq mt-gsq' + (st.sqm ? "" : sp ? " mt-sqa" : "") + '" data-gs="' + esc(G.key) + '" inputmode="numeric" value="' + esc(sp || "") + '" placeholder="0"' + (ro ? " readonly" : "") + ' title="' + (st.sqm ? "Spare lengths, set by hand. Clear it to have it worked out again" : "Spare lengths, worked out (File, Parameters, MTO spares). Type over it to change it") + '"></td>'
+        + '<td class="mt-qu mt-pq" title="' + (isPlate(f) ? "Sheets to cut the " + G.rows.length + " piece" + (G.rows.length === 1 ? "" : "s") : "Stock lengths to cut the " + G.rows.length + " cut" + (G.rows.length === 1 ? "" : "s")) + ' from">' + esc(lenTot(G, G.n)) + '</td>'
+        + '<td><input class="in pt-in mt-q mt-sq mt-gsq' + (st.sqm ? "" : sp ? " mt-sqa" : "") + '" data-gs="' + esc(G.key) + '" inputmode="numeric" value="' + esc(sp || "") + '" placeholder="0"' + (ro ? " readonly" : "") + ' title="' + (st.sqm ? "Spare " + (isPlate(f) ? "sheets" : "lengths") + ", set by hand. Clear it to have it worked out again" : "Spare " + (isPlate(f) ? "sheets" : "lengths") + ", worked out (File, Parameters, MTO spares). Type over it to change it") + '"></td>'
         + '<td class="mt-tot">' + esc(lenTot(G, G.n + sp)) + '</td><td class="mt-itd"><button type="button" class="mt-ii" data-ginfo="' + esc(G.key) + '" title="How the order is worked out" aria-label="How the order is worked out">' + INFO_I + '</button></td>'
         + '<td class="mt-ic">' + (ro ? "" : '<button type="button" class="ic-b sm pt-x mt-x" data-gx="' + esc(G.key) + '" title="Remove this item and all its cuts">✕</button>') + '</td></tr>'; };
 
@@ -375,9 +377,9 @@ const Mto = (() => {
       Store.mutate(key, () => { G.rows.forEach(r => { const i = items.indexOf(r); if (i >= 0) items.splice(i, 1); }); if (a.mtoG) delete a.mtoG[G.key]; Store.touch(a); }); openG.delete(G.key); Store.log("Removed from the MTO of " + Store.actId(a)); App.render(); });
     $$("[data-ginfo]", el).forEach(b => b.onclick = e => { e.stopPropagation(); const G = grp(b.dataset.ginfo); if (!G) return; Fields.closePop(); const sp = gSpare(a, G), st = (a.mtoG || {})[G.key] || {};
       const p = document.createElement("div"); p.className = "pop mt-pop";
-      p.innerHTML = '<div class="mt-ph">As printed on the MTO</div><b>' + esc(desc(G.first)) + '</b><div class="lbl">How the order is worked out</div><p>' + esc(G.res ? explain(Object.assign({}, G.v, { spare: sp }), G.res) : "Pick a stock length for the cuts first.") + '</p>'
-        + (G.res ? '<p>' + esc("Spare: " + sp + " length" + (sp === 1 ? "" : "s") + (st.sqm ? ", set by hand." : ", " + (+pref("spSteel") || 0) + "% of the " + G.n + " rounded up (File, Parameters, MTO spares).")) + '</p>' : "")
-        + '<p class="dim">Each row under it is one cut: its length, the green from Settings, its notes as the mark. The cutting list in the work pack shows where to cut. Only this row goes to the supplier.</p>';
+      p.innerHTML = '<div class="mt-ph">As printed on the MTO</div><b>' + esc(desc(G.first)) + '</b><div class="lbl">How the order is worked out</div><p>' + esc(G.res ? explain(Object.assign({}, G.v, { spare: sp }), G.res) : (isPlate(G.first) ? "Pick a sheet size for the pieces first." : "Pick a stock length for the cuts first.")) + '</p>'
+        + (G.res ? '<p>' + esc("Spare: " + sp + (isPlate(G.first) ? " sheet" : " length") + (sp === 1 ? "" : "s") + (st.sqm ? ", set by hand." : ", " + (+pref(isPlate(G.first) ? "spPlate" : "spSteel") || 0) + "% of the " + G.n + " rounded up (File, Parameters, MTO spares).")) + '</p>' : "")
+        + '<p class="dim">' + (isPlate(G.first) ? "Each row under it is one piece: its length and width, its notes as the mark." : "Each row under it is one cut: its length, the green from Settings, its notes as the mark.") + " The cutting list in the work pack shows where to cut. Only this row goes to the supplier." + '</p>';
       document.body.appendChild(p); Fields.place(p, b); const pr = p.getBoundingClientRect(); if (pr.bottom > innerHeight - 8) p.style.top = Math.max(8, innerHeight - pr.height - 8) + "px"; if (pr.right > innerWidth - 8) p.style.left = Math.max(8, innerWidth - pr.width - 8) + "px"; });
     /* the ⋯ at the row's end: about this item (sizes, weight, how the total was worked out, notes), move it to Spares, remove it */
     /* the row's end: move it to Spares, or remove it (asks first) */
@@ -388,8 +390,8 @@ const Mto = (() => {
       if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?", "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); bolts(); Store.touch(a); }); });
     if (ro) return;
     /* the order the boxes are filled in: to a class, Class Size Item (Ends / type) Qty; N/A, Class Size Item Rating Material Qty; the rest, Item Size Rating Material Qty */
-    const orderOf = it => isInst(it) ? ["cl", "t", "part", "z", "qty"] : isSpec(it) ? ["cl", "dn", "it", "dn2", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : ["t", "z", "m", "r", "qty"];
-    const needs = (it, x) => x === "z" && isInst(it) ? !it.z && (instType(it.desc) || {}).g === "Control valves" : x === "part" ? isInst(it) && !it.part && !!(instType(it.desc) || { mm: [] }).mm.length : x === "cl" ? !it.cl : x === "dn" ? !it.dn : x === "dn2" ? PipeSpec.reducing(it.it) && !it.dn2 : x === "it" ? !it.it : x === "vt" ? specRes(it).need === "ends or type" : x === "qty" ? !String(it.qty || "").trim()
+    const orderOf = it => isInst(it) ? ["cl", "t", "part", "z", "qty"] : isSpec(it) ? ["cl", "dn", "it", "dn2", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : isPlate(it) ? ["t", "z", "m", "r", "pl", "pw"] : ["t", "z", "m", "r", "qty"];
+    const needs = (it, x) => x === "z" && isInst(it) ? !it.z && (instType(it.desc) || {}).g === "Control valves" : x === "part" ? isInst(it) && !it.part && !!(instType(it.desc) || { mm: [] }).mm.length : x === "cl" ? !it.cl : x === "dn" ? !it.dn : x === "dn2" ? PipeSpec.reducing(it.it) && !it.dn2 : x === "it" ? !it.it : x === "vt" ? specRes(it).need === "ends or type" : x === "pl" ? !it.pl : x === "pw" ? !it.pw : x === "qty" ? !String(it.qty || "").trim()
       : x === "t" ? !type(it) && !String(it.desc || "").trim() : x === "z" ? (type(it) || it.cl === "N/A") && !it.z && !(it.desc != null && !type(it)) : x === "r" ? !!type(it) && ratings(it).length > 0 && !it.r : x === "m" ? !!type(it) && !it.m : false;
     /* the next box on the row still to fill in (after a pick, the cursor goes there and its list opens) */
     const after = (id, c) => { const it = find(id); if (!it || !missing(it).length) return null; const O = orderOf(it), from = O.indexOf(c);
@@ -422,7 +424,7 @@ const Mto = (() => {
     /* the studs and nuts follow the flanges: for each class and size, the flange rows (not still being entered) make joints, flange on
        flange (two flanges a joint, a blind or an odd one counted as a joint too), and each joint takes the table's bolts and two nuts a stud.
        A quantity typed over an automatic row stays; a row whose flanges are gone goes */
-    const fillSpare = it => { const T = type(it); if (pref("spAuto") && !it.sqm && !pack(it) && !(T && T.k === "len" && !isPipe(it))) it.sq = autoSpare(it); };   // (a cut's spare is on its parent, in whole lengths)
+    const fillSpare = it => { const T = type(it); if (pref("spAuto") && !it.sqm && !pack(it) && !(T && (T.k === "len" || T.k === "plate") && !isPipe(it))) it.sq = autoSpare(it); };   // (a cut's spare is on its parent, in whole lengths)
     function bolts(){ const want = new Map(), F = PipeSpec.FLG;
       items.filter(it => isSpec(it) && !it.draft && !it.auto && it.it && F.test(it.it) && it.dn).forEach(it => { const k = it.cl + "|" + it.dn, w = want.get(k) || { cl: it.cl, dn: it.dn, n: 0 }; w.n += nq(ord(it)); want.set(k, w); });
       const has = new Map(items.filter(it => it.auto).map(it => [it.auto, it]));
@@ -437,13 +439,12 @@ const Mto = (() => {
       Store.mutate(key, () => { if (id === "newp" && c !== "cl" && lastCl.get(akey(a))) set(it, "cl", lastCl.get(akey(a))); set(it, c, v); recalc(it); if (isNew) items.push(it); const o = order(items); items.splice(0, items.length, ...o); bolts(); Store.touch(a); });
       Store.log((isNew ? "Added to" : "Edited") + " the MTO of " + Store.actId(a)); focusNext = after(it.id, c) || (!missing(it).length ? doneNext(it) : null);
       /* steel lengths and plate: the pieces open by themselves, and once the item is picked the cursor goes to the first piece (Qty then works itself out) */
-      const T = type(it); if (T && T.k === "plate"){ open.add(it.id); if (!cuts(it).length && (!focusNext || focusNext.c === "qty")) focusNext = { id: it.id, c: "l", cut: "new" }; } };   // (plate: its pieces; a steel length row is itself one cut)
+      if (isPlate(it) && focusNext && focusNext.id === it.id && focusNext.c === "qty") focusNext = { id: it.id, c: "pl" }; };   // (a plate row is one piece: its length and width)
     const doneNext = it => it.draft ? { id: it.id, done: 1 } : isPipe(it) ? { id: "newp", c: lastCl.get(akey(a)) ? "dn" : "cl", quiet: true } : { id: "new0", c: "t", quiet: true };
     /* Done: the row goes under its heading, and the cursor back to a new row */
     /* steel cut from stock lengths or sheets: one summary row per stock item (what's ordered), the pieces to cut under it. A new row
        for an item already in the MTO, same size, grade, finish, standard and stock length, adds its pieces to that row on Done */
-    const same = it => { const T = type(it); if (!T || T.k !== "plate") return null; const k = x => [x.t, x.s, x.z, x.r, x.m, x.L, x.mk, x.end].join("|");
-      return items.find(x => x !== it && !x.draft && type(x) === T && k(x) === k(it)) || null; };
+    const same = () => null;   // (steel and plate group under their parent by themselves)
     $$("[data-done]", el).forEach(b => b.onclick = () => { const it = find(b.dataset.done); if (!it) return; const into = same(it);
       if (into){ Store.mutate(key, () => { into.cuts = (into.cuts || []).concat((it.cuts || []).map(c => Object.assign({}, c, { id: uid() }))); const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); recalc(into); fillSpare(into); Store.touch(a); });
         open.add(into.id); Store.log("Added pieces to a row of the MTO of " + Store.actId(a)); note("Added to the " + desc(into) + " row: its pieces are listed under it"); focusNext = doneNext({}); App.render(); return; }
@@ -474,7 +475,7 @@ const Mto = (() => {
     /* quantity, unit (for one typed in) and notes: typed */
     $$(".mt-tbl .pt-in:not(.mt-pk):not(.mt-cin)", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c;
       i.onchange = () => { const v = i.value.trim(), it = find(r); if (!it || String(it[c] == null ? "" : it[c]) === v) return; if (c === "spare"){ Store.mutate(key, () => { it.spare = Math.max(0, Math.round(+v || 0)) || undefined; recalc(it); Store.touch(a); }); return; }
-        Store.mutate(key, () => { it[c] = v; if (it.auto && c === "qty") it.qman = v !== ""; if (c === "sq") it.sqm = v !== ""; recalc(it); bolts(); fillSpare(it); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "qty" && !missing(it).length) focusNext = doneNext(it); };
+        Store.mutate(key, () => { it[c] = v; if (it.auto && c === "qty") it.qman = v !== ""; if (c === "sq") it.sqm = v !== ""; recalc(it); bolts(); fillSpare(it); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if ((c === "qty" || c === "pw") && !missing(it).length) focusNext = doneNext(it); else if (c === "pl" && !it.pw) focusNext = { id: it.id, c: "pw" }; };
       i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }; });
     /* details too long for the column end in more…, which opens the item in full */
     requestAnimationFrame(() => requestAnimationFrame(() => $$(".mt-det", el).forEach(d => { if (d.scrollWidth <= d.clientWidth + 1 || d.nextElementSibling) return;
