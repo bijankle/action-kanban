@@ -11,7 +11,8 @@ const Parts = (() => {
   /* one action's list, drawn into its action view tab; keep is where the cursor was before the redraw */
   function renderFor(el, a, kind, keep){ const ro = !Store.S.edit;
     el.innerHTML = '<div class="pt-main">' + pane(a, kind, ro) + '</div>'; wire(el, a, kind, ro);
-    if (kind === "mto"){ const tb = $$(".mt-tbl", el); tb.forEach(t => gridCols(t, t.classList.contains("mt-pipe") ? "mtoP" : "mtoS", { fixed: { "No.": Math.max(44, ...$$("td.pt-no", t).map(td => [...td.children].reduce((w, b) => w + b.offsetWidth + 3, 18))), Qty: 96, Spare: 56, Total: 76, x: Math.max(40, ...$$("td.mt-ic", t).map(td => [...td.children].reduce((w, b) => w + b.offsetWidth + 4, 14))) }, extra: { Notes: 24, Details: 0 }, cap: { Details: 340 }, inPad: 24, hPad: 22, scroll: true }));
+    const tw = td => { const r = document.createRange(); r.selectNodeContents(td); return Math.ceil(r.getBoundingClientRect().width) + 20; };   // (the width of a cell's text: a steel parent's "4 LG (48 m)")
+    if (kind === "mto"){ const tb = $$(".mt-tbl", el); tb.forEach(t => gridCols(t, t.classList.contains("mt-pipe") ? "mtoP" : "mtoS", { fixed: { "No.": Math.max(44, ...$$("td.pt-no", t).map(td => [...td.children].reduce((w, b) => w + b.offsetWidth + 3, 18))), Qty: Math.max(96, ...$$("td.mt-pq", t).map(tw)), Spare: 56, Total: Math.max(76, ...$$("td.mt-tot", t).map(tw)), x: Math.max(40, ...$$("td.mt-ic", t).map(td => [...td.children].reduce((w, b) => w + b.offsetWidth + 4, 14))) }, extra: { Notes: 24, Details: 0 }, cap: { Details: 340 }, inPad: 24, hPad: 22, scroll: true }));
       /* the piping and the steel tables line up, column for column: each column as wide as the wider of the two */
       if (tb.length === 2){ const cs = tb.map(t => [...t.querySelectorAll("colgroup col")]); if (cs[0].length === cs[1].length){ const w = cs[0].map((c, i) => Math.max(parseFloat(c.style.width) || 0, parseFloat(cs[1][i].style.width) || 0));
         cs.forEach((cc, k) => { cc.forEach((c, i) => c.style.width = w[i] + "px"); tb[k].style.width = w.reduce((x, y) => x + y, 0) + "px"; }); } } }
@@ -89,13 +90,14 @@ const Parts = (() => {
 
   /* ---------- exports ---------- */
   const fname = (a, kind) => Store.actId(a) + " " + (kind === "mto" ? "RFQ" : "Spares") + " " + new Date().toISOString().slice(0, 10) + ".pdf";
-  function excel(a, kind){ const items = list(a, kind); if (!items.length) return alert("Nothing to export yet.");
+  function excel(a, kind){ const items = kind === "mto" ? Mto.orderRows(a) : list(a, kind);   // (the MTO as ordered: each steel parent, not its cuts)
+  if (!items.length) return alert("Nothing to export yet.");
     const sec = kind === "spares", head = ["Item"].concat(COLS[kind].map(c => c[1]), sec ? ["Secured"] : []), rows = items.map((it, i) => [String(i + 1)].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), sec ? [it.secured ? "Yes" : "No"] : []));
     Excel.save(Excel.book(head, rows, Store.actId(a) + " " + NAME[kind]), Store.actId(a) + " " + NAME[kind] + " " + new Date().toISOString().slice(0, 10) + ".xlsx"); }
   let pdfP = null;
   const loadPdf = () => pdfP || (pdfP = new Promise((res, rej) => { const add = (src, next) => { const s = document.createElement("script"); s.src = src; s.onload = next; s.onerror = () => { pdfP = null; rej(new Error("Couldn't load the PDF maker")); }; document.head.appendChild(s); };
     add("js/lib/jspdf.umd.min.js", () => add("js/lib/jspdf.plugin.autotable.min.js", () => res(window.jspdf.jsPDF))); }));
-  async function build(a, kind, r){ const jsPDF = await loadPdf(), doc = new jsPDF({ unit: "mm", format: "a4" }), p = Store.project(a._p) || {}, items = list(a, kind);
+  async function build(a, kind, r){ const jsPDF = await loadPdf(), doc = new jsPDF({ unit: "mm", format: "a4" }), p = Store.project(a._p) || {}, items = kind === "mto" ? Mto.orderRows(a) : list(a, kind);
     const thb = (getComputedStyle(document.documentElement).getPropertyValue("--thb") || "#475569").trim(), rgb = /^#[0-9a-f]{6}$/i.test(thb) ? [1, 3, 5].map(i => parseInt(thb.substr(i, 2), 16)) : [71, 85, 105];
     doc.setFillColor(...rgb); doc.rect(0, 0, 210, 26, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(17);
     doc.text(kind === "mto" ? "Request for Quotation" : "Spares list", 14, 13); doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.text(Store.actId(a) + "   " + (p.name || ""), 14, 20);

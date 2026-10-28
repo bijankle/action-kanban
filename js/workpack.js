@@ -34,7 +34,7 @@ const Workpack = (() => {
     let dm = new Map(); if (tags.length && typeof Docs !== "undefined"){ try { await Docs.load(); dm = Drawings.collect(a); const pick = new Set(a.dwgPick || []); dm = new Map([...dm].map(([t, l]) => [t, l.filter(d => pick.has(d.n))]));   /* (only the drawings ticked on the Drawings tab) */ } catch (e){ console.warn("documents", e); } }
     const all = new Map(); dm.forEach(l => l.forEach(d => { if (!all.has(d.n)) all.set(d.n, d); }));
     /* the parts, in reading order; each one present gets a line in the contents and starts a page */
-    const parts = (a.mto || []).map(it => Object.assign({ src: "New" }, it, { qty: Mto.ord(it) })).concat((a.spares || []).map(it => Object.assign({ src: "Site spares" }, it)));
+    const parts = Mto.orderRows(a).map(it => Object.assign({ src: "New" }, it, { qty: Mto.ord(it) })).concat((a.spares || []).map(it => Object.assign({ src: "Site spares" }, it)));
     const S = [["job", "Job and scope", true], ["isol", "Isolations", (a.isol || []).length], ["parts", "Parts", parts.length], ["cut", "Cutting list", Mto.hasCuts(a)], ["reg", "Drawings and documents", all.size], ["photos", "Photos (" + a.photos.length + ")", a.photos.length],
       ["att", "Attachments", a.files.length]].filter(x => x[2]);
     /* cover: the job, who to contact, the contents */

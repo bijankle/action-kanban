@@ -1278,4 +1278,7 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 /* the MTO and Spares bar (with AI, XLS and RFQ) stays at the top while the list scrolls */
 .av-subr{position:sticky;top:-14px;z-index:6;background:var(--panel);padding:14px 0 6px;margin:-14px 0 4px}
 .pt-top{position:sticky;z-index:5;background:var(--panel);box-shadow:0 -12px 0 var(--panel),0 6px 8px -6px #0002}
-.mt-comb{display:flex;align-items:center;gap:10px;margin:0 0 8px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:color-mix(in srgb,#2563eb 7%,var(--panel));font-size:13px}.mt-comb span{flex:1;min-width:0}.mt-comb .btn{flex:none}
+/* steel parents (what is ordered) with their cuts under them, indented a shade darker */
+.mt-tbl tr.mt-par{cursor:pointer}.mt-tbl tr.mt-par>td{font-weight:600;background:color-mix(in srgb,var(--th) 5%,var(--panel))}.mt-tbl tr.mt-par:hover>td{background:color-mix(in srgb,var(--th) 10%,var(--panel))}
+.mt-tbl .mt-pv{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;white-space:nowrap}.mt-tbl .mt-pq{font-weight:700;white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums}.mt-tbl .mt-par .mt-tg{pointer-events:none}
+.mt-tbl tr.mt-kid>td{background:color-mix(in srgb,var(--th) 4%,var(--panel2))}.mt-tbl tr.mt-kid>td:first-child{padding-left:22px}.mt-tbl tr.mt-kid>td:first-child::before{content:"↳";color:var(--dim);margin-right:4px}
