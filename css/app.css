@@ -1257,3 +1257,4 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .mt-tbl .mt-dw{display:flex;align-items:center;gap:4px;min-width:0;max-width:100%}.mt-tbl .mt-dw .mt-pk{flex:0 1 auto;width:auto!important;field-sizing:content;min-width:60px}
 .mt-tbl .mt-det{min-width:0;flex:1 1 auto}.mt-more2{flex:none;font-size:12px;font-weight:600}
 .mt-tbl .mt-dw .mt-pk{flex:none}.mt-tbl .mt-dw .mt-bl{flex:none;width:56px!important}
+.pt-tbl td.pt-act{overflow:visible;text-overflow:clip}

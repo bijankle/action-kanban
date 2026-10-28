@@ -15,7 +15,10 @@ const Parts = (() => {
       /* the piping and the steel tables line up, column for column: each column as wide as the wider of the two */
       if (tb.length === 2){ const cs = tb.map(t => [...t.querySelectorAll("colgroup col")]); if (cs[0].length === cs[1].length){ const w = cs[0].map((c, i) => Math.max(parseFloat(c.style.width) || 0, parseFloat(cs[1][i].style.width) || 0));
         cs.forEach((cc, k) => { cc.forEach((c, i) => c.style.width = w[i] + "px"); tb[k].style.width = w.reduce((x, y) => x + y, 0) + "px"; }); } } }
-    else { const pt = $(".pt-tbl", el); if (pt) gridCols(pt, "spares", { fixed: { Item: 66 }, scroll: true }); }
+    else { const pt = $(".pt-tbl", el); if (pt){ const ths = pt.tHead ? [...pt.tHead.rows[0].cells] : [], fx = { Item: 66 }, n = ths.length - 1;
+      /* (the row's buttons, → MTO and ✕, measured: never cut off) */
+      if (n > 0) fx[tblKit.id(ths[n], n)] = Math.max(40, ...$$("td.pt-act", pt).map(td => [...td.children].reduce((w, b) => w + b.offsetWidth + 4, 16)));
+      gridCols(pt, "spares", { fixed: fx, scroll: true }); } }
     if (keep && keep.c){ let r = keep.r, cut = keep.cut; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } if (cut === "new" && created.has("cut:" + r)) cut = created.get("cut:" + r);
       const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]' + (cut ? '[data-cut="' + cut + '"]' : ":not([data-cut])"), el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
 
