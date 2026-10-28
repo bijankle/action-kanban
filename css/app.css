@@ -1278,3 +1278,4 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 /* the MTO and Spares bar (with AI, XLS and RFQ) stays at the top while the list scrolls */
 .av-subr{position:sticky;top:-14px;z-index:6;background:var(--panel);padding:14px 0 6px;margin:-14px 0 4px}
 .pt-top{position:sticky;z-index:5;background:var(--panel);box-shadow:0 -12px 0 var(--panel),0 6px 8px -6px #0002}
+.mt-comb{display:flex;align-items:center;gap:10px;margin:0 0 8px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:color-mix(in srgb,#2563eb 7%,var(--panel));font-size:13px}.mt-comb span{flex:1;min-width:0}.mt-comb .btn{flex:none}

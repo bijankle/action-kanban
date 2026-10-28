@@ -21,10 +21,11 @@ function slug(s){ return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-
 function safeName(s){ return String(s || "file").replace(/[\\/:*?"<>|]+/g, "_").slice(0, 120); }
 
 /* the user's profile (kept on this device): it signs edits, prints, workpacks and RFQs */
-const Profile = { get: () => Object.assign({ first: "", last: "", mobile: "", email: "", role: "", company: "" }, lsGet("adProfile", {})),
-  name(){ const p = Profile.get(); return [p.first, p.last].filter(Boolean).join(" ") || lsGet("adName", ""); },
+/* (names are always shown as proper names, Bijan Khadembashi, however they were typed or came from the sign in) */
+const Profile = { get: () => { const p = Object.assign({ first: "", last: "", mobile: "", email: "", role: "", company: "" }, lsGet("adProfile", {})); p.first = properName(p.first); p.last = properName(p.last); return p; },
+  name(){ const p = Profile.get(); return [p.first, p.last].filter(Boolean).join(" ") || properName(lsGet("adName", "")); },
   initials(){ const p = Profile.get(), n = Profile.name(); return ((p.first[0] || "") + (p.last[0] || "")).toUpperCase() || (n ? n.split(/\s+/).map(x => x[0]).join("").slice(0, 2).toUpperCase() : ""); },
-  set(p){ lsSet("adProfile", p); lsSet("adName", [p.first, p.last].filter(Boolean).join(" ")); },
+  set(p){ p = Object.assign({}, p, { first: properName(p.first), last: properName(p.last) }); lsSet("adProfile", p); lsSet("adName", [p.first, p.last].filter(Boolean).join(" ")); },
   /* the contact lines for a PDF: name and role, then mobile and email */
   lines(){ const p = Profile.get(), n = Profile.name(); return [n + (p.role ? ", " + p.role : ""), [p.mobile && "Mobile " + p.mobile, p.email].filter(Boolean).join("   ")].filter(Boolean); } };
 

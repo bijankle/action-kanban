@@ -47,7 +47,8 @@ const Mto = (() => {
     sheets.forEach(s => { s.area = s.ps.reduce((t, p) => t + p.w * p.h, 0); s.use = s.area / (sh.l * sh.w); });
     return { kind: "plate", sh, sheets, big, pieces: ps.length, need: ps.reduce((t, p) => t + p.w * p.h, 0) }; }
   const pack = it => !cuts(it).length || !it.L ? null : isLen(it) ? packLen(it) : isPlate(it) ? packPlate(it) : null;
-  const stockN = res => res ? (res.kind === "len" ? res.bars.length : res.sheets.length) : 0;
+  /* (a piece longer than a stock length is counted as the lengths it takes joined end to end, so the order covers it) */
+  const stockN = res => res ? (res.kind === "len" ? res.bars.length + (res.long || []).reduce((t, p) => t + Math.ceil(p.t / res.L), 0) : res.sheets.length) : 0;
   const n1 = x => +(+x).toFixed(x < 10 ? 2 : 1);
   /* the row's quantity from its pieces, in its unit */
   function total(it, res){ const n = stockN(res) + Math.max(0, Math.round(+it.spare || 0)), k = kg(it);
@@ -74,7 +75,7 @@ const Mto = (() => {
         + (sp ? ", plus " + sp + " spare length" + (sp === 1 ? "" : "s") : "") + ", so " + (n + sp) + " × " + lenTxt(res.L) + " = " + m_((n + sp) * res.L) + " to order."
         + (keepO.length ? " Offcuts kept (" + keep + " mm or more): " + keepO.map(b => mm(b.off)).join(", ") + "." : "") + (scrap.length ? " Scrap: " + scrap.map(b => mm(b.off)).join(", ") + "." : "")
         + (k ? " Weight about " + Math.round((n + sp) * res.L / 1000 * k).toLocaleString() + " kg (" + k + " kg/m)." : "")
-        + (res.long.length ? " " + res.long.length + " piece" + (res.long.length === 1 ? " is" : "s are") + " longer than a stock length (" + res.long.map(p => mm(p.l)).join(", ") + "), so " + (res.long.length === 1 ? "it needs" : "they need") + " a joint or a longer length, and " + (res.long.length === 1 ? "isn't" : "aren't") + " counted." : ""); }
+        + (res.long.length ? " " + res.long.length + " piece" + (res.long.length === 1 ? " is" : "s are") + " longer than a stock length (" + res.long.map(p => mm(p.l)).join(", ") + "), so " + (res.long.length === 1 ? "it needs" : "they need") + " a joint or a longer stock length: " + (res.long.length === 1 ? "it is" : "they are") + " counted as " + res.long.map(p => Math.ceil(p.t / res.L) + " lengths joined").join(", ") + "." : ""); }
     const n = res.sheets.length, s = res.sh;
     return res.pieces + " piece" + (res.pieces === 1 ? "" : "s") + ", " + n1(res.need / 1e6) + " m² in all. They nest onto " + n + " × " + s.l + " x " + s.w + " sheet" + (n === 1 ? "" : "s") + " with a " + kerf + " mm cut between pieces"
       + (sp ? ", plus " + sp + " spare sheet" + (sp === 1 ? "" : "s") : "") + ". Use: " + res.sheets.map((x, i) => "sheet " + (i + 1) + " " + Math.round(x.use * 100) + "%").join(", ") + "."
@@ -232,6 +233,11 @@ const Mto = (() => {
   let focusNext = null;
   /* the class last picked on an action's MTO: new piping rows start in it (rows already there keep theirs), and it can still be changed */
   const lastCl = new Map(), akey = a => a._p + ":" + a.u;   // (after a pick, the next box still to fill in on that row)
+  /* rows of the same stock item (cut from lengths or sheets) that could be one summary row: the same section, size, grade, finish,
+     standard and stock length, each either with its pieces or a length in metres (that length becomes a piece) */
+  const skey = x => [x.t, x.s, x.z, x.r, x.m, x.L, x.mk, x.end].join("|");
+  function combinable(items){ const g = new Map(); items.forEach(it => { const T = type(it); if (it.draft || !T || (T.k !== "len" && T.k !== "plate")) return; if (!cuts(it).length && !(T.k === "len" && String(it.unit || "") === "m" && nq(it.qty) > 0)) return;
+      const k = skey(it); if (!g.has(k)) g.set(k, []); g.get(k).push(it); }); return [...g.values()].filter(l => l.length > 1); }
   function table(a, ro){ const items = a.mto || (a.mto = []); shorten(items); if (!PipeSpec.ready()) PipeSpec.load();
     /* (shown and exported in the MTO's order: piping by heading, then the steel and the rest; in memory, it saves that way at the next change) */
     const sorted = order(items); if (sorted.some((it, i) => it !== items[i])) items.splice(0, items.length, ...sorted);
@@ -248,7 +254,7 @@ const Mto = (() => {
     const tail = it => '<td class="mt-itd"><input class="in pt-in" data-r="' + it.id + '" data-c="notes" value="' + esc(it.notes || "") + '"' + (it.auto ? ' placeholder="' + esc(it.an || "from the flanges") + '"' : "") + (ro ? " readonly" : "") + '>' + (type(it) || (isSpec(it) && it.it) || it.desc ? iBtn(it) : "") + '</td>'
       + '<td class="mt-ic">' + (it.draft && !ro && !missing(it).length ? '<button type="button" class="btn sm mt-done" data-done="' + it.id + '" title="Put it under its heading in the MTO">Done</button>' : "") + '' + (ro ? "" : (it.auto ? "" : '<button type="button" class="ic-b sm mt-dup" data-dup="' + it.id + '" title="Duplicate this row" aria-label="Duplicate this row">' + DUP_I + '</button>') + '<button type="button" class="ic-b sm pt-x mt-x" data-x="' + it.id + '" title="Remove this row">✕</button>') + '</td></tr>';
     const head = (it, cols, last) => GROUP(it) !== last ? '<tr class="mt-grp nosort"><td colspan="' + (cols + 1) + '">' + esc(GROUP(it)) + '</td></tr>' : "";
-    const no = (it, miss, tg) => '<td class="pt-no">' + (miss.length ? '<span class="mt-dot" title="Still to pick: ' + esc(miss.join(", ")) + '"></span>' : it.draft ? "" : ++n) + ((c => c ? '<span class="mt-chk" title="Check: ' + esc(c) + '">?</span>' : "")(it.chk || (isSpec(it) ? specRes(it).chk : ""))) + (tg || "") + '</td>';
+    const no = (it, miss, tg) => '<td class="pt-no">' + (miss.length ? '<span class="mt-dot" title="Still to pick: ' + esc(miss.join(", ")) + '"></span>' : it.draft ? "" : ++n) + ((c => c ? '<span class="mt-chk" title="Check: ' + esc(c) + '">?</span>' : "")(it.chk || (isSpec(it) ? specRes(it).chk : ((pack(it) || {}).long || []).length ? "a piece is longer than the stock length: it needs a joint, or pick a longer stock length" : ""))) + (tg || "") + '</td>';
     const toggle = (it, res) => { const T = type(it), on = open.has(it.id); return T && (T.k === "len" || T.k === "plate") ? '<button type="button" class="mt-tg' + (on ? " on" : "") + '" data-tg="' + it.id + '" title="' + (on ? "Hide" : "Show") + ' the pieces to cut">' + (on ? "▾" : "▸") + (cuts(it).length ? '<b>' + cuts(it).reduce((t, c) => t + Math.max(1, Math.round(+c.n || 1)), 0) + '</b>' : "") + '</button>' : ""; };
     const sub = (it, res, cols) => { const T = type(it); return open.has(it.id) && T && (T.k === "len" || T.k === "plate") ? '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="' + (cols + 1) + '"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>' : ""; };
     /* ---- piping: Class, Size, Item, Ends / type, Qty ---- */
@@ -288,7 +294,7 @@ const Mto = (() => {
     const thead = cols => '<thead><tr><th class="pt-no" data-col="No.">#</th>' + cols.map(([c, nm]) => '<th data-col="' + (nm || c) + '">' + esc(nm) + (REQ.has(c) || c === "cl" || c === "sz" || c === "ms" ? '<span class="mt-rq" title="Needed">*</span>' : "") + '</th>').join("") + '</tr></thead>';
     return '<div class="mt-h">Piping' + tipI("To the plant's pipe spec (" + ((PipeSpec.meta() || {}).doc || "loading the spec…") + "): pick the class, the size and the item, and the spec gives the rest. N/A for anything not to a class.") + '</div>'
       + '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-pipe">' + thead(PC) + '<tbody>' + ph + '</tbody></table></div>'
-      + '<div class="mt-h">Steel and other</div><div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-steel">' + thead(SC) + '<tbody>' + sh + '</tbody></table></div>'; }
+      + '<div class="mt-h">Steel and other</div>' + (ro ? "" : combinable(items).map((l, gi) => '<div class="mt-comb"><span>' + l.length + ' rows of <b>' + esc(desc(l[0])) + '</b> can be one row, what is ordered, with each length as a piece to cut under it.</span><button type="button" class="btn sm" data-comb="' + gi + '">Combine</button></div>').join("")) + '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-steel">' + thead(SC) + '<tbody>' + sh + '</tbody></table></div>'; }
 
   /* the pieces under a row, with the packing drawn */
   function piecesHtml(it, res, ro){ const pl = isPlate(it), cs = it.cuts || [];
@@ -332,6 +338,13 @@ const Mto = (() => {
     $$("[data-info]", el).forEach(b => b.onclick = e => { e.stopPropagation(); info(a, find(b.dataset.info), b, ro); });
     /* the ⋯ at the row's end: about this item (sizes, weight, how the total was worked out, notes), move it to Spares, remove it */
     /* the row's end: move it to Spares, or remove it (asks first) */
+    /* combine: the rows of one stock item into the first, each row's length (or its pieces) a piece under it, after asking with the list */
+    $$("[data-comb]", el).forEach(b => b.onclick = async () => { const l = combinable(items)[+b.dataset.comb]; if (!l) return; const first = l[0];
+      const pcs = l.map(it => cuts(it).length ? cuts(it).map(c => (c.n > 1 ? c.n + " × " : "") + c.l + " mm" + (c.mk ? " " + c.mk : "")).join(", ") : Math.round(nq(it.qty) * 1000) + " mm" + (it.notes ? " " + it.notes : ""));
+      if (!await confirmBox("Combine these " + l.length + " rows into one " + desc(first) + " row? Each becomes a piece to cut under it: " + pcs.join("; ") + ". The row then orders whole stock lengths for them, packed with the saw cut.", "Combine")) return;
+      Store.mutate(key, () => { const all = []; l.forEach(it => { if (cuts(it).length) all.push(...it.cuts.map(c => Object.assign({}, c, { id: uid() }))); else all.push({ id: uid(), l: Math.round(nq(it.qty) * 1000), n: 1, mk: it.notes || "" }); });
+        first.cuts = all; delete first.sqm; first.notes = ""; l.slice(1).forEach(it => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); }); recalc(first); fillSpare(first); Store.touch(a); });
+      open.add(first.id); Store.log("Combined " + l.length + " rows of the MTO of " + Store.actId(a)); App.render(); });
     /* duplicate: a copy of the row straight under it, to change what differs (the studs and nuts that follow the flanges aren't copied: they are worked out) */
     $$("[data-dup]", el).forEach(b => b.onclick = () => { const it = find(b.dataset.dup); if (!it) return; const c = JSON.parse(JSON.stringify(it)); c.id = uid(); delete c.auto; delete c.qman;
       (c.cuts || []).forEach(x => x.id = uid()); Store.mutate(key, () => { items.splice(items.indexOf(it) + 1, 0, c); bolts(); Store.touch(a); }); Store.log("Duplicated a row of the MTO of " + Store.actId(a)); focusNext = { id: c.id, c: "qty" }; App.render(); });

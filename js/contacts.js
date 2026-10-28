@@ -53,12 +53,12 @@ const Contacts = (() => {
     gridCols($(".cts-t", el), "contacts", { fixed: { x: 52 }, sort: false });   // (it sorts itself by its headings; columns fit what they hold, drag or double click to size)
     $$("th[data-s]", el).forEach(th => th.onclick = () => { const k = th.dataset.s; sort = sort.k === k ? { k, dir: -sort.dir } : { k, dir: 1 }; render(el); });
     $$("tr[data-id]", el).forEach(r => { const c = Store.S.config.contacts.find(x => x.id === r.dataset.id); if (!c) return;
-      $$("input", r).forEach(i => i.onchange = () => up(c, () => { c[i.dataset.k] = i.value.trim(); c.name = full(c); }));
+      $$("input", r).forEach(i => i.onchange = () => up(c, () => { c[i.dataset.k] = /^(first|last)$/.test(i.dataset.k) ? properName(i.value) : i.value.trim(); c.name = full(c); }));
       $(".ct-n", r).onclick = () => person(c); $$(".ct-who", r).forEach(b => b.onclick = () => person(c));
       $$("td:nth-child(1) input, td:nth-child(2) input", r).forEach(i => i.ondblclick = () => person(c));
       const d = $("[data-k=del]", r); if (d) d.onclick = async () => { if (!await confirmBox("Remove " + full(c) + " from the contact list? Actions that name them keep the name.", "Remove", true)) return; up(c, () => { c.del = true; }); }; });
     const nr = $(".ct-new", el); if (nr){ const add = () => { const v = k => $("[data-k=" + k + "]", nr).value.trim(); if (!v("first") && !v("last")) return;
-        Store.mutate("config", () => { const c = { id: uid(), first: v("first"), last: v("last"), company: v("company"), mobile: v("mobile"), email: v("email") }; c.name = full(c); Store.S.config.contacts.push(Store.touch(c)); }); };
+        Store.mutate("config", () => { const c = { id: uid(), first: properName(v("first")), last: properName(v("last")), company: v("company"), mobile: v("mobile"), email: v("email") }; c.name = full(c); Store.S.config.contacts.push(Store.touch(c)); }); };
       $("[data-k=add]", nr).onclick = add; $$("input", nr).forEach(i => i.onkeydown = e => { if (e.key === "Enter") add(); }); }
     }
   const pickImport = () => { if (!Store.S.edit) return App.viewOnly(); pickFile(".xlsx", false, importFile); };

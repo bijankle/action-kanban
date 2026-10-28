@@ -33,7 +33,7 @@ const Vendors = (() => {
       const on = (a.rfqTo || []).map(byName).filter(Boolean).filter(hit); res = on.concat(mine.concat(rest).filter(v => !(a.rfqTo || []).includes(v.name))).slice(0, 60); close(); if (!res.length) return; hi = Math.min(hi, res.length - 1);
       const picked = v => (a.rfqTo || []).includes(v.name), nOn = on.length, nMine = mine.filter(v => !picked(v)).length;
       dd = h('<div class="is-dd vd-dd">' + res.map((v, k) => (k === 0 && nOn ? '<div class="vd-sep">On the RFQ <span class="dim">click to take off</span></div>' : "") + (k === nOn && nOn && res.length > nOn ? '<div class="vd-sep">' + (nMine ? "Add" : "Other categories") + '</div>' : "") + (k === nOn + nMine && nMine && rest.length ? '<div class="vd-sep">Other categories</div>' : "")
-        + '<button type="button" class="vd-o' + (k === hi ? " on" : "") + (picked(v) ? " vd-on" : "") + '" data-k="' + k + '"><b>' + (picked(v) ? "✓ " : "") + esc(v.name) + '</b><span>' + esc(v.ordered) + '</span><small>' + (picked(v) ? '<span class="vd-det' + (v.contact || v.email || v.phone ? "" : " bad") + '" data-vd="' + esc(v.name) + '">' + esc(v.contact || v.email || v.phone || "Add contact details") + '</span>' : esc(v.cat !== a.rfqCat ? v.cat : (v.po || 0) + " PO" + (v.po === 1 ? "" : "s"))) + '</small></button>').join("") + '</div>');
+        + '<button type="button" class="vd-o' + (k === hi ? " on" : "") + (picked(v) ? " vd-on" : "") + '" data-k="' + k + '"><b>' + (picked(v) ? "✓ " : "") + esc(v.name) + '</b><span>' + esc(v.ordered) + '</span><small>' + (picked(v) ? '<span class="vd-det' + (v.contact || v.email || v.phone ? "" : " bad") + '" data-vd="' + esc(v.name) + '">' + esc(properName(v.contact) || v.email || v.phone || "Add contact details") + '</span>' : esc(v.cat !== a.rfqCat ? v.cat : (v.po || 0) + " PO" + (v.po === 1 ? "" : "s"))) + '</small></button>').join("") + '</div>');
       document.body.appendChild(dd); const rc = i.getBoundingClientRect(); dd.style.left = Math.max(8, Math.min(rc.left, innerWidth - 620)) + "px"; dd.style.width = Math.max(rc.width, 600) + "px";
       const below = innerHeight - rc.bottom > 280; dd.style.top = (below ? rc.bottom + 3 : Math.max(8, rc.top - 283)) + "px";
       $$(".vd-o", dd).forEach(o => o.onmousedown = e => { e.preventDefault(); const d = e.target.closest("[data-vd]"); if (d){ close(); i.blur(); details(d.dataset.vd, i); return; } pick(res[+o.dataset.k]); }); };
@@ -78,7 +78,7 @@ const Vendors = (() => {
     $$("input", p).forEach(i => i.onkeydown = e => { if (e.key === "Enter" && ok) ok.click(); if (e.key === "Escape") Fields.closePop(); });
     setTimeout(() => $("input", p).focus(), 0); }
   /* the To lines on the RFQ */
-  const lines = name => { const v = byName(name) || { name }; return [v.name, v.contact && "Attn: " + v.contact, v.phone && "Phone " + v.phone, v.email, v.address].filter(Boolean); };
+  const lines = name => { const v = byName(name) || { name }; return [v.name, v.contact && "Attn: " + properName(v.contact), v.phone && "Phone " + v.phone, v.email, v.address].filter(Boolean); };
   async function importFile(file){ if (!file) return; if (!Store.S.edit) return App.viewOnly();
     try { const book = await Excel.read(file), sheets = Object.values(book);
       const find = (need) => { for (const rows of sheets){ const hi = rows.findIndex(r => r && need.every(n => r.some(c => String(c || "").trim().toUpperCase() === n))); if (hi >= 0) return { rows, hi, col: n => rows[hi].findIndex(c => String(c || "").trim().toUpperCase() === n) }; } return null; };
