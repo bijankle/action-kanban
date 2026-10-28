@@ -11,7 +11,7 @@ const Mto = (() => {
   const TYPES = MTOLIB.types, TY = Object.fromEntries(TYPES.map(t => [t.id, t]));
   const ORIGIN = { AU: "Australian", CN: "Chinese", INT: "International" };
   const open = new Set();   // rows with their piece list showing
-  const rules = () => Object.assign({ kerf: 3, keep: 300 }, (Store.S.config || {}).cut || {});
+  const rules = () => Object.assign({ kerf: 3, keep: 300, green: 0 }, (Store.S.config || {}).cut || {});   // (green: the length left on a new piece for trimming to fit on site, mm)
   const type = it => TY[it.t];
   const std = it => { const T = type(it); return T && (T.stds.find(s => s.id === it.s) || T.stds[0]); };
   const sz = it => { const S = std(it); return S && S.sizes.find(z => z.n === it.z); };
@@ -29,11 +29,12 @@ const Mto = (() => {
   /* ---------- packing ---------- */
   /* lengths: biggest piece first, each into the first length it fits (first fit decreasing), a saw cut between pieces */
   function packLen(it){ const L = +it.L, { kerf, keep } = rules(), ps = [], long = [];
-    cuts(it).forEach(c => { for (let i = 0; i < Math.max(1, Math.round(+c.n || 1)); i++) (+c.l > L ? long : ps).push({ l: +c.l, mk: c.mk || "" }); });
-    ps.sort((a, b) => b.l - a.l); const bars = [];
-    ps.forEach(p => { let b = bars.find(b => b.used + (b.ps.length ? kerf : 0) + p.l <= L + 1e-6); if (!b){ b = { ps: [], used: 0 }; bars.push(b); } b.used += (b.ps.length ? kerf : 0) + p.l; b.ps.push(p); });
+    /* (a piece takes its length plus its green, the extra left on it to trim to fit on site) */
+    cuts(it).forEach(c => { const g = Math.max(0, +c.g || 0); for (let i = 0; i < Math.max(1, Math.round(+c.n || 1)); i++) (+c.l + g > L ? long : ps).push({ l: +c.l, g, t: +c.l + g, mk: c.mk || "" }); });
+    ps.sort((a, b) => b.t - a.t); const bars = [];
+    ps.forEach(p => { let b = bars.find(b => b.used + (b.ps.length ? kerf : 0) + p.t <= L + 1e-6); if (!b){ b = { ps: [], used: 0 }; bars.push(b); } b.used += (b.ps.length ? kerf : 0) + p.t; b.ps.push(p); });
     bars.forEach(b => { const left = L - b.used; b.off = left > kerf ? left - kerf : 0; b.keep = b.off >= keep; });
-    return { kind: "len", L, bars, long, pieces: ps.length, need: ps.reduce((t, p) => t + p.l, 0) }; }
+    return { kind: "len", L, bars, long, pieces: ps.length, need: ps.reduce((t, p) => t + p.t, 0), green: ps.reduce((t, p) => t + p.g, 0) }; }
   /* plate: shelves across the sheet, tallest pieces first, each piece turned to suit */
   function packPlate(it){ const sh = sheet(it.L), { kerf } = rules(), ps = [], big = []; if (!sh) return null;
     cuts(it).forEach(c => { for (let i = 0; i < Math.max(1, Math.round(+c.n || 1)); i++){ let a = +c.l, b = +c.w; const lo = Math.max(a, b), hi = Math.min(a, b);
@@ -69,7 +70,7 @@ const Mto = (() => {
   const mm = x => Math.round(x).toLocaleString() + " mm", m_ = x => n1(x / 1000) + " m";
   function explain(it, res){ if (!res) return ""; const { kerf, keep } = rules(), sp = Math.max(0, Math.round(+it.spare || 0)), k = kg(it);
     if (res.kind === "len"){ const n = res.bars.length, keepO = res.bars.filter(b => b.off && b.keep), scrap = res.bars.filter(b => b.off && !b.keep);
-      return res.pieces + " piece" + (res.pieces === 1 ? "" : "s") + ", " + m_(res.need) + " in all. They fit on " + n + " × " + lenTxt(res.L) + " length" + (n === 1 ? "" : "s") + " with a " + kerf + " mm saw cut between pieces"
+      return res.pieces + " piece" + (res.pieces === 1 ? "" : "s") + ", " + m_(res.need) + " in all" + (res.green ? " (with " + mm(res.green) + " of green for site trimming)" : "") + ". They fit on " + n + " × " + lenTxt(res.L) + " length" + (n === 1 ? "" : "s") + " with a " + kerf + " mm saw cut between pieces"
         + (sp ? ", plus " + sp + " spare length" + (sp === 1 ? "" : "s") : "") + ", so " + (n + sp) + " × " + lenTxt(res.L) + " = " + m_((n + sp) * res.L) + " to order."
         + (keepO.length ? " Offcuts kept (" + keep + " mm or more): " + keepO.map(b => mm(b.off)).join(", ") + "." : "") + (scrap.length ? " Scrap: " + scrap.map(b => mm(b.off)).join(", ") + "." : "")
         + (k ? " Weight about " + Math.round((n + sp) * res.L / 1000 * k).toLocaleString() + " kg (" + k + " kg/m)." : "")
@@ -291,21 +292,23 @@ const Mto = (() => {
   /* the pieces under a row, with the packing drawn */
   function piecesHtml(it, res, ro){ const pl = isPlate(it), cs = it.cuts || [];
     const cin = (c, k, v, ph) => '<input class="in pt-in mt-cin" data-cut="' + c + '" data-r="' + it.id + '" data-c="' + k + '"' + (ro ? " readonly" : "") + (k === "mk" ? "" : ' inputmode="decimal"') + ' value="' + esc(v == null ? "" : v) + '"' + (ph ? ' placeholder="' + ph + '"' : "") + '>';
-    return '<div class="mt-cuts"><table class="mt-ct"><thead><tr><th>Piece</th><th>Length (mm)</th>' + (pl ? '<th>Width (mm)</th>' : "") + '<th>Qty</th><th>Mark / where it goes</th><th></th></tr></thead><tbody>'
-      + cs.map((c, i) => '<tr><td class="pt-no">' + (i + 1) + '</td><td>' + cin(c.id, "l", c.l) + '</td>' + (pl ? '<td>' + cin(c.id, "w", c.w) + '</td>' : "") + '<td>' + cin(c.id, "n", c.n || 1) + '</td><td>' + cin(c.id, "mk", c.mk, "e.g. A, or chute brace") + '</td><td>' + (ro ? "" : '<button type="button" class="ic-b sm" data-cx="' + c.id + '" data-r="' + it.id + '" title="Remove this piece">✕</button>') + '</td></tr>').join("")
-      + (ro ? "" : '<tr class="pt-blank"><td class="pt-no"></td><td>' + cin("new", "l", "", pl ? "e.g. 600" : "e.g. 2400") + '</td>' + (pl ? '<td>' + cin("new", "w", "", "e.g. 400") + '</td>' : "") + '<td>' + cin("new", "n", "", "1") + '</td><td>' + cin("new", "mk", "") + '</td><td></td></tr>')
+    const gt = 'Green: extra left on the piece to trim to fit on site, mm (File, Settings sets what a new piece starts with)';
+    return '<div class="mt-cuts"><table class="mt-ct"><thead><tr><th>Piece</th><th>Length (mm)</th>' + (pl ? '<th>Width (mm)</th>' : '<th title="' + gt + '">Green (mm)</th>') + '<th>Qty</th><th>Mark / where it goes</th><th></th></tr></thead><tbody>'
+      + cs.map((c, i) => '<tr><td class="pt-no">' + (i + 1) + '</td><td>' + cin(c.id, "l", c.l) + '</td>' + (pl ? '<td>' + cin(c.id, "w", c.w) + '</td>' : '<td>' + cin(c.id, "g", c.g, "0") + '</td>') + '<td>' + cin(c.id, "n", c.n || 1) + '</td><td>' + cin(c.id, "mk", c.mk, "e.g. A, or chute brace") + '</td><td>' + (ro ? "" : '<button type="button" class="ic-b sm" data-cx="' + c.id + '" data-r="' + it.id + '" title="Remove this piece">✕</button>') + '</td></tr>').join("")
+      + (ro ? "" : '<tr class="pt-blank"><td class="pt-no"></td><td>' + cin("new", "l", "", pl ? "e.g. 600" : "e.g. 2400") + '</td>' + (pl ? '<td>' + cin("new", "w", "", "e.g. 400") + '</td>' : '<td>' + cin("new", "g", "", String(rules().green || 0)) + '</td>') + '<td>' + cin("new", "n", "", "1") + '</td><td>' + cin("new", "mk", "") + '</td><td></td></tr>')
       + '</tbody></table><div class="mt-side">'
       + '<button type="button" class="mt-i' + (res ? " on" : "") + '" data-info="' + it.id + '" title="How the total is worked out">' + INFO_I + '</button>'
       + '</div></div>' + (res ? '<div class="mt-draw">' + (res.kind === "len" ? barsSvg(res) : sheetsSvg(res)) + '</div>' : ""); }
   /* bars the same are drawn once, "× 3" */
-  function groups(res){ const g = new Map(); res.bars.forEach(b => { const k = b.ps.map(p => p.l + "|" + p.mk).join(",") + "#" + b.off; if (!g.has(k)) g.set(k, { b, n: 0 }); g.get(k).n++; }); return [...g.values()]; }
+  function groups(res){ const g = new Map(); res.bars.forEach(b => { const k = b.ps.map(p => p.l + "|" + p.g + "|" + p.mk).join(",") + "#" + b.off; if (!g.has(k)) g.set(k, { b, n: 0 }); g.get(k).n++; }); return [...g.values()]; }
   function barsSvg(res){ const L = res.L, { kerf } = rules();
     return groups(res).map(({ b, n }) => { let x = 0, s = "";
       b.ps.forEach((p, i) => { if (i){ s += '<rect class="kf" x="' + (x / L * 1000) + '" y="2" width="' + Math.max(1, kerf / L * 1000) + '" height="30"/>'; x += kerf; }
-        const w = p.l / L * 1000; s += '<rect class="pc" x="' + (x / L * 1000) + '" y="2" width="' + w + '" height="30" rx="2"/>' + (w > 40 ? '<text x="' + (x / L * 1000 + w / 2) + '" y="21">' + esc(p.l + (p.mk && w > 90 ? " " + p.mk : "")) + '</text>' : ""); x += p.l; });
+        const w = p.l / L * 1000, gw = (p.g || 0) / L * 1000; s += '<rect class="pc" x="' + (x / L * 1000) + '" y="2" width="' + w + '" height="30" rx="2"/>' + (gw ? '<rect class="gr" x="' + (x / L * 1000 + w) + '" y="2" width="' + gw + '" height="30"><title>Green ' + p.g + ' mm</title></rect>' : "")
+          + (w > 40 ? '<text x="' + (x / L * 1000 + w / 2) + '" y="21">' + esc(p.l + (p.g && w > 70 ? " +" + p.g + "G" : "") + (p.mk && w > 90 ? " " + p.mk : "")) + '</text>' : ""); x += p.l + (p.g || 0); });
       if (b.off){ x += kerf; const w = b.off / L * 1000; s += '<rect class="' + (b.keep ? "of" : "sc") + '" x="' + (x / L * 1000) + '" y="2" width="' + w + '" height="30" rx="2"/>' + (w > 50 ? '<text class="ot" x="' + (x / L * 1000 + w / 2) + '" y="21">' + (b.keep ? "offcut " : "scrap ") + Math.round(b.off) + '</text>' : ""); }
       return '<div class="mt-bar"><span class="mt-bn">' + (n > 1 ? "× " + n : "× 1") + '</span><svg viewBox="0 0 1000 34" preserveAspectRatio="none" role="img" aria-label="Cut plan">' + s + '</svg></div>'; }).join("")
-      + '<div class="mt-key"><i class="pc"></i>in the MTO<i class="of"></i>offcut kept<i class="sc"></i>scrap</div>'; }
+      + '<div class="mt-key"><i class="pc"></i>in the MTO' + (res.green ? '<i class="gr"></i>green' : "") + '<i class="of"></i>offcut kept<i class="sc"></i>scrap</div>'; }
   function sheetsSvg(res){ const { l, w } = res.sh;
     return '<div class="mt-shs">' + res.sheets.map((s, i) => '<div class="mt-sh"><span class="mt-bn">Sheet ' + (i + 1) + ', ' + Math.round(s.use * 100) + '%</span><svg viewBox="0 0 ' + l + ' ' + w + '" role="img" aria-label="Sheet layout"><rect class="of" x="0" y="0" width="' + l + '" height="' + w + '"/>'
       + s.ps.map(p => '<rect class="pc" x="' + p.x + '" y="' + p.y + '" width="' + p.w + '" height="' + p.h + '"/>' + (p.w > l / 8 && p.h > w / 10 ? '<text style="font-size:' + Math.round(Math.min(p.h * 0.32, l / 22)) + 'px" x="' + (p.x + p.w / 2) + '" y="' + (p.y + p.h / 2) + '" dominant-baseline="middle">' + esc(p.l0 + "x" + p.w0 + (p.mk ? " " + p.mk : "")) + '</text>' : "")).join("") + '</svg></div>').join("") + '</div>'
@@ -382,10 +385,18 @@ const Mto = (() => {
     const save = (id, c, v) => { const isNew = String(id).startsWith("new"); let it = isNew ? { id: uid(), qty: "", draft: 1 } : find(id); if (!it) return;
       if (c === "cl" && PipeSpec.classes().includes(v)) lastCl.set(akey(a), v);
       Store.mutate(key, () => { if (id === "newp" && c !== "cl" && lastCl.get(akey(a))) set(it, "cl", lastCl.get(akey(a))); set(it, c, v); recalc(it); if (isNew) items.push(it); const o = order(items); items.splice(0, items.length, ...o); bolts(); Store.touch(a); });
-      Store.log((isNew ? "Added to" : "Edited") + " the MTO of " + Store.actId(a)); focusNext = after(it.id, c) || (!missing(it).length ? doneNext(it) : null); };
+      Store.log((isNew ? "Added to" : "Edited") + " the MTO of " + Store.actId(a)); focusNext = after(it.id, c) || (!missing(it).length ? doneNext(it) : null);
+      /* steel lengths and plate: the pieces open by themselves, and once the item is picked the cursor goes to the first piece (Qty then works itself out) */
+      const T = type(it); if (T && (T.k === "len" || T.k === "plate")){ open.add(it.id); if (!cuts(it).length && (!focusNext || focusNext.c === "qty")) focusNext = { id: it.id, c: "l", cut: "new" }; } };
     const doneNext = it => it.draft ? { id: it.id, done: 1 } : isPipe(it) ? { id: "newp", c: lastCl.get(akey(a)) ? "dn" : "cl", quiet: true } : { id: "new0", c: "t", quiet: true };
     /* Done: the row goes under its heading, and the cursor back to a new row */
-    $$("[data-done]", el).forEach(b => b.onclick = () => { const it = find(b.dataset.done); if (!it) return;
+    /* steel cut from stock lengths or sheets: one summary row per stock item (what's ordered), the pieces to cut under it. A new row
+       for an item already in the MTO, same size, grade, finish, standard and stock length, adds its pieces to that row on Done */
+    const same = it => { const T = type(it); if (!T || (T.k !== "len" && T.k !== "plate")) return null; const k = x => [x.t, x.s, x.z, x.r, x.m, x.L, x.mk, x.end].join("|");
+      return items.find(x => x !== it && !x.draft && type(x) === T && k(x) === k(it)) || null; };
+    $$("[data-done]", el).forEach(b => b.onclick = () => { const it = find(b.dataset.done); if (!it) return; const into = same(it);
+      if (into){ Store.mutate(key, () => { into.cuts = (into.cuts || []).concat((it.cuts || []).map(c => Object.assign({}, c, { id: uid() }))); const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); recalc(into); fillSpare(into); Store.touch(a); });
+        open.add(into.id); Store.log("Added pieces to a row of the MTO of " + Store.actId(a)); note("Added to the " + desc(into) + " row: its pieces are listed under it"); focusNext = doneNext({}); App.render(); return; }
       Store.mutate(key, () => { delete it.draft; const o = order(items); items.splice(0, items.length, ...o); bolts(); Store.touch(a); }); Store.log("Added to the MTO of " + Store.actId(a)); focusNext = doneNext(it); App.render(); });
     /* the pick boxes: the app's card with what fits; typing narrows it */
     $$(".mt-pk", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c, it = find(r) || (r === "newp" && lastCl.get(akey(a)) ? { qty: "", cl: lastCl.get(akey(a)) } : { qty: "" }); let key2 = null;
@@ -421,11 +432,11 @@ const Mto = (() => {
     /* the total follows the spare as it's typed */
     $$(".mt-sq", el).forEach(i => i.addEventListener("input", () => { i.classList.remove("mt-sqa"); const it = find(i.dataset.r), td = i.closest("td").nextElementSibling; if (!it || !td || i.dataset.c !== "sq") return; const t = ord(Object.assign({}, it, { sq: i.value })); td.innerHTML = esc(t) + (t ? ' <span class="dim">' + esc(uShort(it.unit) || "EA") + '</span>' : ""); }));
     /* after a pick: the next box still to fill in on that row */
-    if (focusNext){ const f = focusNext; focusNext = null; const t = f.done ? $('.mt-tbl [data-done="' + f.id + '"]', el) : $('.mt-tbl [data-r="' + f.id + '"][data-c="' + f.c + '"]', el); if (t) setTimeout(() => { t.focus(); if (f.quiet) Look.closeFor(t); }, 0); }
+    if (focusNext){ const f = focusNext; focusNext = null; const t = f.done ? $('.mt-tbl [data-done="' + f.id + '"]', el) : f.cut ? $('.mt-tbl [data-r="' + f.id + '"][data-c="' + f.c + '"][data-cut="' + f.cut + '"]', el) : $('.mt-tbl [data-r="' + f.id + '"][data-c="' + f.c + '"]', el); if (t) setTimeout(() => { t.focus(); if (f.quiet) Look.closeFor(t); }, 0); }
     /* the pieces */
     $$(".mt-cin", el).forEach(i => { i.onchange = () => { const it = find(i.dataset.r), c = i.dataset.c, id = i.dataset.cut; if (!it) return; let v = i.value.trim();
-        if (c !== "mk"){ if (v === "") { if (id === "new") return; } else { const x = c === "n" ? Math.round(+v) : num(v); if (!(x > 0)){ i.classList.add("bad"); i.title = c === "n" ? "A whole number" : "A length in mm, or in m with an m (2.4m)"; return; } v = x; } }
-        if (id === "new"){ if (v === "") return; const cu = { id: uid(), n: 1 }; cu[c] = v; Parts.created.set("cut:" + it.id, cu.id);
+        if (c !== "mk"){ if (v === "") { if (id === "new") return; } else { const x = c === "n" ? Math.round(+v) : num(v); if (!(x > 0) && !(c === "g" && x === 0)){ i.classList.add("bad"); i.title = c === "n" ? "A whole number" : "A length in mm, or in m with an m (2.4m)"; return; } v = x; } }
+        if (id === "new"){ if (v === "") return; const cu = { id: uid(), n: 1 }; if (!isPlate(it) && rules().green) cu.g = rules().green; cu[c] = v;   // (a new length starts with the team's green) Parts.created.set("cut:" + it.id, cu.id);
           Store.mutate(key, () => { (it.cuts = it.cuts || []).push(cu); recalc(it); Store.touch(a); }); return; }
         const cu = (it.cuts || []).find(x => x.id === id); if (!cu || String(cu[c] == null ? "" : cu[c]) === String(v)) return;
         Store.mutate(key, () => { cu[c] = v === "" ? undefined : v; recalc(it); Store.touch(a); }); };
@@ -455,14 +466,21 @@ const Mto = (() => {
 
   /* ---------- the cutting list PDF ---------- */
   const needsCut = a => (a.mto || []).some(it => stockN(pack(it)) > 1);
-  async function cutPdf(a){ const jsPDF = await Parts.loadPdf(), doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" }), { kerf, keep } = rules(), p = Store.project(a._p) || {};
+  async function cutPdf(a){ const jsPDF = await Parts.loadPdf(), doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" }), p = Store.project(a._p) || {}; cutDraw(doc, a);
+    const W = 297, pages = doc.getNumberOfPages(); for (let i = 1; i <= pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(Store.actId(a) + " Cutting list   " + (p.name || "") + "   Page " + i + " of " + pages, W / 2, 204, { align: "center" }); }
+    return doc.output("blob"); }
+  /* the rows that are cut from stock lengths or sheets (the work pack adds the cutting list when there are any) */
+  const hasCuts = a => (a.mto || []).some(it => pack(it));
+  /* the cutting list drawn into a PDF from the current page on (a landscape A4 page): each stock length or sheet with its pieces,
+     their lengths, green, saw cuts, where to cut, and the offcuts. Its own export and the work pack both use it */
+  function cutDraw(doc, a){ const { kerf, keep } = rules();
     const W = 297, X = 14, BW = W - 2 * X; let y = 0;
     const head = () => { doc.setFillColor(71, 85, 105); doc.rect(0, 0, W, 20, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("Cutting list", X, 12);
       doc.setFontSize(9.5); doc.setFont("helvetica", "normal"); doc.text(Store.actId(a) + "   " + (a.f.title || "").slice(0, 120), X + 34, 12); y = 28; };
-    const room = h => { if (y + h > 196){ doc.addPage(); head(); } };
+    const room = h => { if (y + h > 196){ doc.addPage("a4", "landscape"); head(); } };
     const hatch = (x, yy, w, h) => { doc.setDrawColor(150); doc.setLineWidth(0.15); for (let d = -h; d < w; d += 2.2){ const x1 = x + Math.max(0, d), y1 = yy + h - Math.max(0, -d) * 0 - (d < 0 ? -d : 0); const x0 = x + Math.max(d, 0), y0 = yy + h - (d < 0 ? -d : 0), x2 = Math.min(x + w, x + d + h), y2 = yy + h - (x2 - (x + d)); if (x2 > x0) doc.line(x0, y0, x2, y2); } };
     head(); doc.setTextColor(60); doc.setFontSize(9);
-    doc.text("Saw cut allowed: " + kerf + " mm. Offcuts of " + keep + " mm or more are kept. Blue pieces are what the MTO is for; grey is offcut. Lengths are in mm, measured from the left end.", X, y); y += 7;
+    { const intro = doc.splitTextToSize("Saw cut allowed: " + kerf + " mm. Offcuts of " + keep + " mm or more are kept. Blue pieces are what the MTO is for" + (rules().green || (a.mto || []).some(it => cuts(it).some(c => +c.g)) ? ", green is extra left on to trim to fit on site (piece +G)" : "") + "; grey is offcut. Lengths are in mm, measured from the left end.", BW); doc.text(intro, X, y); y += intro.length * 4 + 3; }
     (a.mto || []).forEach((it, idx) => { const res = pack(it); if (!res) return; const sp = Math.max(0, Math.round(+it.spare || 0));
       room(30); doc.setTextColor(20); doc.setFont("helvetica", "bold"); doc.setFontSize(11.5); doc.text(doc.splitTextToSize("Item " + (idx + 1) + ": " + desc(it), BW), X, y); y += 5.5;
       doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(80); const ex = doc.splitTextToSize(explain(it, res), BW); doc.text(ex, X, y); y += ex.length * 4 + 3;
@@ -471,8 +489,9 @@ const Mto = (() => {
           doc.text((n > 1 ? "Lengths " + no + " to " + (no + n - 1) + "  (" + n + " the same)" : "Length " + no) + "   " + lenTxt(res.L), X, y); no += n; y += 2.5;
           const s = BW / res.L, h = 9; let x = 0; const ticks = [];
           b.ps.forEach((pc, i) => { if (i) x += kerf; doc.setFillColor(205, 225, 248); doc.setDrawColor(60, 100, 160); doc.setLineWidth(0.3); doc.rect(X + x * s, y, pc.l * s, h, "FD");
-            const lab = pc.l + (pc.mk ? "  " + pc.mk : ""); doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); doc.setTextColor(20, 50, 100); if (doc.getTextWidth(lab) < pc.l * s - 2) doc.text(lab, X + (x + pc.l / 2) * s, y + 5.8, { align: "center" }); else if (doc.getTextWidth(String(pc.l)) < pc.l * s - 1) doc.text(String(pc.l), X + (x + pc.l / 2) * s, y + 5.8, { align: "center" });
-            x += pc.l; ticks.push(x); });
+            if (pc.g){ doc.setFillColor(198, 236, 198); doc.setDrawColor(46, 125, 50); doc.rect(X + (x + pc.l) * s, y, pc.g * s, h, "FD"); if (pc.g * s > 4){ doc.setFontSize(7); doc.setTextColor(30, 90, 35); doc.text("G", X + (x + pc.l + pc.g / 2) * s, y + 5.6, { align: "center" }); } }   // (green: left on to trim on site)
+            const lab = pc.l + (pc.g ? " +" + pc.g + "G" : "") + (pc.mk ? "  " + pc.mk : ""); doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); doc.setTextColor(20, 50, 100); if (doc.getTextWidth(lab) < pc.l * s - 2) doc.text(lab, X + (x + pc.l / 2) * s, y + 5.8, { align: "center" }); else if (doc.getTextWidth(String(pc.l)) < pc.l * s - 1) doc.text(String(pc.l), X + (x + pc.l / 2) * s, y + 5.8, { align: "center" });
+            x += pc.l + (pc.g || 0); ticks.push(x); });
           if (b.off){ const ox = x + kerf; doc.setFillColor(232, 232, 232); doc.setDrawColor(150); doc.rect(X + ox * s, y, b.off * s, h, "FD"); hatch(X + ox * s, y, b.off * s, h);
             const lab = (b.keep ? "Offcut " : "Scrap ") + Math.round(b.off); doc.setFontSize(8); doc.setTextColor(70); if (doc.getTextWidth(lab) < b.off * s - 2){ doc.setFillColor(232, 232, 232); const tw = doc.getTextWidth(lab) + 2; doc.rect(X + (ox + b.off / 2) * s - tw / 2, y + 2.5, tw, 4.5, "F"); doc.text(lab, X + (ox + b.off / 2) * s, y + 5.8, { align: "center" }); } }
           doc.setDrawColor(40); doc.setLineWidth(0.25); doc.rect(X, y, BW, h);
@@ -485,9 +504,7 @@ const Mto = (() => {
           S.ps.forEach(pc => { doc.setFillColor(205, 225, 248); doc.setDrawColor(60, 100, 160); doc.setLineWidth(0.3); doc.rect(X + pc.x * s, y + pc.y * s, pc.w * s, pc.h * s, "FD");
             const lab = pc.l0 + " x " + pc.w0 + (pc.mk ? "  " + pc.mk : ""); doc.setFontSize(7.5); doc.setTextColor(20, 50, 100); if (doc.getTextWidth(lab) < pc.w * s - 1.5 && pc.h * s > 4) doc.text(lab, X + (pc.x + pc.w / 2) * s, y + (pc.y + pc.h / 2) * s + 1.2, { align: "center" }); });
           doc.setDrawColor(40); doc.setLineWidth(0.25); doc.rect(X, y, sh.l * s, sh.w * s); y += sh.w * s + 8; }); }
-      y += 3; });
-    const pages = doc.getNumberOfPages(); for (let i = 1; i <= pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(Store.actId(a) + " Cutting list   " + (p.name || "") + "   Page " + i + " of " + pages, W / 2, 204, { align: "center" }); }
-    return doc.output("blob"); }
+      y += 3; }); }
   async function cutList(a, rev){ try { const blob = await cutPdf(a), name = Store.actId(a) + " Cutting list" + (rev ? " Rev " + rev : "") + ".pdf"; Excel.save(blob, name); Local.saveOriginal(a, name, blob); return name; }
     catch (e){ console.error(e); alert("Couldn't make the cutting list: " + e.message); } }
 
@@ -530,5 +547,5 @@ const Mto = (() => {
   /* put a new row with the others of its kind, so each heading shows once */
   function place(items, it){ items.push(it); const o = order(items); items.splice(0, items.length, ...o); }
   const codes = () => [...new Set(TYPES.map(t => SHORT[t.id]).filter(Boolean))];
-  return { table, wire, recalc, desc, ord, pack, explain, needsCut, cutList, info, TY, shorten, missing, fromAi, codes, place };
+  return { cutDraw, hasCuts, table, wire, recalc, desc, ord, pack, explain, needsCut, cutList, info, TY, shorten, missing, fromAi, codes, place };
 })();

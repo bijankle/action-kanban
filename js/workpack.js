@@ -20,7 +20,7 @@ const Workpack = (() => {
   async function build(a){ const jsPDF = await Parts.loadPdf(), doc = new jsPDF({ unit: "mm", format: "a4" });
     const W = 210, H = 297, M = 14, CW = W - 2 * M, BOT = 282;
     const thb = (getComputedStyle(document.documentElement).getPropertyValue("--thb") || "#475569").trim(), rgb = /^#[0-9a-f]{6}$/i.test(thb) ? [1, 3, 5].map(i => parseInt(thb.substr(i, 2), 16)) : [71, 85, 105];
-    let y = 0; const need = n => { if (y + n > BOT){ doc.addPage(); y = 18; } };
+    let y = 0; const need = n => { if (y + n > BOT){ doc.addPage("a4", "portrait"); y = 18; } };
     const head = t => { need(24); y += 4;   /* (a heading keeps a couple of lines of what follows with it) */  doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.setTextColor(...rgb); doc.text(t.toUpperCase(), M, y); doc.setDrawColor(...rgb); doc.setLineWidth(0.4); doc.line(M, y + 1.5, W - M, y + 1.5); y += 7; doc.setTextColor(30); };
     const para = t => { doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(30); doc.splitTextToSize(t || "–", CW).forEach(l => { need(5.2); doc.text(l, M, y); y += 5; }); y += 2; };
     /* a table without its empty columns (the first, the item number, always stays) */
@@ -35,7 +35,7 @@ const Workpack = (() => {
     const all = new Map(); dm.forEach(l => l.forEach(d => { if (!all.has(d.n)) all.set(d.n, d); }));
     /* the parts, in reading order; each one present gets a line in the contents and starts a page */
     const parts = (a.mto || []).map(it => Object.assign({ src: "New" }, it, { qty: Mto.ord(it) })).concat((a.spares || []).map(it => Object.assign({ src: "Site spares" }, it)));
-    const S = [["job", "Job and scope", true], ["isol", "Isolations", (a.isol || []).length], ["parts", "Parts", parts.length], ["reg", "Drawings and documents", all.size], ["photos", "Photos (" + a.photos.length + ")", a.photos.length],
+    const S = [["job", "Job and scope", true], ["isol", "Isolations", (a.isol || []).length], ["parts", "Parts", parts.length], ["cut", "Cutting list", Mto.hasCuts(a)], ["reg", "Drawings and documents", all.size], ["photos", "Photos (" + a.photos.length + ")", a.photos.length],
       ["att", "Attachments", a.files.length]].filter(x => x[2]);
     /* cover: the job, who to contact, the contents */
     doc.setFillColor(...rgb); doc.rect(0, 0, W, 32, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.text("WORK PACK", M, 9);
@@ -53,9 +53,12 @@ const Workpack = (() => {
     const tocLine = (label, sub) => { const h = sub ? 5.4 : 7.4; if (y + h > BOT) return null; const e = { label, y, sub, h }; toc.push(e); y += h; return e; };
     const tocE = {}; S.forEach(([id, t]) => { tocE[id] = tocLine(t); });
     /* each part follows on, after a gap; a new page only once the current one is more than half full */
-    const start = id => { if (y > 18 + (BOT - 18) / 2){ doc.addPage(); y = 18; } else y += 8; if (tocE[id]) tocE[id].page = doc.getNumberOfPages(); };
+    const start = id => { if (y > 18 + (BOT - 18) / 2){ doc.addPage("a4", "portrait"); y = 18; } else y += 8; if (tocE[id]) tocE[id].page = doc.getNumberOfPages(); };
     const photoLinks = [];   // the photo panel beside the map: links to the Photos page (added once it exists)
-    for (const [id] of S){ start(id);
+    for (const [id] of S){
+      /* the cutting list: its own landscape pages, drawn as in its own export (pieces, green, saw cuts, where to cut, offcuts) */
+      if (id === "cut"){ doc.addPage("a4", "landscape"); if (tocE.cut) tocE.cut.page = doc.getNumberOfPages(); Mto.cutDraw(doc, a); y = BOT + 1; continue; }
+      start(id);
       if (id === "job"){ head("Job"); const names = tags.map(t => { const e = Equip.get(t); return e && e.n ? t + "  " + e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : t; });
         const job = [["Location", a.f.location], ["Done", Store.fields().filter(f => f.type === "check" && a.f[f.id] === true).map(f => f.label).join(", ")], ...Hold.lines(a).map(([k, v]) => [k === "Waiting on" ? "On hold, waiting on" : k, v]), ["Equipment", names.join("\n")], ["Contractor", [a.f.contractor, /^\d{4}-\d\d-\d\d(T\d\d:\d\d)?$/.test(a.f.contractorDate || "") ? "on site " + fmtDate(a.f.contractorDate) : ""].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")], ["Contractor contact", [a.f.contractorContact, a.f.contractorPhone].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")]].filter(r => r[1]);
         if (job.length){ doc.autoTable({ startY: y, body: job, margin: { top: 16, left: M, right: M, bottom: 16 }, theme: "plain", styles: { font: "helvetica", fontSize: 10, cellPadding: 1.5 }, columnStyles: { 0: { cellWidth: 34, textColor: [90, 100, 112], fontStyle: "bold" } } }); y = doc.lastAutoTable.finalY + 4; }
@@ -99,8 +102,8 @@ const Workpack = (() => {
       doc.setDrawColor(200); doc.setLineDashPattern([0.4, 1], 0); doc.setLineWidth(0.25); doc.line(x + doc.getTextWidth(lab) + 2, bl, W - M - doc.getTextWidth(String(pg)) - 2, bl); doc.setLineDashPattern([], 0);
       if (!e.sub){ doc.setDrawColor(225); doc.setLineWidth(0.2); doc.line(M, e.y + e.h - 0.6, W - M, e.y + e.h - 0.6); }   // a rule between the parts
       doc.link(M, e.y, CW, e.h, { pageNumber: pg }); });
-    for (let i = 1; i <= P; i++){ doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(140); doc.text("Job " + Store.actId(a) + " work pack" + (who ? "   Queries: " + (ow.n ? [ow.n, ow.mobile, ow.e] : [Profile.name(), Profile.get().mobile, Profile.get().email]).filter(Boolean).join(", ") : "") + "   Page " + i + " of " + N, W / 2, 291, { align: "center" });
-      if (i > 1){ doc.setTextColor(31, 95, 191); doc.textWithLink("Contents", W - M, 291, { align: "right", pageNumber: 1 }); } }
+    for (let i = 1; i <= P; i++){ doc.setPage(i); const pw = doc.internal.pageSize.getWidth(), fy = doc.internal.pageSize.getHeight() - 6; doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(140); doc.text("Job " + Store.actId(a) + " work pack" + (who ? "   Queries: " + (ow.n ? [ow.n, ow.mobile, ow.e] : [Profile.name(), Profile.get().mobile, Profile.get().email]).filter(Boolean).join(", ") : "") + "   Page " + i + " of " + N, pw / 2, fy, { align: "center" });
+      if (i > 1){ doc.setTextColor(31, 95, 191); doc.textWithLink("Contents", pw - M, fy, { align: "right", pageNumber: 1 }); } }
     return doc.output("blob"); }
   /* the register: the ticked drawings, one line per document, under a heading per equipment tag: kind, number (opens SharePoint), title, and
      a PDF badge linked to the copy */

@@ -1274,3 +1274,4 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .pt-dk.pt-up{flex-direction:row;align-items:center}.pt-up.att-add .fico{display:inline-block;flex:none}
 .pt-has .att-ic{flex:none}
 .pt-g .in,.pt-g .lk-sel,.pt-g .lk-dt{font-size:var(--fb)}
+.mt-draw rect.gr,.mt-key i.gr{fill:#bfe6bf;background:#bfe6bf;stroke:#2e7d32;stroke-width:1}
