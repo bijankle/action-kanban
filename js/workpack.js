@@ -60,9 +60,9 @@ const Workpack = (() => {
         const job = [["Location", a.f.location], ["Done", Store.fields().filter(f => f.type === "check" && a.f[f.id] === true).map(f => f.label).join(", ")], ...Hold.lines(a).map(([k, v]) => [k === "Waiting on" ? "On hold, waiting on" : k, v]), ["Equipment", names.join("\n")], ["Contractor", [a.f.contractor, /^\d{4}-\d\d-\d\d(T\d\d:\d\d)?$/.test(a.f.contractorDate || "") ? "on site " + fmtDate(a.f.contractorDate) : ""].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")], ["Contractor contact", [a.f.contractorContact, a.f.contractorPhone].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")]].filter(r => r[1]);
         if (job.length){ doc.autoTable({ startY: y, body: job, margin: { top: 16, left: M, right: M, bottom: 16 }, theme: "plain", styles: { font: "helvetica", fontSize: 10, cellPadding: 1.5 }, columnStyles: { 0: { cellWidth: 34, textColor: [90, 100, 112], fontStyle: "bold" } } }); y = doc.lastAutoTable.finalY + 4; }
         /* the expected location, with a few of the photos beside it (a link to the rest above them) */
-        let sm = null; try { sm = await SiteMap.forAction(a); } catch (e){ console.warn("site map", e); }
-        if (sm || a.photos.length){ head(sm ? "Expected location and photos" : "Photos"); const mw = sm ? 112 : 0, mh = sm ? mw * 9 / 16 : 0, gx = sm ? M + mw + 6 : M, gw = sm ? CW - mw - 6 : CW;
-          need(Math.max(mh, 40) + 16); const top = y;
+        let sm = null; try { sm = await SiteMap.forAction(a, true); } catch (e){ console.warn("site map", e); }   // (the whole site, the colour map: red circles on the area)
+        if (sm || a.photos.length){ const ip = sm ? doc.getImageProperties(sm.url) : null, mw = sm ? 112 : 0, mh = sm ? mw * ip.height / ip.width : 0, gx = sm ? M + mw + 6 : M, gw = sm ? CW - mw - 6 : CW;
+          need(Math.max(mh, 40) + 30); head(sm ? "Expected location and photos" : "Photos"); const top = y;   // (the heading goes over to the next page with the map, never left on its own)
           if (sm) doc.addImage(sm.url, "JPEG", M, y, mw, mh, undefined, "FAST");
           if (a.photos.length){ const cols = sm ? 2 : 4, gap = 3, cw = (gw - gap * (cols - 1)) / cols, ch = cw * 3 / 4, max = cols * (sm ? Math.max(1, Math.floor((mh - 7 + gap) / (ch + gap))) : 1), shown = Math.min(a.photos.length, max);
             doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(31, 95, 191); const lbl = "Photos (" + a.photos.length + ")  ›  see page ";
