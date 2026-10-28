@@ -712,8 +712,8 @@ html.dark .rb-done.on{color:#3ccf8e}html.dark .rb-hold.on{color:#f2b03d}html.dar
 .mt-wrap{overflow-x:auto;margin:0 -2px}
 .mt-tbl .mt-sel{width:100%;min-width:0;padding:4px 4px;cursor:pointer}.mt-tbl select.mt-sel:disabled{cursor:default;opacity:1;appearance:none;border-color:transparent}
 .mt-tbl .pt-no{white-space:nowrap}
-.mt-tg{border:0;background:var(--panel2);color:var(--th2);border-radius:6px;padding:1px 6px;margin-left:6px;font:700 12px/18px inherit;cursor:pointer;display:inline-flex;gap:3px;align-items:center}
-.mt-tg b{font-size:11px;background:var(--th);color:#fff;border-radius:999px;padding:0 5px;line-height:15px}.mt-tg:hover,.mt-tg.on{background:var(--th-t)}
+.mt-tg{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px 0 5px;margin-left:6px;border-radius:6px;border:1px solid color-mix(in srgb,var(--th) 25%,transparent);background:var(--th-t);color:var(--th2);font:700 11.5px/1 var(--font);cursor:pointer;vertical-align:middle}
+.mt-tg svg{transition:transform .15s}.mt-tg.on svg{transform:rotate(90deg)}.mt-tg b{font:inherit}.mt-tg:hover{border-color:color-mix(in srgb,var(--th) 50%,transparent)}html.dark .mt-tg{color:#c9d3df}
 .mt-row.open td{border-bottom-color:transparent}
 .mt-ic{text-align:center}
 .mt-i{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);background:var(--panel);color:var(--dim);font:italic 800 13px/19px Georgia,serif;cursor:pointer;padding:0}
@@ -1213,7 +1213,7 @@ textarea.in.ta{resize:none;overflow:hidden;min-height:var(--ctl-h,28px)}
 .mt-h{font:700 12px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 2px 6px;display:flex;align-items:center;gap:6px}.mt-h:first-of-type{margin-top:4px}
 .mt-auto{display:block;padding:3px 6px;color:var(--dim);font:12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mt-rms{white-space:nowrap}.mt-rms .mt-pk{width:33%!important;display:inline-block;margin-right:1px}
-.mt-chk{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#c2410c;color:#fff;font:800 10px var(--font);margin-left:3px;vertical-align:middle;cursor:help}
+.mt-chk{display:inline-grid;place-items:center;margin-left:6px;vertical-align:-2px;color:#b45309;cursor:help}html.dark .mt-chk{color:#f2b03d}
 /* table headings stay in view while the list scrolls (the Data validation lists scroll in their page, so their box doesn't hold them) */
 .dv-body .tw-wrap,.dv-body .cts{overflow:visible}
 /* Assets: one asset, as the Project Library shows it */
@@ -1279,6 +1279,6 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .av-subr{position:sticky;top:-14px;z-index:6;background:var(--panel);padding:14px 0 6px;margin:-14px 0 4px}
 .pt-top{position:sticky;z-index:5;background:var(--panel);box-shadow:0 -12px 0 var(--panel),0 6px 8px -6px #0002}
 /* steel parents (what is ordered) with their cuts under them, indented a shade darker */
-.mt-tbl tr.mt-par{cursor:pointer}.mt-tbl tr.mt-par>td{font-weight:600;background:color-mix(in srgb,var(--th) 5%,var(--panel))}.mt-tbl tr.mt-par:hover>td{background:color-mix(in srgb,var(--th) 10%,var(--panel))}
+.mt-tbl tr.mt-par{cursor:pointer}.mt-tbl tr.mt-par>td{font-weight:700;background:var(--panel);border-bottom:1.5px solid color-mix(in srgb,var(--th) 45%,var(--line))}.mt-tbl tr.mt-par:hover>td{background:color-mix(in srgb,var(--th) 5%,var(--panel))}
 .mt-tbl .mt-pv{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;white-space:nowrap}.mt-tbl .mt-pq{font-weight:700;white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums}.mt-tbl .mt-par .mt-tg{pointer-events:none}
 .mt-tbl tr.mt-kid>td{background:color-mix(in srgb,var(--th) 4%,var(--panel2))}.mt-tbl tr.mt-kid>td:first-child{padding-left:22px}.mt-tbl tr.mt-kid>td:first-child::before{content:"↳";color:var(--dim);margin-right:4px}
