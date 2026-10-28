@@ -368,3 +368,18 @@ const PillF = (() => {
     const fa = $(".fall", body); if (fa) fa.onclick = () => { S[key] = {}; keep(); App.render(); }; }
   return { apply, render, count };
 })();
+
+/* a PDF table's columns fitted to what they hold, as the app's own tables are: each column as wide as its longest entry (or its
+   heading), and the long text columns (a description) share what's left; too wide for the page, the widest give way first, down
+   to their longest word. Returns autoTable columnStyles; a column already given a width keeps it */
+function pdfCols(doc, head, body, W, o){ o = o || {}; const fs = o.fs || 9, hfs = o.hfs || fs, pad = (o.pad == null ? 1.8 : o.pad) * 2 + 0.6, fixed = o.fixed || {}, n = head.length;
+  const tw = (t, b, f) => { doc.setFont("helvetica", b ? "bold" : "normal"); doc.setFontSize(f); return doc.getTextWidth(String(t == null ? "" : t)); };
+  const nat = [], min = [];
+  for (let j = 0; j < n; j++){ const cells = body.map(r => String(r[j] == null ? "" : r[j])); const hw = Math.max(...String(head[j]).split(/\s+/).map(w => tw(w, true, hfs)));
+    nat[j] = Math.max(tw(head[j], true, hfs), ...cells.map(c => Math.max(...c.split("\n").map(l => tw(l, false, fs))))) + pad;
+    min[j] = Math.max(hw, ...cells.map(c => Math.max(0, ...c.split(/\s+/).map(w => tw(w, false, fs))))) + pad; }
+  const w = nat.map((x, j) => fixed[j] && fixed[j].cellWidth ? fixed[j].cellWidth : Math.max(x, min[j])), free = j => !(fixed[j] && fixed[j].cellWidth), sum = () => w.reduce((t, x) => t + x, 0);
+  if (sum() <= W){ const long = w.map((x, j) => j).filter(j => free(j) && nat[j] > W * 0.22); const named = w.map((x, j) => j).filter(j => free(j) && /desc|name|title|notes|location|item text/i.test(head[j])); const ls = long.length ? long : named.length ? named : [w.indexOf(Math.max(...w.filter((x, j) => free(j))))]; const tot = ls.reduce((t, j) => t + w[j], 0), extra = W - sum(); ls.forEach(j => w[j] += extra * w[j] / tot); }
+  else { for (let g = 0; g < 60 && sum() > W + 0.1; g++){ const top = Math.max(...w.filter((x, j) => free(j) && x > min[j])); if (!isFinite(top)) break; const js = w.map((x, j) => j).filter(j => free(j) && w[j] === top);
+      const next = Math.max(...w.filter((x, j) => free(j) && x < top), 0), cut = Math.min(top - next, (sum() - W) / js.length) || (sum() - W) / js.length; js.forEach(j => w[j] = Math.max(min[j], w[j] - cut)); } }
+  const out = {}; for (let j = 0; j < n; j++) out[j] = Object.assign({}, fixed[j] || {}, { cellWidth: w[j] }); doc.setFont("helvetica", "normal"); return out; }

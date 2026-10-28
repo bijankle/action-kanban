@@ -27,7 +27,7 @@ const Workpack = (() => {
     const table = (hd0, body0, cols0) => { const keep = hd0.map((c, k) => k === 0 || body0.some(r => String(r[k] == null ? "" : r[k]).trim())), ix = hd0.map((c, k) => k).filter(k => keep[k]);
       const hd = ix.map(k => hd0[k]), body = body0.map(r => ix.map(k => r[k])), cols = {}; ix.forEach((k, j) => { if (cols0 && cols0[k]) cols[j] = cols0[k]; });
       doc.autoTable({ startY: y, head: [hd], body, margin: { top: 16, left: M, right: M, bottom: 16 }, styles: { font: "helvetica", fontSize: 9, cellPadding: 1.8, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" },
-      headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" }, alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: cols || {} }); y = doc.lastAutoTable.finalY + 6; };
+      headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" }, alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: pdfCols(doc, hd, body, CW, { fs: 9, pad: 1.8, fixed: Object.fromEntries(Object.entries(cols).map(([k, v]) => [k, Object.assign({}, v, { cellWidth: undefined })])) }) }); y = doc.lastAutoTable.finalY + 6; };   // (widths fitted to what each column holds; alignments kept)
     /* what goes in: the equipment's documents */
     await Equip.load().catch(() => {});
     const tags = Array.isArray(a.f.equipment) ? a.f.equipment.filter(Boolean) : [];
