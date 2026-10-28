@@ -51,7 +51,7 @@ const PipeSpec = (() => {
   /* a reducing fitting (reducing tee, reducer, olet, swage, bush) has a second, smaller size: the branch or small end; a branch
      fitting (lateral, wye, Y piece, junction, tapping saddle) has a branch size too, the same as the run or smaller */
   const RED = /reduc|olet|swage|bush/i, BRY = /lateral|\bwye\b|y piece|junction|tapping saddle/i, EQOK = /lateral|\bwye\b|y piece|junction/i;
-  const reducing = it => it === "BR:" || (!!it && !/^(V|G|B):/.test(it) && (RED.test(it) || BRY.test(it)));
+  const reducing = it => it === "BR:" || (!!it && !/^(V|G|B|X):/.test(it) && (RED.test(it) || BRY.test(it)));
   const branchy = it => !!it && BRY.test(it);
   /* the class's branch table, by run then branch size: ET equal tee, RT reducing tee, SO sockolet, TO threadolet, WO weldolet, +RED with a reducer */
   const bt = (cl, dn) => { const B = (C(cl) || {}).branch; if (!B || !B.g) return null; const row = B.g[dn] || B.g[dn + "*"]; if (!row) return null; const o = {}; Object.keys(row).forEach(k => o[parseFloat(k)] = row[k]); return o; };
@@ -84,6 +84,8 @@ const PipeSpec = (() => {
   /* a row's spec line: { line (the RFQ words), rows (the (i)), auto (what filled itself in), need } */
   function resolve(r){ if (!D) return { need: "the pipe spec (loading)" }; const c0 = C(r.cl); if (!c0) return { need: "class" }; if (!r.dn) return { need: "size" }; if (!r.it) return { need: "item" };
     if (r.it === "BR:") return r.dn2 ? { need: "item" } : { need: "branch size" };
+    /* an item the spec doesn't list (no gasket given, say), typed in: the spec is a guide, so it goes on the MTO as typed, at the class and size */
+    if (/^X:/.test(r.it)){ const x = r.it.slice(2).trim(); return { x, auto: "", unit: "ea", line: lab(r.cl, r.dn) + " " + x + ", to suit piping class " + r.cl, rows: [["Item", x + " (typed in: the spec doesn't list it)"], ["Size", lab(r.cl, r.dn)], ["To suit", "piping class " + r.cl]] }; }
     if (BOLTS.test(r.it) || /^B:/.test(r.it)) return bolt(r);
     if (/^V:/.test(r.it)){ const v = r.it.slice(2), V = D.valve[v]; if (!V) return { need: "item" };
       const R = k => vrow(v, k); return { v, auto: R("End Connections"), unit: "ea", line: "DN" + (dnOf(r.cl, r.dn) || r.dn) + (U(r.cl) === "OD" ? " (" + lab(r.cl, r.dn) + " pipe)" : "") + " " + R("Type") + ", " + R("End Connections") + ", body " + R("Body Material") + (R("Manufacturer") ? ", " + R("Manufacturer") + " " + R("Model") : "") + ", valve datasheet " + v,

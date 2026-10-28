@@ -124,6 +124,7 @@ const Mto = (() => {
     if (R.v){ const V = k => (R.rows.find(x => x[0] === k) || [, ""])[1], typ = spShort(PipeSpec.clean(V("Type")).replace(/\s+-\s+/, ", ")).replace(/\bBALL VALVE\b/, "BV").replace(/\bGATE VALVE\b/, "GV").replace(/\bGLOBE VALVE\b/, "GLV").replace(/\bBUTTERFLY VALVE\b/, "BFV").replace(/\bCHECK VALVE\b/, "CV").replace(/\bFULL BORE\b/, "FB").replace(/\b3 PIECE BODY\b/, "3PC");
       return [typ, dn, spShort(R.auto), V("Body") && "BODY " + spShort(V("Body")), V("Seats") && "SEATS " + spShort(V("Seats")), spShort(V("Made by")), "TO DATASHEET " + R.v, it.cl].filter(Boolean).join(" "); }
     if (R.g) return ["GK", dn, R.g, it.cl].filter(Boolean).join(" ");
+    if (R.x) return [R.x.toUpperCase(), dn, it.cl].filter(Boolean).join(" ");
     if (!R.c) return [it.cl, dn, it.it && itName(it.it)].filter(Boolean).join(" ").toUpperCase();
     const c = R.c, seen = new Set(); return [spShort(c.d), dn, spShort(c.type), spShort(c.ends), spShort(c.mat), spShort(c.dim)].concat(R.extra || [], [it.cl]).filter(x => x && !seen.has(x) && seen.add(x)).join(" "); }
   /* a spec row's details in the table: everything its short form says after the item and size (type, ends, material, standard,
@@ -211,7 +212,9 @@ const Mto = (() => {
       .concat(PipeSpec.classes().map(x => ({ v: x, t: x, sub: PipeSpec.title(x).slice(0, 110), g: PipeSpec.family(x) })).sort((x, y) => PipeSpec.FAMS.indexOf(x.g) - PipeSpec.FAMS.indexOf(y.g))); const T = type(it), S = std(it);
     if (c === "dn") return PipeSpec.sizes(it.cl).map(n => ({ v: n, t: PipeSpec.lab(it.cl, n), sub: [PipeSpec.U(it.cl) === "OD" && PipeSpec.dnOf(it.cl, n) ? "DN" + PipeSpec.dnOf(it.cl, n) + " flanges and valves" : "", PipeSpec.nonPref(it.cl, n) ? "non-preferred size" : ""].filter(Boolean).join(", ") }));
     if (c === "dn2") return PipeSpec.branches(it.cl, it.dn, it.it).map(x => ({ v: x.v, t: x.t, sub: x.sub, dis: x.dis }));
-    if (c === "it") return PipeSpec.items(it.cl, it.dn).map(x => ({ v: x.v, t: x.t, sub: x.sub || "", g: x.g }));
+    if (c === "it"){ const l = PipeSpec.items(it.cl, it.dn).map(x => ({ v: x.v, t: x.t, sub: x.sub || "", g: x.g })), raw = typedRaw.trim();
+      /* (the spec is a guide: what's typed can go in as it is, when the spec doesn't list it, a gasket where none is given, say) */
+      return raw && !l.some(x => x.t.toLowerCase() === raw.toLowerCase()) ? l.concat([{ v: "X:" + raw, t: raw, sub: "use as typed: not in the spec for " + it.cl, g: "Typed in" }]) : l; }
     if (c === "vt") return (specRes(it).vs || []).map(x => ({ v: x.v, t: x.t }));
     /* N/A piping: the size first (DN), then the library's piping kinds that come in it */
     if (it.cl === "N/A" && c === "z" && !T) return PipeSpec.DNS.map(n => ({ v: "DN" + n, t: "DN" + n }));
@@ -228,7 +231,8 @@ const Mto = (() => {
     if (c === "s") return T.stds.filter(s => !it.z || s.sizes.some(z => z.n === it.z)).map(s => ({ v: s.id, t: stShort(s.n), sub: (s.o !== "INT" ? ORIGIN[s.o] + ", " : "") + s.n }));
     if (c === "unit") return (T.units || []).map(u => ({ v: u, t: uShort(u), sub: u }));
     return []; }
-  const itName = v => !v ? "" : /^V:/.test(v) ? v.slice(2) : /^G:/.test(v) ? "Gasket " + v.slice(2) : v;
+  let typedRaw = "";   // (what's typed in the box whose card is open)
+  const itName = v => !v ? "" : /^X:/.test(v) ? v.slice(2) : /^V:/.test(v) ? v.slice(2) : /^G:/.test(v) ? "Gasket " + v.slice(2) : v;
   const shown = (it, c) => { const T = type(it), S = std(it);
     if (c === "cl") return it.cl || ""; if (c === "dn") return PipeSpec.lab(it.cl, it.dn); if (c === "dn2") return it.dn2 ? (it.dn2 === it.dn ? "equal" : "x " + PipeSpec.lab(it.cl, it.dn2)) : ""; if (c === "it") return itName(it.it); if (c === "vt") return it.vt || "";
     if (c === "t") return itemCode(it); if (!T) return c === "unit" ? it.unit || "" : it[c] || "";
@@ -454,7 +458,7 @@ const Mto = (() => {
       const pt = isInst(it) && (c === "t" || c === "part" || c === "z");   // (an instrument's type and make / model: pick from the plant lists, or type it in)
       const free = c === "part" || c === "spec" || (c === "z" && !type(it) && !(it.cl === "N/A" && it.desc == null)) || (c === "t" && !type(it) && it.desc != null && r !== "new0");
       const show = () => { if (free && c !== "t" && !pt) return;
-        const q = i.value.trim().toLowerCase(), cur0 = String(c === "t" && isInst(it) ? it.desc || "" : shown(it, c)).toLowerCase(), typed = q && q !== cur0, ws = typed ? q.split(/\s+/) : [];
+        typedRaw = c === "it" ? i.value : ""; const q = i.value.trim().toLowerCase(), cur0 = String(c === "t" && isInst(it) ? it.desc || "" : shown(it, c)).toLowerCase(), typed = q && q !== cur0, ws = typed ? q.split(/\s+/) : [];
         const all = choices(it, c, typed ? q : ""); if (!all.length && !(pt && typed)) return Look.close();
         let list = (ws.length ? all.filter(x => x.tagHit || ws.every(w => (x.t + " " + (x.sub || "") + " " + (x.g || "")).toLowerCase().includes(w))) : all).slice(0, 300);
         /* (what you typed in the name itself comes first: "tee red" lights Tee, reducing, not a choice that only mentions it underneath) */
