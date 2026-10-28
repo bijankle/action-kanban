@@ -29,11 +29,13 @@ const PipeSpec = (() => {
   const tube = cl => U(cl) === "OD" && /\btube\b/i.test((C(cl) || {}).title || "");
   const lab = (cl, n) => n == null || n === "" ? "" : (U(cl) === "OD" ? "OD" : "DN") + n;
   /* a PE size's nominal DN, for its flanges (stub and backing ring), valves and bolts (the usual PE stub flange sizes; ones marked * to check) */
-  const ODDN = { 20: 15, 25: 20, 32: 25, 40: 32, 50: 40, 63: 50, 75: 65, 90: 80, 110: 100, 125: 100, 140: 125, 160: 150, 180: 150, 200: 200, 225: 200, 250: 250, 280: 250, 315: 300, 355: 350, 400: 400, 450: 450, 500: 500, 560: 500, 630: 600, 710: 700, 800: 800, 900: 900, 1000: 1000, 1200: 1200 }, ODCHK = new Set([125, 180, 200, 250, 560]);
+  const ODDN = { 20: 15, 25: 20, 32: 25, 40: 32, 50: 40, 63: 50, 75: 65, 90: 80, 110: 100, 125: 100, 140: 125, 160: 150, 180: 150, 200: 200, 225: 200, 250: 250, 280: 250, 315: 300, 355: 350, 400: 400, 450: 450, 500: 500, 560: 500, 630: 600, 710: 700, 800: 800, 900: 900, 1000: 1000, 1200: 1200 }, ODCHK = new Set([560]);   // (Acu-Tech backing rings: OD125 on DN100, OD180 on DN150, OD200 on DN200, OD250 on DN250; OD560 they list on DN550, which AS 2129 has no row for, so DN500 is assumed)
   const dnOf = (cl, n) => U(cl) !== "OD" ? n : tube(cl) ? null : ODDN[n] || null;
   /* 1 the sizes the class covers */
   const sizes = cl => { if (!C(cl)) return []; const ser = U(cl) === "DN" ? DNS : tube(cl) ? OD_TUBE : OD_PE;
-    return ser.filter(n => C(cl).comps.some(c => n >= c.lo && n <= c.hi) || (dnOf(cl, n) && valves(cl).some(v => dnOf(cl, n) >= D.valve[v].lo && dnOf(cl, n) <= D.valve[v].hi))); };
+    return ser.filter(n => (C(cl).comps.some(c => n >= c.lo && n <= c.hi) || (dnOf(cl, n) && valves(cl).some(v => dnOf(cl, n) >= D.valve[v].lo && dnOf(cl, n) <= D.valve[v].hi))) && !noFlange(cl, n)); };
+  /* (a flanged steel class leaves out the sizes AS 2129 has no flange for, such as DN90 and DN650: they can't be bought as flanged) */
+  const noFlange = (cl, n) => { if (U(cl) !== "DN" || !hasFlange(cl, n)) return false; const t = ftab(cl, n); return !!(t && FT[t] && !FT[t][n]); };
   /* 2 the items the spec has at that size: its components, then its valves and gasket */
   const LINING = /\blining\b/i;
   function items(cl, dn){ const c0 = C(cl); if (!c0) return []; const out = [], seen = new Set(), nd = dn == null ? null : dnOf(cl, dn);
@@ -86,6 +88,7 @@ const PipeSpec = (() => {
     if (/^V:/.test(r.it)){ const v = r.it.slice(2), V = D.valve[v]; if (!V) return { need: "item" };
       const R = k => vrow(v, k); return { v, auto: R("End Connections"), unit: "ea", line: "DN" + (dnOf(r.cl, r.dn) || r.dn) + (U(r.cl) === "OD" ? " (" + lab(r.cl, r.dn) + " pipe)" : "") + " " + R("Type") + ", " + R("End Connections") + ", body " + R("Body Material") + (R("Manufacturer") ? ", " + R("Manufacturer") + " " + R("Model") : "") + ", valve datasheet " + v,
         rows: [["Valve datasheet", v + " (spec page " + V.page + ")"], ["Type", R("Type")], ["Ends", R("End Connections")], ["Body", R("Body Material")], ["Seats", R("Seat Material")], ["Made by", [R("Manufacturer"), R("Model")].filter(Boolean).join(" ")], ["Size range", R("Size Range (mm)")]].filter(x => x[1]) }; }
+    if (SAE(r.cl) && (/^G:/.test(r.it) || /^seal$/i.test(r.it))) return saeSeal(r);
     if (/^G:/.test(r.it)){ const g = r.it.slice(2), nd = dnOf(r.cl, r.dn), ft = ftab(r.cl, r.dn), gc = gcomp(r.cl, g), gt = gthk(r.cl, g);
       const txt = gc ? clean(gc.type) : ""; const chk = [gt ? "" : "the gasket's thickness (the spec doesn't give it for this class)", ft ? "" : "the flange table"].filter(Boolean);
       return { g, gt, auto: "to suit " + r.cl, unit: "ea", chk: chk.join(", "),
@@ -122,12 +125,13 @@ const PipeSpec = (() => {
     const L = lining(cl); if (L && LINED.test(d) && !/blind/i.test(d)) out.push(L.short); return out; }
   /* ---------- studs, bolts and nuts, from the flange table ----------
      AS 2129 bolting by table and size: [bolts per flange, bolt diameter (M), plate flange thickness mm]. From supplier data sheets of
-     AS 2129 (Engineering Toolbox Table D plate flange, Matthew Davis Table E); Table H has no thickness there, so its lengths are left to check. */
-  const FT = { D: { 15: [4, 12, 5], 20: [4, 12, 5], 25: [4, 12, 5], 32: [4, 12, 6], 40: [4, 12, 6], 50: [4, 16, 8], 65: [4, 16, 8], 80: [4, 16, 10], 100: [4, 16, 10], 125: [8, 16, 13], 150: [8, 16, 13], 200: [8, 16, 13], 250: [8, 20, 16], 300: [12, 20, 19], 350: [12, 20, 22], 400: [12, 24, 22], 450: [12, 24, 25], 500: [16, 24, 29], 600: [16, 27, 32] },
-    E: { 15: [4, 12, 6], 20: [4, 12, 6], 25: [4, 12, 7], 32: [4, 12, 8], 40: [4, 12, 9], 50: [4, 16, 10], 65: [4, 16, 10], 80: [4, 16, 11], 100: [8, 16, 13], 125: [8, 16, 14], 150: [8, 20, 17], 200: [8, 20, 19], 250: [12, 20, 22], 300: [12, 24, 25], 350: [12, 24, 29], 400: [12, 24, 32], 450: [16, 24, 35], 500: [16, 24, 38], 600: [16, 30, 48] },
+     AS 2129 (Engineering Toolbox Table D plate flange, Matthew Davis Table E; DN700 to DN1200 from Ozlinc's AS 2129 plate flange table,
+     bolt size from the hole: 30 mm M27, 33 mm M30, 36 mm M33); Table H has no thickness there, so its lengths are left to check. */
+  const FT = { D: { 15: [4, 12, 5], 20: [4, 12, 5], 25: [4, 12, 5], 32: [4, 12, 6], 40: [4, 12, 6], 50: [4, 16, 8], 65: [4, 16, 8], 80: [4, 16, 10], 100: [4, 16, 10], 125: [8, 16, 13], 150: [8, 16, 13], 200: [8, 16, 13], 250: [8, 20, 16], 300: [12, 20, 19], 350: [12, 20, 22], 400: [12, 24, 22], 450: [12, 24, 25], 500: [16, 24, 29], 600: [16, 27, 32], 700: [20, 27, 35], 750: [20, 30, 41], 800: [20, 33, 41], 900: [24, 33, 48], 1000: [24, 33, 51], 1050: [28, 33, 54], 1200: [32, 33, 60] },
+    E: { 15: [4, 12, 6], 20: [4, 12, 6], 25: [4, 12, 7], 32: [4, 12, 8], 40: [4, 12, 9], 50: [4, 16, 10], 65: [4, 16, 10], 80: [4, 16, 11], 100: [8, 16, 13], 125: [8, 16, 14], 150: [8, 20, 17], 200: [8, 20, 19], 250: [12, 20, 22], 300: [12, 24, 25], 350: [12, 24, 29], 400: [12, 24, 32], 450: [16, 24, 35], 500: [16, 24, 38], 600: [16, 30, 48], 700: [20, 30, 51], 750: [20, 33, 54], 800: [20, 33, 54], 900: [24, 33, 64] },
     H: { 15: [4, 16], 20: [4, 16], 25: [4, 16], 32: [4, 16], 40: [4, 16], 50: [4, 20], 65: [8, 20], 80: [8, 20], 100: [8, 20], 150: [12, 24], 200: [12, 24], 250: [12, 27], 300: [16, 24] } };
   /* ISO 4032 nut height and coarse thread pitch, by diameter */
-  const NUT = { 12: 10.8, 16: 14.8, 20: 18, 24: 21.5, 27: 23.8, 30: 25.6 }, PITCH = { 12: 1.75, 16: 2, 20: 2.5, 24: 3, 27: 3, 30: 3.5 };
+  const NUT = { 12: 10.8, 16: 14.8, 20: 18, 24: 21.5, 27: 23.8, 30: 25.6, 33: 28.7 }, PITCH = { 12: 1.75, 16: 2, 20: 2.5, 24: 3, 27: 3, 30: 3.5, 33: 3.5 };
   const BOLTS = /stud bolt|machine bolt|^nuts?\b/i;
   const FLG = /^(flange|stub flange|flange adaptor|single-part flange|plate, blind)/i;
   const hasFlange = (cl, dn) => ((C(cl) || { comps: [] }).comps).some(c => FLG.test(clean(c.d)) && dn >= c.lo && dn <= c.hi);
@@ -140,12 +144,22 @@ const PipeSpec = (() => {
     const t = (String((C(cl) || {}).title || "").match(/Table ([DEFH])/) || [])[1], all = Object.values(D ? D.pipe : {}).flatMap(c => c.comps).filter(c => /gasket/i.test(c.d) && g && clean(c.type).includes(g) && thk(c));
     const best = all.find(c => t && clean(c.type).includes("Table " + t)) || all[0]; return best ? thk(best) : own ? thk(own) : null; }
   /* a flange joint's bolting: flange on flange with the class's gasket (a wafer valve or the like between them takes a longer stud: change the length) */
-  /* PE stub end collar thickness by OD, mm (AusPolySpec PE100 stub flange table; the other sizes aren't known yet) */
-  const COLLAR = { 63: 13, 90: 17 };
+  /* PE stub end collar thickness (T) by OD, mm: Acu-Tech PE100 butt weld stub flange, SDR11 / SDR17 (HDPE catalogue V317). Acu-Tech's
+     butt weld stubs start at OD63, so OD20 to OD50 take the OD63 collar (it errs long); OD1200 isn't in the table */
+  const COLLAR = { 20: 14, 25: 14, 32: 14, 40: 14, 50: 14, 63: 14, 75: 16, 90: 20, 110: 20, 125: 25, 140: 25, 160: 25, 180: 30, 200: 30, 225: 30, 250: 35, 280: 35, 315: 40, 355: 40, 400: 45, 450: 55, 500: 60, 560: 60, 630: 60, 710: 70, 800: 80, 900: 93, 1000: 113 };
+  const COLSRC = dn => "Acu-Tech PE100 butt weld stub flange" + (dn < 63 ? " (OD63 collar, the smallest Acu-Tech lists)" : "");
   /* bolting where the spec lists none (agreed): galvanised Gr 8.8 / Gr 8 for carbon and galvanised steel, 316 A4-70 for stainless */
   const BMAT = cl => /^SS\d/.test(cl) ? { stud: "316 stainless, A4-70", bolt: "316 stainless, A4-70, hex head", nut: "316 stainless, A4-70 hex nuts" } : { stud: "Galvanised, Gr. 8.8", bolt: "Galvanised, Gr. 8.8, hex head", nut: "Galvanised, Gr. 8 hex nuts" };
   /* the Swagelok tube classes join with SAE (ISO 6162) single-part flanges: their screws come as a kit with the flange, from the package vendor */
   const SAE = cl => /single-part flange|SAE/i.test(((C(cl) || { comps: [] }).comps).map(c => c.d + " " + c.type).join(" ") + " " + ((C(cl) || {}).title || ""));
+  /* an SAE (ISO 6162) flange seals with an O-ring in its face, not a flat gasket: the size by the flange (SAE J518 / ISO 6162, the same
+     for Code 61 and Code 62 up to 2"), the flange by the tube OD, the rubber from the class's seal line */
+  const ORING = [[16, '1/2"', 18.64, 210], [22, '3/4"', 24.99, 214], [28, '1"', 32.92, 219], [35, '1-1/4"', 37.69, 222], [42, '1-1/2"', 47.22, 225], [Infinity, '2"', 56.74, 228]];
+  function saeSeal(r){ const [, f, id, dash] = ORING.find(o => r.dn <= o[0]), cs = (C(r.cl) || { comps: [] }).comps, sc = cs.find(c => /^seal|o-ring/i.test(clean(c.d))), fl = cs.find(c => FLG.test(clean(c.d)));
+    const code = (String(fl ? clean(fl.dim) : "").match(/Code (6[12])/) || [])[1] || "61", iso = code === "62" ? "ISO 6162-2" : "ISO 6162-1", rub = sc ? clean(sc.type).replace(/\s*O-ring/i, "") : "NBR, 90 IRHD";
+    const sz = id + " x 3.53 (AS 568-" + dash + ")";
+    return { g: "O-ring", gt: null, auto: sz, unit: "ea", chk: "", line: "O-ring " + rub + ", " + sz + ", for " + f + " SAE Code " + code + " (" + iso + ") flange, " + lab(r.cl, r.dn) + " tube, to suit piping class " + r.cl,
+      rows: [["Seal", "O-ring in the flange face (an SAE flange takes no flat gasket)"], ["Size", sz + ", ID x section, mm"], ["Rubber", rub + (sc ? ", " + clean(sc.dim) : "")], ["To suit", f + " SAE Code " + code + " (" + iso + ") flange on " + lab(r.cl, r.dn) + " tube"]] }; }
   function joint(cl, dn){ const nd = dnOf(cl, dn), t = ftab(cl, dn), row = t && FT[t] && FT[t][nd], chk = [];
     if (!row) return { chk: "the flange table at this size", nd, t };
     const [n, d, T] = row, g = gthk(cl) || (chk.push("gasket thickness, 3 mm assumed"), 3), L0 = lining(cl), faces = /^RL/.test(cl) ? 6 : 0;   // (rubber lined classes: 3 mm of rubber on each flange face)
@@ -165,7 +179,7 @@ const PipeSpec = (() => {
     return { bolt: kind, mat: what, J, L, chk, unit: "ea", auto: size + (J.n ? ", " + (kind === "nut" ? 2 * J.n : J.n) + " per joint" : ""),
       line: NAME[kind] + " " + size + ", " + what + (J.t ? ", for DN" + J.nd + " AS 2129 Table " + J.t + " flanges" : ""),
       rows: [["Item", NAME[kind]], ["Size", size || "not known: " + (J.chk || "")], ["Material", what + (comp ? "" : " (assumed: the spec lists no bolting for " + r.cl + ")")], ["Per joint", J.n ? (kind === "nut" ? 2 * J.n + " nuts (2 per stud)" : J.n + " " + kind + "s") : ""], ["Flange", J.t ? "DN" + J.nd + ", AS 2129 Table " + J.t + (J.T ? ", " + J.T + " mm plate" : "") : ""],
-        ["Length worked out", J.grip && kind !== "nut" ? (r.bl ? r.bl + " mm, set by hand (worked out: " + (kind === "stud" ? J.stud : J.bolt) + " mm)" :  L + " mm: two flanges " + 2 * J.T + " mm" + (J.col ? ", two stub collars " + 2 * J.col + " mm" : "") + ", gasket " + J.g + " mm" + (J.faces ? ", rubber faces " + J.faces + " mm" : "") + ", " + (kind === "stud" ? "two nuts" : "one nut") + " and 3 threads clear, rounded up") : ""],
+        ["Length worked out", J.grip && kind !== "nut" ? (r.bl ? r.bl + " mm, set by hand (worked out: " + (kind === "stud" ? J.stud : J.bolt) + " mm)" :  L + " mm: two flanges " + 2 * J.T + " mm" + (J.col ? ", two stub collars " + 2 * J.col + " mm (collar " + J.col + " mm as per " + COLSRC(r.dn) + ")" : "") + ", gasket " + J.g + " mm" + (J.faces ? ", rubber faces " + J.faces + " mm" : "") + ", " + (kind === "stud" ? "two nuts" : "one nut") + " and 3 threads clear, rounded up") : ""],
         ["To check", chk]].filter(x => x[1]) }; }
   /* the material family a class belongs to, for the headings in the class list */
   const FAM = [["Carbon steel", /^(MS\d|XS)/], ["Galvanised steel", /^MSG/], ["Lined steel", /^(CL|RL)\d/], ["Stainless steel", /^SS\d/], ["Poly (HDPE)", /^PE/], ["Other plastic", /./]];
