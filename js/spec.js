@@ -140,21 +140,32 @@ const PipeSpec = (() => {
     const t = (String((C(cl) || {}).title || "").match(/Table ([DEFH])/) || [])[1], all = Object.values(D ? D.pipe : {}).flatMap(c => c.comps).filter(c => /gasket/i.test(c.d) && g && clean(c.type).includes(g) && thk(c));
     const best = all.find(c => t && clean(c.type).includes("Table " + t)) || all[0]; return best ? thk(best) : own ? thk(own) : null; }
   /* a flange joint's bolting: flange on flange with the class's gasket (a wafer valve or the like between them takes a longer stud: change the length) */
+  /* PE stub end collar thickness by OD, mm (AusPolySpec PE100 stub flange table; the other sizes aren't known yet) */
+  const COLLAR = { 63: 13, 90: 17 };
+  /* bolting where the spec lists none (agreed): galvanised Gr 8.8 / Gr 8 for carbon and galvanised steel, 316 A4-70 for stainless */
+  const BMAT = cl => /^SS\d/.test(cl) ? { stud: "316 stainless, A4-70", bolt: "316 stainless, A4-70, hex head", nut: "316 stainless, A4-70 hex nuts" } : { stud: "Galvanised, Gr. 8.8", bolt: "Galvanised, Gr. 8.8, hex head", nut: "Galvanised, Gr. 8 hex nuts" };
+  /* the Swagelok tube classes join with SAE (ISO 6162) single-part flanges: their screws come as a kit with the flange, from the package vendor */
+  const SAE = cl => /single-part flange|SAE/i.test(((C(cl) || { comps: [] }).comps).map(c => c.d + " " + c.type).join(" ") + " " + ((C(cl) || {}).title || ""));
   function joint(cl, dn){ const nd = dnOf(cl, dn), t = ftab(cl, dn), row = t && FT[t] && FT[t][nd], chk = [];
     if (!row) return { chk: "the flange table at this size", nd, t };
     const [n, d, T] = row, g = gthk(cl) || (chk.push("gasket thickness, 3 mm assumed"), 3), L0 = lining(cl), faces = /^RL/.test(cl) ? 6 : 0;   // (rubber lined classes: 3 mm of rubber on each flange face)
-    if (!T) chk.push("the flange thickness (Table " + t + ")"); if (U(cl) === "OD") chk.push("the stub flange and backing ring thickness"); if (U(cl) === "OD" && ODCHK.has(dn)) chk.push("the DN of an " + lab(cl, dn) + " stub flange");
-    const grip = T ? 2 * T + g + faces : null, m = NUT[d], p = PITCH[d], up = (x, s) => Math.ceil(x / s) * s;
-    return { n, d, t, nd, T, g, faces, grip, stud: grip ? up(grip + 2 * m + 6 * p, 5) : null, bolt: grip ? up(grip + m + 3 * p, grip + m + 3 * p > 80 ? 10 : 5) : null, chk: chk.join(", ") }; }
-  function bolt(r){ const J = joint(r.cl, r.dn), comp = ((C(r.cl) || { comps: [] }).comps).find(c => clean(c.d) === r.it), kind = /^B:/.test(r.it) ? r.it.slice(2) : /nut/i.test(r.it) ? "nut" : /machine/i.test(r.it) ? "bolt" : "stud";
-    const what = comp ? clean(comp.type) + (clean(comp.dim) && clean(comp.dim) !== "-" ? ", " + clean(comp.dim) : "") : "material to suit piping class " + r.cl, L = +r.bl || (kind === "stud" ? J.stud : kind === "bolt" ? J.bolt : null);
-    const chk = [J.chk, comp ? "" : "the bolting material (the spec doesn't list bolting for " + r.cl + ")", L || kind === "nut" ? "" : "the length"].filter(Boolean).join(", ");
+    /* PE: a steel backing ring (the AS 2129 plate thickness, as Iplex and Enviropipes list them) behind each stub end's collar */
+    const col = U(cl) === "OD" ? COLLAR[dn] || null : 0;
+    if (!T) chk.push("the flange thickness (Table " + t + ")"); if (U(cl) === "OD" && !col) chk.push("the stub end collar thickness at " + lab(cl, dn)); if (U(cl) === "OD" && ODCHK.has(dn)) chk.push("the DN of an " + lab(cl, dn) + " stub flange");
+    const grip = T && col !== null ? 2 * (T + col) + g + faces : null, m = NUT[d], p = PITCH[d], up = (x, s) => Math.ceil(x / s) * s;
+    return { n, d, t, nd, T, col, g, faces, grip, stud: grip ? up(grip + 2 * m + 6 * p, 5) : null, bolt: grip ? up(grip + m + 3 * p, grip + m + 3 * p > 80 ? 10 : 5) : null, chk: chk.join(", ") }; }
+  function bolt(r){ if (r.it === "B:kit" || (SAE(r.cl) && /bolt|screw/i.test(r.it))){ const sc = ((C(r.cl) || { comps: [] }).comps).find(c => /bolt|screw/i.test(c.d)), what = sc ? clean(sc.type) + ", " + clean(sc.dim) : "socket head cap screws";
+      return { bolt: "kit", mat: what, unit: "kit", auto: "1 kit per flange", chk: "", line: "Screw kit to suit " + lab(r.cl, r.dn) + " SAE (ISO 6162) single-part flange, " + what + ", supplied with the flange by the package vendor",
+        rows: [["Item", "Flange screw kit, SAE (ISO 6162) single-part flange"], ["Size", "to suit " + lab(r.cl, r.dn) + " tube"], ["Material", what], ["Supplied", "with the flange, by the package vendor (agreed)"]] }; }
+    const J = joint(r.cl, r.dn), comp = ((C(r.cl) || { comps: [] }).comps).find(c => clean(c.d) === r.it), kind = /^B:/.test(r.it) ? r.it.slice(2) : /nut/i.test(r.it) ? "nut" : /machine/i.test(r.it) ? "bolt" : "stud";
+    const what = comp ? clean(comp.type) + (clean(comp.dim) && clean(comp.dim) !== "-" ? ", " + clean(comp.dim) : "") : BMAT(r.cl)[kind], L = +r.bl || (kind === "stud" ? J.stud : kind === "bolt" ? J.bolt : null);
+    const chk = [J.chk, L || kind === "nut" ? "" : "the length"].filter(Boolean).join(", ");
     const size = J.d ? "M" + J.d + (kind === "nut" ? "" : " x " + (L || "?") + (r.bl ? "" : "")) : "";
     const NAME = { stud: "Stud bolt", bolt: "Machine bolt, hex head", nut: "Hex nut" };
     return { bolt: kind, mat: what, J, L, chk, unit: "ea", auto: size + (J.n ? ", " + (kind === "nut" ? 2 * J.n : J.n) + " per joint" : ""),
       line: NAME[kind] + " " + size + ", " + what + (J.t ? ", for DN" + J.nd + " AS 2129 Table " + J.t + " flanges" : ""),
-      rows: [["Item", NAME[kind]], ["Size", size || "not known: " + (J.chk || "")], ["Material", what], ["Per joint", J.n ? (kind === "nut" ? 2 * J.n + " nuts (2 per stud)" : J.n + " " + kind + "s") : ""], ["Flange", J.t ? "DN" + J.nd + ", AS 2129 Table " + J.t + (J.T ? ", " + J.T + " mm plate" : "") : ""],
-        ["Length worked out", J.grip && kind !== "nut" ? (r.bl ? r.bl + " mm, set by hand (worked out: " + (kind === "stud" ? J.stud : J.bolt) + " mm)" : L + " mm: two flanges " + 2 * J.T + " mm, gasket " + J.g + " mm" + (J.faces ? ", rubber faces " + J.faces + " mm" : "") + ", " + (kind === "stud" ? "two nuts" : "one nut") + " and 3 threads clear, rounded up") : ""],
+      rows: [["Item", NAME[kind]], ["Size", size || "not known: " + (J.chk || "")], ["Material", what + (comp ? "" : " (assumed: the spec lists no bolting for " + r.cl + ")")], ["Per joint", J.n ? (kind === "nut" ? 2 * J.n + " nuts (2 per stud)" : J.n + " " + kind + "s") : ""], ["Flange", J.t ? "DN" + J.nd + ", AS 2129 Table " + J.t + (J.T ? ", " + J.T + " mm plate" : "") : ""],
+        ["Length worked out", J.grip && kind !== "nut" ? (r.bl ? r.bl + " mm, set by hand (worked out: " + (kind === "stud" ? J.stud : J.bolt) + " mm)" :  L + " mm: two flanges " + 2 * J.T + " mm" + (J.col ? ", two stub collars " + 2 * J.col + " mm" : "") + ", gasket " + J.g + " mm" + (J.faces ? ", rubber faces " + J.faces + " mm" : "") + ", " + (kind === "stud" ? "two nuts" : "one nut") + " and 3 threads clear, rounded up") : ""],
         ["To check", chk]].filter(x => x[1]) }; }
   /* the material family a class belongs to, for the headings in the class list */
   const FAM = [["Carbon steel", /^(MS\d|XS)/], ["Galvanised steel", /^MSG/], ["Lined steel", /^(CL|RL)\d/], ["Stainless steel", /^SS\d/], ["Poly (HDPE)", /^PE/], ["Other plastic", /./]];
@@ -164,5 +175,5 @@ const PipeSpec = (() => {
   const nonPref = (cl, n) => starred(cl).has(n);
   let NPDN = null; const nonPrefDN = () => NPDN || (NPDN = !D ? new Set() : new Set(classes().filter(cl => U(cl) === "DN").flatMap(cl => [...starred(cl)])));
   const title = cl => C(cl) ? clean(C(cl).title) : "";
-  return { nonPref, nonPrefDN, lab, U, dnOf, joint, branchPlan, branchy, BOLTS, FLG, family, FAMS, reducing, branches, load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
+  return { SAE, nonPref, nonPrefDN, lab, U, dnOf, joint, branchPlan, branchy, BOLTS, FLG, family, FAMS, reducing, branches, load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
 })();
