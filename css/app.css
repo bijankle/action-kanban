@@ -1259,3 +1259,18 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .mt-tbl .mt-dw .mt-pk{flex:none}.mt-tbl .mt-dw .mt-bl{flex:none;width:56px!important}
 .pt-tbl td.pt-act{overflow:visible;text-overflow:clip}
 .mt-pop .mt-ph{font:600 10.5px var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
+/* the MTO's top: labels on the line with their boxes, the boxes lined up; the quote and PO boxes as tall as the left side */
+.pt-g{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 12px;align-items:center;margin:0}
+.pt-lab{font-size:var(--fl);font-weight:600;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:4px}
+.pt-g .in,.pt-g .lk-sel,.pt-g .combo{width:100%;min-width:0}.pt-g .combo .in{width:100%}
+.pt-r{display:flex;flex-direction:column;gap:8px}.pt-r>.pt-up{flex:1 1 0;min-height:28px;margin:0}
+.pt-up.att-add{justify-content:center;gap:7px;height:auto}.pt-up.att-add .fico{width:15px;height:17px}
+.pt-has{display:flex;align-items:center;gap:8px;padding:0 8px 0 10px;border:1.5px solid var(--line);border-radius:8px;cursor:pointer;min-width:0}
+.pt-has:hover{border-color:var(--line2)}.pt-has .pt-fn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;cursor:pointer}
+.pt-has .pt-rev{margin-left:auto;border:0;background:none;padding:0;cursor:pointer;color:var(--th);display:grid;place-items:center}.pt-has .pt-rev svg{width:16px;height:16px}
+.pt-has .pt-rev+.ic-b,.pt-has .pt-fn+.ic-b{margin-left:auto}.pt-has .pt-rev+.ic-b{margin-left:0}
+.pt-none{display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--line);border-radius:8px}
+.pt-revs .pt-rv{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
+.pt-dk.pt-up{flex-direction:row;align-items:center}.pt-up.att-add .fico{display:inline-block;flex:none}
+.pt-has .att-ic{flex:none}
+.pt-g .in,.pt-g .lk-sel,.pt-g .lk-dt{font-size:var(--fb)}

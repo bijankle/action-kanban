@@ -11,13 +11,14 @@ const Vendors = (() => {
   const hasKey = () => !!(lsGet("adGemKey", "") || "").trim();
 
   /* ---------- the box on the MTO tab ---------- */
-  function box(a, ro){ const c = a.rfqCat || "", to = a.rfqTo || [];
-    if (!all().length) return '<div class="vd-box"><div class="dim">No approved vendor list yet. Import it on the Data validation tab, Suppliers.</div></div>';
-    return '<div class="vd-box">' + ""
-      + '<div class="vd-row"><label class="fl vd-cat">Supplier category<select class="in" data-k="cat"' + (ro ? " disabled" : "") + '><option value="">' + "Pick a category" + '</option>' + cats().map(x => '<option' + (x.name === c ? " selected" : "") + ' title="' + esc(x.look) + '">' + esc(x.name) + '</option>').join("") + '</select></label>'
-      + '<label class="fl vd-pick">Supplier<div class="combo"><input class="in" data-k="ven" autocomplete="off" placeholder="' + (c ? "Pick from " + inCat(c).length + " approved suppliers" : "Search all approved suppliers") + '"' + (ro ? " readonly" : "") + '></div></label></div>'
-      + '<div class="vd-to">' + (to.length ? to.map(n => { const v = byName(n) || {}; const has = !!(v.contact || v.email || v.phone); return '<span class="vd-chip" title="' + esc([v.cat, v.ordered, v.po ? v.po + " POs, last " + fmtDate(v.last) : ""].filter(Boolean).join("\n")) + '"><b>' + esc(n) + '</b>' + (v.type ? '<i>' + esc(v.type) + '</i>' : "")
-        + '<button type="button" class="vd-det' + (has ? "" : " bad") + '" data-vd="' + esc(n) + '" title="' + esc(has ? [v.contact, v.phone, v.email, v.address].filter(Boolean).join("\n") + "\nClick to edit" : "No contact details yet, they go on the RFQ. Click to add them.") + '">' + (has ? esc(v.contact || v.email || v.phone) : "Add contact details") + '</button>' + (ro ? "" : '<button type="button" data-x="' + esc(n) + '" title="Remove">✕</button>') + '</span>'; }).join("") : "") + '</div></div>'; }
+  /* the RFQ's who: category and supplier, each label on the line with its box (the boxes line up); more rows can follow (the ETA).
+     The suppliers picked show in the Supplier box itself, by name; its list has them ticked at the top, with their contact details */
+  function box(a, ro, more){ const c = a.rfqCat || "", to = a.rfqTo || [];
+    if (!all().length) return '<div class="vd-box"><div class="dim">No approved vendor list yet. Import it on the Data validation tab, Suppliers.</div></div>' + (more ? '<div class="pt-g">' + more + '</div>' : "");
+    return '<div class="vd-box pt-g">'
+      + '<label class="pt-lab" for="vdCat">Supplier category</label><select class="in" id="vdCat" data-k="cat"' + (ro ? " disabled" : "") + '><option value="">Pick a category</option>' + cats().map(x => '<option' + (x.name === c ? " selected" : "") + ' title="' + esc(x.look) + '">' + esc(x.name) + '</option>').join("") + '</select>'
+      + '<label class="pt-lab" for="vdVen">Supplier</label><div class="combo"><input class="in" id="vdVen" data-k="ven" autocomplete="off" value="' + esc(to.join(", ")) + '" placeholder="' + (c ? "Pick from " + inCat(c).length + " approved suppliers" : "Search all approved suppliers") + '"' + (ro ? " readonly" : "") + ' title="' + esc(to.length ? to.join("\n") + "\nClick to add or remove, and for contact details" : "") + '"></div>'
+      + (more || "") + '</div>'; }
   function wire(el, a, ro){ const b = $(".vd-box", el); if (!b || !all().length) return; const key = "a:" + a._p;
     $$("[data-vd]", b).forEach(x => x.onclick = () => details(x.dataset.vd, x)); if (ro) return;
     const set = (fn, msg) => { Store.mutate(key, () => { fn(); Store.touch(a); }); if (msg) Store.log(msg); };
@@ -29,13 +30,17 @@ const Vendors = (() => {
     const close = () => { dd && dd.remove(); dd = null; };
     const draw = () => { const q = i.value.trim().toLowerCase(), w = qWords(q), hit = v => smartHit(v.name + " " + v.ordered + " " + v.cat + " " + v.aka, w);
       const mine = a.rfqCat ? inCat(a.rfqCat).filter(hit) : [], rest = q || !a.rfqCat ? all().filter(v => v.cat !== a.rfqCat && hit(v)).sort((x, y) => (y.po || 0) - (x.po || 0)) : [];
-      res = mine.concat(rest).filter(v => !(a.rfqTo || []).includes(v.name)).slice(0, 60); close(); if (!res.length) return; hi = Math.min(hi, res.length - 1);
-      dd = h('<div class="is-dd vd-dd">' + res.map((v, k) => (k === mine.length && mine.length && rest.length ? '<div class="vd-sep">Other categories</div>' : "") + '<button type="button" class="vd-o' + (k === hi ? " on" : "") + '" data-k="' + k + '"><b>' + esc(v.name) + '</b><span>' + esc(v.ordered) + '</span><small>' + esc(v.cat !== a.rfqCat ? v.cat : (v.po || 0) + " PO" + (v.po === 1 ? "" : "s")) + '</small></button>').join("") + '</div>');
+      const on = (a.rfqTo || []).map(byName).filter(Boolean).filter(hit); res = on.concat(mine.concat(rest).filter(v => !(a.rfqTo || []).includes(v.name))).slice(0, 60); close(); if (!res.length) return; hi = Math.min(hi, res.length - 1);
+      const picked = v => (a.rfqTo || []).includes(v.name), nOn = on.length, nMine = mine.filter(v => !picked(v)).length;
+      dd = h('<div class="is-dd vd-dd">' + res.map((v, k) => (k === 0 && nOn ? '<div class="vd-sep">On the RFQ <span class="dim">click to take off</span></div>' : "") + (k === nOn && nOn && res.length > nOn ? '<div class="vd-sep">' + (nMine ? "Add" : "Other categories") + '</div>' : "") + (k === nOn + nMine && nMine && rest.length ? '<div class="vd-sep">Other categories</div>' : "")
+        + '<button type="button" class="vd-o' + (k === hi ? " on" : "") + (picked(v) ? " vd-on" : "") + '" data-k="' + k + '"><b>' + (picked(v) ? "✓ " : "") + esc(v.name) + '</b><span>' + esc(v.ordered) + '</span><small>' + (picked(v) ? '<span class="vd-det' + (v.contact || v.email || v.phone ? "" : " bad") + '" data-vd="' + esc(v.name) + '">' + esc(v.contact || v.email || v.phone || "Add contact details") + '</span>' : esc(v.cat !== a.rfqCat ? v.cat : (v.po || 0) + " PO" + (v.po === 1 ? "" : "s"))) + '</small></button>').join("") + '</div>');
       document.body.appendChild(dd); const rc = i.getBoundingClientRect(); dd.style.left = Math.max(8, Math.min(rc.left, innerWidth - 620)) + "px"; dd.style.width = Math.max(rc.width, 600) + "px";
       const below = innerHeight - rc.bottom > 280; dd.style.top = (below ? rc.bottom + 3 : Math.max(8, rc.top - 283)) + "px";
-      $$(".vd-o", dd).forEach(o => o.onmousedown = e => { e.preventDefault(); pick(res[+o.dataset.k]); }); };
-    const pick = v => { close(); i.value = ""; set(() => { a.rfqTo = (a.rfqTo || []).concat(v.name); if (!a.rfqCat){ a.rfqCat = v.cat; a.rfqCatAI = false; } }, "Added " + v.name + " to the RFQ of " + Store.actId(a)); };
-    i.onfocus = () => draw(); i.oninput = () => { hi = 0; draw(); }; i.onblur = () => setTimeout(close, 120);
+      $$(".vd-o", dd).forEach(o => o.onmousedown = e => { e.preventDefault(); const d = e.target.closest("[data-vd]"); if (d){ close(); i.blur(); details(d.dataset.vd, i); return; } pick(res[+o.dataset.k]); }); };
+    const pick = v => { close(); i.value = ""; if ((a.rfqTo || []).includes(v.name)){ set(() => { a.rfqTo = a.rfqTo.filter(n => n !== v.name); }, "Took " + v.name + " off the RFQ of " + Store.actId(a)); return; }
+      set(() => { a.rfqTo = (a.rfqTo || []).concat(v.name); if (!a.rfqCat){ a.rfqCat = v.cat; a.rfqCatAI = false; } }, "Added " + v.name + " to the RFQ of " + Store.actId(a)); };
+    /* (the box shows the names picked; clicking into it is for searching, and leaving it puts the names back) */
+    i.onfocus = () => { i.value = ""; draw(); }; i.oninput = () => { hi = 0; draw(); }; i.onblur = () => setTimeout(() => { close(); if (document.activeElement !== i) i.value = (a.rfqTo || []).join(", "); }, 120);
     i.onkeydown = e => { if (dd && (e.key === "ArrowDown" || e.key === "ArrowUp")){ e.preventDefault(); hi = (hi + (e.key === "ArrowDown" ? 1 : -1) + res.length) % res.length; $$(".vd-o", dd).forEach((o, k) => o.classList.toggle("on", k === hi)); const o = $$(".vd-o", dd)[hi]; o && o.scrollIntoView({ block: "nearest" }); }
       else if (e.key === "Enter"){ e.preventDefault(); if (dd && res[hi]) pick(res[hi]); } else if (e.key === "Escape"){ e.stopPropagation(); close(); i.blur(); } };
     }

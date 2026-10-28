@@ -34,16 +34,25 @@ const Parts = (() => {
       + '<button type="button" class="dl dl-xl" data-k="xls" title="Export this ' + NAME[kind] + ' to Excel">' + fileIco("XLSX") + '</button>'
       + '<button type="button" class="dl dl-pdf" data-k="pdf" title="' + (kind === "mto" ? "Export the RFQ as a PDF" : "Export the spares list as a PDF") + '">' + fileIco(kind === "mto" ? "RFQ" : "PDF") + '</button></div>'
       /* the MTO's top: who the RFQ goes to on the left, the quotes and the PO on the right */
-      + (kind === "mto" ? '<div class="pt-top"><div class="pt-l">' + Vendors.box(a, ro) + '</div><div class="pt-r">' + docs(a, "quotes", ro) + docs(a, "pos", ro) + '<div class="pt-dk"><div class="pt-dh">ETA' + tipI("When the whole quote is expected on site. It shows as the Parts ETA on the Actions list.") + '</div><input class="in" type="date" data-eta="1" value="' + esc(/^\d{4}-\d\d-\d\d$/.test(Store.eta(a) || "") ? Store.eta(a) : "") + '"' + (ro ? " readonly" : "") + ' aria-label="ETA of the whole quote"></div></div></div>' : "")
+      /* the MTO's top: category, supplier and ETA on the left (each label on the line with its box), the quote and the PO on the right, as tall as the left */
+      + (kind === "mto" ? '<div class="pt-top"><div class="pt-l">' + Vendors.box(a, ro, '<label class="pt-lab" for="ptEta">ETA' + tipI("When the whole quote is expected on site. It shows as the Parts ETA on the Actions list.") + '</label><input class="in" id="ptEta" type="date" data-eta="1" value="' + esc(/^\d{4}-\d\d-\d\d$/.test(Store.eta(a) || "") ? Store.eta(a) : "") + '"' + (ro ? " readonly" : "") + ' aria-label="ETA of the whole quote">') + '</div><div class="pt-r">' + docs(a, "quotes", ro) + docs(a, "pos", ro) + '</div></div>' : "")
       + (kind === "mto" ? Mto.table(a, ro) : '<div class="mt-wrap"><table class="tbl pt-tbl"><thead><tr><th class="pt-no">Item</th>' + cols.map(([k, n]) => '<th class="pt-' + k + '">' + esc(n) + '</th>').join("") + (kind === "spares" ? '<th class="pt-sec">Secured</th>' : "") + '<th class="pt-act"></th></tr></thead><tbody>'
       + items.map(row).join("") + Array.from({ length: blanks }, (_, k) => blank(k)).join("") + '</tbody></table></div>')
       + '<div class="dim pt-foot">' + (kind === "mto" && (a.spares || []).length ? a.spares.length + " more from spares, not on the RFQ" : "") + (kind === "spares" && items.length ? items.filter(x => x.secured).length + " of " + items.length + " secured" : "") + '</div>'; }
   /* the quotes or the PO: each file on a line, then a dashed bar to upload another (or drop one on it) */
   const DOC = { quotes: ["Quote", "rfq"], pos: ["PO", "po"] };
-  const docs = (a, k, ro) => { const fs = a[k] || [];
-    return '<div class="pt-dk" data-dk="' + k + '"><div class="pt-dh">' + DOC[k][0] + (fs.length ? ' <span class="dim">' + fs.length + '</span>' : "") + '</div>'
-      + fs.slice().reverse().map(f => '<div class="pt-file"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : "FILE") + '</span><button type="button" class="link" data-q="' + f.h + '" data-qk="' + k + '">' + esc(f.name) + '</button><span class="dim">' + esc(fmtDate(f.added)) + ' · ' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" data-qx="' + f.h + '" data-qk="' + k + '" title="Remove">✕</button>') + '</div>').join("")
-      + (ro ? (fs.length ? "" : '<div class="dim">None yet.</div>') : '<button type="button" class="att-add" data-up="' + k + '" title="Upload the ' + DOC[k][0] + ', or drop it here. It ticks ' + (k === "pos" ? "PO sent" : "RFQ sent") + '">+ Upload ' + DOC[k][0].replace("Quote", "quote") + '</button>') + '</div>'; };
+  /* the quote or the PO: one box each, no heading. Empty, it is the upload (click, or drop a file on it); with a file in, it shows the latest,
+     and a new one dropped or picked goes on top as the next revision. The (i) opens the earlier ones */
+  const docs = (a, k, ro) => { const fs = a[k] || [], f = fs[fs.length - 1], ic = n => '<span class="att-ic">' + (/pdf$/i.test(n) ? "PDF" : /xlsx?$|csv$/i.test(n) ? "XLS" : "FILE") + '</span>';
+    if (!f) return ro ? '<div class="pt-dk pt-up pt-none dim" data-dk="' + k + '">No ' + DOC[k][0].toLowerCase() + '</div>' : '<button type="button" class="pt-dk pt-up att-add" data-dk="' + k + '" data-up="' + k + '" title="Upload the ' + DOC[k][0] + ', or drop it here. It ticks ' + (k === "pos" ? "PO sent" : "RFQ sent") + '">' + upIco("") + 'Upload ' + DOC[k][0].replace("Quote", "quote") + '</button>';
+    return '<div class="pt-dk pt-up pt-has" data-dk="' + k + '"' + (ro ? "" : ' data-up="' + k + '" title="Click here or drop a file to upload a new revision"') + '>' + ic(f.name) + '<button type="button" class="link pt-fn" data-q="' + f.h + '" data-qk="' + k + '" title="' + esc(f.name + ", " + fmtDate(f.added) + ", " + fmtSize(f.size || 0)) + '">' + esc(f.name) + '</button>'
+      + (fs.length > 1 ? '<button type="button" class="pt-rev" data-rev="' + k + '" title="Earlier ' + (k === "pos" ? "POs" : "quotes") + ' (' + (fs.length - 1) + ')" aria-label="Earlier revisions">' + INFO_I + '</button>' : "")
+      + (ro ? "" : '<button type="button" class="ic-b sm" data-qx="' + f.h + '" data-qk="' + k + '" title="Delete this ' + DOC[k][0] + '" aria-label="Delete">' + BIN_I + '</button>') + '</div>'; };
+  /* the earlier revisions of a quote or PO, in a callout like an MTO row's (i): newest first, each opens; pointing shows, clicking pins */
+  function revs(a, k, anchor, ro){ Fields.closePop(); const fs = (a[k] || []).slice(0, -1).reverse(); if (!fs.length) return;
+    const p = document.createElement("div"); p.className = "pop mt-pop pt-revs";
+    p.innerHTML = '<div class="mt-ph">Earlier ' + (k === "pos" ? "POs" : "quotes") + '</div>' + fs.map(f => '<div class="pt-rv"><button type="button" class="link" data-h="' + f.h + '">' + esc(f.name) + '</button><span class="dim">' + esc(fmtDate(f.added)) + '</span></div>').join("");
+    document.body.appendChild(p); Fields.place(p, anchor); $$("[data-h]", p).forEach(b => b.onclick = () => Media.openFile(a, (a[k] || []).find(f => f.h === b.dataset.h))); }
   const DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>';
 
   function wire(el, a, kind, ro){ const key = "a:" + a._p, items = list(a, kind); if (kind === "mto"){ Vendors.wire(el, a, ro); Mto.wire(el, a, ro); }
@@ -59,8 +68,10 @@ const Parts = (() => {
       note("Moved to " + NAME[OTHER[kind]] + " (Ctrl+Z to undo)"); Store.log("Moved a part of " + Store.actId(a) + " to " + NAME[OTHER[kind]]); });
     $$(".pt-x", el).forEach(b => b.onclick = () => { const id = b.closest("tr").dataset.id; Store.mutate(key, () => { const i = items.findIndex(x => x.id === id); items.splice(i, 1); Store.touch(a); }); });
     $$("[data-q]", el).forEach(b => b.onclick = () => Media.openFile(a, (a[b.dataset.qk] || []).find(f => f.h === b.dataset.q)));
-    $$("[data-qx]", el).forEach(b => b.onclick = () => Store.mutate(key, () => { const k = b.dataset.qk; a[k] = (a[k] || []).filter(f => f.h !== b.dataset.qx); Store.touch(a); }));
-    $$("[data-up]", el).forEach(b => b.onclick = () => pickFile("", true, fs => quotes(a, fs, b.dataset.up)));
+    $$("[data-qx]", el).forEach(b => b.onclick = async e => { e.stopPropagation(); const k = b.dataset.qk, f = (a[k] || []).find(x => x.h === b.dataset.qx); if (!f || !await confirmBox("Delete " + f.name + "?" + ((a[k] || []).length > 1 ? " The revision before it shows instead." : ""), "Delete", true)) return;
+      Store.mutate(key, () => { a[k] = (a[k] || []).filter(x => x.h !== f.h); Store.touch(a); }); Store.log("Deleted " + f.name + " from " + Store.actId(a)); });
+    $$("[data-up]", el).forEach(b => b.onclick = e => { if (e.target.closest("button") && e.target.closest("button") !== b) return; pickFile("", true, fs => quotes(a, fs, b.dataset.up)); });
+    $$("[data-rev]", el).forEach(b => b.onclick = e => { e.stopPropagation(); revs(a, b.dataset.rev, b, ro); });
     $$("[data-k]", el).forEach(b => b.onclick = () => { const k = b.dataset.k;
       if (k === "xls") excel(a, kind); else if (k === "pdf") pdf(a, kind); else if (k === "gem") gemini(a, kind); else if (k === "cut") Mto.cutList(a); });
     if (!ro) $$(".pt-dk", el).forEach(qb => { qb.ondragover = e => { if ([...e.dataTransfer.types].includes("Files")){ e.preventDefault(); qb.classList.add("drop"); } };

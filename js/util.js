@@ -71,6 +71,7 @@ function dragResize(handle, get, set, sign){ sign = sign || -1; handle.addEventL
 /* an (i) button that shows a how-to note in a small callout, so guidance doesn't take up room on screen */
 /* (a span, not a button, so a label around it doesn't pass its clicks on to it) */
 /* the (i) symbol everywhere: a thin outlined circle with a plain upright i (its colour comes from the button) */
+const BIN_I = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>';
 const INFO_I = '<svg class="ii" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 11v6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="7.6" r="1.25" fill="currentColor"/></svg>';
 const tipI = (text, label) => '<span class="tip-i" role="button" tabindex="0" data-tip="' + esc(text) + '" aria-label="' + esc(label || "More information") + '" title="' + esc(label || "More information") + '">' + INFO_I + '</span>';
 (() => { let cur = null;
