@@ -1275,3 +1275,5 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .pt-has .att-ic{flex:none}
 .pt-g .in,.pt-g .lk-sel,.pt-g .lk-dt{font-size:var(--fb)}
 .mt-draw rect.gr,.mt-key i.gr{fill:#bfe6bf;background:#bfe6bf;stroke:#2e7d32;stroke-width:1}
+/* the MTO and Spares bar (with AI, XLS and RFQ) stays at the top while the list scrolls */
+.av-subr{position:sticky;top:-14px;z-index:6;background:var(--panel);padding:14px 0 6px;margin:-14px 0 4px}
