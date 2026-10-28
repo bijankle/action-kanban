@@ -256,9 +256,9 @@ const Mto = (() => {
       ph += '<tr data-id="' + it.id + '" class="mt-row' + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res));
       if (isSpec(it)){ const R = specRes(it);
         ph += '<td>' + box(it, "cl", "Class") + '</td><td class="mt-szd">' + box(it, "dn", "Size") + (PipeSpec.reducing(it.it) ? box(it, "dn2", "x small") : "") + '</td><td>' + box(it, "it", "Item") + '</td>'
-          + '<td>' + (R.bolt && R.bolt !== "nut" && R.bolt !== "kit" ? '<div class="mt-dw"><input class="in pt-in mt-bl" data-r="' + it.id + '" data-c="bl" inputmode="numeric" value="' + esc(it.bl || "") + '" placeholder="' + esc(R.L || "length") + '"' + (ro ? " readonly" : "") + ' title="Length, mm: worked out flange on flange with the gasket. Change it for a valve or spacer between the flanges"><span class="mt-auto mt-det" data-det="' + it.id + '"> mm, ' + esc([R.auto, spShort(R.mat || "")].filter(Boolean).join(", ")) + '</span></div>'
-            : (R.vs || []).length ? '<div class="mt-dw">' + box(it, "vt", "Pick one") + (it.vt && !R.need ? '<span class="mt-auto mt-det" data-det="' + it.id + '">' + esc(specDetail(it).replace(spShort(it.vt), "").replace(/\s+/g, " ").trim()) + '</span>' : "") + '</div>'
-            : '<div class="mt-dw"><span class="mt-auto mt-det" data-det="' + it.id + '">' + esc(R.need ? R.auto || "" : specDetail(it)) + '</span></div>') + '</td>'; }
+          + '<td>' + (R.bolt && R.bolt !== "nut" && R.bolt !== "kit" ? '<div class="mt-dw"><input class="in pt-in mt-bl" data-r="' + it.id + '" data-c="bl" inputmode="numeric" value="' + esc(it.bl || "") + '" placeholder="' + esc(R.L || "length") + '"' + (ro ? " readonly" : "") + ' title="Length, mm: worked out flange on flange with the gasket. Change it for a valve or spacer between the flanges"><span class="mt-auto mt-det" data-fit="1" data-det="' + it.id + '"> mm, ' + esc(R.auto || "") + '</span></div>'
+            : (R.vs || []).length ? '<div class="mt-dw">' + box(it, "vt", "Pick one") + '</div>'
+            : '<div class="mt-dw"><span class="mt-auto mt-det" data-fit="1" data-det="' + it.id + '">' + esc(R.auto || "") + '</span></div>') + '</td>'; }
       else if (T || it.cl === "N/A" && !it.cat && it.desc == null){
         ph += '<td>' + box(it, "cl", "Class", "", "N/A") + '</td><td>' + box(it, "z", "Size") + '</td><td>' + box(it, "t", "Item") + '</td>'
           + '<td class="mt-rms">' + (T ? (ratings(it).length ? box(it, "r", "Sch") : "") + box(it, "m", "Material") + box(it, "s", "Std", ' data-opt="1"') : "") + '</td>'; }
@@ -443,7 +443,7 @@ const Mto = (() => {
       if (S && S.note) facts.push(["Note", S.note]); }
     const p = document.createElement("div"); p.className = "pop mt-pop";   // (in full first, then the sizes, weight and how the total was worked out)
     const F = inFull(it);
-    p.innerHTML = '<b>' + esc(desc(it) || "Item") + '</b><p class="mt-full">' + esc(F.line) + '</p><dl class="mt-fl">' + F.rows.map(([t, v]) => '<dt>' + esc(t) + '</dt><dd>' + esc(v) + '</dd>').join("") + '</dl>' + (facts.length ? '<dl>' + facts.map(([t, v]) => '<dt>' + esc(t) + '</dt><dd>' + esc(v) + '</dd>').join("") + '</dl>' : "")
+    p.innerHTML = '<div class="mt-ph">As printed on the MTO</div><b>' + esc(desc(it) || "Item") + '</b>' + (isSpec(it) ? "" : '<p class="mt-full">' + esc(F.line) + '</p>') + '<dl class="mt-fl">' + F.rows.map(([t, v]) => '<dt>' + esc(t) + '</dt><dd>' + esc(v) + '</dd>').join("") + '</dl>' + (facts.length ? '<dl>' + facts.map(([t, v]) => '<dt>' + esc(t) + '</dt><dd>' + esc(v) + '</dd>').join("") + '</dl>' : "")
       + (res ? '<div class="lbl">How the total was worked out</div><p>' + esc(explain(it, res)) + '</p>'
         : T && (T.k === "len" || T.k === "plate") ? '<div class="lbl">How the total is worked out</div><p>' + esc(!it.L ? "Pick a stock " + (T.k === "plate" ? "sheet size" : "length") + " first." : "Add the pieces the job needs (▸). They're packed onto the fewest " + (T.k === "plate" ? "sheets" : "stock lengths, keeping offcuts of " + rules().keep + " mm or more,") + " with a " + rules().kerf + " mm saw cut between pieces, and Qty becomes the total.") + '</p>' : "")
       + (T && !z && it.z ? '<p class="bad">' + esc(it.z) + " isn't in the library for " + esc(S.n) + ". Check the size.</p>" : "")
