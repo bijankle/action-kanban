@@ -152,7 +152,8 @@ const Mto = (() => {
   const COLS = [["t", "Item"], ["z", "Size"], ["r", "Rating"], ["m", "Material"], ["s", "Std"], ["spec", "Class"], ["part", "Part"], ["qty", "Qty"], ["notes", "Notes"], ["x", ""]];
   const REQ = new Set(["t", "z", "r", "m", "qty"]);
   /* what a row still needs picked: its item, size, schedule or class, material and quantity (for one typed in: what it is and how many) */
-  function missing(it){ if (isSpec(it)){ const R = specRes(it), out = R.need ? [R.need] : []; if (!String(it.qty || "").trim()) out.push("quantity"); return out; }
+  function missing(it){ if (isSpec(it) && !PipeSpec.ready()) return [];   // (until the spec has loaded, nothing is known to be missing: no yellow while it loads)
+    if (isSpec(it)){ const R = specRes(it), out = R.need ? [R.need] : []; if (!String(it.qty || "").trim()) out.push("quantity"); return out; }
     const T = type(it), out = []; if (it.cl === "N/A" && !T && it.desc == null){ if (!it.z) out.push("size"); out.push("item"); if (!String(it.qty || "").trim()) out.push("quantity"); return out; } if (!T){ if (!String(it.desc || "").trim()) out.push("item"); }
     else { if (PIPEK.has(T.id) && (!it.mk || !it.end)) out.push("how it's made and its ends"); if (!it.z) out.push("size"); if (ratings(it).length && !it.r) out.push(T.rl ? T.rl.toLowerCase() : "rating"); if ((std(it) || {}).mats && std(it).mats.length && !it.m) out.push("material"); if (it.sx) out.push("standard"); }
     if (!String(it.qty || "").trim()) out.push("quantity"); return out; }

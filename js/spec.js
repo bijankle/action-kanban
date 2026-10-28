@@ -8,7 +8,7 @@ const PipeSpec = (() => {
   let D = null, loadP = null;
   const src = () => (lsGet("adEquipSrc", "") || "https://raw.githubusercontent.com/bijankle/ProjectLibrary/HEAD/search-data.json").replace(/search-data\.json(\?.*)?$/, "spec/index.json");
   function load(force){ if (loadP && !force) return loadP;
-    loadP = IDB.get("pspec").then(c => { if (c && c.d){ D = c.d; if (!force && now() - c.at < 864e5) return D; }
+    loadP = IDB.get("pspec").then(c => { if (c && c.d){ D = c.d; App.render(); if (!force && now() - c.at < 864e5) return D; }   // (drawn again as soon as the copy on this computer is in)
       return fetch(src(), { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(d => { if (d && d.pipe){ D = d; IDB.set("pspec", { at: now(), d }); App.render(); } return D; }).catch(() => D); });
     return loadP; }
   const clean = s => String(s || "").replace(/\^\d+/g, "").replace(/\s+/g, " ").trim();
