@@ -116,10 +116,15 @@ const Mto = (() => {
   const spShort = t => { let o = PipeSpec.clean(t); SPW.forEach(([re, w]) => o = o.replace(re, w)); return o.replace(/\s*,\s*/g, " ").replace(/\s+/g, " ").trim().toUpperCase(); };
   function specShort(it){ const R = specRes(it), L = n => PipeSpec.lab(it.cl, n), dn = it.dn ? L(it.dn) + (it.dn2 && PipeSpec.reducing(it.it) ? (it.dn2 === it.dn ? " EQUAL" : " X " + L(it.dn2)) : "") : "";
     if (R.bolt || R.g) return spShort(R.line) + (R.chk ? " (CHECK)" : "");
-    if (R.v) return [spShort(PipeSpec.clean((R.rows.find(x => x[0] === "Type") || [, ""])[1]).split(" - ")[0]).replace(/\bBALL VALVE\b/, "BV").replace(/\bGATE VALVE\b/, "GV").replace(/\bGLOBE VALVE\b/, "GLV").replace(/\bBUTTERFLY VALVE\b/, "BFV").replace(/\bCHECK VALVE\b/, "CV"), dn, spShort(R.auto), R.v, it.cl].filter(Boolean).join(" ");
+    if (R.v){ const V = k => (R.rows.find(x => x[0] === k) || [, ""])[1], typ = spShort(PipeSpec.clean(V("Type")).replace(/\s+-\s+/, ", ")).replace(/\bBALL VALVE\b/, "BV").replace(/\bGATE VALVE\b/, "GV").replace(/\bGLOBE VALVE\b/, "GLV").replace(/\bBUTTERFLY VALVE\b/, "BFV").replace(/\bCHECK VALVE\b/, "CV").replace(/\bFULL BORE\b/, "FB").replace(/\b3 PIECE BODY\b/, "3PC");
+      return [typ, dn, spShort(R.auto), V("Body") && "BODY " + spShort(V("Body")), V("Seats") && "SEATS " + spShort(V("Seats")), spShort(V("Made by")), "TO DATASHEET " + R.v, it.cl].filter(Boolean).join(" "); }
     if (R.g) return ["GK", dn, R.g, it.cl].filter(Boolean).join(" ");
     if (!R.c) return [it.cl, dn, it.it && itName(it.it)].filter(Boolean).join(" ").toUpperCase();
     const c = R.c, seen = new Set(); return [spShort(c.d), dn, spShort(c.type), spShort(c.ends), spShort(c.mat), spShort(c.dim)].concat(R.extra || [], [it.cl]).filter(x => x && !seen.has(x) && seen.add(x)).join(" "); }
+  /* a spec row's details in the table: everything its short form says after the item and size (type, ends, material, standard,
+     lining, finish), so what shows on the MTO is what the supplier is asked for */
+  function specDetail(it){ const s = specShort(it), L = n => PipeSpec.lab(it.cl, n), z = (L(it.dn) + (it.dn2 && PipeSpec.reducing(it.it) ? (it.dn2 === it.dn ? " EQUAL" : " X " + L(it.dn2)) : "")).toUpperCase(), i = s.indexOf(z);
+    return (i >= 0 ? s.slice(i + z.length) : s).replace(/^\s*GK\s+/, "").replace(new RegExp("\\s*" + String(it.cl).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"), "").trim(); }
   /* the short form, used on the MTO, the RFQ and the exports: item, size, rating, material, standard, stock length */
   function desc(it){ if (isSpec(it)) return specShort(it);
     const T = type(it), S = std(it); if (!T) return it.desc || "";
@@ -245,14 +250,15 @@ const Mto = (() => {
     const toggle = (it, res) => { const T = type(it), on = open.has(it.id); return T && (T.k === "len" || T.k === "plate") ? '<button type="button" class="mt-tg' + (on ? " on" : "") + '" data-tg="' + it.id + '" title="' + (on ? "Hide" : "Show") + ' the pieces to cut">' + (on ? "▾" : "▸") + (cuts(it).length ? '<b>' + cuts(it).reduce((t, c) => t + Math.max(1, Math.round(+c.n || 1)), 0) + '</b>' : "") + '</button>' : ""; };
     const sub = (it, res, cols) => { const T = type(it); return open.has(it.id) && T && (T.k === "len" || T.k === "plate") ? '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="' + (cols + 1) + '"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>' : ""; };
     /* ---- piping: Class, Size, Item, Ends / type, Qty ---- */
-    const PC = [["cl", "Class"], ["sz", "Size"], ["t", "Item"], ["et", "Ends / type"], ["qty", "Qty"], ["sq", "Spare"], ["tot", "Total"], ["notes", "Notes"], ["x", ""]];
+    const PC = [["cl", "Class"], ["sz", "Size"], ["t", "Item"], ["et", "Details"], ["qty", "Qty"], ["sq", "Spare"], ["tot", "Total"], ["notes", "Notes"], ["x", ""]];
     let last = null, ph = "";
     const pipeRow = it => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it); let ph = "";
       ph += '<tr data-id="' + it.id + '" class="mt-row' + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res));
       if (isSpec(it)){ const R = specRes(it);
         ph += '<td>' + box(it, "cl", "Class") + '</td><td class="mt-szd">' + box(it, "dn", "Size") + (PipeSpec.reducing(it.it) ? box(it, "dn2", "x small") : "") + '</td><td>' + box(it, "it", "Item") + '</td>'
-          + '<td>' + (R.bolt && R.bolt !== "nut" ? '<input class="in pt-in mt-bl" data-r="' + it.id + '" data-c="bl" inputmode="numeric" value="' + esc(it.bl || "") + '" placeholder="' + esc(R.L || "length") + '"' + (ro ? " readonly" : "") + ' title="Length, mm: worked out flange on flange with the gasket. Change it for a valve or spacer between the flanges"><span class="mt-auto"> mm, ' + esc(R.auto || "") + '</span>'
-            : (R.vs || []).length ? box(it, "vt", "Pick one") : '<span class="mt-auto" title="From the spec">' + esc(R.auto || "") + '</span>') + '</td>'; }
+          + '<td>' + (R.bolt && R.bolt !== "nut" ? '<div class="mt-dw"><input class="in pt-in mt-bl" data-r="' + it.id + '" data-c="bl" inputmode="numeric" value="' + esc(it.bl || "") + '" placeholder="' + esc(R.L || "length") + '"' + (ro ? " readonly" : "") + ' title="Length, mm: worked out flange on flange with the gasket. Change it for a valve or spacer between the flanges"><span class="mt-auto mt-det" data-det="' + it.id + '"> mm, ' + esc([R.auto, spShort(R.mat || "")].filter(Boolean).join(", ")) + '</span></div>'
+            : (R.vs || []).length ? '<div class="mt-dw">' + box(it, "vt", "Pick one") + (it.vt && !R.need ? '<span class="mt-auto mt-det" data-det="' + it.id + '">' + esc(specDetail(it).replace(spShort(it.vt), "").replace(/\s+/g, " ").trim()) + '</span>' : "") + '</div>'
+            : '<div class="mt-dw"><span class="mt-auto mt-det" data-det="' + it.id + '">' + esc(R.need ? R.auto || "" : specDetail(it)) + '</span></div>') + '</td>'; }
       else if (T || it.cl === "N/A" && !it.cat && it.desc == null){
         ph += '<td>' + box(it, "cl", "Class", "", "N/A") + '</td><td>' + box(it, "z", "Size") + '</td><td>' + box(it, "t", "Item") + '</td>'
           + '<td class="mt-rms">' + (T ? (ratings(it).length ? box(it, "r", "Sch") : "") + box(it, "m", "Material") + box(it, "s", "Std", ' data-opt="1"') : "") + '</td>'; }
@@ -408,6 +414,9 @@ const Mto = (() => {
       i.onchange = () => { const v = i.value.trim(), it = find(r); if (!it || String(it[c] == null ? "" : it[c]) === v) return; if (c === "spare"){ Store.mutate(key, () => { it.spare = Math.max(0, Math.round(+v || 0)) || undefined; recalc(it); Store.touch(a); }); return; }
         Store.mutate(key, () => { it[c] = v; if (it.auto && c === "qty") it.qman = v !== ""; if (c === "sq") it.sqm = v !== ""; recalc(it); bolts(); fillSpare(it); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "qty" && !missing(it).length) focusNext = doneNext(it); };
       i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }; });
+    /* details too long for the column end in more…, which opens the item in full */
+    requestAnimationFrame(() => requestAnimationFrame(() => $$(".mt-det", el).forEach(d => { if (d.scrollWidth <= d.clientWidth + 1 || d.nextElementSibling) return;
+      const m = h('<button type="button" class="link mt-more2">more…</button>'); d.after(m); d.parentElement.classList.add("mt-cut"); m.onclick = e => { e.stopPropagation(); info(a, find(d.dataset.det), m, ro); }; })));
     /* the total follows the spare as it's typed */
     $$(".mt-sq", el).forEach(i => i.addEventListener("input", () => { i.classList.remove("mt-sqa"); const it = find(i.dataset.r), td = i.closest("td").nextElementSibling; if (!it || !td || i.dataset.c !== "sq") return; const t = ord(Object.assign({}, it, { sq: i.value })); td.innerHTML = esc(t) + (t ? ' <span class="dim">' + esc(uShort(it.unit) || "EA") + '</span>' : ""); }));
     /* after a pick: the next box still to fill in on that row */
@@ -482,7 +491,8 @@ const Mto = (() => {
     catch (e){ console.error(e); alert("Couldn't make the cutting list: " + e.message); } }
 
   /* the short form for rows saved before it (in memory only: they save that way at their next change) */
-  const seen = new WeakSet(); function shorten(list){ (list || []).forEach(it => { if (!it || seen.has(it)) return; seen.add(it); if (type(it)) it.desc = desc(it); }); }
+  /* every row keeps its short form in desc, which the exports, the RFQ and the search read (a spec row's needs the spec loaded; until it is, the last one stays) */
+  const seen = new WeakSet(); function shorten(list){ (list || []).forEach(it => { if (!it) return; if (isSpec(it)){ if (PipeSpec.ready()){ const d = desc(it); if (d) it.desc = d; } return; } if (seen.has(it)) return; seen.add(it); if (type(it)) it.desc = desc(it); }); }
   /* a line from the AI (item, size, rating, material, standard, qty, unit, notes) as a row: matched to the library where
      it can be, the rest left to pick (the row shows its yellow dot); an item not in the library is typed in as it came */
   const norm = x => String(x || "").toUpperCase().replace(/\s+/g, " ").replace(/[×]/g, "X").trim();

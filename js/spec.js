@@ -117,6 +117,8 @@ const PipeSpec = (() => {
     if (/zinc\s*-?\s*nick/i.test(M) && !pipe && steel && !/zinc/i.test(all)) out.push("ZN-NI COATED");
     /* PE pipe colour, from the class's material line */
     if (pipe && /white outer\s*\/\s*black inner/i.test(M)) out.push("WHITE OUTER BLACK INNER"); else if (pipe && /black pipe/i.test(M)) out.push("BLACK");
+    /* a manufacturer's standard part: the system it belongs to, from the class (Viega Megapress, Vic-Press, Swagelok), or "manufacturer's standard" tells a supplier nothing */
+    const brand = (String(c0.title || "").match(/^(Viega Megapress|Vic-Press|Victaulic|Swagelok)/i) || [])[1]; if (brand && /manufacturer|model|style/i.test([c.mat, c.dim, c.type].join(" "))) out.push(brand.toUpperCase());
     const L = lining(cl); if (L && LINED.test(d) && !/blind/i.test(d)) out.push(L.short); return out; }
   /* ---------- studs, bolts and nuts, from the flange table ----------
      AS 2129 bolting by table and size: [bolts per flange, bolt diameter (M), plate flange thickness mm]. From supplier data sheets of
@@ -149,7 +151,7 @@ const PipeSpec = (() => {
     const chk = [J.chk, comp ? "" : "the bolting material (the spec doesn't list bolting for " + r.cl + ")", L || kind === "nut" ? "" : "the length"].filter(Boolean).join(", ");
     const size = J.d ? "M" + J.d + (kind === "nut" ? "" : " x " + (L || "?") + (r.bl ? "" : "")) : "";
     const NAME = { stud: "Stud bolt", bolt: "Machine bolt, hex head", nut: "Hex nut" };
-    return { bolt: kind, J, L, chk, unit: "ea", auto: size + (J.n ? ", " + (kind === "nut" ? 2 * J.n : J.n) + " per joint" : ""),
+    return { bolt: kind, mat: what, J, L, chk, unit: "ea", auto: size + (J.n ? ", " + (kind === "nut" ? 2 * J.n : J.n) + " per joint" : ""),
       line: NAME[kind] + " " + size + ", " + what + (J.t ? ", for DN" + J.nd + " AS 2129 Table " + J.t + " flanges" : ""),
       rows: [["Item", NAME[kind]], ["Size", size || "not known: " + (J.chk || "")], ["Material", what], ["Per joint", J.n ? (kind === "nut" ? 2 * J.n + " nuts (2 per stud)" : J.n + " " + kind + "s") : ""], ["Flange", J.t ? "DN" + J.nd + ", AS 2129 Table " + J.t + (J.T ? ", " + J.T + " mm plate" : "") : ""],
         ["Length worked out", J.grip && kind !== "nut" ? (r.bl ? r.bl + " mm, set by hand (worked out: " + (kind === "stud" ? J.stud : J.bolt) + " mm)" : L + " mm: two flanges " + 2 * J.T + " mm, gasket " + J.g + " mm" + (J.faces ? ", rubber faces " + J.faces + " mm" : "") + ", " + (kind === "stud" ? "two nuts" : "one nut") + " and 3 threads clear, rounded up") : ""],

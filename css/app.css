@@ -1253,3 +1253,7 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .mt-tbl td.pt-no{white-space:nowrap;overflow:visible;text-overflow:clip}
 /* a spare the app worked out (File, Parameters, MTO spares): a faint blue fill until you type over it */
 .mt-tbl .mt-sqa{background:color-mix(in srgb,#2563eb 13%,var(--panel))}html.dark .mt-tbl .mt-sqa{background:color-mix(in srgb,#3b82f6 22%,var(--panel))}
+/* MTO details: the spec's words after the item and size, ending in more… when cut off */
+.mt-tbl .mt-dw{display:flex;align-items:center;gap:4px;min-width:0;max-width:100%}.mt-tbl .mt-dw .mt-pk{flex:0 1 auto;width:auto!important;field-sizing:content;min-width:60px}
+.mt-tbl .mt-det{min-width:0;flex:1 1 auto}.mt-more2{flex:none;font-size:12px;font-weight:600}
+.mt-tbl .mt-dw .mt-pk{flex:none}.mt-tbl .mt-dw .mt-bl{flex:none;width:56px!important}

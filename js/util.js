@@ -311,7 +311,7 @@ function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts)
     rows.forEach(r => { const td = r.cells[i]; if (!td) return; const f = td.querySelector("input,select,textarea"), font = getComputedStyle(f || td).font;
       const t = f ? (f.tagName === "SELECT" ? (f.options[f.selectedIndex] || {}).text : f.value || f.placeholder) : td.textContent.trim(); const more = [...td.querySelectorAll("input:not([type=checkbox]):not([hidden])")].slice(1).reduce((t2, g) => t2 + textW(g.value || g.placeholder, getComputedStyle(g).font) + (opts.inPad || 36) + 2, 0);   // (two boxes in a cell, a reducing fitting's sizes: room for both)
       w = Math.max(w, textW(t, font) + (f ? (f.tagName === "SELECT" ? 48 : opts.inPad || 36) : 20) + more); });
-    return Math.min(opts.max || 480, Math.ceil(w + ((opts.extra || {})[tblKit.id(th, i)] || 0))); };   // (extra: room for something inside a column's boxes, like the MTO's (i))
+    return Math.min((opts.cap || {})[tblKit.id(th, i)] || opts.max || 480, Math.ceil(w + ((opts.extra || {})[tblKit.id(th, i)] || 0))); };   // (cap: a column that shows long text ends in more… past this width)   // (extra: room for something inside a column's boxes, like the MTO's (i))
   const id = tblKit.id;
   let cg = table.querySelector("colgroup"); if (!cg){ cg = document.createElement("colgroup"); table.insertBefore(cg, table.firstChild); } cg.innerHTML = ths.map(() => "<col>").join("");
   /* the width there is: the nearest box round the table that has a width (measured after the page has laid out) */
