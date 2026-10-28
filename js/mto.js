@@ -254,12 +254,16 @@ const Mto = (() => {
   const lenTot = (G, n) => !G.res ? (isPlate(G.first) ? "? SHT" : "? LG") : G.res.kind === "plate" ? n + " SHT (" + n1(n * G.res.sh.l * G.res.sh.w / 1e6) + " m²)" : n + " LG (" + n1(n * G.res.L / 1000) + " m)";
   /* everything cut from stock, as the cutting list draws it: each parent (its cuts, spare lengths) and each plate row with pieces */
   function packs(a){ const items = a.mto || [], gs = groupsOf(items), done = new Set(), out = [];
-    items.forEach(it => { if (!isCut(it)){ const res = pack(it); if (res) out.push({ it, res }); return; } const G = gs.get(skey(it)); if (done.has(G.key)) return; done.add(G.key);
-      if (G.res) out.push({ it: Object.assign({}, G.v, { spare: gSpare(a, G) }), res: G.res }); }); return out; }
+    items.forEach(it => { if (!isCut(it)){ const res = pack(it); if (res) out.push({ it, res, key: it.id }); return; } const G = gs.get(skey(it)); if (done.has(G.key)) return; done.add(G.key);
+      if (G.res) out.push({ it: Object.assign({}, G.v, { spare: gSpare(a, G) }), res: G.res, key: "g:" + G.key }); }); return out; }
   /* what goes to the supplier: each parent in place of its cuts (as stock lengths), everything else as it is */
-  function orderRows(a){ const items = a.mto || [], gs = groupsOf(items), done = new Set(), out = [];
-    items.forEach(it => { if (!isCut(it)) return out.push(it); const G = gs.get(skey(it)); if (done.has(G.key)) return; done.add(G.key); const n = G.n + gSpare(a, G);
-      out.push({ id: "g:" + G.key, desc: desc(G.first), part: G.first.part || "", qty: String(n), unit: isPlate(G.first) ? "sheets" : "lengths", notes: "", grp: G }); }); return out; }
+  /* withCuts (the RFQ): each parent's cuts listed under it, numbered 5.1, 5.2, so the supplier sees what the lengths are for; no is the item number */
+  function orderRows(a, withCuts){ const items = a.mto || [], gs = groupsOf(items), done = new Set(), out = []; let k = 0;
+    items.forEach(it => { if (!isCut(it)) return out.push(Object.assign({}, it, { no: String(++k) })); const G = gs.get(skey(it)); if (done.has(G.key)) return; done.add(G.key); const n = G.n + gSpare(a, G), no = String(++k);
+      out.push({ id: "g:" + G.key, no, desc: desc(G.first), part: G.first.part || "", qty: String(n), unit: isPlate(G.first) ? "sheets" : "lengths", notes: "", grp: G });
+      if (withCuts) G.rows.flatMap(piecesOf).forEach((c, i) => { const g = +c.g || 0;
+        out.push({ id: "c:" + G.key + i, no: no + "." + (i + 1), kid: true, desc: "    " + (isPlate(G.first) ? "Piece " + c.l + " x " + c.w + " mm" : "Cut " + c.l + " mm" + (g ? " (+" + g + " green)" : "")), part: "", qty: String(Math.max(1, Math.round(+c.n || 1))), unit: "ea", notes: c.mk || "" }); }); });
+    return out; }
   function table(a, ro){ const items = a.mto || (a.mto = []); shorten(items); if (!PipeSpec.ready()) PipeSpec.load();
     /* (shown and exported in the MTO's order: piping by heading, then the steel and the rest; in memory, it saves that way at the next change) */
     const sorted = order(items); if (sorted.some((it, i) => it !== items[i])) items.splice(0, items.length, ...sorted);
@@ -308,8 +312,8 @@ const Mto = (() => {
     let sh = ""; last = null;
     const steelRow = (it, kid) => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it);
       return '<tr data-id="' + it.id + '" class="mt-row' + (kid ? " mt-kid" : "") + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res), kid)
-        + '<td>' + box(it, "t", "Item") + '</td><td>' + box(it, "z", "Size") + '</td>'
-        + '<td class="mt-szd">' + (T ? box(it, "m", "Material") + box(it, "s", "Std", ' data-opt="1"') : box(it, "part", "Part / model")) + '</td><td>' + (T && ratings(it).length ? box(it, "r", T.rl || "Finish") : "") + '</td>'
+        + (kid ? '<td></td><td></td><td></td><td></td>' : '<td>' + box(it, "t", "Item") + '</td><td>' + box(it, "z", "Size") + '</td>'
+        + '<td class="mt-szd">' + (T ? box(it, "m", "Material") + box(it, "s", "Std", ' data-opt="1"') : box(it, "part", "Part / model")) + '</td><td>' + (T && ratings(it).length ? box(it, "r", T.rl || "Finish") : "") + '</td>')   // (a cut is always its parent's item: only its length, notes and buttons)
         + qtyCell(it, !!res, kid) + tail(it) + sub(it, res, SC.length); };
     /* a parent row: the stock to order (worked out), its spare lengths, the total; clicking it shows or hides its cuts */
     const gs = groupsOf(items), drawn = new Set();
@@ -528,7 +532,8 @@ const Mto = (() => {
   const hasCuts = a => packs(a).length > 0;
   /* the cutting list drawn into a PDF from the current page on (a landscape A4 page): each stock length or sheet with its pieces,
      their lengths, green, saw cuts, where to cut, and the offcuts. Its own export and the work pack both use it */
-  function cutDraw(doc, a){ const { kerf, keep } = rules();
+  /* o.back: the page of the work pack's parts list, for a "Back to parts" link on each item; returns where each item starts, by key */
+  function cutDraw(doc, a, o){ const { kerf, keep } = rules(), at = {}, nos = Object.fromEntries(orderRows(a).map(r => [r.id, r.no])); o = o || {};   // (items numbered as in the parts list)
     const W = 297, X = 14, BW = W - 2 * X; let y = 0;
     const head = () => { doc.setFillColor(71, 85, 105); doc.rect(0, 0, W, 20, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("Cutting list", X, 12);
       doc.setFontSize(9.5); doc.setFont("helvetica", "normal"); doc.text(Store.actId(a) + "   " + (a.f.title || "").slice(0, 120), X + 34, 12); y = 28; };
@@ -536,8 +541,9 @@ const Mto = (() => {
     const hatch = (x, yy, w, h) => { doc.setDrawColor(150); doc.setLineWidth(0.15); for (let d = -h; d < w; d += 2.2){ const x1 = x + Math.max(0, d), y1 = yy + h - Math.max(0, -d) * 0 - (d < 0 ? -d : 0); const x0 = x + Math.max(d, 0), y0 = yy + h - (d < 0 ? -d : 0), x2 = Math.min(x + w, x + d + h), y2 = yy + h - (x2 - (x + d)); if (x2 > x0) doc.line(x0, y0, x2, y2); } };
     head(); doc.setTextColor(60); doc.setFontSize(9);
     { const intro = doc.splitTextToSize("Saw cut allowed: " + kerf + " mm. Offcuts of " + keep + " mm or more are kept. Blue pieces are what the MTO is for" + (rules().green || packs(a).some(x => cuts(x.it).some(c => +c.g)) ? ", green is extra left on to trim to fit on site (piece +G)" : "") + "; grey is offcut. Lengths are in mm, measured from the left end.", BW); doc.text(intro, X, y); y += intro.length * 4 + 3; }
-    packs(a).forEach(({ it, res }, idx) => {
-      room(30); doc.setTextColor(20); doc.setFont("helvetica", "bold"); doc.setFontSize(11.5); doc.text(doc.splitTextToSize("Item " + (idx + 1) + ": " + desc(it), BW), X, y); y += 5.5;
+    packs(a).forEach(({ it, res, key }, idx) => {
+      room(30); at[key] = doc.getNumberOfPages(); if (o.back){ doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(31, 95, 191); doc.textWithLink("Back to parts", X + BW, y, { align: "right", pageNumber: o.back }); }
+      doc.setTextColor(20); doc.setFont("helvetica", "bold"); doc.setFontSize(11.5); doc.text(doc.splitTextToSize("Item " + (nos[key] || idx + 1) + ": " + desc(it), o.back ? BW - 30 : BW), X, y); y += 5.5;
       doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(80); const ex = doc.splitTextToSize(explain(it, res), BW); doc.text(ex, X, y); y += ex.length * 4 + 3;
       if (res.kind === "len"){ let no = 1;
         groups(res).forEach(({ b, n }) => { room(24); doc.setTextColor(30); doc.setFont("helvetica", "bold"); doc.setFontSize(9.5);
@@ -559,7 +565,7 @@ const Mto = (() => {
           S.ps.forEach(pc => { doc.setFillColor(205, 225, 248); doc.setDrawColor(60, 100, 160); doc.setLineWidth(0.3); doc.rect(X + pc.x * s, y + pc.y * s, pc.w * s, pc.h * s, "FD");
             const lab = pc.l0 + " x " + pc.w0 + (pc.mk ? "  " + pc.mk : ""); doc.setFontSize(7.5); doc.setTextColor(20, 50, 100); if (doc.getTextWidth(lab) < pc.w * s - 1.5 && pc.h * s > 4) doc.text(lab, X + (pc.x + pc.w / 2) * s, y + (pc.y + pc.h / 2) * s + 1.2, { align: "center" }); });
           doc.setDrawColor(40); doc.setLineWidth(0.25); doc.rect(X, y, sh.l * s, sh.w * s); y += sh.w * s + 8; }); }
-      y += 3; }); }
+      y += 3; }); return at; }
   async function cutList(a, rev){ try { const blob = await cutPdf(a), name = Store.actId(a) + " Cutting list" + (rev ? " Rev " + rev : "") + ".pdf"; Excel.save(blob, name); Local.saveOriginal(a, name, blob); return name; }
     catch (e){ console.error(e); alert("Couldn't make the cutting list: " + e.message); } }
 

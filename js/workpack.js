@@ -24,10 +24,11 @@ const Workpack = (() => {
     const head = t => { need(24); y += 4;   /* (a heading keeps a couple of lines of what follows with it) */  doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.setTextColor(...rgb); doc.text(t.toUpperCase(), M, y); doc.setDrawColor(...rgb); doc.setLineWidth(0.4); doc.line(M, y + 1.5, W - M, y + 1.5); y += 7; doc.setTextColor(30); };
     const para = t => { doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(30); doc.splitTextToSize(t || "–", CW).forEach(l => { need(5.2); doc.text(l, M, y); y += 5; }); y += 2; };
     /* a table without its empty columns (the first, the item number, always stays) */
-    const table = (hd0, body0, cols0) => { const keep = hd0.map((c, k) => k === 0 || body0.some(r => String(r[k] == null ? "" : r[k]).trim())), ix = hd0.map((c, k) => k).filter(k => keep[k]);
+    const table = (hd0, body0, cols0, hook) => { const keep = hd0.map((c, k) => k === 0 || body0.some(r => String(r[k] == null ? "" : r[k]).trim())), ix = hd0.map((c, k) => k).filter(k => keep[k]);
       const hd = ix.map(k => hd0[k]), body = body0.map(r => ix.map(k => r[k])), cols = {}; ix.forEach((k, j) => { if (cols0 && cols0[k]) cols[j] = cols0[k]; });
       doc.autoTable({ startY: y, head: [hd], body, margin: { top: 16, left: M, right: M, bottom: 16 }, styles: { font: "helvetica", fontSize: 9, cellPadding: 1.8, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" },
-      headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" }, alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: pdfCols(doc, hd, body, CW, { fs: 9, pad: 1.8, fixed: Object.fromEntries(Object.entries(cols).map(([k, v]) => [k, Object.assign({}, v, { cellWidth: undefined })])) }) }); y = doc.lastAutoTable.finalY + 6; };   // (widths fitted to what each column holds; alignments kept)
+      headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" }, alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: pdfCols(doc, hd, body, CW, { fs: 9, pad: 1.8, fixed: Object.fromEntries(Object.entries(cols).map(([k, v]) => [k, Object.assign({}, v, { cellWidth: undefined })])) }),
+        didDrawCell: hook ? d => hook(d, hd) : undefined }); y = doc.lastAutoTable.finalY + 6; };   // (widths fitted to what each column holds; alignments kept)
     /* what goes in: the equipment's documents */
     await Equip.load().catch(() => {});
     const tags = Array.isArray(a.f.equipment) ? a.f.equipment.filter(Boolean) : [];
@@ -54,10 +55,11 @@ const Workpack = (() => {
     const tocE = {}; S.forEach(([id, t]) => { tocE[id] = tocLine(t); });
     /* each part follows on, after a gap; a new page only once the current one is more than half full */
     const start = id => { if (y > 18 + (BOT - 18) / 2){ doc.addPage("a4", "portrait"); y = 18; } else y += 8; if (tocE[id]) tocE[id].page = doc.getNumberOfPages(); };
+    const cutLinks = []; let partsPage = 0, cutAt = {};   // the parts list's links to the cutting list (added once it exists), and back
     const photoLinks = [];   // the photo panel beside the map: links to the Photos page (added once it exists)
     for (const [id] of S){
       /* the cutting list: its own landscape pages, drawn as in its own export (pieces, green, saw cuts, where to cut, offcuts) */
-      if (id === "cut"){ doc.addPage("a4", "landscape"); if (tocE.cut) tocE.cut.page = doc.getNumberOfPages(); Mto.cutDraw(doc, a); y = BOT + 1; continue; }
+      if (id === "cut"){ doc.addPage("a4", "landscape"); if (tocE.cut) tocE.cut.page = doc.getNumberOfPages(); cutAt = Mto.cutDraw(doc, a, { back: partsPage }); y = BOT + 1; continue; }
       start(id);
       if (id === "job"){ head("Job"); const names = tags.map(t => { const e = Equip.get(t); return e && e.n ? t + "  " + e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : t; });
         const job = [["Location", a.f.location], ["Done", Store.fields().filter(f => f.type === "check" && a.f[f.id] === true).map(f => f.label).join(", ")], ...Hold.lines(a).map(([k, v]) => [k === "Waiting on" ? "On hold, waiting on" : k, v]), ["Equipment", names.join("\n")], ["Contractor", [a.f.contractor, /^\d{4}-\d\d-\d\d(T\d\d:\d\d)?$/.test(a.f.contractorDate || "") ? "on site " + fmtDate(a.f.contractorDate) : ""].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")], ["Contractor contact", [a.f.contractorContact, a.f.contractorPhone].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")]].filter(r => r[1]);
@@ -81,8 +83,13 @@ const Workpack = (() => {
           y += 5; }
         [["Problem", a.f.problem], ["Work required", a.f.solution], ["Notes", a.f.notes]].forEach(([k, v]) => { if (String(v || "").trim()){ head(k); para(v); } }); }   // (anything blank is left out)
       if (id === "isol"){ head("Isolations"); table(["No.", "Equipment number", "Equipment name", "Note"], a.isol.map((it, i) => [i + 1, it.tag || "", it.name || "", it.note || ""]), { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 40 }, 2: { cellWidth: 62 } }); }
-      if (id === "parts"){ head("Parts"); table(["Item", "Description", "Part / tag no.", "Qty", "Unit", "Supplied from", "Notes"], parts.map((it, i) => [i + 1, it.desc || "", it.part || "", it.qty || "", it.unit || "", it.src, it.notes || ""]),
-        { 0: { cellWidth: 11, halign: "center" }, 1: { cellWidth: 50 }, 3: { cellWidth: 12, halign: "right" }, 4: { cellWidth: 13 }, 5: { cellWidth: 22 } }); }
+      /* a steel or plate parent says where its cutting diagram is: "See cutting list p." and the page, put in once that page exists, and clicks through to it */
+      if (id === "parts"){ head("Parts"); partsPage = doc.getNumberOfPages(); const SEE = "See cutting list p.";
+        table(["Item", "Description", "Part / tag no.", "Qty", "Unit", "Supplied from", "Notes"], parts.map((it, i) => [it.no || i + 1, it.desc || "", it.part || "", it.qty || "", it.unit || "", it.src, it.grp ? SEE : it.notes || ""]),
+        { 0: { cellWidth: 11, halign: "center" }, 1: { cellWidth: 50 }, 3: { cellWidth: 12, halign: "right" }, 4: { cellWidth: 13 }, 5: { cellWidth: 22 } },
+        (d, hd) => { const r = parts[d.row.index]; if (d.section !== "body" || !r || !r.grp) return; const C = d.cell;
+          if (hd[d.column.index] === "Notes"){ doc.setFontSize(9); cutLinks.push({ page: doc.getNumberOfPages(), key: r.id, x: C.x, y: C.y, w: C.width, h: C.height, tx: C.x + C.padding("left") + doc.getTextWidth(SEE) + 1, ty: C.y + C.padding("top") + 3.1 }); }
+          else if (hd[d.column.index] === "Description") cutLinks.push({ page: doc.getNumberOfPages(), key: r.id, x: C.x, y: C.y, w: C.width, h: C.height }); }); }
       if (id === "reg") register(doc, { head, need, M, CW, rgb, get y(){ return y; }, set y(v){ y = v; } }, tags, dm);
       if (id === "photos"){ head("Photos (" + a.photos.length + ")"); const gw = (CW - 6) / 2, gh = 66;
         for (let i = 0; i < a.photos.length; i += 2){ need(gh + 8); let rowH = 0;
@@ -92,6 +99,8 @@ const Workpack = (() => {
               if (ph.cap){ doc.setFontSize(7.5); doc.setTextColor(110); doc.text(doc.splitTextToSize(ph.cap, gw)[0] || "", M + k * (gw + 6), y + hh + 3.5); } } catch (e){ console.warn("photo", e); } }
           y += rowH + 8; } }
       if (id === "att"){ const links = await Media.shareLinks([a]); head("Attachments"); doc.setFontSize(9.5); a.files.forEach(f => { need(5.5); doc.setTextColor(31, 95, 191); doc.textWithLink(f.name, M, y, { url: links.get(f) || Media.fileUrlOnline(a, f) }); doc.setTextColor(120); doc.text(fmtSize(f.size || 0), W - M, y, { align: "right" }); y += 5.5; }); y += 2; } }
+    /* each steel or plate parent in the parts list: its cutting list page, written in and linked, now those pages exist */
+    cutLinks.forEach(l => { const pg = cutAt[l.key]; if (!pg) return; doc.setPage(l.page); if (l.tx != null){ doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(31, 95, 191); doc.text(String(pg), l.tx, l.ty); doc.setFont("helvetica", "normal"); } doc.link(l.x, l.y, l.w, l.h, { pageNumber: pg }); });
     /* the photo panel's page number and links, now the Photos page exists */
     const php = tocE.photos && tocE.photos.page; photoLinks.forEach(l => { doc.setPage(l.page); if (!php) return; if (l.tx != null){ doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(31, 95, 191); doc.text(String(php), l.tx, l.ty); doc.setFont("helvetica", "normal"); } doc.link(l.x, l.y, l.w, l.h, { pageNumber: php }); });
     /* page numbers */

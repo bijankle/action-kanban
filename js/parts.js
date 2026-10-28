@@ -90,14 +90,14 @@ const Parts = (() => {
 
   /* ---------- exports ---------- */
   const fname = (a, kind) => Store.actId(a) + " " + (kind === "mto" ? "RFQ" : "Spares") + " " + new Date().toISOString().slice(0, 10) + ".pdf";
-  function excel(a, kind){ const items = kind === "mto" ? Mto.orderRows(a) : list(a, kind);   // (the MTO as ordered: each steel parent, not its cuts)
+  function excel(a, kind){ const items = kind === "mto" ? Mto.orderRows(a, true) : list(a, kind);   // (the MTO as ordered: each steel parent, its cuts listed under it)
   if (!items.length) return alert("Nothing to export yet.");
-    const sec = kind === "spares", head = ["Item"].concat(COLS[kind].map(c => c[1]), sec ? ["Secured"] : []), rows = items.map((it, i) => [String(i + 1)].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), sec ? [it.secured ? "Yes" : "No"] : []));
+    const sec = kind === "spares", head = ["Item"].concat(COLS[kind].map(c => c[1]), sec ? ["Secured"] : []), rows = items.map((it, i) => [it.no || String(i + 1)].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), sec ? [it.secured ? "Yes" : "No"] : []));
     Excel.save(Excel.book(head, rows, Store.actId(a) + " " + NAME[kind]), Store.actId(a) + " " + NAME[kind] + " " + new Date().toISOString().slice(0, 10) + ".xlsx"); }
   let pdfP = null;
   const loadPdf = () => pdfP || (pdfP = new Promise((res, rej) => { const add = (src, next) => { const s = document.createElement("script"); s.src = src; s.onload = next; s.onerror = () => { pdfP = null; rej(new Error("Couldn't load the PDF maker")); }; document.head.appendChild(s); };
     add("js/lib/jspdf.umd.min.js", () => add("js/lib/jspdf.plugin.autotable.min.js", () => res(window.jspdf.jsPDF))); }));
-  async function build(a, kind, r){ const jsPDF = await loadPdf(), doc = new jsPDF({ unit: "mm", format: "a4" }), p = Store.project(a._p) || {}, items = kind === "mto" ? Mto.orderRows(a) : list(a, kind);
+  async function build(a, kind, r){ const jsPDF = await loadPdf(), doc = new jsPDF({ unit: "mm", format: "a4" }), p = Store.project(a._p) || {}, items = kind === "mto" ? Mto.orderRows(a, true) : list(a, kind);
     const thb = (getComputedStyle(document.documentElement).getPropertyValue("--thb") || "#475569").trim(), rgb = /^#[0-9a-f]{6}$/i.test(thb) ? [1, 3, 5].map(i => parseInt(thb.substr(i, 2), 16)) : [71, 85, 105];
     doc.setFillColor(...rgb); doc.rect(0, 0, 210, 26, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(17);
     doc.text(kind === "mto" ? "Request for Quotation" : "Spares list", 14, 13); doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.text(Store.actId(a) + "   " + (p.name || ""), 14, 20);
@@ -117,11 +117,12 @@ const Parts = (() => {
     const meta = ["Date: " + fmtDate(now()), kind !== "mto" && Profile.name() ? "Issued by: " + Profile.name() + (pf.role ? ", " + pf.role : "") : "", kind !== "mto" && pf.mobile ? "Mobile: " + pf.mobile : "", kind !== "mto" && pf.email ? "Email: " + pf.email : "", a.f.location ? "Location: " + a.f.location : "", Array.isArray(a.f.equipment) && a.f.equipment.length ? "Equipment: " + a.f.equipment.join(", ") : ""].filter(Boolean);
     doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(90); const ml = doc.splitTextToSize(meta.join("     "), 182); doc.text(ml, 14, y0 + 2); y0 += ml.length * 4.4 + 4;
     /* (columns with nothing in them are left out, and the rest fit what they hold) */
-    const hd0 = ["Item"].concat(COLS[kind].map(c => c[1]), kind === "spares" ? ["Secured"] : []), bd0 = items.map((it, i) => [i + 1].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), kind === "spares" ? [it.secured ? "Yes" : "No"] : []));
+    const hd0 = ["Item"].concat(COLS[kind].map(c => c[1]), kind === "spares" ? ["Secured"] : []), bd0 = items.map((it, i) => [it.no || i + 1].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), kind === "spares" ? [it.secured ? "Yes" : "No"] : []));
     const keepC = hd0.map((h, j) => j === 0 || bd0.some(r => String(r[j]).trim() !== "")), hdK = hd0.filter((h, j) => keepC[j]), bdK = bd0.map(r => r.filter((x, j) => keepC[j])), qi = hdK.indexOf("Qty");
     doc.autoTable({ startY: y0, head: [hdK], body: bdK,
       styles: { font: "helvetica", fontSize: 9.5, cellPadding: 2.2, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" }, headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: pdfCols(doc, hdK, bdK, 182, { fs: 9.5, pad: 2.2, fixed: Object.assign({ 0: { halign: "center" } }, qi > 0 ? { [qi]: { halign: "right" } } : {}) }), margin: { left: 14, right: 14 } });
+      alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: pdfCols(doc, hdK, bdK, 182, { fs: 9.5, pad: 2.2, fixed: Object.assign({ 0: { halign: "center" } }, qi > 0 ? { [qi]: { halign: "right" } } : {}) }), margin: { left: 14, right: 14 },
+      didParseCell: d => { if (d.section === "body" && items[d.row.index] && items[d.row.index].kid){ d.cell.styles.textColor = [95, 104, 117]; d.cell.styles.fontSize = 8.5; d.cell.styles.fillColor = [255, 255, 255]; } } });   // (a parent's cuts: smaller and grey under it)
     let y = doc.lastAutoTable.finalY + 8; doc.setFontSize(9); doc.setTextColor(110);
     if (kind === "mto" && (a.spares || []).length) { doc.text((a.spares.length) + " further item" + (a.spares.length > 1 ? "s come" : " comes") + " from site spares and " + (a.spares.length > 1 ? "are" : "is") + " not part of this request.", 14, y); y += 6; }
     const pages = doc.getNumberOfPages(); for (let i = 1; i <= pages; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140); doc.text(fname(a, kind).replace(/\.pdf$/, "") + "   Page " + i + " of " + pages, 105, 290, { align: "center" }); }
@@ -134,7 +135,6 @@ const Parts = (() => {
       const warn = (miss.length ? " Your profile has no " + miss.join(", ") + " (your profile, the round button top right)." : "") + (noTo ? " No vendor is picked." : bare.length ? " No contact details for " + bare.join(", ") + " (click the vendor to add them)." : "");
       if (warn && !await confirmBox("Missing on the RFQ:" + warn + " Export it anyway?", "Export")) return;
       const blob = await build(a, kind), name = fname(a, kind); Excel.save(blob, name); Local.saveOriginal(a, name, blob); Store.log("Exported " + name);
-      if (Mto.needsCut(a)) await Mto.cutList(a);   // (the trades' cutting list comes too, only when something needs more than one length or sheet)
     }
     catch (e){ console.error(e); alert("Couldn't make the PDF: " + e.message); } finally { exporting = false; } }
 
@@ -181,5 +181,5 @@ const Parts = (() => {
     $(".yn-no", m).onclick = () => m.close();
     add.onclick = () => { const take = rows.filter(r => r._on).map(r => { const o = Object.assign({ id: uid() }, r); delete o._on; if (mto) Mto.recalc(o); else cols.forEach(([k]) => { if (!o[k]) delete o[k]; }); return o; }); if (!take.length) return;
       Store.mutate("a:" + a._p, () => { const L = list(a, kind); if (mto) take.forEach(it => Mto.place(L, it)); else L.push(...take); Store.touch(a); }); Store.log("Added " + take.length + " parts to the " + NAME[kind] + " of " + Store.actId(a)); m.close(); }; }
-  return { renderFor, NAME, loadPdf, created };
+  return { renderFor, NAME, loadPdf, created, build };
 })();
