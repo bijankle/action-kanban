@@ -332,12 +332,16 @@ function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts)
   const widths = ths.map((th, i) => Math.round(set[i] || (free[i] ? (flo.has(i) ? minW(i) : nat[i] * k) : nat[i])));
   cols.forEach((c, i) => c.style.width = widths[i] + "px"); table.classList.add("tw"); table.style.width = widths.reduce((t, w) => t + w, 0) + "px";
   rows.forEach(r => [...r.cells].forEach(td => { if (!td.title && !td.querySelector("input,select,textarea,button")) td.title = td.textContent.trim(); }));
+  /* one row height, always: text that doesn't fit its cell stays on one line and ends in more…, which shows it all */
+  rows.forEach(r => [...r.cells].forEach(td => { if (td.colSpan > 1 || !td.textContent.trim() || td.querySelector("input,select,textarea,button,svg,img,.mc,.lt-w")) return;
+    const th = ths[td.cellIndex]; td.innerHTML = moreCut(td.innerHTML, th ? th.textContent.trim() : ""); }));
+  requestAnimationFrame(() => moreFit(table));
   numCols(table);
   const save = () => lsSet("adTW", store);
   ths.forEach((th, i) => { if (th.querySelector(".tw-r")) return; const h = document.createElement("i"); h.className = "tw-r"; th.appendChild(h);
     h.onclick = e => e.stopPropagation();
     h.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const x0 = e.clientX, w0 = cols[i].getBoundingClientRect().width || widths[i]; h.setPointerCapture(e.pointerId);
-      h.onpointermove = ev => { const w = Math.max(40, w0 + ev.clientX - x0); cols[i].style.width = w + "px"; W[id(th, i)] = Math.round(w); table.style.width = cols.reduce((t, c) => t + parseFloat(c.style.width), 0) + "px"; };
+      h.onpointermove = ev => { const w = Math.max(40, w0 + ev.clientX - x0); cols[i].style.width = w + "px"; W[id(th, i)] = Math.round(w); table.style.width = cols.reduce((t, c) => t + parseFloat(c.style.width), 0) + "px"; moreFit(table); };
       h.onpointerup = () => { h.onpointermove = null; save(); }; };
     h.ondblclick = e => { e.stopPropagation(); W[id(th, i)] = natural(i); save(); gridCols(table, key, opts); }; }); }
 

@@ -26,8 +26,8 @@ const Workpack = (() => {
     /* a table without its empty columns (the first, the item number, always stays) */
     const table = (hd0, body0, cols0, hook) => { const keep = hd0.map((c, k) => k === 0 || body0.some(r => String(r[k] == null ? "" : r[k]).trim())), ix = hd0.map((c, k) => k).filter(k => keep[k]);
       const hd = ix.map(k => hd0[k]), body = body0.map(r => ix.map(k => r[k])), cols = {}; ix.forEach((k, j) => { if (cols0 && cols0[k]) cols[j] = cols0[k]; });
-      doc.autoTable({ startY: y, head: [hd], body, margin: { top: 16, left: M, right: M, bottom: 16 }, styles: { font: "helvetica", fontSize: 9, cellPadding: 1.8, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" },
-      headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" }, alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: pdfCols(doc, hd, body, CW, { fs: 9, pad: 1.8, fixed: Object.fromEntries(Object.entries(cols).map(([k, v]) => [k, Object.assign({}, v, { cellWidth: undefined })])) }),
+      doc.autoTable({ startY: y, head: [hd], body, margin: { top: 16, left: M, right: M, bottom: 16 }, styles: { font: "helvetica", fontSize: 9, cellPadding: 1.1, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" },
+      headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" }, alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: pdfCols(doc, hd, body, CW, { fs: 9, pad: 1.1, fixed: Object.fromEntries(Object.entries(cols).map(([k, v]) => [k, Object.assign({}, v, { cellWidth: undefined })])) }),
         didDrawCell: hook ? d => hook(d, hd) : undefined }); y = doc.lastAutoTable.finalY + 6; };   // (widths fitted to what each column holds; alignments kept)
     /* what goes in: the equipment's documents */
     await Equip.load().catch(() => {});
@@ -82,10 +82,10 @@ const Workpack = (() => {
           if (sm){ doc.setFontSize(8); doc.setTextColor(110); doc.setFont("helvetica", "italic"); doc.splitTextToSize(sm.note, CW).forEach(l => { doc.text(l, M, y + 2.5); y += 3.6; }); doc.setFont("helvetica", "normal"); }
           y += 5; }
         [["Problem", a.f.problem], ["Work required", a.f.solution], ["Notes", a.f.notes]].forEach(([k, v]) => { if (String(v || "").trim()){ head(k); para(v); } }); }   // (anything blank is left out)
-      if (id === "isol"){ head("Isolations"); table(["No.", "Equipment number", "Equipment name", "Note"], a.isol.map((it, i) => [i + 1, it.tag || "", it.name || "", it.note || ""]), { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 40 }, 2: { cellWidth: 62 } }); }
+      if (id === "isol"){ head("Isolations"); table(["#", "Equipment number", "Equipment name", "Note"], a.isol.map((it, i) => [i + 1, it.tag || "", it.name || "", it.note || ""]), { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 40 }, 2: { cellWidth: 62 } }); }
       /* a steel or plate parent says where its cutting diagram is: "See cutting list p." and the page, put in once that page exists, and clicks through to it */
       if (id === "parts"){ head("Parts"); partsPage = doc.getNumberOfPages(); const SEE = "See cutting list p.";
-        table(["Item", "Description", "Part / tag no.", "Qty", "Unit", "Supplied from", "Notes"], parts.map((it, i) => [it.no || i + 1, it.desc || "", it.part || "", it.qty || "", it.unit || "", it.src, it.grp ? SEE : it.notes || ""]),
+        table(["#", "Description", "Part / tag no.", "Qty", "Unit", "Supplied from", "Notes"], parts.map((it, i) => [it.no || i + 1, it.desc || "", it.part || "", it.qty || "", it.unit || "", it.src, it.grp ? SEE : it.notes || ""]),
         { 0: { cellWidth: 11, halign: "center" }, 1: { cellWidth: 50 }, 3: { cellWidth: 12, halign: "right" }, 4: { cellWidth: 13 }, 5: { cellWidth: 22 } },
         (d, hd) => { const r = parts[d.row.index]; if (d.section !== "body" || !r || !r.grp) return; const C = d.cell;
           if (hd[d.column.index] === "Notes"){ doc.setFontSize(9); cutLinks.push({ page: doc.getNumberOfPages(), key: r.id, x: C.x, y: C.y, w: C.width, h: C.height, tx: C.x + C.padding("left") + doc.getTextWidth(SEE) + 1, ty: C.y + C.padding("top") + 3.1 }); }

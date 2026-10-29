@@ -92,7 +92,7 @@ const Parts = (() => {
   const fname = (a, kind) => Store.actId(a) + " " + (kind === "mto" ? "RFQ" : "Spares") + " " + new Date().toISOString().slice(0, 10) + ".pdf";
   function excel(a, kind){ const items = kind === "mto" ? Mto.orderRows(a, true) : list(a, kind);   // (the MTO as ordered: each steel parent, its cuts listed under it)
   if (!items.length) return alert("Nothing to export yet.");
-    const sec = kind === "spares", head = ["Item"].concat(COLS[kind].map(c => c[1]), sec ? ["Secured"] : []), rows = items.map((it, i) => [it.no || String(i + 1)].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), sec ? [it.secured ? "Yes" : "No"] : []));
+    const sec = kind === "spares", head = ["#"].concat(COLS[kind].map(c => c[1]), sec ? ["Secured"] : []), rows = items.map((it, i) => [it.no || String(i + 1)].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), sec ? [it.secured ? "Yes" : "No"] : []));
     Excel.save(Excel.book(head, rows, Store.actId(a) + " " + NAME[kind]), Store.actId(a) + " " + NAME[kind] + " " + new Date().toISOString().slice(0, 10) + ".xlsx"); }
   let pdfP = null;
   const loadPdf = () => pdfP || (pdfP = new Promise((res, rej) => { const add = (src, next) => { const s = document.createElement("script"); s.src = src; s.onload = next; s.onerror = () => { pdfP = null; rej(new Error("Couldn't load the PDF maker")); }; document.head.appendChild(s); };
@@ -117,11 +117,11 @@ const Parts = (() => {
     const meta = ["Date: " + fmtDate(now()), kind !== "mto" && Profile.name() ? "Issued by: " + Profile.name() + (pf.role ? ", " + pf.role : "") : "", kind !== "mto" && pf.mobile ? "Mobile: " + pf.mobile : "", kind !== "mto" && pf.email ? "Email: " + pf.email : "", a.f.location ? "Location: " + a.f.location : "", Array.isArray(a.f.equipment) && a.f.equipment.length ? "Equipment: " + a.f.equipment.join(", ") : ""].filter(Boolean);
     doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(90); const ml = doc.splitTextToSize(meta.join("     "), 182); doc.text(ml, 14, y0 + 2); y0 += ml.length * 4.4 + 4;
     /* (columns with nothing in them are left out, and the rest fit what they hold) */
-    const hd0 = ["Item"].concat(COLS[kind].map(c => c[1]), kind === "spares" ? ["Secured"] : []), bd0 = items.map((it, i) => [it.no || i + 1].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), kind === "spares" ? [it.secured ? "Yes" : "No"] : []));
+    const hd0 = ["#"].concat(COLS[kind].map(c => c[1]), kind === "spares" ? ["Secured"] : []), bd0 = items.map((it, i) => [it.no || i + 1].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), kind === "spares" ? [it.secured ? "Yes" : "No"] : []));
     const keepC = hd0.map((h, j) => j === 0 || bd0.some(r => String(r[j]).trim() !== "")), hdK = hd0.filter((h, j) => keepC[j]), bdK = bd0.map(r => r.filter((x, j) => keepC[j])), qi = hdK.indexOf("Qty");
     doc.autoTable({ startY: y0, head: [hdK], body: bdK,
-      styles: { font: "helvetica", fontSize: 9.5, cellPadding: 2.2, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" }, headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: pdfCols(doc, hdK, bdK, 182, { fs: 9.5, pad: 2.2, fixed: Object.assign({ 0: { halign: "center" } }, qi > 0 ? { [qi]: { halign: "right" } } : {}) }), margin: { left: 14, right: 14 },
+      styles: { font: "helvetica", fontSize: 9.5, cellPadding: 1.3, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "top" }, headStyles: { fillColor: rgb, textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [246, 247, 249] }, columnStyles: pdfCols(doc, hdK, bdK, 182, { fs: 9.5, pad: 1.3, fixed: Object.assign({ 0: { halign: "center" } }, qi > 0 ? { [qi]: { halign: "right" } } : {}) }), margin: { left: 14, right: 14 },
       didParseCell: d => { if (d.section === "body" && items[d.row.index] && items[d.row.index].kid){ d.cell.styles.textColor = [95, 104, 117]; d.cell.styles.fontSize = 8.5; d.cell.styles.fillColor = [255, 255, 255]; } } });   // (a parent's cuts: smaller and grey under it)
     let y = doc.lastAutoTable.finalY + 8; doc.setFontSize(9); doc.setTextColor(110);
     if (kind === "mto" && (a.spares || []).length) { doc.text((a.spares.length) + " further item" + (a.spares.length > 1 ? "s come" : " comes") + " from site spares and " + (a.spares.length > 1 ? "are" : "is") + " not part of this request.", 14, y); y += 6; }

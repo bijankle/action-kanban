@@ -1354,3 +1354,9 @@ html.dark{--edf:#2a2117;--edh:#36291a;--autof:#1d2a40;--autoh:#253552}
 .tbl td.tk .ck input:indeterminate,.tbl td.tk .ck.na input{background-color:color-mix(in srgb,#9aa3ad 22%,var(--panel));background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6h6' stroke='%237a8591' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
 .tbl td.tk .ck input:disabled{cursor:default;opacity:.6}
 .tbl td.tk .ck input:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+/* one row height, always: nothing in a table cell wraps; what doesn't fit ends in more… */
+.tbl td,.vd-tbl td{white-space:nowrap!important;height:var(--row)!important;vertical-align:middle!important}
+.tbl td .mc-t>div,.tbl td .mc-t>p{display:inline;margin:0}.tbl td .mc-t>div+div::before,.tbl td .mc-t>p+p::before{content:"  ·  "}.tbl td .mc-t br{display:none}
+.tbl td .mc{height:var(--row)}.tbl td .mc-more{font-size:11.5px}
+.tbl td .mc-t .is-tx,.tbl td .mc-t .is-why{display:inline!important;overflow:visible!important;text-overflow:clip!important;max-width:none!important;white-space:nowrap!important}
+.tbl td .mc-t .is-tx,.tbl td .mc-t .is-why{padding:0!important}.tbl td .mc-t{line-height:var(--row)}
