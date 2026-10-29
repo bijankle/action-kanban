@@ -99,7 +99,7 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     const hv = await a.p.evaluate(() => { const ho = Store.field("handover"), x = Store.all().filter(q => !q.del && Store.stage(q.stage).kind === "open"), A = x[0], B = x[1];
       Fields.set(A, ho, true); const closed = Store.stage(A.stage).kind + " " + (A.f.pccr === Flow.NA); Fields.set(A, ho, Flow.NA); const back = Store.stage(A.stage).kind + " " + (A.f.pccr === Flow.NA);
       Fields.set(B, Store.field("category"), "Commissioning"); return closed + " | " + back + " | " + (B.f.handover === Flow.NA) + " | " + Store.stages().map(s => s.name).slice(0, 3).join(","); });
-    check("Handover closes it and marks the rest not needed; Commissioning doesn't need it", /^done true \| open false \| true \| Categorize Issue,Hand Over,/.test(hv), hv);
+    check("Handover marks the rest not needed but doesn't complete it; Commissioning doesn't need it", /^open true \| open false \| true \| Categorize Issue,Hand Over,/.test(hv), hv);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
   } catch (e) { console.log("  FAIL  the checks stopped: " + e.message); code = 1; }
   await browser.close(); srv.kill(); fs.rmSync(dir, { recursive: true, force: true });

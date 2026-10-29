@@ -12,7 +12,9 @@ const Flow = (() => {
   const state = (a, f) => { const v = a.f[f.id]; return v === NA ? "na" : (f.type === "choice" ? !!v : v === true) ? "done" : "open"; };
   const ok = (a, f) => state(a, f) !== "open";
   /* the stage its ticks put it in (when every step is done, the last one: it never goes into Done by itself) */
-  function where(a){ const ss = open(); for (const s of ss){ const f = stepOf(s); if (f && !ok(a, f)) return s; } return ss[ss.length - 1]; }
+  function where(a){ const ss = open(); for (const s of ss){ const f = stepOf(s); if (f && !ok(a, f)) return s; }
+    const ho = Store.field("handover"); if (ho && ho.stage && a.f.handover === true){ const h = ss.find(s => s.id === ho.stage); if (h) return h; }   // (handed over: it waits in Hand Over until someone ticks Complete)
+    return ss[ss.length - 1]; }
   /* record who set a step, and when (shown when you point at the tick) */
   function mark(a, f, v){ a.f[f.id] = v; const w = a.tkw = a.tkw || {}; if (v === false || v === "" || v == null) delete w[f.id]; else w[f.id] = { by: Profile.name() || "", at: now() }; }
   const who = (a, f) => { const w = (a.tkw || {})[f.id]; if (!w) return ""; return (a.f[f.id] === NA ? "Marked not needed" : f.type === "choice" ? "Set" : "Ticked") + (w.by ? " by " + w.by : "") + ", " + fmtDate((d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + "T" + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"))(new Date(w.at))); };   // (local time, 24 hour)
@@ -82,7 +84,7 @@ const Flow = (() => {
      not needed), and open ones go to the step their ticks now say */
   async function handoverSetup(){ if (!App.isAdmin() || Store.field("handover")) return;
     const C = Store.S.config, pc = C.fields.findIndex(f => f.id === "pccr"), sp = C.stages.findIndex(s => s.id === (Store.field("pccr") || {}).stage);
-    const F = { id: "handover", label: "Handed over", short: "Handover", type: "check", table: true, na: false, stage: "stH" + uid(), desc: "Handed over to whoever owns it (Defect, Punchlist, Operations or Maintenance): the correspondence sent. Ticking it marks the other steps not needed and closes the action. Commissioning jobs don't need it." };
+    const F = { id: "handover", label: "Handed over", short: "Handover", type: "check", table: true, na: false, stage: "stH" + uid(), desc: "Handed over to whoever owns it (Defect, Punchlist, Operations or Maintenance): the correspondence sent. Ticking it marks the other steps not needed; tick Complete when the work is physically done. Commissioning jobs don't need it." };
     const S = { id: F.stage, name: "Hand Over", todo: "Hand Over", kind: "open", color: "#7C5CD6" };
     const acts = Store.all().filter(a => !a.del), com = acts.filter(a => a.f.category === "Commissioning"), gone = acts.filter(a => HO.includes(a.f.category) && Store.stage(a.stage).kind === "done");
     /* (who moves: worked out with the step in place, then put back) */
@@ -90,7 +92,7 @@ const Flow = (() => {
     const moves = acts.filter(a => Store.stage(a.stage).kind === "open" && a.f.category !== "Commissioning").map(a => ({ a, to: where(a) })).filter(m => m.to && m.to.id !== m.a.stage);
     C.fields.splice(C.fields.indexOf(F), 1); C.stages.splice(C.stages.indexOf(S), 1);
     const row = (a, what) => '<div class="fw-r"><span>' + esc(Store.actId(a)) + ' ' + esc((a.f.title || "").slice(0, 50)) + '</span><span class="dim">' + esc(what) + '</span></div>';
-    const ok = await new Promise(res => { const m = modal('<h3>Add the Handover step</h3><p class="dim">A Handover tick column before PCCR, and a Hand Over step in the Organizer after Categorize Issue. Ticking Handover marks the other steps not needed and closes the action; the Category no longer closes anything. Commissioning jobs don\'t need it.</p>'
+    const ok = await new Promise(res => { const m = modal('<h3>Add the Handover step</h3><p class="dim">A Handover tick column before PCCR, and a Hand Over step in the Organizer after Categorize Issue. Ticking Handover marks the other steps not needed; Complete stays yours to tick when the work is physically done. The Category only says what it is. Commissioning jobs don\'t need it.</p>'
       + (gone.length ? '<div class="fw-h">Already handed over and closed: Handover ticked, the rest of their steps not needed</div>' + gone.map(a => row(a, a.f.category)).join("") : "")
       + (com.length ? '<div class="fw-h">Commissioning jobs: Handover not needed</div>' + com.map(a => row(a, "stays at " + Store.todo(Store.stage(a.stage)))).join("") : "")
       + (moves.length ? '<div class="fw-h">Open actions that go to the step their ticks now say</div>' + moves.map(x => row(x.a, Store.todo(Store.stage(x.a.stage)) + " → " + x.to.name)).join("") : "")
@@ -107,12 +109,12 @@ const Flow = (() => {
       if (a.stage !== s0 || JSON.stringify(a.f) !== f0) Store.touch(a); })));
     Store.log("Added the Handover step: " + gone.length + " handed over, " + com.length + " Commissioning not needed, " + moves.length + " moved"); App.render(); }
   /* the Handover tick (inside a Store.mutate): ticked, every step still to do is marked not needed (remembered in a.hoNA) and the
-     action closes; ticked off again (or marked not needed), those steps come back and it reopens where its ticks say */
-  function handover(a, v){ const fin = Store.stages().find(s => s.kind === "done"), steps = open().map(stepOf).filter(f => f && f.type === "check" && f.id !== "handover");
-    if (v === true){ a.hoNA = a.hoNA || []; steps.forEach(f => { if (a.f[f.id] !== true && a.f[f.id] !== NA){ mark(a, f, NA); a.hoNA.push(f.id); } });
-      if (fin && Store.stage(a.stage).kind !== "done"){ Store.place(a, fin.id, 0); Store.log("Handed over and closed " + Store.actId(a)); } return; }
-    (a.hoNA || []).forEach(id => { const f = Store.field(id); if (f && a.f[id] === NA) mark(a, f, ""); }); delete a.hoNA;
-    if (Store.stage(a.stage).kind === "done"){ const to = where(a); if (to){ Store.place(a, to.id); Store.log("Reopened " + Store.actId(a)); } } }
+     action waits in Hand Over; ticked off again (or marked not needed), those steps come back. It never completes the action:
+     Complete is always ticked by hand, when the work is physically done */
+  function handover(a, v){ const steps = open().map(stepOf).filter(f => f && f.type === "check" && f.id !== "handover");
+    if (v === true){ a.hoNA = a.hoNA || []; steps.forEach(f => { if (a.f[f.id] !== true && a.f[f.id] !== NA){ mark(a, f, NA); a.hoNA.push(f.id); } }); Store.log("Handed over " + Store.actId(a)); }
+    else { (a.hoNA || []).forEach(id => { const f = Store.field(id); if (f && a.f[id] === NA) mark(a, f, ""); }); delete a.hoNA; }
+    if (Store.stage(a.stage).kind === "open") sync(a); }
   /* the Category is the handover (Defect, Punchlist, Operations, Maintenance): once, the admin is asked to take the Defect tick
      column and its Send Defect Notice step out of the list and the Organizer, and to close the open actions already handed
      over, each listed with a tick to leave any open */
