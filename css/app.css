@@ -1574,3 +1574,10 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 #printRoot .pa-det th{background:#f1f3f6!important;color:#333!important;font-weight:700!important;width:1%;white-space:nowrap}
 #printRoot .pa-det td{background:#fff;color:#111;font-weight:400}#printRoot .pa-det td a{color:#1a56c4;text-decoration:underline}
 #printRoot .pa-cols:not(.one){gap:0!important}#printRoot .pa-cols:not(.one)>.pa-l{padding-right:10px}#printRoot .pa-cols:not(.one)>.pa-r{padding-left:10px;border-left:1px solid #c9ced6;align-self:stretch}
+/* the + Add column heading: a heading like the others (dark bold words at the top left), not a white outlined button */
+.tbl th.addcol{vertical-align:top!important;text-align:left!important;padding:0!important;border-left:1px solid var(--line2)!important}
+.tbl th.addcol .addc{display:block;height:auto!important;border:0!important;border-radius:0!important;background:none!important;color:var(--ink)!important;font:700 var(--fb) var(--font)!important;padding:8px 10px!important;text-align:left;width:100%;white-space:nowrap}
+.tbl th.addcol .addc:hover,.tbl th.addcol .addc:focus-visible{color:var(--th)!important;text-decoration:underline;background:none!important}
+.tbl th.addcol .addc.addc-s{padding:8px 0!important;text-align:center}
+.tbl td.addcol{background:var(--panel)!important;border-left:1px solid var(--line2)!important}
+.tbl th.tk .th-m{background:transparent!important}.th-i:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)!important;color:var(--ink)!important}
