@@ -120,7 +120,12 @@ const ActionView = (() => {
       /* picking a known person fills in their mobile and company */
       who.addEventListener("change", () => { const c = Store.contacts().find(x => x.name.toLowerCase() === who.value.trim().toLowerCase()); if (c){ if (!mob.value) mob.value = c.mobile || ""; if (!co.value) co.value = c.company || ""; } save(); });
       [mob, co, $("textarea", nr)].forEach(i => i.addEventListener("change", save)); d.addEventListener("change", save);
-      Look.scan && Look.scan(dc); }
+      Look.scan && Look.scan(dc); dc.after(nr); }
+    /* Contractor, Handover and Record as little tables like the Actions list rows: short names in shaded cells, values and boxes
+       edge to edge, two pairs to a row where there's room; the last change line runs the full width at the end */
+    { $(".ov-g", el).classList.add("ov-tbl"); const lc = $(".det-m .lastch", el); if (lc) $(".det-m", el).appendChild(lc);
+      const SH = { "Contractor company": "Company", "Date and time on site": "On site", "Contact name": "Contact", "Contact number": "Phone", "Contractor assigned": "Assigned", "Action owner": "Owner", "Date created": "Created", "Last modified": "Modified", "Date completed": "Completed", "Handed to": "To", "Their mobile": "Mobile", "Date of handover": "Date" };
+      $$(".det-c>.det-r>label, .det-m>.det-r>label", el).forEach(l => { const t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild : null; if (t && SH[t.textContent.trim()]) t.textContent = SH[t.textContent.trim()]; }); }
     $$("[data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a)); }
   async function act(k, a, list, i){
     if (k === "x") App.select(null);

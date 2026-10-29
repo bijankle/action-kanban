@@ -52,7 +52,7 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     /* the hold square: off hold, a click puts it on hold; on hold, a click only opens the callout (its switch takes it off) */
     const hs = await p.evaluate(async () => { Fields.closePop(); const a = Store.all().find(x => x.no === 3), ref = a._p + ":" + a.u; App.render && App.render(); await new Promise(r => setTimeout(r, 300));
       const sq = document.querySelector('tr[data-ref="' + CSS.escape(ref) + '"] [data-rb="hold"]'); if (!sq) return "no square"; sq.click(); await new Promise(r => setTimeout(r, 300));
-      const c = document.querySelector(".holdpop"), r1 = Hold.on(a) + " " + !!c + " " + (c && c.querySelector(".hold-sw").checked); if (c){ c.querySelector(".hold-sw").click(); }
+      const c = document.querySelector(".holdpop"), r1 = Hold.on(a) + " " + !!c + " " + (c && c.querySelector(".hsw input").checked); if (c){ c.querySelector(".hsw input").click(); }
       const r2 = Hold.on(a); Fields.closePop(); return r1 + " " + r2; });
     check("clicking the hold square on a held action opens the callout and keeps the hold; its switch takes it off", hs === "true true true false", hs);
     /* deleting takes it off hold */

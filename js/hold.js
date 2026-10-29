@@ -18,15 +18,17 @@ const Hold = (() => {
   function after(){ if (!pending) return; const ref = pending; pending = null; setTimeout(() => { const r = $('.av-head[data-ref="' + CSS.escape(ref) + '"] [data-rb="hold"]') || $('tr[data-ref="' + CSS.escape(ref) + '"] [data-rb="hold"]') || $('[data-hold="' + CSS.escape(ref) + '"]'); if (r) open(ref, r); }, 60); }
   function open(ref, anchor){ const a = App.act(ref); if (!a) return; Fields.closePop(); const h = rec(a), ro = !Store.S.edit;
     /* the switch at the top: on, the details below; off, it comes off hold (to the step its ticks say) and they hide */
-    const p = h_('<div class="pop holdpop"><label class="hold-tg"><input type="checkbox" class="hold-sw" data-k="on"' + (on(a) ? " checked" : "") + (ro ? " disabled" : "") + '><b>On hold</b>' + tipI("Who is it waiting on? They go into the contact list so whoever picks this up can chase them.") + '</label><div class="hold-b"' + (on(a) ? "" : " hidden") + '>'
-      + '<label class="fl">Waiting on<input class="in" data-k="who" list="holdNames" autocomplete="off" value="' + esc(h.who || "") + '" placeholder="Name"' + (ro ? " readonly" : "") + '></label>'
+    const p = h_('<div class="pop holdpop"><div class="hold-tg"><b>On hold</b>' + tipI("Who is it waiting on? They go into the contact list so whoever picks this up can chase them.") + '<label class="hsw" title="On hold: on or off"><input type="checkbox" data-k="on"' + (on(a) ? " checked" : "") + (ro ? " disabled" : "") + ' aria-label="On hold"><span class="hsw-t"><i></i></span></label></div><div class="hold-b"' + (on(a) ? "" : " hidden") + '>'
+      + '<label class="fl hf">Who<input class="in" data-k="who" list="holdNames" autocomplete="off" value="' + esc(h.who || "") + '" placeholder="Name"' + (ro ? " readonly" : "") + '></label>'
       + '<datalist id="holdNames">' + Store.contacts().map(c => '<option value="' + esc(c.name) + '">' + esc([c.company, c.mobile].filter(Boolean).join(" · ")) + '</option>').join("") + '</datalist>'
-      + '<label class="fl">Their mobile<input class="in" data-k="mobile" type="tel" value="' + esc(h.mobile || "") + '"' + (ro ? " readonly" : "") + '></label>'
-      + '<label class="fl"><span class="fl-h">Company <span class="dim">optional</span></span><input class="in" data-k="company" value="' + esc(h.company || "") + '"' + (ro ? " readonly" : "") + '></label>'
-      + '<label class="fl">On hold since<input class="in" data-k="since" type="date" value="' + esc(h.since || "") + '"' + (ro ? " readonly" : "") + '></label>'
-      + '<label class="fl"><span class="fl-h">Due back' + tipI("When it should come back to us.") + '</span>' + '<input class="in" data-k="due" type="date" value="' + esc(h.due || "") + '"' + (ro ? " readonly" : "") + '></label>'
-      + '<label class="fl"><span class="fl-h">Note' + tipI("Why it's on hold.") + '</span>' + '<textarea class="in" data-k="why" rows="3" placeholder="e.g. waiting on the vendor\'s revised quote for the hoses"' + (ro ? " readonly" : "") + '>' + esc(h.why || "") + '</textarea></label>'
+      + '<label class="fl hf">Mobile<input class="in" data-k="mobile" type="tel" value="' + esc(h.mobile || "") + '"' + (ro ? " readonly" : "") + '></label>'
+      + '<label class="fl hf">Company<input class="in" data-k="company" value="' + esc(h.company || "") + '"' + (ro ? " readonly" : "") + '></label>'
+      + '<label class="fl hf">Since<input class="in" data-k="since" type="date" value="' + esc(h.since || "") + '"' + (ro ? " readonly" : "") + '></label>'
+      + '<label class="fl hf">Due<input class="in" data-k="due" type="date" value="' + esc(h.due || "") + '"' + (ro ? " readonly" : "") + '></label>'
+      + '<label class="fl hn">Note<textarea class="in" data-k="why" rows="3" placeholder="e.g. waiting on the vendor\'s revised quote for the hoses"' + (ro ? " readonly" : "") + '>' + esc(h.why || "") + '</textarea></label>'
       + (ro ? "" : '<div class="yn-btns"><button type="button" class="yn-yes" data-k="ok">Save</button></div>') + '</div></div>');
+    /* the boxes as a little table, like the Actions list rows: names in a shaded first column, boxes edge to edge (Note below) */
+    { p.classList.add("hp-tbl"); const fs = $$(".fl.hf", p), g = h_('<div class="hp-grid"></div>'); fs[0].before(g); fs.forEach(f => g.appendChild(f)); }
     document.body.appendChild(p); Fields.place(p, anchor); const pr = p.getBoundingClientRect(); if (pr.bottom > innerHeight - 8) p.style.top = Math.max(8, innerHeight - pr.height - 8) + "px";
     const v = k => $('[data-k="' + k + '"]', p).value.trim(), who = $('[data-k="who"]', p), sw = $('[data-k="on"]', p);
     sw.onchange = () => { const f = Store.field("onhold") || { id: "onhold", type: "check" }; Fields.set(a, f, sw.checked); $(".hold-b", p).hidden = !sw.checked; pending = null; };
