@@ -167,6 +167,9 @@ document.addEventListener("click", e => { const b = e.target.closest(".mc-more")
 const KSYM = { "Mech equipment": '<path d="M10.37 5.19L10.5 2.52L13.5 2.52L13.63 5.19A7 7 0 0 1 15.66 6.03L15.66 6.03L17.64 4.23L19.77 6.36L17.97 8.34A7 7 0 0 1 18.81 10.37L18.81 10.37L21.48 10.5L21.48 13.5L18.81 13.63A7 7 0 0 1 17.97 15.66L17.97 15.66L19.77 17.64L17.64 19.77L15.66 17.97A7 7 0 0 1 13.63 18.81L13.63 18.81L13.5 21.48L10.5 21.48L10.37 18.81A7 7 0 0 1 8.34 17.97L8.34 17.97L6.36 19.77L4.23 17.64L6.03 15.66A7 7 0 0 1 5.19 13.63L5.19 13.63L2.52 13.5L2.52 10.5L5.19 10.37A7 7 0 0 1 6.03 8.34L6.03 8.34L4.23 6.36L6.36 4.23L8.34 6.03A7 7 0 0 1 10.37 5.19Z"/><circle cx="12" cy="12" r="3"/>', "Elec equipment": '<path d="M13 2.5L5.5 13.5h6l-1 8 8-11.5h-6z"/>',
   "Control valve": '<path d="M3.5 13.5l8.5 5v-10zM20.5 13.5l-8.5 5v-10z"/><path d="M12 8.5V5M8 5a4 3 0 018 0z"/>', "Manual valve": '<path d="M3.5 13.5l8.5 5v-10zM20.5 13.5l-8.5 5v-10z"/><path d="M12 8.5V4M8 4h8"/>',
   "Instrument": '<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M8 17h8"/>', "Tags": '<path d="M3.5 12.5V4.5h8l9 9-8 8z"/><circle cx="8" cy="8.5" r="1.3"/>' };
+/* (the other asset kinds: a pipe run, a pipe special in its run, a hose, a control tag's signal, a cable) */
+Object.assign(KSYM, { "Pipe line": '<path d="M2 9h20M2 15h20M5 9v6M19 9v6"/>', "Pipe special": '<path d="M2 12h5M17 12h5"/><rect x="7" y="8" width="10" height="8" rx="1.5"/>',
+  "Hose": '<path d="M3 18c3 0 4-12 9-12s6 12 9 12"/>', "Control tag": '<path d="M3 12h4l2-5 3 10 2-5h7"/>', "Cable": '<path d="M2 12c3-5 5 5 8 0s5 5 8 0 3-2 4-1"/><circle cx="2.5" cy="12" r="1.2"/>' });
 const kindSym = k => { const n = k === "Tags" ? "Tag added in the app" : k; return '<span class="ksym" role="img" aria-label="' + esc(n) + '" title="' + esc(n) + '"><svg viewBox="0 0 24 24">' + (KSYM[k] || KSYM.Tags) + '</svg></span>'; };
 
 /* a person's name with each word capitalised (bijan KHADEMBASHI → Bijan Khadembashi, o'brien → O'Brien) */

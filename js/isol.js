@@ -5,7 +5,10 @@
 "use strict";
 const Equip = (() => {
   const SRC = "https://raw.githubusercontent.com/bijankle/ProjectLibrary/HEAD/search-data.json";   // where the plant equipment lists live
-  const KINDS = { mel: [0, 1, "Mech equipment"], elec: [0, 1, "Elec equipment"], cv: [0, 1, "Control valve"], mv: [0, 1, "Manual valve"], ins: [0, 1, "Instrument"] };
+  /* every asset list in the Project Library (not its drawings or documents): [tag column, name column, kind]; a cable is named by its two ends */
+  const KINDS = { mel: [0, 1, "Mech equipment"], elec: [0, 1, "Elec equipment"], elx: [0, 1, "Elec equipment"], cv: [0, 1, "Control valve"], mv: [0, 1, "Manual valve"], ins: [0, 1, "Instrument"],
+    line: [0, 2, "Pipe line"], spi: [0, 2, "Pipe special"], hose: [0, 1, "Hose"], ctl: [0, 1, "Control tag"], cable: [0, r => [r[1], r[4]].filter(Boolean).join(" to "), "Cable"] };
+  const KV = 2;   // (bumped when KINDS changes, so the copy on this device is rebuilt at once)
   let list = null, loadP = null, raw = null;
   /* the plant equipment lists, kept on this device and refreshed once a day */
   /* the plant lists give some equipment the same name (F10-MG-01 and F10-MG-02 are both TRAMP MAGNET): where tags of
@@ -15,12 +18,12 @@ const Equip = (() => {
     items.forEach(it => { if (it.n && n.get(key(it)) > 1 && !it.dn){ const m = it.t.match(/([0-9A-Z]+)$/i); if (m){ it.n = it.n + " " + m[1].replace(/^0+(?=\w)/, ""); it.dn = 1; } } });
     return items; }
   function load(force){ if (loadP && !force) return loadP;
-    loadP = (async () => { const c = await IDB.get("equip"); if (c && c.items){ list = number(c.items); raw = c.raw || null; if (!force && raw && now() - c.at < 864e5) return list; }
+    loadP = (async () => { const c = await IDB.get("equip"); if (c && c.items){ list = number(c.items); raw = c.raw || null; if (!force && raw && c.v === KV && now() - c.at < 864e5) return list; }
       try { const r = await fetch(lsGet("adEquipSrc", "") || SRC, { cache: "no-store" }); if (!r.ok) throw new Error(r.status); const d = await r.json(), out = [], seen = new Set();
         const pidCol = ((d.types || {}).mel || { f: [] }).f.indexOf("P&ID");
         Object.entries(KINDS).forEach(([k, [ti, ni, label]]) => (d.data && d.data[k] || []).forEach(row => { const t = String(row[ti] || "").trim(); if (!t || seen.has(k + t)) return; seen.add(k + t);
-          const it = { t, n: String(row[ni] || "").trim(), k: label }; if (k === "mel" && pidCol >= 0 && row[pidCol]) it.p = row[pidCol]; out.push(it); }));
-        list = number(out); raw = d; areaM = null; IDB.set("equip", { at: now(), items: out, raw: d }); }
+          const it = { t, n: String((typeof ni === "function" ? ni(row) : row[ni]) || "").trim(), k: label }; if (k === "mel" && pidCol >= 0 && row[pidCol]) it.p = row[pidCol]; out.push(it); }));
+        list = number(out); raw = d; areaM = null; IDB.set("equip", { at: now(), v: KV, items: out, raw: d }); }
       catch (e){ console.warn("plant equipment lists", e); if (!list) list = []; }
       return list; })();
     return loadP; }
