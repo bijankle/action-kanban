@@ -77,5 +77,25 @@ const Flow = (() => {
     Store.projects().forEach(pj => Store.mutate("a:" + pj.id, () => Store.actsOf(pj.id).forEach(a => { const s0 = a.stage; sync(a); if (a.stage !== s0) Store.touch(a); })));
     Store.log("Made every tick column a step: " + plan.map(p => p.name).join(", ")); App.render(); }
   const a0 = a => a.stage;
-  return { NA, remove, linkAll, loose, where, sync, mark, who, moveTo, stepOf, state, leave };
+  /* the Category is the handover (Defect, Punchlist, Operations, Maintenance): once, the admin is asked to take the Defect tick
+     column and its Send Defect Notice step out of the list and the Organizer, and to close the open actions already handed
+     over, each listed with a tick to leave any open */
+  const HO = ["Defect", "Punchlist", "Operations", "Maintenance"];
+  async function handoverTidy(){ const df = Store.field("defect"); if (!App.isAdmin() || !df || (!df.table && !df.stage)) return;
+    const st = df.stage && Store.stage(df.stage), fin = Store.stages().find(s => s.kind === "done");
+    const open = Store.all().filter(a => !a.del && Store.stage(a.stage).kind !== "done" && HO.includes(a.f.category));
+    const ok = await new Promise(res => { const m = modal('<h3>The Category is now the handover</h3><p class="dim">Defect, Punchlist, Operations and Maintenance are handed to another division: picking one closes the action (it asks first) and it stays on record under Done. Commissioning carries on as now.</p>'
+      + '<div class="fw-h">The list and the Organizer</div><div class="fw-r"><span>The Defect tick column</span><span class="dim">taken out of the list (what was ticked is kept)</span></div>'
+      + (st && !st.del ? '<div class="fw-r"><span>The ' + esc(st.name) + ' step</span><span class="dim">taken out of the Organizer; its actions move on</span></div>' : "")
+      + (open.length ? '<div class="fw-h">Open actions already handed over, to close (untick any to leave open)</div>' + open.map(a => '<label class="fw-r"><span><input type="checkbox" data-u="' + esc(a._p + ":" + a.u) + '" checked> ' + esc(Store.actId(a)) + ' ' + esc((a.f.title || "").slice(0, 60)) + '</span><span class="dim">' + esc(a.f.category) + ', now ' + esc(Store.todo(Store.stage(a.stage))) + (a.f.category === "Defect" && a.f.defect !== true ? ', notice not sent' : "") + '</span></label>').join("") : '<p class="dim">No open action is categorised as a handover.</p>')
+      + '<div class="yn-btns"><button class="yn-no" type="button">Not now</button><button class="yn-yes" type="button">Make the change</button></div>', { cls: "fw-win", onClose: () => res(null) });
+      $(".yn-no", m).onclick = () => m.close(); $(".yn-yes", m).onclick = () => { res(new Set($$("input[data-u]:checked", m).map(x => x.dataset.u))); m.close(); }; });
+    if (!ok) return;
+    Store.mutate("config", () => { df.table = false; const was = df.stage; delete df.stage; Store.touch(df); if (was){ const s = Store.S.config.stages.find(x => x.id === was); if (s){ s.del = true; Store.touch(s); } } Store.S.config.mod = now(); });
+    Store.projects().forEach(pj => Store.mutate("a:" + pj.id, () => Store.actsOf(pj.id).forEach(a => { if (a.del) return; const s0 = a.stage;
+      if (ok.has(a._p + ":" + a.u) && fin){ Store.place(a, fin.id, 0); Store.log("Handed over and closed " + Store.actId(a)); }
+      else if (st && a.stage === st.id) sync(a);
+      if (a.stage !== s0) Store.touch(a); })));
+    Store.log("The Category is now the handover: the Defect column and its step taken out, " + ok.size + " handed over action" + (ok.size === 1 ? "" : "s") + " closed"); App.render(); }
+  return { handoverTidy, NA, remove, linkAll, loose, where, sync, mark, who, moveTo, stepOf, state, leave };
 })();

@@ -31,7 +31,8 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     check("loads with the actions listed", (await p.$$(".tbl tbody tr")).length >= 3);
     /* ticks lead: picking a category and ticking PCCR move the card on */
     const at = () => p.evaluate(() => { const a = Store.all().find(x => x.no === 1); return Store.actId(a) + " " + Store.todo(Store.stage(a.stage)); });
-    await p.evaluate(() => { const a = Store.all().find(x => x.no === 1); Fields.set(a, Store.field("category"), "Maintenance"); }); const s1 = await at();
+    /* (Maintenance is a handover: it asks; Category only sets it and leaves the action open) */
+    await p.evaluate(() => { const a = Store.all().find(x => x.no === 1); Fields.set(a, Store.field("category"), "Maintenance"); }); await p.click(".ho-cat"); await p.waitForTimeout(300); const s1 = await at();
     check("Category sets the ID and moves it to Send PCCR", /^MAN-0001 Send PCCR$/.test(s1), s1);
     await p.evaluate(() => { const a = Store.all().find(x => x.no === 1); Fields.set(a, Store.field("pccr"), true); }); const s2 = await at();
     check("ticking PCCR moves it to Draft MTO", /Draft MTO$/.test(s2), s2);
@@ -45,6 +46,12 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
       Store.undo(); await new Promise(r => setTimeout(r, 300)); Store.redo(); await new Promise(r => setTimeout(r, 400));
       return (App.selRef === a._p + ":" + a.u) + " | " + (document.querySelector("#note") || {}).textContent; });
     check("a redo that hides an action opens it and says so", /^true \| Redone on .*hidden by the list's filters/.test(ur), ur);
+    /* a handover Category, answered Hand over and close, closes the action; Commissioning carries on without asking */
+    const pair = await p.evaluate(() => Store.all().filter(x => !x.del && x.no !== 1 && Store.stage(x.stage).kind === "open").slice(0, 2).map(x => x.u));
+    await p.evaluate(u => { const a = Store.all().find(x => x.u === u); Fields.set(a, Store.field("category"), "Operations"); }, pair[0]); await p.click(".ynmodal .yn-yes"); await p.waitForTimeout(400);
+    const ho = await p.evaluate(([u, w]) => { const a = Store.all().find(x => x.u === u), b = Store.all().find(x => x.u === w); Fields.set(b, Store.field("category"), "Commissioning");
+      return Store.actId(a) + " " + Store.stage(a.stage).kind + " | " + b.f.category + " " + Store.stage(b.stage).kind + " " + !!document.querySelector(".ynmodal"); }, pair);
+    check("handing over closes the action, Commissioning carries on", /^OPS-\d+ done \| Commissioning open false$/.test(ho), ho);
     /* taking a hold off and putting it back on keeps who it was waiting on */
     const hb = await p.evaluate(() => { const a = Store.all().find(x => x.no === 3), f = Store.field("onhold"); Fields.set(a, f, true); a.hold = Object.assign({}, a.hold, { who: "Jo Smith", mobile: "0400 000 000" });
       Fields.set(a, f, false); Fields.set(a, f, true); Fields.closePop(); return Hold.on(a) + " " + (a.hold || {}).who + " " + (a.hold || {}).mobile; });

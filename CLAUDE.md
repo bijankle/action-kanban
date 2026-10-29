@@ -35,6 +35,7 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - Clicking beside a small control (a tick box) opens a short card about it with a link to where it's worked on; pointing at it can show the same card.
 - Data stays trustworthy: one source of truth, nothing changes silently, and anything that changes other data asks first and lists exactly what will change. The Actions list ticks lead; the Organizer follows them.
 - Steps have three states where it makes sense: done, not needed, not done yet.
+- The Category is the handover: Defect, Punchlist, Operations and Maintenance are handed to another division, so picking one asks to hand it over and close it (kept as a record under Done; no Organizer step for them). Commissioning is our own work and carries on. Every tick column has a pill in the Filters panel's Ticked group.
 - Rules and presets live in File, Parameters, per person; the defaults are what he has tuned. Settings shared by everyone (photo quality) are admin only (bkhadembashi@nsrltd.com).
 - All exports in File, Export (Excel, PDF, Word), with quick buttons above the list too.
 
