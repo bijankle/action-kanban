@@ -28,8 +28,8 @@ const Table = (() => {
   function cols(){ const t = Store.field("title"), rest = (Store.selected().length > 1 ? [{ id: "_proj", label: "Project", type: "proj" }] : []).concat(Store.fields().filter(f => f.table && f.id !== "title"));
     /* Complete: its own tick column, after the last step tick (Contractor); the Status cell keeps hold and delete */
     const cp = Store.fields().find(f => f.type === "complete"); if (cp && !rest.includes(cp)){ let k = -1; rest.forEach((f, n) => { if (f.type === "check" && f.stage) k = n; }); rest.splice(k < 0 ? rest.length : k + 1, 0, cp); }
-    /* On Hold and Delete sit just right of Complete (config.actAfter, when set, is the column they follow instead) */
-    const at = Store.S.config.actAfter || (cp && rest.includes(cp) ? cp.id : ""), ai = at && at !== "title" ? rest.findIndex(f => f.id === at) : -1; rest.splice(ai + 1, 0, { id: "_hold", label: "On Hold", type: "act", k: "hold" }, { id: "_del", label: "Delete", type: "act", k: "del" });   // (two columns of their own, each dragged on its own)
+    /* On Hold and Delete sit at the end, just left of + Add column (config.actAfter, when set, is the column they follow instead) */
+    const at = Store.S.config.actAfter, ai = at && at !== "title" ? rest.findIndex(f => f.id === at) : rest.length - 1; rest.splice(ai + 1, 0, { id: "_hold", label: "On Hold", type: "act", k: "hold" }, { id: "_del", label: "Delete", type: "act", k: "del" });   // (two columns of their own, each dragged on its own)
     const base = [{ id: "_id", label: "ID", type: "id" }].concat(t && t.table !== false ? [t] : [], rest);
     /* once any column has been dragged, the whole order is kept (each person's own, on their computer: moving columns
        never changes anyone else's list); columns added since keep their place in the default order */
@@ -37,7 +37,6 @@ const Table = (() => {
     if (ord.includes("_act")){ const k = ord.indexOf("_act"); ord.splice(k, 1, "_hold", "_del"); lsSet("adColOrder", ord); }   // (On Hold and Delete were one column: now two, in its place)
     /* (once: Handover goes back to just left of PCCR in an order kept from before, as asked) */
     if (!lsGet("adColFixHo", 0)){ if (ord.includes("handover") && ord.includes("pccr")){ ord = ord.filter(x => x !== "handover"); ord.splice(ord.indexOf("pccr"), 0, "handover"); }
-      const cpx = Store.fields().find(f => f.type === "complete"); if (cpx && ord.includes("_hold") && ord.includes(cpx.id)){ ord = ord.filter(x => x !== "_hold" && x !== "_del"); ord.splice(ord.indexOf(cpx.id) + 1, 0, "_hold", "_del"); }   // (and On Hold and Delete just right of Complete)
       lsSet("adColOrder", ord); lsSet("adColFixHo", 1); }
     const at2 = new Map(ord.map((id, n) => [id, n])), dflt = new Map(base.map((c, n) => [c.id, n]));
     const rank = c => at2.has(c.id) ? at2.get(c.id) : (() => { for (let n = dflt.get(c.id) - 1; n >= 0; n--) if (at2.has(base[n].id)) return at2.get(base[n].id) + 0.5; return -0.5; })();
@@ -123,7 +122,7 @@ const Table = (() => {
     const tickF = "700 11.5px " + getComputedStyle(document.body).fontFamily;
     /* a column nobody has sized is as wide as the longest word in its heading (the heading wraps a word at a line) or its widest entry */
     const tickOf = () => 23;   // (a tick column is one square cell wide: the row height and its line)
-    const px = c => TICK.has(c.type) ? tickOf(c) : ws[c.id] || (c.id === "equipment" ? Math.max(headW("F12-CV-402", "600 13px " + getComputedStyle(document.body).fontFamily) + 34, headW(head(c))) : TICK.has(c.type) ? tickOf(c) : fix(c) ? Math.max(headW(head(c)), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
+    const px = c => c.type === "act" ? NEED.act : TICK.has(c.type) ? tickOf(c) : ws[c.id] || (c.id === "equipment" ? Math.max(headW("F12-CV-402", "600 13px " + getComputedStyle(document.body).fontFamily) + 34, headW(head(c))) : TICK.has(c.type) ? tickOf(c) : fix(c) ? Math.max(headW(head(c)), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
     const FIX = new Set(["act", "id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || c.id === "equipment" || (c.type === "choice" && (c.options || []).length <= 3) || !!ws[c.id];   // (a column someone has sized keeps that width; the rest share what's left)
     /* when space runs out, the counts and dates go first, then the location; the tick boxes stay */
     const lp = c => (["sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
@@ -139,7 +138,7 @@ const Table = (() => {
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? pref("titleMin") : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
-    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="' + c.id + '" draggable="' + !!Store.S.edit + '" aria-label="' + c.label + '" style="width:' + NEED.act + 'px"><span class="th-2"><span class="th-c"><span class="th-v">' + c.label + '</span><button type="button" class="th-i" data-c="' + c.id + '" aria-label="What ' + c.label + ' means">' + INFO_I + '</button></span></span></th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + !!Store.S.edit + '" style="width:' + wid(c) + '">'
+    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="' + c.id + '" aria-label="' + c.label + '" style="width:' + NEED.act + 'px"><span class="th-2"><span class="th-c"><span class="th-v">' + c.label + '</span><button type="button" class="th-i" data-c="' + c.id + '" aria-label="What ' + c.label + ' means">' + INFO_I + '</button></span></span></th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + (TICK.has(c.type) ? '<span class="th-v">' + esc(head(c)) + '</span>' : esc(head(c))) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">' + INFO_I + '</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '>' + (App.isAdmin() ? (ADD < 60 ? '<button type="button" class="addc addc-s" aria-haspopup="true" title="Add a column" aria-label="Add a column">+</button>' : '<button type="button" class="addc" aria-haspopup="true">+ Add column</button>') : "") + '</th>' : "");
     const minW = cs.reduce((t, c) => t + least(c), 0) + ADD;
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
@@ -288,13 +287,13 @@ const Table = (() => {
       const ns = lc.filter(c => c.id !== "title"); if (ns.length && spare > 0) ns.forEach(c => { ws[c.id] += Math.floor(spare / ns.length); }); }
     else if (spare < 0){   /* no room for it all: Notes (and any long text) gives first, down to a little, then the title, so the + column always shows; their text ends in more… */
       let short = -spare; ws._add = 24; short -= add - 24;
-      lc.filter(c => c.id !== "title").forEach(c => { if (short <= 0) return; const g = Math.min(short, Math.max(0, ws[c.id] - 90)); ws[c.id] -= g; short -= g; });
+      lc.filter(c => c.id !== "title").forEach(c => { if (short <= 0) return; const g = Math.min(short, Math.max(0, ws[c.id] - 60)); ws[c.id] -= g; short -= g; });
       const t = lc.find(c => c.id === "title"); if (t && short > 0){ const g = Math.min(short, Math.max(0, ws.title - 160)); ws.title -= g; short -= g; } }
     if (JSON.stringify(ws) !== JSON.stringify(old) || first){ lsSet("adColW", ws); requestAnimationFrame(() => App.render()); } }
   /* a long column set by hand is remembered from one opening to the next */
   const remember = (c, w) => { if (c && LONG(c)){ const m = longMem(); m[c.id] = Math.round(w); lsSet("adColLong", m); } };
   function wireHead(el, cs){ $$("th", el).forEach(th => { const id = th.dataset.c; if (!$(".th-l", th)) return;   // (the row buttons' column has no heading)
-      $(".th-l", th).onclick = () => { App.sort = App.sort && App.sort.id === id ? (App.sort.dir > 0 ? { id, dir: -1 } : null) : { id, dir: 1 }; App.render(); };
+      $(".th-l", th).onclick = () => { if (Date.now() - (el.__dragAt || 0) < 400) return; App.sort = App.sort && App.sort.id === id ? (App.sort.dir > 0 ? { id, dir: -1 } : null) : { id, dir: 1 }; App.render(); };
       /* resize */
       const r = $(".th-r", th); r.onclick = e => e.stopPropagation();
       const mb = $(".th-m", th); if (mb) mb.onclick = e => { e.stopPropagation(); colMenu(mb, id, () => r.ondblclick(new MouseEvent("dblclick"))); };
@@ -308,19 +307,29 @@ const Table = (() => {
           if (!raf) raf = requestAnimationFrame(() => { raf = 0; tagFit(el); moreFit(el); }); };   // (the tags and more… follow the width as it's dragged)
         r.onpointerup = () => { r.onpointermove = null; if (!moved) return; dragged.add(id); remember(Store.field(id) || { id }, parseFloat(th.style.width) || th.offsetWidth); const ws = widths(); ws[id] = Math.round(parseFloat(th.style.width) || th.offsetWidth); lsSet("adColW", ws); App.render(); }; };   // (only the column dragged)
     }); dragHead(el, cs); }
-  /* reorder by dragging a heading (the field order is shared, it's also the order in the side panel); ID and title stay
-     first, Status can go anywhere after them */
-  function dragHead(el){ const ids = cols().map(c => c.id), movable = () => !!Store.S.edit;   // (every column moves, the ID and title too)
-    $$("th[data-c]", el).forEach(th => { const id = th.dataset.c;
-      th.ondragstart = e => { if (!movable(id)) return e.preventDefault(); e.dataTransfer.setData("text/col", id); th.classList.add("drag"); };
-      th.ondragend = () => th.classList.remove("drag");
-      th.ondragover = e => { if ([...e.dataTransfer.types].includes("text/col")){ e.preventDefault(); th.classList.add("dover"); } };
-      th.ondragleave = () => th.classList.remove("dover");
-      th.ondrop = e => { th.classList.remove("dover"); const from = e.dataTransfer.getData("text/col"); if (!from || from === id) return; e.preventDefault();
-        /* the new order of all the columns: the dragged one takes the dropped on one's place (after it going right, before it going left) */
-        const o = ids.slice(), a = o.indexOf(from), b0 = o.indexOf(id); o.splice(a, 1); let b = o.indexOf(id); b = a < b0 ? b + 1 : b;
-        o.splice(Math.max(0, b), 0, from);
-        lsSet("adColOrder", o); App.render(); }; }); }
+  /* reorder by dragging a heading, live: once the pointer has moved a little, the whole column (heading and every cell) slides
+     to wherever the pointer is, so what you see while dragging is what you get on release (nothing jumps). The + Add column
+     is always last: a column let go over it, or past it, stays just left of it. The order is kept on this computer */
+  function dragHead(el){ if (!Store.S.edit) return; const tb = $("table.tbl", el); if (!tb) return;
+    $$("thead th[data-c]", tb).forEach(th => { th.onpointerdown = e => { if (e.button !== 0 || e.target.closest(".th-r,.tw-r,.th-i,.th-m,button,input")) return;
+      const x0 = e.clientX; let on = false, lastX = x0;
+      const cellsAt = k => [...tb.rows].map(r => r.cells.length === tb.rows[0].cells.length ? r.cells[k] : null);
+      const colsEl = () => [...tb.querySelectorAll("colgroup col")];
+      const move = ev => { lastX = ev.clientX; if (!on){ if (Math.abs(ev.clientX - x0) < 6) return; on = true; tb.classList.add("coldrag"); th.classList.add("drag"); try { th.setPointerCapture(e.pointerId); } catch (x){} }
+        ev.preventDefault();
+        const hs = [...tb.rows[0].cells], from = hs.indexOf(th), last = hs.findIndex(h => h.classList.contains("addcol")), end = last < 0 ? hs.length : last;
+        /* where the pointer is among the headings (never at or past + Add column) */
+        let to = from; for (let k = 0; k < end; k++){ const b = hs[k].getBoundingClientRect(); if (ev.clientX >= b.left && ev.clientX < b.right){ to = k; break; } if (k === end - 1 && ev.clientX >= b.right) to = end - 1; }
+        if (ev.clientX < hs[0].getBoundingClientRect().left) to = 0;
+        if (to === from) return;
+        /* slide the column there, every row and the column widths with it */
+        const src = cellsAt(from), dst = cellsAt(to), cs2 = colsEl();
+        [...tb.rows].forEach((row, n) => { const a = src[n], b = dst[n]; if (!a || !b) return; if (to > from) b.after(a); else b.before(a); });
+        if (cs2[from] && cs2[to]){ if (to > from) cs2[to].after(cs2[from]); else cs2[to].before(cs2[from]); } };
+      const up = () => { document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up); document.removeEventListener("pointercancel", up);
+        if (!on) return; tb.classList.remove("coldrag"); th.classList.remove("drag"); el.__dragAt = Date.now();   // (the click that ends a drag doesn't sort)
+        const o = [...tb.rows[0].cells].map(h => h.dataset.c).filter(Boolean); lsSet("adColOrder", o); fitKey = ""; App.render(); };
+      document.addEventListener("pointermove", move); document.addEventListener("pointerup", up); document.addEventListener("pointercancel", up); }; }); }
   /* tiles view (like SharePoint or Google Drive): the main photo fills the tile, the title over it; the
      arrows on a tile step through its photos. The tile size is set from the Size callout. */
   const tileIx = new Map();

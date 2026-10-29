@@ -1562,8 +1562,8 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .str.str-h>*{border-left-color:var(--line2)!important}
 .tbl th .th-m,.tbl th .th-i,.tbl th svg{color:var(--muted)!important}.tbl th .th-m:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)!important}
 .tbl th .th-r:hover,.tbl th .tw-r:hover{background:color-mix(in srgb,var(--th) 35%,transparent)!important}
-/* the + Add column strip stays in sight at the list's right edge, even when the list is wider than its pane */
-.tbl th.addcol,.tbl td.addcol{position:sticky;right:0;z-index:3;background:var(--panel)}.tbl th.addcol{z-index:4;background:var(--hdr)!important}
+/* the + Add column strip is the last column, never over the others */
+.tbl td.addcol{position:static}.tbl th.addcol{position:sticky;top:0;right:auto}
 /* the heading and name cell colour: the light grey, with a faint tint of the theme colour (with the blue theme, the light grey) */
 :root{--hdr:color-mix(in srgb,var(--th) 5%,color-mix(in srgb,var(--panel2) 70%,var(--panel)))}
 /* the action PDF: an outlined header block; the Summary as a little table like the app's (a shaded name cell, plain values,
@@ -1581,3 +1581,6 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .tbl th.addcol .addc.addc-s{padding:8px 0!important;text-align:center}
 .tbl td.addcol{background:var(--panel)!important;border-left:1px solid var(--line2)!important}
 .tbl th.tk .th-m{background:transparent!important}.th-i:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)!important;color:var(--ink)!important}
+/* dragging a heading: the column slides with the pointer; the heading being moved is shaded and shows a grabbing hand */
+.tbl thead th[data-c]{cursor:grab}.tbl.coldrag,.tbl.coldrag *{cursor:grabbing!important;user-select:none}
+.tbl thead th.drag{background:color-mix(in srgb,var(--th) 18%,var(--hdr))!important;outline:2px solid var(--th);outline-offset:-2px}

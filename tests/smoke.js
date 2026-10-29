@@ -29,6 +29,12 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
   try {
     const { p, errs } = await open("someone@example.com");
     check("loads with the actions listed", (await p.$$(".tbl tbody tr")).length >= 3);
+    /* On Hold and Delete sit just left of + Add column, and a column dropped past + Add column stays left of it */
+    const hk = await p.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 400)), o = () => [...document.querySelectorAll(".tbl thead th")].map(th => th.dataset.c || (th.classList.contains("addcol") ? "ADD" : "")).filter(Boolean);
+      const first = o().slice(-3).join(","); localStorage.setItem("adColOrder", JSON.stringify(o().filter(x => x !== "ADD").filter(x => x !== "_hold").concat(["ADD", "_hold"]))); App.render(); await w(); const after = o(); localStorage.removeItem("adColOrder"); App.render(); await w();
+      const add = document.querySelector(".tbl th.addcol").getBoundingClientRect(), under = [...document.querySelectorAll('.tbl th[data-c="_hold"], .tbl th[data-c="_del"]')].some(th => th.getBoundingClientRect().right > add.left + 1);
+      return first + " | " + after.slice(-2).join(",") + " | " + under; });
+    check("On Hold and Delete sit just left of + Add column and never behind it", hk === "_hold,_del,ADD | _hold,ADD | false", hk);
     /* ticks lead: picking a category and ticking PCCR move the card on */
     const at = () => p.evaluate(() => { const a = Store.all().find(x => x.no === 1); return Store.actId(a) + " " + Store.todo(Store.stage(a.stage)); });
     await p.evaluate(() => { const a = Store.all().find(x => x.no === 1); Fields.set(a, Store.field("category"), "Maintenance"); }); const s1 = await at();
