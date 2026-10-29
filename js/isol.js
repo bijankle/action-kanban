@@ -62,7 +62,7 @@ const Isol = (() => {
   const tick = (on, ro, key, tip) => '<td class="is-pk"><label class="ck is-ck" title="' + esc(tip) + '"><input type="checkbox"' + (on ? " checked" : "") + (ro ? " disabled" : "") + ' data-pk="' + esc(key) + '"></label>' + (on ? LOCK : BULB) + '</td>';
   function renderFor(el, a, keep){ const ro = !Store.S.edit;
     const items = list(a), tags = Array.isArray(a.f.equipment) ? a.f.equipment : [], sug = tags.length && typeof IsolSuggest !== "undefined" ? suggestions(a, tags) : [];
-    el.innerHTML = '<div class="is-main"><table class="tbl pt-tbl is-tbl"><thead><tr><th class="is-pk"></th><th class="pt-no">No.</th>' + COLS.map(([k, n]) => '<th class="is-' + k + '">' + esc(n) + '</th>').join("") + '</tr></thead><tbody>'
+    el.innerHTML = '<div class="is-main"><table class="tbl pt-tbl is-tbl"><thead><tr><th class="is-pk"></th><th class="pt-no" data-col="No.">#</th>' + COLS.map(([k, n]) => '<th class="is-' + k + '">' + esc(n) + '</th>').join("") + '</tr></thead><tbody>'
       + items.map((it, i) => '<tr data-id="' + it.id + '">' + tick(true, ro, it.id, ro ? "Isolated" : "Isolated. Untick to take it off") + '<td class="pt-no">' + (i + 1) + '</td>' + COLS.map(([k]) => cell(it.id, k, it[k], ro)).join("") + '</tr>').join("")
       + (ro ? "" : '<tr class="pt-blank"><td class="is-pk"></td><td class="pt-no"></td>' + COLS.map(([c]) => cell("new0", c, "", ro, c === "tag" ? "Type a number" : c === "name" ? "or a name" : "")).join("") + '</tr>')
       + (sug === null ? '<tr class="is-sep"><td colspan="5">Suggested from the plant lists <span class="dim">' + (Equip.raw() ? "working them out…" : "loading the lists…") + '</span></td></tr>'
@@ -72,7 +72,7 @@ const Isol = (() => {
     if (!Equip.count) Equip.load().then(() => { if (App.sub === "isol" && Equip.count) App.render(); });
     wire(el, a, ro);
     wireSug(el, a, ro, sug || []);
-    gridCols($(".is-tbl", el), "isol", { fixed: { c0: 64, "No.": 46 } });
+    gridCols($(".is-tbl", el), "isol", { fixed: { c0: 64, "No.": 30 } });
     if (keep && keep.c){ let r = keep.r; if (created.has(r)){ r = created.get(r); created.delete(keep.r); } const t = $('[data-r="' + r + '"][data-c="' + keep.c + '"]', el); if (t){ if (t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } created.clear(); }
   /* ---------- suggested isolations: what to isolate for the subject equipment, as pills to add or dismiss ---------- */
   let index = null, building = null;

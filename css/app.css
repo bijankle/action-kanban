@@ -1284,3 +1284,73 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 .mt-tbl tr.mt-kid>td{background:color-mix(in srgb,var(--th) 4%,var(--panel2))}.mt-tbl tr.mt-kid>td:first-child{padding-left:22px}.mt-tbl tr.mt-kid>td:first-child::before{content:"↳";color:var(--dim);margin-right:4px}
 /* a plate piece: length × width in the Qty cell */
 .mt-tbl .mt-dims{white-space:nowrap}.mt-tbl .mt-dm{width:58px!important}.mt-tbl .mt-dims .dim{margin:0 3px}.mt-tbl .mt-mm{font-size:11.5px}
+
+/* ---------- compact tables, one look in every table (the Actions list, the MTO, Spares, Isolations, Drawings, Data validation):
+   22px rows like Outlook's compact view, a faint line between every cell like Excel, one font at 13px.
+   A cell you type in is a faint orange fill, square and edge to edge; one the app filled in is faint blue until it's typed over.
+   The buttons in a row (hold, done, delete, duplicate, ✕) are square cells of the grid with the symbol in the middle ---------- */
+:root{--row:22px;--edf:#fdf3e7;--edh:#fbe7cf;--autof:#dbe7fb;--autoh:#cbdaf5}
+html.dark{--edf:#2a2117;--edh:#36291a;--autof:#1d2a40;--autoh:#253552}
+.tbl td{height:var(--row)!important;padding:0 8px!important;font-size:13px!important;line-height:1.2;font-family:var(--font)!important}
+.tbl td *{font-family:var(--font)!important}
+.tbl tbody td+td{border-left:1px solid var(--line)}
+.tbl th .th-l{padding:4px 8px}
+.tbl th{font-size:12.5px}
+/* (cells holding something to type in: no padding, the fill reaches the cell lines) */
+.tbl td:has(.in,.lt-b,.tg1,.tagin,.rb,.ic-b,.mt-ii){padding:0!important}
+.tbl td .in,.tbl td .lt-b,.tbl td .tg1,.tbl td .tagin,.tbl td .lk-sel,.tbl td .pt-in,.tbl td.ed .in,.tbl td.ed .lt-b,.tbl td.ed input.in,.tbl td.ed .tagin{height:var(--row)!important;line-height:var(--row)!important;min-height:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--edf)!important;padding:0 6px!important;font-size:13px!important;margin:0!important;vertical-align:middle}
+.tbl td .in:hover,.tbl td .lt-b:hover,.tbl td .tg1:hover,.tbl td .pt-in:hover,.tbl td .lk-sel:hover{background:var(--edh)!important}
+.tbl td .in:focus,.tbl td .tagin:focus,.tbl td .pt-in:focus{background:var(--panel)!important;box-shadow:inset 0 -2px 0 var(--th)!important}
+/* filled in by the app (a worked out spare, the location from the WBS, the category from Defect emailed): blue, orange again once typed over */
+.tbl td .in.lk,.tbl td .lk .in,.tbl td .lk>.in,.tbl td .lk .lt-b,.tbl td .lk-sel.lk,.tbl td .mt-sqa,.mt-tbl .mt-sqa{background:var(--autof)!important}
+.tbl td .in.lk:hover,.tbl td .lk .in:hover,.tbl td .mt-sqa:hover{background:var(--autoh)!important}
+.tbl td .pt-blank .pt-in,.tbl tr.pt-blank td .pt-in{background:var(--edf)!important}
+/* hold, done and delete: three square cells of the grid, the symbol in the middle, the state as a fill */
+.tbl td.actc .rbs{display:flex;gap:0;width:auto;justify-content:flex-start;height:var(--row)}
+.tbl td .rb{width:var(--row)!important;height:var(--row)!important;border:0!important;border-right:1px solid var(--line)!important;border-radius:0!important;background:transparent;flex:none}
+.tbl td .rb svg{width:13px!important;height:13px!important}.tbl td .rb svg.big{width:15px!important;height:15px!important}
+.tbl td .rb:hover{background:var(--panel2)}
+.tbl td .rb-hi{width:var(--row)!important;height:var(--row);border-right:1px solid var(--line);display:inline-grid;place-items:center}
+.tbl td .hold-i{width:15px;height:15px;font-size:10px;line-height:15px;margin:0}
+/* duplicate, ✕ and (i): square cells too */
+.tbl td .ic-b,.tbl td .ic-b.sm,.mt-tbl .mt-x{width:var(--row)!important;height:var(--row)!important;border-radius:0!important;font-size:12px}
+.tbl td .ic-b svg{width:13px;height:13px}
+.tbl td .pt-x:hover,.tbl td .mt-x:hover{color:#c0392b}html.dark .tbl td .pt-x:hover,html.dark .tbl td .mt-x:hover{color:#ff6b5b}
+/* tick boxes in a row: 16px so they sit inside the 22px row */
+.tbl td .ck input,.tbl td input[type=checkbox]{width:15px;height:15px}
+/* the rest of a row shrunk to fit: the ID box, the tag pills, the open/close tab, the Done button, the spare and unit boxes */
+.tbl td .idw{height:var(--row);border:0;border-radius:0;background:transparent;padding:0}
+.tbl td .tg-more{padding:0 6px;font-size:11px;line-height:16px}
+.mt-tbl .mt-tg{height:16px;font-size:11px}
+.mt-tbl .mt-done{height:var(--row)!important;border-radius:0!important;padding:0 10px!important;margin:0!important;font-size:12px}
+.mt-tbl .mt-pv,.mt-tbl .mt-pq{font-size:13px}
+.mt-tbl tr.mt-par>td{border-bottom:1px solid color-mix(in srgb,var(--th) 45%,var(--line))}
+.tbl tr.mt-grp td,.tbl tr.grp td,.tbl tr.is-grp td{height:18px!important;font-size:10.5px!important}
+.tbl td .ic-b+.ic-b,.tbl td .mt-done+.ic-b{border-left:1px solid var(--line)!important}
+.tbl td:has(>.ic-b:first-child){text-align:left}
+.tbl td .rb-hw .hold-i{top:1px!important;right:1px!important;width:9px!important;height:9px!important;font-size:0!important}.tbl td .rb-hw .hold-i svg{width:9px!important;height:9px!important}
+.tbl th.tk .th-l{padding:4px 3px 16px}.tbl th.actc{padding:4px 8px}
+/* (the whole cell takes the fill, so a cell with a number and its unit, or a box narrower than its column, is filled edge to edge) */
+.tbl td:has(>.in,>.pt-in,>.lt-w,>.tagbox,>.tg1,>.lk-sel,>.combo,>.lk){background:var(--edf)!important}
+.tbl td:has(>.in,>.pt-in,>.lt-w,>.tagbox,>.tg1,>.lk-sel,>.combo,>.lk):hover{background:var(--edh)!important}
+.tbl td:has(>.mt-sqa,>.in.lk,>.lk){background:var(--autof)!important}
+.tbl td:has(>.mt-sqa,>.in.lk,>.lk):hover{background:var(--autoh)!important}
+.tbl td:has(>.in,>.pt-in) .in,.tbl td:has(>.in,>.pt-in) .pt-in{background:transparent!important}
+.tbl td .in:focus,.tbl td .pt-in:focus,.tbl td .tagin:focus{background:var(--panel)!important}
+.pt-tbl td.pt-no{padding:0 4px!important}
+.tbl td .ct-n:empty{display:none}.tbl td .ct-n{padding:0 8px;line-height:16px;font-size:12px}
+.tbl td .btn.sm,.tbl td .btn{height:var(--row)!important;border-radius:0!important;padding:0 10px!important;font-size:12px;margin:0}
+/* the tick columns: one square cell each, the cell is the tick box (orange to tick, a green ✓ done, a grey – not needed), headed by one word set on end with its (i) under it */
+.tbl th.tk{vertical-align:bottom;padding:0!important}
+.tbl th.tk .th-l{display:block;padding:20px 0 24px!important;text-align:center;white-space:nowrap;line-height:1;font-size:12px}
+.tbl th.tk .th-v{display:inline-block;writing-mode:vertical-rl;transform:rotate(180deg)}
+.tbl th.tk .th-i{position:absolute!important;left:50%!important;bottom:4px!important;transform:translateX(-50%)!important;margin:0!important;width:15px!important;height:15px!important}
+.tbl th.tk .th-m{top:2px!important;bottom:auto!important;right:50%!important;transform:translateX(50%)!important}
+.tbl td.tk{padding:0!important;width:23px;min-width:23px;max-width:23px}
+.tbl td.tk .ck{display:block!important;width:100%!important;max-width:none!important;height:var(--row);margin:0!important}
+.tbl td.tk .ck input{-webkit-appearance:none;appearance:none;display:block;width:100%!important;height:var(--row)!important;margin:0;border:0;border-radius:0;background:var(--edf) center/12px no-repeat;cursor:pointer}
+.tbl td.tk .ck input:hover{background-color:var(--edh)}
+.tbl td.tk .ck input:checked{background-color:color-mix(in srgb,#1f8a58 18%,var(--panel));background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6.5l2.6 2.6L10 3.4' fill='none' stroke='%231f8a58' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.tbl td.tk .ck input:indeterminate,.tbl td.tk .ck.na input{background-color:color-mix(in srgb,#9aa3ad 22%,var(--panel));background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6h6' stroke='%237a8591' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
+.tbl td.tk .ck input:disabled{cursor:default;opacity:.6}
+.tbl td.tk .ck input:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}

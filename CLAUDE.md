@@ -15,7 +15,8 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 ## Look and feel
 
 - One look everywhere: when a style is picked (the (i) symbol, dropdowns, date boxes, buttons), apply it across the whole app, not just where it was asked about.
-- Every control is 28px high (boxes, buttons, tabs, chips); tick boxes 18px. Don't change heights when restyling.
+- Every control is 28px high (boxes, buttons, tabs, chips); tick boxes 18px. Don't change heights when restyling. Inside tables it's different (below).
+- Tables, every one the same (compact, like Outlook's compact view and Excel): 22px rows, 13px text, a faint line between every cell. A cell you type in is a faint orange fill, square and edge to edge (no rounded boxes); one the app filled in is faint blue and turns orange once typed over. Buttons in a row (hold, done, delete, duplicate, ✕) are square cells of the grid with the symbol in the middle. Tick columns are one square cell each (the cell is the tick: green ✓ done, grey – not needed), headed by one word set on end with an (i) for the rest. The number column is always # and as narrow as its numbers. Use the `--row`, `--edf`, `--autof` tokens in css/app.css.
 - Compact and tight: no redundant headings, labels, counts or "Empty"/"None yet" lines. Space goes to the content.
 - Text cut off for length ends in "more…" (opens the full text). The (i) is only for explaining something, not for cut off text.
 - Never the browser's own look: no autofill, no datalist, no native date or time pickers. Use the app's own dropdown card, calendar (Monday first, Clear and Today) and a 24 hour time.

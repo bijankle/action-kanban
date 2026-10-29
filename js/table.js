@@ -2,10 +2,11 @@
    Click a row to open it in the side panel. Drag a header to reorder columns, drag its edge to resize. */
 "use strict";
 const Table = (() => {
-  const NEED = { act: 120, id: 200, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
+  const NEED = { act: 67, id: 200, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
   let cv = null; const TICK = new Set(["check", "complete"]);
   /* a tick column's heading is one word (its short name); the i beside it says what it means */
-  const head = c => TICK.has(c.type) && c.short ? c.short : c.label;
+  /* a tick column is headed by one word, set on end (Parts for Parts Arrived), so the header stays short; its (i) gives the full name and what it means */
+  const head = c => TICK.has(c.type) ? String(c.short || c.label).trim().split(/\s+/)[0] : c.label;
   document.addEventListener("click", e => { const b = e.target.closest(".th-i"); if (!b) return; e.stopPropagation(); e.preventDefault(); Fields.closePop(); const f = Store.field(b.dataset.c); if (!f) return;
     const p = h('<div class="pop thpop"><b>' + esc(f.label) + '</b>' + (f.desc ? '<p>' + esc(f.desc) + '</p>' : "") + '</div>'); document.body.appendChild(p); Fields.place(p, b); }, true);
   /* the width of a heading's longest word, plus the cell padding and room for the sort arrow */
@@ -104,8 +105,8 @@ const Table = (() => {
        their heading (headings wrap onto two lines), or what their contents need if that's wider */
     const tickF = "700 11.5px " + getComputedStyle(document.body).fontFamily;
     /* a column nobody has sized is as wide as the longest word in its heading (the heading wraps a word at a line) or its widest entry */
-    const tickOf = c => Math.max(44, headW(head(c), tickF) - 14);   // (the i sits under the heading, so only the longest word and a little padding count)
-    const px = c => ws[c.id] || (c.id === "equipment" ? Math.max(headW("F12-CV-402", "600 13px " + getComputedStyle(document.body).fontFamily) + 34, headW(head(c))) : TICK.has(c.type) ? tickOf(c) : fix(c) ? Math.max(headW(head(c)), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
+    const tickOf = () => 23;   // (a tick column is one square cell wide: the row height and its line)
+    const px = c => TICK.has(c.type) ? tickOf(c) : ws[c.id] || (c.id === "equipment" ? Math.max(headW("F12-CV-402", "600 13px " + getComputedStyle(document.body).fontFamily) + 34, headW(head(c))) : TICK.has(c.type) ? tickOf(c) : fix(c) ? Math.max(headW(head(c)), NEED[c.type] || 60) : c.type === "proj" ? 140 : W[c.type] || 140);
     const FIX = new Set(["act", "id", "stage", "rank", "check", "complete", "mto", "sparelist", "isollist", "date", "meta", "phone", "number"]), fix = c => FIX.has(c.type) || c.id === "equipment" || (c.type === "choice" && (c.options || []).length <= 3) || !!ws[c.id];   // (a column someone has sized keeps that width; the rest share what's left)
     /* when space runs out, the counts and dates go first, then the location; the tick boxes stay */
     const lp = c => (["sparelist", "isollist", "date", "meta", "phone", "number"].includes(c.type) || (c.type === "choice" && (c.options || []).length <= 3)) ? " lp1" : c.id === "location" ? " lp2" : "";
@@ -122,7 +123,7 @@ const Table = (() => {
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? pref("titleMin") : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
     const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" draggable="' + !!Store.S.edit + '" aria-label="Status: on hold, complete, delete" style="width:' + NEED.act + 'px">Status</th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + !!Store.S.edit + '" style="width:' + wid(c) + '">'
-      + '<span class="th-l">' + esc(head(c)) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">' + INFO_I + '</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '>' + (App.isAdmin() ? (ADD < 60 ? '<button type="button" class="addc addc-s" aria-haspopup="true" title="Add a column" aria-label="Add a column">+</button>' : '<button type="button" class="addc" aria-haspopup="true">+ Add column</button>') : "") + '</th>' : "");
+      + '<span class="th-l">' + (TICK.has(c.type) ? '<span class="th-v">' + esc(head(c)) + '</span>' : esc(head(c))) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">' + INFO_I + '</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '>' + (App.isAdmin() ? (ADD < 60 ? '<button type="button" class="addc addc-s" aria-haspopup="true" title="Add a column" aria-label="Add a column">+</button>' : '<button type="button" class="addc" aria-haspopup="true">+ Add column</button>') : "") + '</th>' : "");
     const minW = cs.reduce((t, c) => t + least(c), 0) + ADD;
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
       + (list.length ? "" : '<div class="empty">' + (Store.visible().length ? "No actions match the filter." : "No actions yet. Click <b>+ New action</b>, or the upload with AI button beside it to make one from an email.") + '</div>') + '</div>';
@@ -224,7 +225,7 @@ const Table = (() => {
       q.onkeydown = e => { if (e.key === "Enter"){ const b = $$("[data-f]", p).find(x => !x.hidden); if (b) b.click(); } if (e.key === "Escape") Fields.closePop(); }; }
     $$("[data-f]", p).forEach(b => b.onclick = () => { Fields.closePop(); Store.mutate("config", () => { const f = Store.field(b.dataset.f), fs = Store.S.config.fields; f.table = true; fs.splice(fs.indexOf(f), 1); fs.push(f); Store.S.config.mod = now(); Store.touch(f); }); Store.log("Added the " + b.textContent + " column"); }); }
   /* a column's tight width (as a double click on its edge gives): its heading's longest word, or its widest cell */
-  function fitW(el, cs, th, i){ const l = $(".th-l", th);
+  function fitW(el, cs, th, i){ const l = $(".th-l", th); if (cs[i] && TICK.has(cs[i].type)) return 23;   // (a tick column: one square cell)
     let w = cs[i] && TICK.has(cs[i].type) ? headW(head(cs[i]), getComputedStyle(l).font) - 14 : headW(cs[i] ? head(cs[i]) : l.textContent, getComputedStyle(l).font);
     $$("tbody tr", el).forEach(tr => { const td = tr.children[i]; if (!td) return;
       const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML;
