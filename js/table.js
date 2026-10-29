@@ -2,7 +2,7 @@
    Click a row to open it in the side panel. Drag a header to reorder columns, drag its edge to resize. */
 "use strict";
 const Table = (() => {
-  const NEED = { act: 45, id: 200, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
+  const NEED = { act: 23, id: 200, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
   let cv = null; const TICK = new Set(["check", "complete"]);
   /* a tick column's heading is one word (its short name); the i beside it says what it means */
   /* a tick column is headed by one word, set on end (Parts for Parts Arrived), so the header stays short; its (i) gives the full name and what it means */
@@ -29,14 +29,15 @@ const Table = (() => {
     /* Complete: its own tick column, after the last step tick (Contractor); the Status cell keeps hold and delete */
     const cp = Store.fields().find(f => f.type === "complete"); if (cp && !rest.includes(cp)){ let k = -1; rest.forEach((f, n) => { if (f.type === "check" && f.stage) k = n; }); rest.splice(k < 0 ? rest.length : k + 1, 0, cp); }
     /* On Hold and Delete sit just right of Complete (config.actAfter, when set, is the column they follow instead) */
-    const at = Store.S.config.actAfter || (cp && rest.includes(cp) ? cp.id : ""), ai = at && at !== "title" ? rest.findIndex(f => f.id === at) : -1; rest.splice(ai + 1, 0, { id: "_act", label: "", type: "act" });
+    const at = Store.S.config.actAfter || (cp && rest.includes(cp) ? cp.id : ""), ai = at && at !== "title" ? rest.findIndex(f => f.id === at) : -1; rest.splice(ai + 1, 0, { id: "_hold", label: "On Hold", type: "act", k: "hold" }, { id: "_del", label: "Delete", type: "act", k: "del" });   // (two columns of their own, each dragged on its own)
     const base = [{ id: "_id", label: "ID", type: "id" }].concat(t && t.table !== false ? [t] : [], rest);
     /* once any column has been dragged, the whole order is kept (each person's own, on their computer: moving columns
        never changes anyone else's list); columns added since keep their place in the default order */
     let ord = lsGet("adColOrder", null); if (!Array.isArray(ord) || !ord.length) return base;
+    if (ord.includes("_act")){ const k = ord.indexOf("_act"); ord.splice(k, 1, "_hold", "_del"); lsSet("adColOrder", ord); }   // (On Hold and Delete were one column: now two, in its place)
     /* (once: Handover goes back to just left of PCCR in an order kept from before, as asked) */
     if (!lsGet("adColFixHo", 0)){ if (ord.includes("handover") && ord.includes("pccr")){ ord = ord.filter(x => x !== "handover"); ord.splice(ord.indexOf("pccr"), 0, "handover"); }
-      const cpx = Store.fields().find(f => f.type === "complete"); if (cpx && ord.includes("_act") && ord.includes(cpx.id)){ ord = ord.filter(x => x !== "_act"); ord.splice(ord.indexOf(cpx.id) + 1, 0, "_act"); }   // (and On Hold and Delete just right of Complete)
+      const cpx = Store.fields().find(f => f.type === "complete"); if (cpx && ord.includes("_hold") && ord.includes(cpx.id)){ ord = ord.filter(x => x !== "_hold" && x !== "_del"); ord.splice(ord.indexOf(cpx.id) + 1, 0, "_hold", "_del"); }   // (and On Hold and Delete just right of Complete)
       lsSet("adColOrder", ord); lsSet("adColFixHo", 1); }
     const at2 = new Map(ord.map((id, n) => [id, n])), dflt = new Map(base.map((c, n) => [c.id, n]));
     const rank = c => at2.has(c.id) ? at2.get(c.id) : (() => { for (let n = dflt.get(c.id) - 1; n >= 0; n--) if (at2.has(base[n].id)) return at2.get(base[n].id) + 0.5; return -0.5; })();
@@ -138,7 +139,7 @@ const Table = (() => {
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? pref("titleMin") : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
-    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" draggable="' + !!Store.S.edit + '" aria-label="On hold, delete" style="width:' + NEED.act + 'px"><span class="th-2"><span class="th-c"><span class="th-v">On Hold</span><button type="button" class="th-i" data-c="_hold" aria-label="What On Hold means">' + INFO_I + '</button></span><span class="th-c"><span class="th-v">Delete</span><button type="button" class="th-i" data-c="_del" aria-label="What Delete means">' + INFO_I + '</button></span></span></th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + !!Store.S.edit + '" style="width:' + wid(c) + '">'
+    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="' + c.id + '" draggable="' + !!Store.S.edit + '" aria-label="' + c.label + '" style="width:' + NEED.act + 'px"><span class="th-2"><span class="th-c"><span class="th-v">' + c.label + '</span><button type="button" class="th-i" data-c="' + c.id + '" aria-label="What ' + c.label + ' means">' + INFO_I + '</button></span></span></th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + !!Store.S.edit + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + (TICK.has(c.type) ? '<span class="th-v">' + esc(head(c)) + '</span>' : esc(head(c))) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">' + INFO_I + '</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '>' + (App.isAdmin() ? (ADD < 60 ? '<button type="button" class="addc addc-s" aria-haspopup="true" title="Add a column" aria-label="Add a column">+</button>' : '<button type="button" class="addc" aria-haspopup="true">+ Add column</button>') : "") + '</th>' : "");
     const minW = cs.reduce((t, c) => t + least(c), 0) + ADD;
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
@@ -146,7 +147,7 @@ const Table = (() => {
     const tb = $("tbody", el), frag = document.createDocumentFragment();
     list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on"; if (a.del || a.f.handover === true || Store.stage(a.stage).kind === "done") tr.classList.add("struck");   // (handed over, complete or deleted: a line through the whole row)
       cs.forEach(c => { const td = document.createElement("td"); const l = lp(c).trim(); if (l) td.classList.add(l); if (TICK.has(c.type)) td.classList.add("tk");
-        if (c.type === "act"){ td.classList.add("actc"); td.innerHTML = rowBtns(a, true); }
+        if (c.type === "act"){ td.classList.add("actc"); td.innerHTML = rowBtns(a, true); if (c.k === "hold") $$('[data-rb="del"]', td).forEach(x => x.remove()); else $$(".rb-hw", td).forEach(x => x.remove()); }
         else if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = '<span class="idw idt"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + esc(Store.actId(a)) + '</span></span>'; }   // (plain bold text in the list: it can't be edited, so no box)
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
         else if (c.id === "equipment"){ td.classList.add("ed", "tgc"); tagCell(td, a, c); }
