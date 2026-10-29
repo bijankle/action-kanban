@@ -1654,3 +1654,4 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 #printRoot .pa-sks{margin-top:12px}#printRoot .pa-sk{margin:0 0 8px;break-inside:avoid;border:1px solid #c9ced6}#printRoot .pa-sk img{display:block;width:100%;height:auto;max-height:250mm;object-fit:contain}
 #printRoot .pa-sk figcaption{font-size:8.5pt;font-weight:600;color:#555;padding:2px 6px;border-bottom:1px solid #c9ced6;background:#f1f3f6}
 #printRoot section>.pa-b{margin-top:12px}
+.sk-f{cursor:grab;touch-action:none}.sk-dragging .sk-f{transition:none}.sk-f.drag{opacity:.55;outline:2px solid var(--th);outline-offset:2px}.sk-dragging,.sk-dragging *{user-select:none;cursor:grabbing!important}

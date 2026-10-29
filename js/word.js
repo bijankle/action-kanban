@@ -38,6 +38,9 @@ const Word = (() => {
       [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([, v]) => o.blanks || String(v || "").trim()).forEach(([k, v]) => body.push(H(k), ...lines(String(v || "").trim() ? v : "–")));
       const tb = (title, cols, rows) => { if (rows.length) body.push(H(title), table(cols, rows)); };
       tb("Isolations", ["#", "Equipment number", "Equipment name", "Note"], (a.isol || []).map((it, k) => [k + 1, it.tag, it.name, it.note]));
+      /* the sketches, each as wide as the page, its number and name above it, just before the MTO */
+      if ((a.sketches || []).length){ body.push(H("Sketches")); for (const [k, sk] of a.sketches.entries()){ try { const im = await photo(Sketch.src(a, sk), 640);
+          body.push(new Paragraph({ children: [new TextRun({ text: (k + 1) + "  " + (sk.name || ""), bold: true, color: "5D6875", size: 18 })], shading: { type: ShadingType.CLEAR, fill: "F1F3F6" } }), new Paragraph({ children: [new ImageRun(im)] })); } catch (e){ console.warn("sketch", e); } } }
       tb("MTO", ["#", "Description", "Part / tag no.", "Qty", "Unit", "Notes"], Mto.orderRows(a).map((it, k) => [k + 1, it.desc, it.part, Mto.ord(it), it.unit, it.notes]));
       tb("From spares", ["#", "Description", "Part / tag no.", "Qty", "Unit", "Store location / notes", "Secured"], (a.spares || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes, it.secured ? "Yes" : ""]));
       if (a.files.length){ body.push(H("Attachments")); a.files.forEach(f => body.push(new Paragraph({ children: [new ExternalHyperlink({ link: links.get(f) || Media.fileUrlOnline(a, f), children: [new TextRun({ text: f.name, style: "Hyperlink" })] }), new TextRun({ text: "  " + fmtSize(f.size || 0), color: "7A8591" })] }))); }
