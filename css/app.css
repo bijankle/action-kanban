@@ -1394,3 +1394,16 @@ html.dark .tbl td .rb-done.on{color:#3ccf8e!important}html.dark .tbl td .rb-hold
 .tbl th.actc{padding:0!important;vertical-align:bottom}.tbl th.actc .th-2{display:flex;height:100%;align-items:flex-end}
 .tbl th.actc .th-v{display:inline-block;width:calc(var(--row) + 1px);writing-mode:vertical-rl;transform:rotate(180deg);text-align:left;padding:6px 0 5px;line-height:var(--row);font-size:var(--fs);box-sizing:border-box}
 .tbl th.actc .th-v+.th-v{border-right:1px solid color-mix(in srgb,#fff 20%,transparent)}
+/* cell fills, every table and the Details boxes: filled in by hand white; filled in by the app faint blue; needed and still empty lavender */
+:root{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 6%,var(--panel));--need:#ece6fb;--needh:#e1d8f8}
+html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel));--need:#2a2340;--needh:#332a4e}
+.tbl tr td.need,.tbl tr td.need .in,.tbl tr td.need .lk-sel{background:var(--need)!important}
+.tbl tr:hover td.need,.tbl tr:hover td.need .lk-sel{background:var(--needh)!important}
+.tbl td.tk.need .ck input:not(:checked):not(:indeterminate){background-color:var(--need)}.tbl td.tk.need .ck input:not(:checked):not(:indeterminate):hover{background-color:var(--needh)}
+.tbl td.tk.autof .ck input:indeterminate{background-color:var(--autof)!important}
+/* the MTO: a needed box still empty on a row being filled in (the columns marked *) */
+.mt-tbl tr.mt-part td:has(>input.mt-pk:placeholder-shown),.mt-tbl tr.mt-part td.mt-qu:has(>input[data-c="qty"]:placeholder-shown){background:var(--need)!important}
+/* the Details panel: the Category still to pick */
+.det-c .lk-sel.lk-ph,.av .lk-sel.lk-ph[aria-label="Category"]{background:var(--need)!important}
+/* no hint text in a table's empty cells: the fill says what's needed */
+.tbl td .tg1.ph,.tbl td .lt-b .dim{visibility:hidden}.tbl td .tagin::placeholder{color:transparent}

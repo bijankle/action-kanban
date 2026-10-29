@@ -143,6 +143,10 @@ const Table = (() => {
         else { const v = Fields.show(a, c); td.innerHTML = v && !TICK.has(c.type) && /^(text|longtext|choice|contact|multi)$/.test(c.type) ? moreCut(v, Store.actId(a) + " " + c.label) : v; }
         if (c.id === "parts"){ const st = etaState(a); if (st){ td.classList.add("eta", st); td.dataset.eta = ""; } }
         if (c.type === "check" && c.id !== "parts" && Store.S.edit !== undefined){ td.dataset.tk = c.id; td.classList.add("tkc"); }   // (click beside the box for its card)   // (a coloured dot on the box's corner; point at it for the delivery)
+        /* the cell's fill: needed and still empty (the Category, a step still to tick) lavender; filled in by the app blue; by hand white */
+        if (Store.S.edit && !a.del && Store.stage(a.stage).kind !== "done"){ const v = a.f[c.id];
+          if ((c.id === "category" && !v) || (c.type === "check" && c.stage && !v)) td.classList.add("need"); }
+        if (c.type === "check" && a.f[c.id] === Flow.NA && ((a.hoNA || []).includes(c.id) || (a.auto || {})[c.id])) td.classList.add("autof");
         tr.appendChild(td); });
       if (ADD){ const td = document.createElement("td"); td.className = "addcol"; tr.appendChild(td); }
       frag.appendChild(tr); });
