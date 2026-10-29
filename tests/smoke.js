@@ -38,6 +38,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
       pk.querySelectorAll("input[type=checkbox]:checked").forEach(c => c.click()); await new Promise(r => setTimeout(r, 100)); const d = pk.querySelector('input[data-v="–"]'); if (!d) return "no dash row"; d.click();
       const now = JSON.stringify(a.f.equipment); Fields.closePop(); return now; });
     check("a Tags cell opens the Tags picker and a tick saves", tp === '["–"]', tp);
+    /* an image added on the Sketches tab becomes a sketch */
+    const skc = await p.evaluate(async () => { const a = Store.all().find(x => !x.del); const c = document.createElement("canvas"); c.width = 40; c.height = 30; c.getContext("2d").fillRect(5, 5, 10, 10);
+      const f = await new Promise(r => c.toBlob(b => r(new File([b], "Test sketch.png", { type: "image/png" })), "image/png")); const n0 = (a.sketches || []).length; await Sketch.add(a, [f]); return (a.sketches.length - n0) + " " + a.sketches[a.sketches.length - 1].name; });
+    check("an image added on the Sketches tab becomes a sketch", skc === "1 Test sketch", skc);
     /* On Hold and Delete sit just left of + Add column, and a column dropped past + Add column stays left of it */
     const hk = await p.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 400)), o = () => [...document.querySelectorAll(".tbl thead th")].map(th => th.dataset.c || (th.classList.contains("addcol") ? "ADD" : "")).filter(Boolean);
       const first = o().slice(-3).join(","); localStorage.setItem("adColOrder", JSON.stringify(o().filter(x => x !== "ADD").filter(x => x !== "_hold").concat(["ADD", "_hold"]))); App.render(); await w(); const after = o(); localStorage.removeItem("adColOrder"); App.render(); await w();

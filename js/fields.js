@@ -227,7 +227,7 @@ const Fields = (() => {
     const qi = $(".tgp-q", p), A = $(".tgp-a", p), R = $(".tgp-m", p);
     const row = (t, on) => { const e = t === "–" ? { n: "No equipment tag for this action" } : Equip.get(t) || {}; return '<label class="tgp-r' + (on ? " on" : "") + '"><span class="tgp-c"><input type="checkbox" data-v="' + esc(t) + '"' + (on ? " checked" : "") + '></span><span class="tgp-s">' + (e.k ? kindSym(e.k) : "") + '</span><b>' + esc(t) + '</b><small>' + esc(e.n ? e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "") + '</small></label>'; };
     const save = () => set(a, f, cur.slice());
-    const draw = () => { const found = q ? (Equip.find(q, /^[a-z]{0,3}[\d-]/i.test(q) ? "t" : "n") || []).map(x => x.t).filter(t => !cur.includes(t)).slice(0, 60) : [];
+    const draw = () => { const found = q ? [...new Set((Equip.find(q, "t") || []).concat(Equip.find(q, "n") || []).map(x => x.t))].filter(t => !cur.includes(t)).slice(0, 60) : [];   /* (tags first, then names; spaces and dashes don't matter, so cv 402 finds F12-CV-402) */
       const dash = (!cur.length && !q) || /^(-|–|n\/?a?)$/i.test(q) ? row("–", false) : "";
       const typed = q && !/^(-|–|n\/?a?)$/i.test(q) && !found.concat(cur).some(t => t.toLowerCase() === q.toLowerCase()) ? '<button type="button" class="tgp-r tgp-add"><span class="tgp-c">+</span><span class="tgp-s"></span><b>' + esc(q.toUpperCase()) + '</b><small>Add as typed (not in the plant lists)</small></button>' : "";
       A.innerHTML = cur.map(t => row(t, true)).join("");

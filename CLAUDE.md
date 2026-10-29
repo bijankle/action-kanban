@@ -42,6 +42,7 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - One ETA for the whole order (set on the MTO tab), never line by line. The Parts ETA card is a snug summary: when it's due (or overdue by how many days), who from, and counts like 12 × piping items, 1 × structural item; every line one row high.
 - All exports in File, Export (Excel, PDF, Word), with quick buttons above the list too.
 
+- The action's tabs: Overview, Sketches, Materials (MTO, Spares), Isolations, References (the drawings and documents). Sketches: images or PDFs (each PDF page a lossless PNG), full width one under another, each headed by a row (number, name, fullscreen, bin); they print full width just before the MTO.
 - Details (Overview): left is Problem, Solution, Tags, Notes, Attachments (three to a row, Attach file one third wide), Contractor; right is Photos then Record (Action owner, dates, last change). No ticks, Category, Location or hold/complete/delete buttons there (they're in the list); the title sits right of the ID.
 
 ## More of the same spirit
@@ -65,7 +66,7 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 
 - Never end a line of code with a // note in the middle of a statement: it comments out the rest of the line (it has broken things three times). Use /* */ for notes inside a line.
 
-- Plain JS globals, no build step: App, Store, Fields, Flow, Table, Kanban, ActionView, Media, Print, Word, Parts, Vendors, Hold, Drawings, Equip.
+- Plain JS globals, no build step: App, Store, Fields, Flow, Table, Kanban, ActionView, Media, Print, Word, Parts, Vendors, Hold, Drawings, Equip, Sketch.
 - Data lives in the separate repo bijankle/action-kanban-data (data/config.json etc.); set `mod` on a changed stage or field and on the file.
 - The live site is a Cloudflare worker (cloudflare/worker.js), pasted into the dashboard by hand; say when it needs re-pasting.
 - Avoid the class name `ph` on anything new: `.ph` is the photo grid and its styles leak (it has bitten twice).
