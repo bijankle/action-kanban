@@ -29,6 +29,9 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
   try {
     const { p, errs } = await open("someone@example.com");
     check("loads with the actions listed", (await p.$$(".tbl tbody tr")).length >= 3);
+    /* a dropdown opens on one click and shows its list */
+    const dd = await p.evaluate(async () => { const b = document.querySelector(".tbl tbody .lk-sel"); if (!b) return "no dropdown cell"; b.click(); await new Promise(r => setTimeout(r, 200)); const n = document.querySelectorAll(".lk-card .lk-o").length; Look.close && Look.close(); document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); return n > 0 ? "opens" : "no list"; });
+    check("a dropdown cell opens its list on one click", dd === "opens", dd);
     /* On Hold and Delete sit just left of + Add column, and a column dropped past + Add column stays left of it */
     const hk = await p.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 400)), o = () => [...document.querySelectorAll(".tbl thead th")].map(th => th.dataset.c || (th.classList.contains("addcol") ? "ADD" : "")).filter(Boolean);
       const first = o().slice(-3).join(","); localStorage.setItem("adColOrder", JSON.stringify(o().filter(x => x !== "ADD").filter(x => x !== "_hold").concat(["ADD", "_hold"]))); App.render(); await w(); const after = o(); localStorage.removeItem("adColOrder"); App.render(); await w();

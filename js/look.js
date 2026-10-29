@@ -26,7 +26,7 @@ const Look = (() => {
       else if (e.key === "Enter"){ e.preventDefault(); const x = shown[hi]; if (x && !x.grp){ close(); pick(x); } }
       else if (e.key === "Escape"){ e.stopPropagation(); close(); anchor.focus(); } else if (e.key === "Tab") close();
       else if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey){ const x = items.find(y => y.hk === +e.key); if (x){ e.preventDefault(); close(); pick(x); } } };
-    c.__key = key; c.classList.toggle("lk-two", items.some(x => x.sub)); if (items.some(x => x.sub) && window.__lkm) c.classList.add("lkm" + window.__lkm);   // (preview: the look picked for lists with words beside each choice) document.body.appendChild(c); draw();   // (a list where some choices have a line under them: every choice in the same bold type)
+    c.__key = key; c.classList.toggle("lk-two", items.some(x => x.sub)); c.classList.add("lkm1");   /* (every dropdown is a little table: one 22px row per choice with a line under it, a choice's few words in a cell beside it, the groups as shaded rows) */ document.body.appendChild(c); draw();   // (a list where some choices have a line under them: every choice in the same bold type)
     const r = anchor.getBoundingClientRect(); c.style.minWidth = Math.min(innerWidth - 16, Math.max(r.width, items.some(x => x.sub) ? 420 : 160)) + "px"; c.style.left = Math.max(8, Math.min(r.left, innerWidth - c.offsetWidth - 8)) + "px";
     const below = innerHeight - r.bottom > Math.min(300, c.offsetHeight + 8); c.style.top = (below ? r.bottom + 3 : Math.max(8, r.top - c.offsetHeight - 3)) + "px";
     const qi = $(".lk-q", c); if (qi) qi.focus();

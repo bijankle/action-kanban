@@ -1596,18 +1596,31 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .tbl:not(:has(th.tk)) th{height:var(--row)!important;padding:0 8px!important;line-height:var(--row)!important;vertical-align:middle!important;white-space:nowrap!important}
 .tbl:not(:has(th.tk)) th .th-l{padding:0!important;line-height:var(--row)!important;white-space:nowrap}
 .tbl:not(:has(th.tk)) th .th-m{top:50%!important;bottom:auto!important;transform:translateY(-50%)}
-/* (preview) lists whose choices have a few words beside them (the pipe classes):
-   1: a little table like the Actions rows, the code and its words in cells, the groups as shaded rows
    2: one line each like the Category list, the words grey after the code
-   3: two lines each like the Tags suggestions, the words under the code */
-.lk-card.lkm1 .lk-ol{padding:0}.lkm1 .lk-o{display:grid!important;grid-template-columns:96px minmax(0,1fr);gap:0!important;height:var(--row,22px)!important;min-height:0!important;padding:0!important;border-bottom:1px solid var(--line);border-radius:0!important;align-items:stretch}
-.lkm1 .lk-o .lk-x{display:contents}.lkm1 .lk-o .lk-x b{display:flex;align-items:center;padding:0 6px;border-right:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* lists whose choices have a few words beside them (the pipe classes, sizes, items): a little table like the Actions rows,
+   the code and its words in their own cells, the groups as shaded rows like the name cells */
+.lk-card.lkm1 .lk-ol{padding:0}
+.lkm1 .lk-o,.lkm1 .lk-g{flex:none!important}
+.lkm1 .lk-o{display:grid!important;grid-template-columns:max-content minmax(0,1fr);gap:0!important;height:var(--row,22px)!important;min-height:0!important;padding:0!important;border-bottom:1px solid var(--line);border-radius:0!important;align-items:stretch}
+.lkm1 .lk-o .lk-x{display:contents}
+.lkm1 .lk-o .lk-x b{display:flex;align-items:center;min-width:96px;padding:0 8px 0 6px;border-right:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lkm1 .lk-o .lk-x small{display:flex;align-items:center;padding:0 6px;font-size:var(--fb)!important;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lkm1 .lk-g{background:var(--hdr);color:var(--muted);font-weight:600;font-size:var(--fb);height:var(--row,22px);line-height:var(--row,22px);padding:0 6px;margin:0;border-bottom:1px solid var(--line2);text-transform:none;letter-spacing:0}
-.lkm2 .lk-o{height:var(--row,22px)!important;min-height:0!important;padding:0 8px!important}.lkm2 .lk-o .lk-x{display:flex;flex-direction:row!important;align-items:baseline;gap:8px;min-width:0;white-space:nowrap}
-.lkm2 .lk-o .lk-x b{flex:none;min-width:64px}.lkm2 .lk-o .lk-x small{font-size:var(--fb)!important;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
-.lkm2 .lk-g{font-size:var(--fs);padding:6px 8px 2px}
-.lkm3 .lk-o{height:auto!important;min-height:36px!important;padding:3px 8px!important;align-items:center}.lkm3 .lk-o .lk-x{display:flex;flex-direction:column;gap:1px;min-width:0;line-height:1.25}
-.lkm3 .lk-o .lk-x small{font-size:var(--fb)!important;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lkm3 .lk-g{font-size:var(--fs);padding:6px 8px 2px}
-.lkm1 .lk-o,.lkm2 .lk-o,.lkm3 .lk-o,.lkm1 .lk-g,.lkm2 .lk-g,.lkm3 .lk-g{flex:none!important}
+/* (a choice with no words beside it fills its row; the tick for the current choice sits at the right of the row) */
+.lkm1 .lk-o:not(.lk-2) .lk-x b{grid-column:1/-1;border-right:0}
+.lkm1 .lk-o{position:relative}.lkm1 .lk-o.on::after{position:absolute;right:8px;top:0;line-height:var(--row,22px)}
+.lkm1 .lk-q{border-radius:0!important;border:0!important;border-bottom:1px solid var(--line2)!important;height:var(--row,22px)!important}
+.lk-card.lkm1{border-radius:0!important;padding:0!important;border:1px solid var(--line2)!important}
+/* the other dropdowns (Tags suggestions, isolation and supplier suggestions, name boxes) look the same as the dropdown tables:
+   square, one 22px row per choice with a line under it, the code, its symbol and its words each in their own cell */
+.tg-dd,.is-dd,.combo .dd,.vd-dd{border-radius:0!important;padding:0!important;border:1px solid var(--line2)!important}
+.tg-o,.is-o,.dd-o,.vd-o{border-radius:0!important;padding:0 6px!important;min-height:0!important;height:var(--row,22px);display:flex!important;flex-direction:row!important;align-items:center!important;gap:0!important;border-bottom:1px solid var(--line);font-size:var(--fb)!important;width:100%;box-sizing:border-box}
+.tg-o:last-child,.is-o:last-child,.dd-o:last-child,.vd-o:last-child{border-bottom:0}
+.tg-o .ksym{width:22px!important;height:var(--row,22px);display:grid;place-items:center;border-right:1px solid var(--line);margin:0 6px 0 -6px}
+.tg-o .tg-x,.tg-o.kd .tg-x{flex-direction:row!important;align-items:stretch;gap:0;min-width:0;height:100%}
+.tg-o .tg-x>b,.tg-o>b,.dd-o>span,.is-o>b,.vd-o>b{display:flex;align-items:center;min-width:96px;padding-right:8px;margin-right:6px;border-right:1px solid var(--line);white-space:nowrap}
+.tg-o .tg-x>span,.dd-o small,.is-o small,.vd-o small{display:flex;align-items:center;font-size:var(--fb)!important;color:var(--muted)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.is-o,.vd-o{display:grid!important;align-items:stretch!important;padding:0!important}
+.is-o>*,.vd-o>*{display:flex;align-items:center;min-width:0;padding:0 6px;border-left:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0!important}
+.is-o>:first-child,.vd-o>:first-child{border-left:0}
