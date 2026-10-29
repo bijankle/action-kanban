@@ -191,5 +191,16 @@ const PipeSpec = (() => {
   const nonPref = (cl, n) => starred(cl).has(n);
   let NPDN = null; const nonPrefDN = () => NPDN || (NPDN = !D ? new Set() : new Set(classes().filter(cl => U(cl) === "DN").flatMap(cl => [...starred(cl)])));
   const title = cl => C(cl) ? clean(C(cl).title) : "";
-  return { SAE, nonPref, nonPrefDN, lab, U, dnOf, joint, branchPlan, branchy, BOLTS, FLG, family, FAMS, reducing, branches, load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
+  /* a class in a few words, just to tell the classes apart in a list: material, how it's joined, flange table, pressure, service
+     (MS1: CS, welded, Table D, LP, liquid or gas); the full title is still on the (i) and the spec */
+  const short = cl => { const t = " " + title(cl).toLowerCase() + " ", out = [];
+    const M = [[/ectfe/, "ECTFE"], [/pvdf/, "PVDF"], [/pe100|hdpe|polyethylene/, "PE"], [/polypropylene/, "PP"], [/ceramic/, "Ceramic lined"], [/butyl/, "Butyl lined"], [/rubber/, "Rubber lined"], [/polyurethane/, "PU lined"], [/duplex/, "Duplex SS"], [/stainless/, "SS"], [/galvanised/, "Galv"], [/copper/, "Copper"], [/steel/, "CS"]];
+    const m = M.find(([r]) => r.test(t)); if (m) out.push(m[1]);
+    if (/megapress|cold press|vic-press/.test(t)) out.push("press fit"); else if (/swagelok/.test(t)) out.push("tube fittings"); else if (/weld/.test(t)) out.push("welded");
+    if (/xs schedule/.test(t)) out.push("XS");
+    const tb = /table ([a-z])\b/.exec(t); if (tb) out.push("Table " + tb[1].toUpperCase());
+    const pr = [[/low pressure/, "LP"], [/medium pressure/, "MP"], [/high pressure/, "HP"]].filter(([r]) => r.test(t)).map(x => x[1]); if (pr.length) out.push(pr.join("/"));
+    const sv = [[/slurry/, "slurry"], [/reagent/, "reagent"], [/fire/, "fire"], [/potable/, "potable"], [/air/, "air"], [/water/, "water"], [/liquid or gas/, "liquid or gas"], [/acid/, "acid"], [/steam/, "steam"], [/high temperature/, "hot"]].filter(([r]) => r.test(t)).map(x => x[1]);
+    if (sv.length) out.push(sv.slice(0, 2).join(", ")); return out.join(", "); };
+  return { short, SAE, nonPref, nonPrefDN, lab, U, dnOf, joint, branchPlan, branchy, BOLTS, FLG, family, FAMS, reducing, branches, load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
 })();
