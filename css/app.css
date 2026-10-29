@@ -1590,3 +1590,9 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 /* the MTO tab's top: no card round it (the supplier box is already a table); it starts on the same left edge as the tables below */
 .pt-top{border:0!important;border-radius:0!important;padding:0!important;gap:12px}.pt-l{padding:0!important}.pt-r{padding:0!important;border-left:0!important}
 .mt-wrap{margin:0!important}.mt-h{margin-left:0!important;margin-right:0!important}
+/* heading lines on the same side as the body lines (the left edge of each cell after the first), so every column line runs
+   straight from the heading down; and a heading row is one 22px row, as every other row, wherever no heading stands on end */
+.tbl th{border-right:0!important}.tbl thead th+th{border-left:1px solid var(--line2)!important}
+.tbl:not(:has(th.tk)) th{height:var(--row)!important;padding:0 8px!important;line-height:var(--row)!important;vertical-align:middle!important;white-space:nowrap!important}
+.tbl:not(:has(th.tk)) th .th-l{padding:0!important;line-height:var(--row)!important;white-space:nowrap}
+.tbl:not(:has(th.tk)) th .th-m{top:50%!important;bottom:auto!important;transform:translateY(-50%)}
