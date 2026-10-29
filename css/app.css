@@ -1456,3 +1456,6 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 /* the parts ETA card: snug to what's in it, every line one row high (it widens rather than wraps) */
 .etapop{width:max-content;min-width:0;max-width:calc(100vw - 16px)}.etapop .ep-g>span,.etapop .ep-r,.etapop .ep-h{white-space:nowrap}.ep-g{grid-template-columns:auto auto}
 .ov-l .det-c .ho-note{grid-column:1/-1}.ov-l .det-c .ho-note textarea{resize:vertical;min-height:28px;font:inherit}
+/* a handed over, complete or deleted action: one line straight through the whole row, over every cell */
+.tbl tr.struck>td{position:relative}
+.tbl tr.struck>td::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid color-mix(in srgb,var(--ink) 55%,transparent);pointer-events:none;z-index:2}

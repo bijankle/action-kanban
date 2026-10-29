@@ -139,7 +139,7 @@ const Table = (() => {
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
       + (list.length ? "" : '<div class="empty">' + (Store.visible().length ? Filters.emptyHtml() : "No actions yet. Click <b>+ New action</b>, or the upload with AI button beside it to make one from an email.") + '</div>') + '</div>';
     const tb = $("tbody", el), frag = document.createDocumentFragment();
-    list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on";
+    list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on"; if (a.del || a.f.handover === true || Store.stage(a.stage).kind === "done") tr.classList.add("struck");   // (handed over, complete or deleted: a line through the whole row)
       cs.forEach(c => { const td = document.createElement("td"); const l = lp(c).trim(); if (l) td.classList.add(l); if (TICK.has(c.type)) td.classList.add("tk");
         if (c.type === "act"){ td.classList.add("actc"); td.innerHTML = rowBtns(a, true); }
         else if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = '<span class="idw idt"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + esc(Store.actId(a)) + '</span></span>'; }   // (plain bold text in the list: it can't be edited, so no box)
