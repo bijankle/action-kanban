@@ -424,3 +424,8 @@ const CellEdit = (() => {
   new MutationObserver(() => { if (at && !document.querySelector("td.cell-sel")) again(); }).observe(document.body, { childList: true, subtree: true });
   return { edit, mark };
 })();
+
+/* the Modified by and Date modified cells of a Data validation row: who added or last changed it in the app and when
+   (29-Oct-26); a row that came with the app or the plant lists says Native */
+const dmy = t => { if (!t) return ""; const d = new Date(t); return isNaN(d) ? "" : String(d.getDate()).padStart(2, "0") + "-" + d.toLocaleString("en-GB", { month: "short" }) + "-" + String(d.getFullYear()).slice(2); };
+const whoBy = x => x && x.by ? properName(x.by) : "Native", whenBy = x => x && x.by ? dmy(x.at || x.mod) : "";

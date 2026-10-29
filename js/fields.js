@@ -225,16 +225,24 @@ const Fields = (() => {
     const p = h('<div class="pop tgp" role="dialog" aria-label="Tags"><div class="tgp-a"></div><input class="in tgp-q" type="text" placeholder="Search equipment by number or name" autocomplete="off" spellcheck="false"><div class="tgp-m"></div></div>');
     document.body.appendChild(p); place(p, anchor); Equip.load().then(() => p.isConnected && draw()).catch(() => {});
     const qi = $(".tgp-q", p), A = $(".tgp-a", p), R = $(".tgp-m", p);
-    const row = (t, on) => { const e = t === "–" ? { n: "No equipment tag for this action" } : Equip.get(t) || {}; return '<label class="tgp-r' + (on ? " on" : "") + '"><span class="tgp-c"><input type="checkbox" data-v="' + esc(t) + '"' + (on ? " checked" : "") + '></span><span class="tgp-s">' + (e.k ? kindSym(e.k) : "") + '</span><b>' + esc(t) + '</b><small>' + esc(e.n ? e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "") + '</small></label>'; };
+    const appTag = t => (f.options || []).find(o => !o.del && o.label.toLowerCase() === String(t).toLowerCase());
+    const row = (t, on) => { const e = t === "–" ? { n: "No equipment tag for this action" } : Equip.get(t) || (appTag(t) ? { n: appTag(t).desc, k: "Tags" } : {}); return '<label class="tgp-r' + (on ? " on" : "") + '"><span class="tgp-c"><input type="checkbox" data-v="' + esc(t) + '"' + (on ? " checked" : "") + '></span><span class="tgp-s">' + (e.k ? kindSym(e.k) : "") + '</span><b>' + esc(t) + '</b><small>' + esc(e.n ? e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "") + '</small></label>'; };
     const save = () => set(a, f, cur.slice());
     const draw = () => { const found = q ? [...new Set((Equip.find(q, "t") || []).concat(Equip.find(q, "n") || []).map(x => x.t))].filter(t => !cur.includes(t)).slice(0, 60) : [];   /* (tags first, then names; spaces and dashes don't matter, so cv 402 finds F12-CV-402) */
       const dash = (!cur.length && !q) || /^(-|–|n\/?a?)$/i.test(q) ? row("–", false) : "";
-      const typed = q && !/^(-|–|n\/?a?)$/i.test(q) && !found.concat(cur).some(t => t.toLowerCase() === q.toLowerCase()) ? '<button type="button" class="tgp-r tgp-add"><span class="tgp-c">+</span><span class="tgp-s"></span><b>' + esc(q.toUpperCase()) + '</b><small>Add as typed (not in the plant lists)</small></button>' : "";
+      /* a tag the plant lists don't have: added with a description (needed), so the tag list in Data validation stays complete */
+      const typed = q && !/^(-|–|n\/?a?)$/i.test(q) && !found.concat(cur).some(t => t.toLowerCase() === q.toLowerCase()) ? '<div class="tgp-r tgp-add"><span class="tgp-c">+</span><span class="tgp-s"></span><b>' + esc(q.toUpperCase()) + '</b><input class="in tgp-d" placeholder="Describe it to add it (needed), then Enter" autocomplete="off"></div>' : "";
       A.innerHTML = cur.map(t => row(t, true)).join("");
       R.innerHTML = (cur.includes("–") ? "" : dash) + found.map(t => row(t, false)).join("") + typed;
       $$("input[type=checkbox]", p).forEach(c => c.onchange = () => { const x = c.dataset.v; cur = !c.checked ? cur.filter(y => y !== x) : x === "–" ? ["–"] : cur.filter(y => y !== "–").concat(x); save(); draw(); });
-      const ad = $(".tgp-add", R); if (ad) ad.onclick = () => { cur = cur.filter(y => y !== "–").concat(q.toUpperCase()); qi.value = ""; q = ""; save(); draw(); qi.focus(); }; };
-    qi.oninput = () => { q = qi.value.trim(); draw(); }; qi.onkeydown = e => { if (e.key === "Escape"){ e.stopPropagation(); closePop(); } if (e.key === "Enter"){ e.preventDefault(); const c = $(".tgp-m input[type=checkbox]", p) || $(".tgp-add", p); if (c) c.click(); } };
+      const di = $(".tgp-d", R); if (di) di.onkeydown = e => { if (e.key === "Escape"){ e.stopPropagation(); closePop(); return; } if (e.key !== "Enter") return; e.preventDefault(); const d = di.value.trim(); if (!d){ di.classList.add("bad"); note("Add a description first, so the tag list stays complete"); return; }
+        const t = q.toUpperCase(); newTag(t, d); cur = cur.filter(y => y !== "–").concat(t); qi.value = ""; q = ""; save(); draw(); qi.focus(); }; };
+    /* (into the shared tag list, with who added it and when; the same tag described differently keeps the old description in its history) */
+    const newTag = (t, d) => Store.mutate("config", () => { f.options = f.options || []; const o = appTag(t), by = Profile.name(), byE = (Profile.get().email || "").toLowerCase();
+      if (!o) f.options.push({ id: uid(), label: t, desc: d, color: "", by, byE, at: now(), hist: [] });
+      else if (o.desc !== d){ (o.hist = o.hist || []).push({ t: now(), by, from: o.desc || "", to: d }); o.desc = d; o.by = by; o.byE = byE; o.at = now(); }
+      Store.touch(f); Store.S.config.mod = now(); });
+    qi.oninput = () => { q = qi.value.trim(); draw(); }; qi.onkeydown = e => { if (e.key === "Escape"){ e.stopPropagation(); closePop(); } if (e.key === "Enter"){ e.preventDefault(); const c = $(".tgp-m input[type=checkbox]", p); if (c) c.click(); else { const d = $(".tgp-d", p); if (d) d.focus(); } } };
     draw(); setTimeout(() => qi.focus(), 0); }
   function place(p, anchor){ const r = anchor.getBoundingClientRect(); p.style.left = Math.max(8, Math.min(r.left, innerWidth - Math.max(290, p.offsetWidth + 8))) + "px";
     const below = innerHeight - r.bottom > 300; p.style.top = (below ? r.bottom + 4 : Math.max(8, r.top - 304)) + "px"; }

@@ -54,6 +54,8 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - Model the real workflow, not an idealised one: ask how the job is actually done on site (who ticks what, when the quote comes back, jobs handed to Ops or Maintenance) before designing the rule.
 - Plain, active step names that say what's done next ("Send RFQ", not "Draft RFQ"; "Categorize Issue").
 - Symbols over words where the meaning is obvious (a gear for mech equipment, a bolt for electrical), with the word in the tooltip.
+- Anything you click to open bigger or full screen (photos, sketches) shows the hand cursor, never the magnifying glass. Full screen is the real full screen: one Esc closes it and you're back where you were. Zooming a picture zooms the picture (never the browser page), on the point under the pointer; drag to pan, double click to fit.
+- Data validation rows say who added or last changed them and when (Modified by, Date modified as 29-Oct-26); anything that came with the app or the plant lists says Native. A new tag needs a description before it can be added; a changed description keeps the old one in an (i) history on the row.
 - Pointing shows, clicking pins: hover cards can also be clicked to stay open, with a ✕.
 - Uploads look the same everywhere: a slim dashed bar, one box high, that you can click or drop onto. Photos as even 4:3 tiles you can drag to reorder, with a bin on each; in Details they sit at the top of the right column, about 150px wide, with Record under them.
 - Avoid accidental triggers: no single key shortcuts that create things; deletes ask first.

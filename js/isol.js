@@ -29,7 +29,7 @@ const Equip = (() => {
     return loadP; }
   /* best matches for what's typed, from the tag (field "t") or the name (field "n") */
   function find(q, by){ const w = qWords(q); if (!w.length) return [];   // (spaces and dashes don't matter: CV 402 finds CV-402)
-    const extra = ((Store.field("equipment") || {}).options || []).filter(o => !o.del).map(o => ({ t: o.label, n: "", k: "Tags" }));
+    const extra = ((Store.field("equipment") || {}).options || []).filter(o => !o.del).map(o => ({ t: o.label, n: o.desc || "", k: "Tags" }));
     const all = extra.concat(list || []), first = w[0], whole = w.join(""), out = [];   // (the words run together, CV402, rank first)
     for (const it of all){ const t = squash(it.t), n = squash(it.n), hay = t + " " + n; if (!w.every(x => hay.includes(x))) continue;
       const f = by === "n" ? n : t; out.push([f.startsWith(whole) ? 0 : f.includes(whole) ? 1 : f.startsWith(first) ? 2 : f.includes(first) ? 3 : 4, it, KR[it.k] == null ? 3 : KR[it.k], n.length]); if (out.length > 4000) break; }

@@ -7,14 +7,14 @@
 "use strict";
 const Assets = (() => {
   const TYPES = [["mel", "Equipment (mech)"], ["elec", "Equipment (elec)"], ["cable", "Cables"], ["ins", "Instruments"], ["cv", "Control valves"], ["mv", "Manual valves"], ["line", "Lines"],
-    ["spi", "Pipe specials"], ["hose", "Hoses"], ["ctl", "Control tags"]];
+    ["spi", "Pipe specials"], ["hose", "Hoses"], ["ctl", "Control tags"], ["app", "Added in the app"]];
   const TN = Object.fromEntries(TYPES);
   const STEPS = {
     mel: [["k", "Equipment code"], ["a", "Area"]], ins: [["k", "Instrument letters"], ["a", "Area"]],
     cv: [["k", "Valve type"], ["a", "Area"], ["sz", "Size (mm)"]], mv: [["k", "Valve type"], ["a", "Area"], ["sz", "Size (DN)"]],
     line: [["k", "Service"], ["a", "Area"], ["sp", "Pipe spec"], ["sz", "Size (DN)"]],
     spi: [["k", "Type"], ["a", "Area"]], hose: [["k", "Service"], ["a", "Area"]], ctl: [["k", "Kind"], ["a", "Area"]],
-    elec: [["k", "Equipment code"], ["a", "Area"]], cable: [["k", "Cable kind"], ["a", "Area"]] };
+    elec: [["k", "Equipment code"], ["a", "Area"]], cable: [["k", "Cable kind"], ["a", "Area"]], app: [["a", "Area"]] };
   const SIZE = { cv: "Valve size (mm)", mv: "Size (DN)", line: "Size (DN)" };
   const NAMEF = { mel: "Equipment name", elec: "Equipment name", ins: "Description", cv: "Location", spi: "Description", hose: "Description", ctl: "Description", mv: "Valve type" };
   /* the names of the codes (as the Project Library gives them) */
@@ -91,7 +91,9 @@ const Assets = (() => {
   const ALPHA = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
   const label = (f, v) => f === "t" ? TN[v] : v === "?" ? "Other" : v;
   const searched = list => (App.q || "").trim() ? list.filter(r => smartHit(r.key + " " + r.name + " " + TN[r.t], App.q)) : list;
-  const current = () => { const all = build(); return all ? searched(all.filter(match)) : null; };
+  /* tags added in the app (from the Tags picker), with who added them and when, and their description history */
+  const appRows = () => ((Store.field("equipment") || {}).options || []).filter(o => !o.del).map(o => ({ t: "app", key: o.label, name: o.desc || "", a: area(o.label) || "?", k: "?", sp: "", sz: "", by: o.by, at: o.at, hist: o.hist || [], o }));
+  const current = () => { const all = build(); return all ? searched(all.concat(appRows()).filter(match)) : null; };
   const fcount = () => path.filter(p => p.v != null || p.f !== "t").length + ((App.q || "").trim() ? 1 : 0);
 
   /* the Filters side bar: the picked steps as chips, then the pills of the next step */
@@ -140,17 +142,20 @@ const Assets = (() => {
   function page(body){ names(); const list = current();
     if (list && sel){ const r = IX.get(kx(sel)); if (r) return detail(body, r); }
     if (!list){ body.innerHTML = '<p class="dim">Loading the plant lists…</p>'; if (!Equip.raw()) Equip.load().then(() => App.render()); return; }
-    const t = ty(), cols = [["key", "Tag"], ["name", "Name"]].concat(t ? [] : [["t", "Type"]]).concat((t ? steps() : [["a", "Area"]]).map(([f, n]) => [f, n]));
-    const cell = (r, f) => f === "t" ? TN[r.t] : f === "key" || f === "name" ? r[f] : (r[f] === "?" ? "" : r[f]) + (f === "a" || f === "k" || f === "sp" ? (s => s ? " " + s : "")(r[f] === "?" ? "" : shortName(nameOf(f, r.t, r[f]))) : "");
+    const t = ty(), cols = [["key", "Tag"], ["name", "Name"]].concat(t ? [] : [["t", "Type"]]).concat((t ? steps() : [["a", "Area"]]).map(([f, n]) => [f, n])).concat([["by", "Modified by"], ["at", "Date modified"]]);
+    const cell = (r, f) => f === "by" ? whoBy(r) : f === "at" ? whenBy(r) : f === "t" ? TN[r.t] : f === "key" || f === "name" ? r[f] : (r[f] === "?" ? "" : r[f]) + (f === "a" || f === "k" || f === "sp" ? (s => s ? " " + s : "")(r[f] === "?" ? "" : shortName(nameOf(f, r.t, r[f]))) : "");
     /* (the whole list sorts by the heading picked, then the first rows show) */
     const st = (tblKit.sort || {}).assets, ci = st ? cols.findIndex(([, n]) => n === st.c) : -1;
     const sorted = ci < 0 ? list : list.slice().sort((x, y) => st.d * ALPHA.compare(String(cell(x, cols[ci][0]) || "~"), String(cell(y, cols[ci][0]) || "~")));
     const n = Math.min(sorted.length, SHOW + more);
     body.innerHTML = '<div class="tw-wrap"><table class="tbl ct vd-tbl as-tbl"><thead><tr>' + cols.map(([f, nm]) => '<th data-col="' + esc(nm) + '">' + esc(nm) + '</th>').join("") + '</tr></thead><tbody>'
-      + sorted.slice(0, n).map(r => '<tr data-k="' + esc(r.key) + '" title="Open ' + esc(r.key) + '">' + cols.map(([f]) => '<td>' + (f === "key" ? '<b>' + esc(r.key) + '</b>' : esc(cell(r, f))) + '</td>').join("") + '</tr>').join("") + '</tbody></table></div>'
+      + sorted.slice(0, n).map(r => '<tr data-k="' + esc(r.key) + '" title="Open ' + esc(r.key) + '">' + cols.map(([f]) => '<td>' + (f === "key" ? '<b>' + esc(r.key) + '</b>' : f === "name" && r.hist && r.hist.length ? esc(cell(r, f)) + tipI("Description history:\n" + r.hist.map(x => dmy(x.t) + ", " + properName(x.by || "") + ": " + (x.from || "(none)") + " → " + x.to).join("\n")) : esc(cell(r, f))) + '</td>').join("") + '</tr>').join("") + '</tbody></table></div>'
       + (sorted.length > n ? '<button type="button" class="link as-more">' + (sorted.length - n).toLocaleString() + ' more…</button>' : "");
     const m = $(".as-more", body); if (m) m.onclick = () => { more += SHOW; App.render(); };
-    $$(".as-tbl tbody tr[data-k]", body).forEach(tr => tr.onclick = () => open(tr.dataset.k));
+    /* a plant list row opens its details; a tag added in the app has its description changed in place (kept in its history) */
+    $$(".as-tbl tbody tr[data-k]", body).forEach(tr => tr.onclick = async e => { if (e.target.closest(".tip-i")) return; const ar = appRows().find(x => x.key === tr.dataset.k);
+      if (!ar) return open(tr.dataset.k); if (!Store.S.edit) return App.viewOnly(); const d = await promptBox("Description of " + ar.key, ar.name); if (d == null || !d.trim() || d.trim() === ar.name) return;
+      const f = Store.field("equipment"), o = ar.o; Store.mutate("config", () => { (o.hist = o.hist || []).push({ t: now(), by: Profile.name(), from: o.desc || "", to: d.trim() }); o.desc = d.trim(); o.by = Profile.name(); o.at = now(); Store.touch(f); Store.S.config.mod = now(); }); });
     gridCols($(".as-tbl", body), "assets", { max: 520, onSort: () => App.render() }); }
   return { page, filters, fcount, reset: () => { more = 0; }, sel: () => sel, show: k => { sel = k || ""; tab = "d"; lsSet("adAsSel", sel); } };
 })();

@@ -26,7 +26,7 @@ const Sketch = (() => {
     for (const f of files){ try {
         const parts = isPdf(f) ? await pdfPages(f) : [await (async () => { const b = await createImageBitmap(f).catch(() => null); return { blob: f, name: (f.name && !/^image\.\w+$/.test(f.name) ? f.name.replace(/\.\w+$/, "") : "Pasted sketch"), w: b ? b.width : 0, ht: b ? b.height : 0, ext: extOf(f) }; })()];
         for (const p of parts){ const buf = await p.blob.arrayBuffer(), h = (await sha1(buf)).slice(0, 16); if (list(a).some(s => s.h === h)) continue;
-          const s = { h, name: p.name, w: p.w, ht: p.ht, ext: p.ext, added: now() }; mem.set(h, URL.createObjectURL(p.blob));
+          const s = { h, name: properTitle(p.name), w: p.w, ht: p.ht, ext: p.ext, added: now(), by: Profile.name(), at: now() }; mem.set(h, URL.createObjectURL(p.blob));
           Store.mutate("a:" + a._p, () => { list(a).push(s); Store.touch(a); });   /* (shows at once; the file uploads behind it) */
           await Store.addBlob(path(a._p, s), bufToB64(buf)); }
         Store.log("Added sketches to " + Store.actId(a)); }
@@ -37,7 +37,7 @@ const Sketch = (() => {
   function renderFor(el, a, ro){ const S = list(a), M = "2";   /* (each sketch headed by a row: its number, its name, fullscreen and the bin) */
     el.innerHTML = '<div class="sk sk' + M + '">' + (ro ? "" : '<button type="button" class="att-add sk-up" title="Click, drop or paste images or PDFs (each PDF page becomes a sketch)">+ Add sketches (images or PDFs)</button>')
       + S.map((s, i) => '<figure class="sk-f" data-i="' + i + '">'
-        + (M === "2" ? '<div class="sk-h"><span class="sk-n">' + (i + 1) + '</span><span class="sk-t">' + esc(s.name || "") + '</span><button type="button" class="sk-b" data-k="fs" title="Fullscreen">' + FS + '</button>' + (ro ? "" : '<button type="button" class="sk-b" data-k="del" title="Remove this sketch">' + BIN + '</button>') + '</div>' : "")
+        + (M === "2" ? '<div class="sk-h"><span class="sk-n">' + (i + 1) + '</span><span class="sk-t" title="' + (ro ? "" : "Double click to rename") + '">' + esc(s.name || "") + '</span><span class="sk-by" title="Modified by">' + esc(whoBy(s)) + '</span><span class="sk-at" title="Date modified">' + esc(whenBy(s)) + '</span><button type="button" class="sk-b" data-k="fs" title="Fullscreen">' + FS + '</button>' + (ro ? "" : '<button type="button" class="sk-b" data-k="del" title="Remove this sketch">' + BIN + '</button>') + '</div>' : "")
         + '<img alt="' + esc(s.name || "Sketch " + (i + 1)) + '" src="' + esc(src(a, s)) + '" loading="lazy" draggable="false">'
         + (M === "1" ? '<figcaption class="sk-h"><span class="sk-n">' + (i + 1) + '</span><span class="sk-t">' + esc(s.name || "") + '</span>' + (ro ? "" : '<button type="button" class="sk-b" data-k="del" title="Remove this sketch">' + BIN + '</button>') + '</figcaption>' : "")
         + (M === "3" ? '<span class="sk-badge">' + (i + 1) + '</span>' + (ro ? "" : '<button type="button" class="sk-b sk-ov" data-k="del" title="Remove this sketch">' + BIN + '</button>') : "")
@@ -47,6 +47,10 @@ const Sketch = (() => {
       up.ondrop = e => { up.classList.remove("drop"); if (!e.dataTransfer.files.length) return; e.preventDefault(); e.stopPropagation(); add(a, e.dataTransfer.files); }; }
     $$(".sk-f", el).forEach(f => { const i = +f.dataset.i;
       $("img", f).onclick = () => { if (Date.now() - (f.__moved || 0) > 300) view(a, i); }; const fs = $('[data-k="fs"]', f); if (fs) fs.onclick = () => view(a, i);
+      /* double click the title to rename it (proper case, words already in capitals left as they are) */
+      const tt = $(".sk-t", f); if (tt && !ro) tt.ondblclick = e => { e.stopPropagation(); const s0 = list(a)[i]; if (!s0) return; const inp = h('<input class="in sk-ti" value="' + esc(s0.name || "") + '">'); tt.replaceWith(inp); inp.focus(); inp.select();
+        let gone = false; const done = ok => { if (gone) return; gone = true; const v = properTitle(inp.value.trim()); if (ok && v && v !== s0.name){ Store.mutate("a:" + a._p, () => { s0.name = v; s0.by = Profile.name(); s0.at = now(); Store.touch(a); }); Store.log("Renamed a sketch on " + Store.actId(a)); } else App.render(); };
+        inp.onkeydown = ev => { if (ev.key === "Enter"){ ev.preventDefault(); done(true); } if (ev.key === "Escape"){ ev.preventDefault(); done(false); } ev.stopPropagation(); }; inp.onblur = () => done(true); inp.onpointerdown = ev => ev.stopPropagation(); };
       const d = $('[data-k="del"]', f); if (d) d.onclick = async e => { e.stopPropagation(); const s = list(a)[i]; if (s && await confirmBox("Remove sketch " + (i + 1) + " from " + Store.actId(a) + "? You can undo with Ctrl+Z.", "Remove", true)){ Store.mutate("a:" + a._p, () => { const k = list(a).indexOf(s); if (k >= 0) list(a).splice(k, 1); Store.touch(a); }); Store.log("Removed a sketch from " + Store.actId(a)); } };
       if (ro) return;
       /* drag to reorder, live: once the pointer has moved a little, the sketch follows it and the others make way as it passes
@@ -60,13 +64,29 @@ const Sketch = (() => {
           const order = $$(".sk-f", box).map(x => +x.dataset.i); if (order.every((v, k) => v === k)) return;
           Store.mutate("a:" + a._p, () => { const old = list(a).slice(); order.forEach((from, k) => { list(a)[k] = old[from]; }); Store.touch(a); }); Store.log("Reordered the sketches of " + Store.actId(a)); };
         document.addEventListener("pointermove", move); document.addEventListener("pointerup", up); }; }); }
-  /* fullscreen: one sketch at a time, as large as the screen allows; the arrows (or ← →) step through, Esc closes */
-  function view(a, i){ const S = list(a); if (!S[i]) return; const v = h('<div class="skv" tabindex="-1"><img alt=""><span class="skv-n"></span><button type="button" class="skv-x" title="Close (Esc)">✕</button><button type="button" class="skv-a skv-p" aria-label="Previous">‹</button><button type="button" class="skv-a skv-q" aria-label="Next">›</button></div>');
-    const show = () => { $("img", v).src = src(a, S[i]); $(".skv-n", v).textContent = (i + 1) + " of " + S.length + "  " + (S[i].name || ""); };
-    const go = d => { i = (i + d + S.length) % S.length; show(); }, close = () => v.remove();
-    $(".skv-x", v).onclick = close; $(".skv-p", v).onclick = () => go(-1); $(".skv-q", v).onclick = () => go(1); v.onclick = e => { if (e.target === v) close(); };
-    v.onkeydown = e => { if (e.key === "Escape") close(); else if (e.key === "ArrowLeft") go(-1); else if (e.key === "ArrowRight") go(1); };
-    document.body.appendChild(v); show(); v.focus(); if (v.requestFullscreen) v.requestFullscreen().catch(() => {}); }
+  /* the viewer: one sketch at a time, full screen (one Esc closes it and full screen together). Scroll, Ctrl+scroll,
+     pinch or Ctrl + and - zoom the sketch itself (never the page), on the point under the pointer; drag to move round a
+     zoomed sketch; double click or 0 fits it again; the arrows (or ← →) step through, Esc closes */
+  function view(a, i){ const S = list(a); if (!S[i]) return; const v = h('<div class="skv" tabindex="-1"><div class="skv-st"><img alt="" draggable="false"></div><span class="skv-n"></span><button type="button" class="skv-x" title="Close (Esc)">✕</button><button type="button" class="skv-a skv-p" aria-label="Previous">‹</button><button type="button" class="skv-a skv-q" aria-label="Next">›</button></div>');
+    const st = $(".skv-st", v), im = $("img", v); let k = 1, tx = 0, ty = 0, fitK = 1;
+    const put = () => { im.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + k + ")"; };
+    const fit = () => { const W = st.clientWidth, H = st.clientHeight, w = im.naturalWidth || 1, hh = im.naturalHeight || 1; fitK = Math.min(W / w, H / hh); k = fitK; tx = (W - w * k) / 2; ty = (H - hh * k) / 2; put(); };
+    const zoomAt = (cx, cy, f) => { const r = st.getBoundingClientRect(), x = cx - r.left, y = cy - r.top, nk = Math.max(fitK * 0.5, Math.min(fitK * 40, k * f)); tx = x - (x - tx) * (nk / k); ty = y - (y - ty) * (nk / k); k = nk; put(); };
+    const show = () => { im.onload = fit; im.src = src(a, S[i]); $(".skv-n", v).textContent = (i + 1) + " of " + S.length + "  " + (S[i].name || ""); if (im.complete && im.naturalWidth) fit(); };
+    const go = d => { i = (i + d + S.length) % S.length; show(); };
+    /* (full screen proper: one Esc leaves full screen and closes the viewer together, back to where you were) */
+    const close = () => { if (!v.isConnected) return; v.remove(); removeEventListener("resize", fit); document.removeEventListener("fullscreenchange", fsc); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); };
+    const fsc = () => { if (!document.fullscreenElement) close(); };
+    $(".skv-x", v).onclick = close; $(".skv-p", v).onclick = () => go(-1); $(".skv-q", v).onclick = () => go(1);
+    st.addEventListener("wheel", e => { e.preventDefault(); zoomAt(e.clientX, e.clientY, Math.exp(-Math.max(-150, Math.min(150, e.deltaY)) * 0.002)); }, { passive: false });
+    let drag = null, moved = false; st.onpointerdown = e => { drag = { x: e.clientX, y: e.clientY, tx, ty }; moved = false; st.setPointerCapture(e.pointerId); st.classList.add("grab"); };
+    st.onpointermove = e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true; tx = drag.tx + dx; ty = drag.ty + dy; put(); };
+    st.onpointerup = () => { drag = null; st.classList.remove("grab"); }; v.onclick = e => { if (e.target === v) close(); };
+    st.ondblclick = () => fit();
+    v.onkeydown = e => { if (e.key === "Escape") close(); else if (e.key === "ArrowLeft") go(-1); else if (e.key === "ArrowRight") go(1);
+      else if ((e.ctrlKey || e.metaKey) && (e.key === "+" || e.key === "=" || e.key === "-" || e.key === "0") || e.key === "0"){ e.preventDefault(); const r = st.getBoundingClientRect(); if (e.key === "0") fit(); else zoomAt(r.left + r.width / 2, r.top + r.height / 2, e.key === "-" ? 1 / 1.25 : 1.25); } };
+    document.body.appendChild(v); addEventListener("resize", fit); show(); v.focus();
+    if (v.requestFullscreen) v.requestFullscreen().then(() => document.addEventListener("fullscreenchange", fsc)).catch(() => {}); }
   /* pasting on the Sketches tab adds the pasted images as sketches */
   document.addEventListener("paste", e => { if (App.sub !== "sketches" || !App.selRef || !Store.S.edit) return; const fs = [...(e.clipboardData || {}).files || []].filter(f => /^image\//.test(f.type) || isPdf(f)); if (!fs.length) return;
     e.preventDefault(); e.stopImmediatePropagation(); add(App.act(App.selRef), fs); }, true);
