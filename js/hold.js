@@ -48,5 +48,6 @@ const Hold = (() => {
      pairs with the blank ones left out; nothing when it isn't on hold */
   function lines(a){ if (!on(a)) return []; const h = rec(a), c = h.who ? Store.contacts().find(x => !x.del && x.name.toLowerCase() === h.who.toLowerCase()) || {} : {};
     return [["Waiting on", [h.who, h.company || c.company].filter(Boolean).join(", ")], ["Mobile", h.mobile || c.mobile], ["Email", c.email], ["On hold since", h.since && fmtDate(h.since)], ["Notes", h.why]].filter(x => String(x[1] || "").trim()); }
-  return { btn, entered, after, open, missing, on, lines };
+  const hush = () => { pending = null; };   // (put on hold by the app itself: no form to open)
+  return { btn, entered, after, hush, open, missing, on, lines };
 })();

@@ -4,7 +4,8 @@
    Isolations. */
 "use strict";
 const ActionView = (() => {
-  const CORE = new Set(["title", "status", "priority", "problem", "solution", "notes"]);
+  const CORE = new Set(["title", "status", "priority", "problem", "solution", "notes", "equipment"]);
+  const OFF = new Set(["category", "location"]);   // (in the Actions list, not in Details)
   const TABS = [["overview", "Overview"], ["materials", "Materials"], ["isol", "Isolations"], ["drawings", "Drawings"]];   // (Materials holds the MTO and Spares)
   /* simple yes or no fields (tick boxes, Yes / No choices) are kept to the Actions table, not the action's details */
   const yesNo = f => f.type === "check" || (f.type === "choice" && (f.options || []).filter(o => !o.del).length && (f.options || []).filter(o => !o.del).every(o => /^(yes|no)$/i.test(o.label)));
@@ -24,11 +25,10 @@ const ActionView = (() => {
        leave the panel as it is, so its photos and map don't flash */
     const sig = JSON.stringify([stable(a), Media.pendingOf(a).length, sub, ro, i, list.length, Store.S.config.mod, (Store.S.config.contacts || []).length, Store.S.vendors && Store.S.vendors.mod, Equip.count, Isol.ready(), PipeSpec.ready(), Store.projects().length, Mto.shownKey()]);
     if (el.__sig === sig && el.isConnected && $(".av", el)) return; el.__sig = sig;
-    /* the header: the ID with its PDF button on the far left, in line with the title, then the hold, complete and delete buttons; the arrows and close sit at the right */
-    el.innerHTML = '<div class="av"><div class="av-head" data-ref="' + esc(a._p + ":" + a.u) + '">' + Table.idBox(a, true) + Table.rowBtns(a) + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "") + '<span class="grow"></span>'
+    /* the header: the ID with its PDF button on the far left, the title right beside it (hold, complete and delete are in the list's row); the arrows and close sit at the right */
+    el.innerHTML = '<div class="av"><div class="av-head" data-ref="' + esc(a._p + ":" + a.u) + '">' + Table.idBox(a, true) + '<div class="av-title" data-f="title"></div>' + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "")
       + '<span class="av-nav"><button type="button" class="ic-b" data-k="prev" title="Previous action"' + (i > 0 ? "" : " disabled") + '>‹</button><span class="dim">' + (i >= 0 ? (i + 1) + " of " + list.length : "") + '</span><button type="button" class="ic-b" data-k="next" title="Next action"' + (i >= 0 && i < list.length - 1 ? "" : " disabled") + '>›</button></span>'
       + '<button type="button" class="ic-b av-close" data-k="x" title="Close (Esc)" aria-label="Close">✕</button></div>'
-      + '<div class="av-title" data-f="title"></div>'
       + '<div class="av-tabs">' + TABS.map(([k, t]) => { const mat = sub === "mto" || sub === "spares", on = k === sub || (k === "materials" && mat), c = k === "materials" ? n("mto") + n("spares") : k === "isol" ? n("isol") : k === "drawings" ? Drawings.count(a) : 0; return '<button type="button" class="av-tab' + (on ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'
       + '<div class="av-body' + (sub === "overview" ? " ov" : "") + '"></div></div>';
     $$(".av-head [data-f], .av-title[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
@@ -79,32 +79,30 @@ const ActionView = (() => {
         : '<p class="dim">No changes recorded yet. Changes are recorded from now on.</p>')
       + '<p class="dim sm-t">Created ' + esc(when(a.created || a.mod)) + '.' + tipI("The last 400 changes are kept with the action.") + '</p><div class="yn-btns"><button class="yn-yes" type="button">Close</button></div>', { cls: "ch-win" });
     $(".yn-yes", m).onclick = () => m.close(); }
-  function overview(el, a, ro){
+  function overview(el, a, ro){ const REC = '<div class="ov-rec"><h4 class="det-h2">Record</h4><div class="det det-m"></div></div>';
     el.innerHTML = (!Store.mine(a) && a.mod && now() - a.mod < 15 * 60000 ? '<div class="sd-warn">⚠ <b>' + esc(App.who(a)) + '</b> edited this action ' + esc(App.ago(a.mod)) + ' and may still be working on it. Changes to different fields are both kept; if you both change the same field you\'ll both be warned.</div>' : "")
-      + '<div class="ov-g"><div class="ov-l"><h4>Problem</h4><div data-f="problem"></div><h4>Solution</h4><div data-f="solution"></div><h4>Notes</h4><div data-f="notes"></div>'
+      /* left: what the job is (problem, solution, tags, notes), its files and the contractor; right: the photos at the top, filling
+         the column, then the record (owner, dates, last change). The ticks, Category and Location live in the list */
+      + '<div class="ov-g"><div class="ov-l"><h4>Problem</h4><div data-f="problem"></div><h4>Solution</h4><div data-f="solution"></div>'
+      + (Store.field("equipment") ? '<h4>Tags</h4><div data-f="equipment" class="ov-tags"></div>' : "") + '<h4>Notes</h4><div data-f="notes"></div>'
       + '<h4>Attachments <span class="cnt">' + (a.files.length || "") + '</span></h4><div class="att-l"></div>'
-      + '<h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span><button type="button" class="ph-cp" data-k="phcopy" title="Copy a picture of this action: ID and title, problem, solution and every photo" aria-label="Copy a picture of the problem, solution and photos">' + Table.IDI.copy + '</button></h4><div class="ph-fill"><div class="ph-g"></div></div></div>'
-      + '<div class="ov-r">'
-      + '<h4>Status</h4><div class="stk-g"></div><h4>Details</h4><div class="det"></div><h4 class="det-h2" hidden>Contractor</h4><div class="det det-c"></div><h4 class="det-h2">Record</h4><div class="det det-m"></div></div></div></div>';
+      + '<h4 class="det-h2" hidden>Contractor</h4><div class="det det-c"></div></div>'
+      + '<div class="ov-r"><h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span><button type="button" class="ph-cp" data-k="phcopy" title="Copy a picture of this action: ID and title, problem, solution and every photo" aria-label="Copy a picture of the problem, solution and photos">' + Table.IDI.copy + '</button></h4><div class="ph-fill"><div class="ph-g"></div></div>'
+      + REC + '</div></div>';
     $$("[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     $$("[data-f=problem] textarea,[data-f=solution] textarea,[data-f=notes] textarea", el).forEach(t => { t.rows = 1; t.dispatchEvent(new Event("input")); });   // (each fits its text)
     photos(a, $(".ph-fill", el), ro);
     files(a, $(".att-l", el), ro);
     /* (the expected location map is for the work pack only, not shown here) */
-    const det = $(".det", el);
-    /* the action owner leads the details: their name and contact details go on the workpack */
-    const ow = h('<div class="det-r det-own"><label>Action owner</label><span class="own"></span></div>'); det.appendChild(ow); ownerBox($(".own", ow), a, ro);
+    /* the action owner leads the record: their name and contact details go on the workpack */
+    const ow = h('<div class="det-r det-own"><label>Action owner</label><span class="own"></span></div>'); $(".det-m", el).appendChild(ow); ownerBox($(".own", ow), a, ro);
     /* the details in three parts: the job, the contractor, and the record of when (created, modified, completed) */
     const CONTR = /^contractor/;
-    Store.fields().filter(f => !CORE.has(f.id) && !["mto", "sparelist", "isollist", "complete"].includes(f.type) && !Fields.DERIVED[f.id] && !yesNo(f)).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); (CONTR.test(f.id) ? $(".det-c", el) : f.type === "meta" ? $(".det-m", el) : det).appendChild(r); });
+    Store.fields().filter(f => !CORE.has(f.id) && !["mto", "sparelist", "isollist", "complete"].includes(f.type) && !Fields.DERIVED[f.id] && !yesNo(f) && !OFF.has(f.id)).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); (CONTR.test(f.id) ? $(".det-c", el) : f.type === "meta" ? $(".det-m", el) : $(".det-m", el)).appendChild(r); });
     /* under Last modified: the last change, who made it and what it was, on two lines at most, then more… for the whole history */
     const lm = $('.det-m [data-f="modified"]', el); if (lm){ const hl = (a.hist || [])[(a.hist || []).length - 1], what = hl ? (hl.c || []).map(([k, f, t]) => k + (t ? " " + t : f ? " cleared" : "")).join(", ") || hl.note || "" : "";
       lm.appendChild(h('<div class="lastch">' + (hl ? '<span class="lc-t">' + esc((hl.by || "Someone") + (what ? ": " + what : "")) + '</span> ' : "") + '<button type="button" class="link" data-k="hist" title="Change history: every change, who made it and when">more…</button></div>')); }
     $(".det-c", el).previousElementSibling.hidden = !$(".det-c", el).children.length;
-    /* Status: the list's tick columns, in workflow order, down three columns like a checklist (each tick works as in the list) */
-    const tks = Store.fields().filter(f => f.type === "check" && f.table), sg = $(".stk-g", el); sg.style.setProperty("--rows", Math.ceil(tks.length / 3) || 1);
-    tks.forEach(f => { const r = h('<div class="stk"><span class="stk-l" title="' + esc(f.desc || f.label) + '">' + esc(f.short || f.label) + '</span></div>'); const ed = Fields.editor(a, f, ro); r.prepend(ed); $(".stk-l", r).onclick = () => { const i = $("input", ed); if (i && !i.disabled) i.click(); }; sg.appendChild(r); });
-    if (!tks.length){ sg.previousElementSibling.remove(); sg.remove(); }
     $$("[data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a)); }
   async function act(k, a, list, i){
     if (k === "x") App.select(null);
@@ -117,10 +115,9 @@ const ActionView = (() => {
     else if (k === "addph") Media.pickFiles(a, "image/*");
     else if (k === "addf") Media.pickFiles(a);
     else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Flow.remove(a); App.select(null); } } }
-  /* every photo as an even 4:3 tile under the attachments, click one to view it. The tiles fill the left column down to
-     the bottom of the panel, as big as fits (few photos, big tiles; many, smaller); below the smallest, the box grows */
+  /* every photo as an even 4:3 tile at the top of the right column, click one to view it */
   const GRID = new Map();
-  function photos(a, box, ro){ const g = $(".ph-g", box), up = Media.pendingOf(a), n = a.photos.length + up.length + (ro ? 0 : 1), GAP = 6, MIN = 64;
+  function photos(a, box, ro){ const g = $(".ph-g", box), up = Media.pendingOf(a), n = a.photos.length + up.length + (ro ? 0 : 1), GAP = 6;
     g.innerHTML = a.photos.map((p, i) => '<div class="ph-c"><button type="button" class="ph-t" data-i="' + i + '" title="View photo ' + (i + 1) + '"><img alt="Photo ' + (i + 1) + '" loading="lazy"></button>' + (ro ? "" : '<button type="button" class="ph-del" data-i="' + i + '" title="Remove this photo" aria-label="Remove photo ' + (i + 1) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg></button>') + '</div>').join("")
       + up.map(u => '<div class="ph-c ph-up" data-pid="' + u.id + '" title="Adding this photo…"><img alt="Photo being added" src="' + esc(u.url) + '"><span class="ph-bar" aria-hidden="true"><i style="width:' + Math.round(u.p * 100) + '%"></i></span></div>').join("")
       + (ro ? "" : '<button type="button" class="ph-add" title="Upload photos, or drop or paste them anywhere on the action">+ Add photos</button>');
@@ -140,17 +137,9 @@ const ActionView = (() => {
     const ad = $(".ph-add", g); if (ad) ad.onclick = () => Media.pickFiles(a, "image/*");
     if (!n) return;
     let last = ""; const was = GRID.get(a.u); if (was){ g.style.gridTemplateColumns = was[0]; g.style.gridAutoRows = was[1]; box.style.minHeight = was[2]; }   // (the last sizes straight away, so a redraw doesn't jump)
-    /* the space to fill: the photo box's own height, or down to the bottom of the panel when the column above it is short */
-    const room = () => { const sc = box.closest(".av-body,.sd-body,.ap-body") || box.closest("[class*=scroll]") || box.parentElement.parentElement; let H = box.clientHeight;
-      const sr = sc && sc.getBoundingClientRect(), br = box.getBoundingClientRect(); if (sr) H = Math.max(H, Math.floor(sr.bottom - br.top - 12)); return H; };
-    const fit = () => { if (!box.isConnected){ ro2.disconnect(); return; } box.style.minHeight = ""; const W = box.clientWidth, H = room(); if (!W) return;
-      const one = getComputedStyle(box.closest(".ov-g")).gridTemplateColumns.split(" ").length < 2;
-      /* even 4:3 tiles (a camera photo's shape): the column count that gives the biggest tiles that still fit the width and the height */
-      const ratio = 4 / 3; let best = null;
-      if (one){ const c = Math.max(2, Math.min(n, Math.floor((W + GAP) / (150 + GAP)))); best = { c, w: (W - GAP * (c - 1)) / c, rws: Math.ceil(n / c) }; }   // stacked under the details there's no height to fill: about 150px tiles across the width
-      else for (let c = 1; c <= n; c++){ const rws = Math.ceil(n / c); let w = (W - GAP * (c - 1)) / c; if (!one && rws * (w / ratio) + GAP * (rws - 1) > H) w = Math.min(w, ((H - GAP * (rws - 1)) / rws) * ratio); 
-        if (w >= MIN && (!best || w > best.w + .5)) best = { c, w, rws }; }
-      if (!best){ const c = Math.max(1, Math.floor((W + GAP) / (MIN + GAP))); best = { c, w: MIN, rws: Math.ceil(n / c) }; }
+    /* even 4:3 tiles (a camera photo's shape) at the top of the right column, about 150px wide across its width, the record straight after */
+    const fit = () => { if (!box.isConnected){ ro2.disconnect(); return; } box.style.minHeight = ""; const W = box.clientWidth; if (!W) return;
+      const ratio = 4 / 3, c = Math.max(2, Math.min(n, Math.floor((W + GAP) / (150 + GAP)))), best = { c, w: (W - GAP * (c - 1)) / c, rws: Math.ceil(n / c) };
       const w = Math.floor(best.w), h = Math.floor(best.w / ratio), need = best.rws * h + GAP * (best.rws - 1), k = best.c + "," + w + "," + h;
       box.style.minHeight = need + "px";
       if (k === last) return; last = k; g.style.gridTemplateColumns = "repeat(" + best.c + "," + w + "px)"; g.style.gridAutoRows = h + "px"; GRID.set(a.u, [g.style.gridTemplateColumns, g.style.gridAutoRows, box.style.minHeight]); };
@@ -158,7 +147,7 @@ const ActionView = (() => {
     $$("img", g).forEach(im => im.addEventListener("load", () => requestAnimationFrame(fit), { once: true })); }
   /* the files, then a slim dashed bar one box high to attach another (or drop one on it) */
   function files(a, l, ro){ l.innerHTML = a.files.length || !ro ? "" : '<div class="dim">No attachments.</div>';
-    a.files.forEach(f => { const r = h('<div class="att"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : /docx?$/i.test(f.name) ? "DOC" : "FILE") + '</span><button type="button" class="link att-n">' + esc(f.name) + '</button><span class="dim">' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" title="Remove">✕</button>') + '</div>');
+    a.files.forEach(f => { const r = h('<div class="att"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : /docx?$/i.test(f.name) ? "DOC" : "FILE") + '</span><button type="button" class="link att-n" title="' + esc(f.name + ", " + fmtSize(f.size || 0)) + '">' + esc(f.name) + '</button><span class="dim">' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" title="Remove">✕</button>') + '</div>');
       $(".att-n", r).onclick = () => Media.openFile(a, f);
       const x = $(".ic-b", r); if (x) x.onclick = () => Store.mutate("a:" + a._p, () => { const i = a.files.indexOf(f); if (i >= 0) a.files.splice(i, 1); Store.touch(a); });
       l.appendChild(r); });

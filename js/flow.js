@@ -136,6 +136,58 @@ const Flow = (() => {
     if (!go) return;
     Store.projects().forEach(pj => { const mine = list.filter(x => x.a._p === pj.id && go.has(x.a._p + ":" + x.a.u)); if (mine.length) Store.mutate("a:" + pj.id, () => mine.forEach(({ a, u }) => { const was = a.owner.n; a.owner = { n: full(u), e: u.id }; Store.touch(a); Store.log("Action owner of " + Store.actId(a) + ": " + was + " merged into " + full(u)); })); });
     done(); App.render(); }
+  /* once, for the admin: three test actions (Test1 to Test3) built to push the app to its limits, listed and added only if agreed.
+     Test1: everything as long and as full as it gets (text, tags, contractor, on hold and overdue); Test2: the workflow and the
+     materials (ticks done, not needed and still to do, a big MTO with steel cuts and plate, spares, isolations, an overdue ETA);
+     Test3: the bare minimum and odd values (no text, the "–" tag, Commissioning, completed, created years ago) */
+  async function testActions(){ const C = Store.S.config; if (!App.isAdmin() || C.testActs) return;
+    const pj = Store.projects()[0]; if (!pj) return;
+    const done = () => Store.mutate("config", () => { C.testActs = now(); C.mod = now(); });
+    const L = ["Test1: very long text everywhere, 14 tags, every contractor box, on hold with an overdue due date, odd characters (° ± Ø µ ½ ≥ “quotes” & <angle> brackets)",
+      "Test2: the workflow and materials, ticks done, not needed and still to do, 40 MTO lines with steel cuts and plate, 15 spares, 12 isolations, an ETA in the past",
+      "Test3: the bare minimum, no problem or notes, tag –, Commissioning, ticked Complete, created in 2019"];
+    const go = await new Promise(res => { const m = modal('<h3>Add three test actions</h3><p class="dim">For trying the app out. They are ordinary actions (you can delete them afterwards with the bin) and go into ' + esc(pj.name || "the project") + '. Nothing else changes.</p>'
+      + L.map(t => '<div class="fw-r"><span>' + esc(t) + '</span></div>').join("")
+      + '<div class="yn-btns"><button class="yn-no" type="button">Not now</button><button class="yn-yes" type="button">Add them</button></div>', { cls: "fw-win", onClose: () => res(false) });
+      $(".yn-no", m).onclick = () => m.close(); $(".yn-yes", m).onclick = () => { res(true); m.close(); }; });
+    if (!go) return;
+    const day = n => { const d = new Date(Date.now() + n * 864e5); return d.toISOString().slice(0, 10); };
+    const long = (s, n) => Array.from({ length: n }, (_, i) => s.replace("#", i + 1)).join(" ");
+    const id = () => uid(), ck = Store.field;
+    Store.mutate("a:" + pj.id, () => {
+      /* Test1: the longest and fullest */
+      const t1 = Store.newAction(pj.id, { title: "Test1 " + "Conveyor CV402 underpan spray manifold leaking at every flanged joint along the full 46 m length, including the take up and the tail pulley, needs full replacement with HDPE and new isolation valves",
+        problem: long("Line # of the problem: the spray bar at ±2.5 m spacing leaks at 3.2 bar, the flange gaskets (Ø 110 mm, 3 mm CNAF) have perished and water runs onto the belt at ≥ 40 °C ambient; operators report “slippery walkway” & <hazard> tags hung.", 12) + "\n\nSecond paragraph after a blank line.\nThird line straight after.",
+        solution: long("Step #: isolate, drain, remove the old manifold, fit new PE100 SDR11 DN100 with stub flanges and backing rings, pressure test to 1.5 × design.", 10),
+        notes: long("Note #: µ-switch on the take up is also loose, ½ turn on the locknut; ask Ops about the 06:00 to 18:00 shutdown window.", 15),
+        equipment: ["F12-CV-402", "F12-CV-403", "F12-PP-401", "F12-PP-402", "F12-SP-001", "F12-SP-002", "F12-SP-003", "F12-XV-12551", "F12-XV-12552", "F12-LT-12199", "F12-ZT-12005A", "F12-CH-407", "F13-BLC-401", "A-VERY-LONG-EQUIPMENT-TAG-NUMBER-0001-REV-C"],
+        location: "F12 Primary Crushing, under the CV402 head end, east side walkway between grid lines 14 and 19, level 2",
+        contractor: "Very Long Name Mechanical, Electrical, Instrumentation and Shutdown Services Pty Ltd", contractorDate: day(3) + "T06:30", contractorContact: "Maximilian Alexander Featherstonehaugh-Smythe", contractorPhone: "+61 400 123 456 ext 7890" });
+      t1.hold = { who: "Jo Featherstonehaugh", mobile: "0400 000 001", company: "Primero Group", since: day(-21), due: day(-7), why: long("Waiting on the revised quote # for the hoses and the stub flanges.", 4) };
+      /* Test2: the workflow and the materials */
+      const t2 = Store.newAction(pj.id, { title: "Test2 Ball mill discharge sump pump replacement with new pipework, steelwork and platform",
+        problem: "Pump F13-PS-404 cavitates; the suction line is undersized and the platform steel is corroded.", solution: "Replace the pump, upsize the suction to DN150 and replace the platform.",
+        equipment: ["F13-PS-404", "F13-SW-002"], location: "F13 Grinding", pccr: true, mtodone: true, secured: NA, rfq: true });
+      const pipe = q => ({ id: id(), qty: String(q), cl: "RL2", dn: 300, it: "Pipe", unit: "m", sq: "0.1", sqm: false });
+      const free = (d, q, u) => ({ id: id(), desc: d, qty: String(q), unit: u });
+      t2.mto = [].concat(Array.from({ length: 12 }, (_, i) => pipe(i + 1)), Array.from({ length: 16 }, (_, i) => free(["GASKET DN150 CNAF 3MM", "BOLT M20 X 90 GR 8.8 GALV", "NUT M20 GR 8 GALV", "WASHER M20 FLAT GALV"][i % 4] + " LINE " + (i + 1), (i % 5) + 1, "ea")));
+      try { const S = Mto.TY.wb.stds[0], P = Mto.TY.plate.stds[0];
+        t2.mto = t2.mto.concat([2.4, 3.1, 4.75, 5.2, 1.8, 6].map(q => ({ id: id(), qty: String(q), t: "wb", s: S.id, z: S.sizes[0].n, m: S.mats[0], L: S.defl, unit: "m" })),
+          [[1200, 600], [800, 400], [2400, 1200], [300, 300], [1500, 750], [950, 450]].map(d => ({ id: id(), qty: "1", t: "plate", s: P.id, z: P.sizes[0].n, m: P.mats[0], L: P.defl, unit: "sheets", pl: String(d[0]), pw: String(d[1]) }))); } catch (e){}
+      t2.mtoG = {};
+      t2.spares = Array.from({ length: 15 }, (_, i) => i % 3 ? { id: id(), qty: String(i + 1), cl: "N/A", cat: "inst", desc: "Spare part " + (i + 1) + (i === 7 ? " with a really long description that has to be cut off with more… in the table" : ""), unit: "ea", part: "PN-" + (10000 + i) } : { id: id(), qty: "2", cl: "MSG3", dn: 25, it: "Elbow, 90°", unit: "ea", vt: "Press Connector", desc: "ELB 90 DN25 MDL 4316 PRESS MSG3" });
+      t2.isol = Array.from({ length: 12 }, (_, i) => ({ id: id(), tag: "F13-" + ["PS", "SW", "XV", "MCC"][i % 4] + "-" + (400 + i), name: ["Mill discharge sump pump", "Switchboard / MCC (from the SLD)", "Process water isolation valve", "Motor control centre bucket"][i % 4] + " " + (i + 1), note: i === 3 ? "Lock out at both ends, test for dead" : "" }));
+      t2.f.eta = day(-5);
+      /* Test3: the bare minimum and odd values */
+      const t3 = Store.newAction(pj.id, { title: "Test3", equipment: ["–"] });
+      t3.created = new Date(2019, 0, 1).getTime();
+      [t1, t2, t3].forEach(a => { Store.log("Added test action " + Store.actId(a)); sync(a); }); });
+    const all = Store.actsOf(pj.id).filter(a => !a.del), t = n => all.filter(a => new RegExp("^test" + n + "\\b", "i").test(a.f.title || "")).pop(), t1 = t(1), t2 = t(2), t3 = t(3);
+    /* the Category through the usual rule, so the ID letters and Handover follow it as they would by hand */
+    [[t1, "Defect"], [t2, "Maintenance"], [t3, "Commissioning"]].forEach(([a, c]) => { if (a && ck("category")) Fields.set(a, ck("category"), c, true); });
+    if (t1 && ck("onhold")){ Fields.set(t1, ck("onhold"), true, true); Hold.hush(); Store.mutate("a:" + pj.id, () => { t1.hold.since = day(-21); Store.touch(t1); }); }
+    if (t3 && ck("complete")) Fields.set(t3, ck("complete"), true, true);
+    done(); App.render(); }
   /* the Handover tick (inside a Store.mutate): ticked, every step still to do is marked not needed (remembered in a.hoNA) and the
      action waits in Hand Over; ticked off again (or marked not needed), those steps come back. It never completes the action:
      Complete is always ticked by hand, when the work is physically done */
@@ -163,5 +215,5 @@ const Flow = (() => {
       else if (st && a.stage === st.id) sync(a);
       if (a.stage !== s0) Store.touch(a); })));
     Store.log("The Category is now the handover: the Defect column and its step taken out, " + ok.size + " handed over action" + (ok.size === 1 ? "" : "s") + " closed"); App.render(); }
-  return { ownerMerge, reopenHanded, handoverSetup, handover, handoverTidy, NA, remove, linkAll, loose, where, sync, mark, who, moveTo, stepOf, state, leave };
+  return { testActions, ownerMerge, reopenHanded, handoverSetup, handover, handoverTidy, NA, remove, linkAll, loose, where, sync, mark, who, moveTo, stepOf, state, leave };
 })();

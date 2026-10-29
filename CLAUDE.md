@@ -40,6 +40,8 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - Rules and presets live in File, Parameters, per person; the defaults are what he has tuned. Settings shared by everyone (photo quality) are admin only (bkhadembashi@nsrltd.com).
 - All exports in File, Export (Excel, PDF, Word), with quick buttons above the list too.
 
+- Details (Overview): left is Problem, Solution, Tags, Notes, Attachments (three to a row, Attach file one third wide), Contractor; right is Photos then Record (Action owner, dates, last change). No ticks, Category, Location or hold/complete/delete buttons there (they're in the list); the title sits right of the ID.
+
 ## More of the same spirit
 
 - Nothing pops up or moves under the user: switching tabs never opens something on its own (the Organizer opens laid out in full), and background redraws wait while they're typing or picking.
@@ -50,7 +52,7 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - Plain, active step names that say what's done next ("Send RFQ", not "Draft RFQ"; "Categorize Issue").
 - Symbols over words where the meaning is obvious (a gear for mech equipment, a bolt for electrical), with the word in the tooltip.
 - Pointing shows, clicking pins: hover cards can also be clicked to stay open, with a ✕.
-- Uploads look the same everywhere: a slim dashed bar, one box high, that you can click or drop onto. Photos as even 4:3 tiles you can drag to reorder, with a bin on each; in Details they grow to fill the left column down to the bottom of the panel (smaller when there's less room).
+- Uploads look the same everywhere: a slim dashed bar, one box high, that you can click or drop onto. Photos as even 4:3 tiles you can drag to reorder, with a bin on each; in Details they sit at the top of the right column, about 150px wide, with Record under them.
 - Avoid accidental triggers: no single key shortcuts that create things; deletes ask first.
 - Exports read well on paper: A4 portrait, blanks and unticked boxes left out, links that work without signing in, no browser header or footer.
 - The app remembers where you were: the last action viewed, the tab inside it (next and previous keep the tab), panel widths and filters.
