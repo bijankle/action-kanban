@@ -1529,3 +1529,25 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .dv-cols{align-items:flex-start}
 .dv-ed>.fl-ck{background:linear-gradient(to right,color-mix(in srgb,var(--panel2) 70%,var(--panel)) 116px,var(--line2) 116px 117px,var(--edf,#fff) 117px)!important;cursor:pointer}
 .dv-ed>.fl-ck>input{align-self:center;justify-self:start;width:16px;height:16px;margin:0 0 0 7px}
+/* Data validation lists (a column's allowed values, the Status stages) as tables like the Actions rows: one 22px row each,
+   a cell for the grip, the colour, each box, the count and the ✕; the add box is the last row */
+.opts,.stl{display:flex!important;flex-direction:column;gap:0!important;border:1px solid var(--line2);margin:0!important}
+.opts:empty{display:none!important}
+.opt,.str{display:grid!important;gap:0!important;align-items:stretch;height:var(--row,22px);border-bottom:1px solid var(--line);background:var(--panel)}
+.opt:last-child,.str:last-child{border-bottom:0}
+.opt{grid-template-columns:18px 22px minmax(0,1fr) 40px 22px}
+.str{grid-template-columns:18px 22px minmax(0,1fr) minmax(0,1fr) 104px 40px 40px 22px}
+.opt>*,.str>*{height:var(--row,22px)!important;min-width:0;margin:0!important;border-left:1px solid var(--line)!important;font-size:var(--fb)!important}
+.opt>:first-child,.str>:first-child{border-left:0!important}
+.opt .grip,.str .grip{display:grid;place-items:center;color:var(--dim);font-size:10px!important;cursor:grab}
+.opt input[type=color],.str input[type=color]{width:22px!important;height:22px!important;border:0!important;border-radius:0!important;padding:3px!important;background:var(--panel)!important}
+.opt .in,.str .in,.str .lk-sel{height:var(--row,22px)!important;min-height:0!important;border:0!important;border-left:1px solid var(--line)!important;border-radius:0!important;box-shadow:none!important;padding:0 6px!important;background:var(--edf,#fff)!important;width:100%!important;max-width:none!important;flex:none!important}
+.opt .dim,.str .dim{display:flex;align-items:center;justify-content:flex-end;padding:0 6px}
+.opt .ic-b,.str .ic-b{width:22px!important;height:22px!important;border:0!important;border-left:1px solid var(--line)!important;border-radius:0!important;display:grid;place-items:center;padding:0!important}
+.str-ck{display:grid;place-items:center;cursor:pointer}.str-ck input{width:15px;height:15px;margin:0}
+.str.str-h{background:var(--th);color:#fff;font-weight:700}.str.str-h>*{display:flex;align-items:center;padding:0 6px;border-left-color:color-mix(in srgb,#fff 20%,transparent)!important}
+.str.str-h .grip,.str.str-h .swh{padding:0}
+.dv-ed [data-k=newopt],.dv-body .stl+[data-k=new]{display:block;width:100%;height:var(--row,22px)!important;min-height:0!important;border:1px solid var(--line2)!important;border-top:0!important;border-radius:0!important;box-shadow:none!important;padding:0 6px!important;font-size:var(--fb)!important;margin:0!important}
+.dv-ed .opts:empty+[data-k=newopt]{border-top:1px solid var(--line2)!important}
+.dv-ed>.dv-h{margin-top:12px}
+.dv-body .stl,.dv-body .stl+[data-k=new]{width:100%!important;max-width:820px}
