@@ -121,6 +121,21 @@ const Flow = (() => {
     if (!keep) return;
     Store.projects().forEach(pj => Store.mutate("a:" + pj.id, () => Store.actsOf(pj.id).forEach(a => { if (!keep.has(a._p + ":" + a.u) || Store.stage(a.stage).kind !== "done") return; const to = where(a); if (to){ Store.place(a, to.id); Store.touch(a); Store.log("Reopened " + Store.actId(a) + ": waiting in " + to.name); } })));
     done(); App.render(); }
+  /* once, for the admin: owners typed as a short or differently written name of someone who has signed up ("Bijan" for
+     Bijan Khadembashi) are listed and, if agreed, put under that one person so the Action owner pills don't split */
+  async function ownerMerge(){ const C = Store.S.config; if (!App.isAdmin() || C.ownMerge) return;
+    const us = Store.users().filter(u => !u.nameOnly && u.first), full = u => [u.first, u.last].filter(Boolean).join(" "), lc = x => String(x || "").trim().toLowerCase();
+    const who = o => (o.e && us.find(u => u.id === o.e)) || us.find(u => lc(full(u)) === lc(o.n)) || ((m => m.length === 1 ? m[0] : null)(us.filter(u => lc(u.first) === lc(o.n))));
+    const list = Store.all().map(a => { const o = a.owner || {}, u = o.n && who(o); return u && (o.n !== full(u) || o.e !== u.id) ? { a, u } : null; }).filter(Boolean);
+    const done = () => Store.mutate("config", () => { C.ownMerge = now(); C.mod = now(); });
+    if (!list.length) return done();
+    const go = await new Promise(res => { const m = modal('<h3>Merge action owners</h3><p class="dim">These actions name their owner differently from the person who has signed up, so the Action owner filter shows them as someone else. Merging changes only the owner on the ticked actions.</p>'
+      + list.map(({ a, u }) => '<label class="fw-r"><span><input type="checkbox" data-u="' + esc(a._p + ":" + a.u) + '" checked> ' + esc(Store.actId(a)) + ' ' + esc((a.f.title || "").slice(0, 50)) + '</span><span class="dim">' + esc(a.owner.n) + ' to ' + esc(full(u)) + '</span></label>').join("")
+      + '<div class="yn-btns"><button class="yn-no" type="button">Not now</button><button class="yn-yes" type="button">Merge the ticked ones</button></div>', { cls: "fw-win", onClose: () => res(null) });
+      $(".yn-no", m).onclick = () => m.close(); $(".yn-yes", m).onclick = () => { res(new Set($$("input[data-u]:checked", m).map(x => x.dataset.u))); m.close(); }; });
+    if (!go) return;
+    Store.projects().forEach(pj => { const mine = list.filter(x => x.a._p === pj.id && go.has(x.a._p + ":" + x.a.u)); if (mine.length) Store.mutate("a:" + pj.id, () => mine.forEach(({ a, u }) => { const was = a.owner.n; a.owner = { n: full(u), e: u.id }; Store.touch(a); Store.log("Action owner of " + Store.actId(a) + ": " + was + " merged into " + full(u)); })); });
+    done(); App.render(); }
   /* the Handover tick (inside a Store.mutate): ticked, every step still to do is marked not needed (remembered in a.hoNA) and the
      action waits in Hand Over; ticked off again (or marked not needed), those steps come back. It never completes the action:
      Complete is always ticked by hand, when the work is physically done */
@@ -148,5 +163,5 @@ const Flow = (() => {
       else if (st && a.stage === st.id) sync(a);
       if (a.stage !== s0) Store.touch(a); })));
     Store.log("The Category is now the handover: the Defect column and its step taken out, " + ok.size + " handed over action" + (ok.size === 1 ? "" : "s") + " closed"); App.render(); }
-  return { reopenHanded, handoverSetup, handover, handoverTidy, NA, remove, linkAll, loose, where, sync, mark, who, moveTo, stepOf, state, leave };
+  return { ownerMerge, reopenHanded, handoverSetup, handover, handoverTidy, NA, remove, linkAll, loose, where, sync, mark, who, moveTo, stepOf, state, leave };
 })();
