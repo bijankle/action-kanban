@@ -220,7 +220,7 @@ async function sendMail(env, to, subject, body){ if (!env.RESEND_KEY || !to) ret
       body: JSON.stringify({ from: env.MAIL_FROM || "Action Database <onboarding@resend.dev>", to: [to], subject, html: body }) }); return r.ok; }
   catch (e){ return false; } }
 const ask = (link, what, u, email) => '<div style="font:15px/1.5 Segoe UI,Arial,sans-serif;color:#1d2430;max-width:520px">'
-  + "<p><b>" + esc([u.first, u.last].join(" ")) + "</b> " + what + ".</p>"
+  + "<p><b>" + esc(proper([u.first, u.last].filter(Boolean).join(" "))) + "</b> " + what + ".</p>"
   + '<table style="font-size:14px;border-collapse:collapse;margin:0 0 16px"><tr><td style="color:#7a8591;padding:2px 14px 2px 0">Email</td><td>' + esc(email) + "</td></tr>"
   + (u.role ? '<tr><td style="color:#7a8591;padding:2px 14px 2px 0">Role</td><td>' + esc(u.role) + "</td></tr>" : "") + (u.mobile ? '<tr><td style="color:#7a8591;padding:2px 14px 2px 0">Mobile</td><td>' + esc(u.mobile) + "</td></tr>" : "") + "</table>"
   + '<p><a href="' + esc(link) + '" style="background:#475569;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;display:inline-block">Review and approve</a></p>'
@@ -241,7 +241,9 @@ const STYLE = ":root{--bg:#eef0f3;--card:#fff;--line:#dde1e7;--ink:#1d2430;--mut
   + "table{width:100%;border-collapse:collapse;font-size:14px}td,th{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.4px}.wide{width:min(860px,100%)}"
   + ".pill{font-size:12px;font-weight:700;border-radius:999px;padding:2px 8px;border:1px solid var(--line)}.pend{color:#b7791f;border-color:#b7791f}";
 const page = (title, body, wide) => '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + " · Action Database</title><style>" + STYLE + '</style></head><body><main class="box' + (wide ? " wide" : "") + '"><div class="logo">A*</div><h1>' + esc(title) + "</h1>" + body + "</main></body></html>";
-const card = (u, email) => '<div class="card"><b>' + esc([u.first, u.last].join(" ")) + "</b><span>" + esc(u.role || "") + "</span><span>" + esc([email, u.mobile].filter(Boolean).join("   ")) + "</span></div>";
+/* names as people write them: "bijan khadembashi" shows as Bijan Khadembashi (a name typed with capitals is left as typed) */
+const proper = n => n === n.toLowerCase() ? n.replace(/(^|[\s'-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()) : n;
+const card = (u, email) => '<div class="card"><b>' + esc(proper([u.first, u.last].filter(Boolean).join(" "))) + "</b><span>" + esc(u.role || "") + "</span><span>" + esc([email, u.mobile].filter(Boolean).join("   ")) + "</span></div>";
 
 function loginPage(admin){ return page("Sign in to Action Database", '<p id="msg">Enter your email. You\'ll then be asked for your password.</p><form id="f" novalidate><div id="body"></div><p class="err" id="err" hidden></p><div class="row"><button class="go" id="go" type="submit">Next</button><span id="alt"></span></div></form>'
   + "<script>(()=>{const $=i=>document.getElementById(i),body=$('body'),err=$('err'),msg=$('msg'),go=$('go'),alt=$('alt');let step='email',email=localStorage.getItem('adLastEmail')||'';"
@@ -269,8 +271,8 @@ function loginPage(admin){ return page("Sign in to Action Database", '<p id="msg
   + "draw();})();</script>"); }
 
 function adminPage({ d }){ const rows = Object.entries(d.users).sort((a, b) => (a[1].status === "pending" ? 0 : 1) - (b[1].status === "pending" ? 0 : 1) || a[0].localeCompare(b[0]));
-  return html(page("Accounts", "<p>Everyone who can sign in. Remove someone and they're signed out within a minute. Sign out ends their sign in on every computer.</p><table><thead><tr><th>Name</th><th>Email</th><th>Status</th><th></th></tr></thead><tbody>"
-    + rows.map(([e, u]) => "<tr><td>" + esc([u.first, u.last].join(" ")) + "<br><span style=\"color:var(--muted);font-size:13px\">" + esc(u.role || "") + "</span></td><td>" + esc(e) + "</td><td>" + (u.status === "pending" ? '<span class="pill pend">Waiting</span>' : '<span class="pill">Active</span>') + (u.reset ? ' <span class="pill pend">New password waiting</span>' : "") + '</td><td class="row" style="justify-content:flex-end">'
-      + (u.status === "pending" ? '<button class="go" data-do="approve" data-e="' + esc(e) + '">Approve</button>' : '<button class="no" style="color:var(--ink)" data-do="signout" data-e="' + esc(e) + '">Sign out</button>') + '<button class="no" data-do="remove" data-e="' + esc(e) + '">Remove</button></td></tr>').join("")
+  return html(page("Accounts", "<p>Everyone who can sign in. Remove someone and they're signed out within a minute. Sign out ends their sign in on every computer.</p><table><thead><tr><th>Name</th><th>Email</th><th>Status</th><th style='width:100%'></th></tr></thead><tbody>"
+    + rows.map(([e, u]) => "<tr><td style='white-space:nowrap'>" + esc(proper([u.first, u.last].filter(Boolean).join(" "))) + "<br><span style=\"color:var(--muted);font-size:13px\">" + esc(u.role || "") + "</span></td><td>" + esc(e) + "</td><td>" + (u.status === "pending" ? '<span class="pill pend">Waiting</span>' : '<span class="pill">Active</span>') + (u.reset ? ' <span class="pill pend">New password waiting</span>' : "") + '</td><td><div class="row">'
+      + (u.status === "pending" ? '<button class="go" data-do="approve" data-e="' + esc(e) + '">Approve</button>' : '<button class="no" style="color:var(--ink)" data-do="signout" data-e="' + esc(e) + '">Sign out</button>') + '<button class="no" data-do="remove" data-e="' + esc(e) + '">Remove</button></div></td></tr>').join("")
     + '</tbody></table><p style="margin-top:14px"><a href="/" style="color:var(--th)">Back to the app</a></p>'
     + "<script>document.querySelectorAll('[data-do]').forEach(b=>b.onclick=async()=>{if(b.dataset.do==='remove'&&!confirm('Remove '+b.dataset.e+'? They will not be able to sign in.'))return;b.disabled=true;const r=await fetch('/admin/act',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:b.dataset.e,do:b.dataset.do})});if(r.ok)location.reload();else{b.disabled=false;alert((await r.json().catch(()=>({}))).message||'Couldn\\'t do that');}});</script>", true)); }

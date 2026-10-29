@@ -212,7 +212,7 @@ body.resizing{cursor:col-resize;user-select:none}body.resizing iframe,body.resiz
 .tbl th.drag{opacity:.4}.tbl th.dover{box-shadow:inset 3px 0 0 #fff}
 .tbl td{padding:5px 10px;border-bottom:1px solid var(--line);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fb);height:40px}
 .tbl tbody tr{cursor:pointer}.tbl tbody tr:hover td{background:var(--panel2)}
-.tbl tbody tr.on td{background:var(--th-t)}.tbl tbody tr.on td:first-child{box-shadow:inset 4px 0 0 var(--th)}
+
 .tbl tbody tr.drop td{background:color-mix(in srgb,var(--th) 18%,var(--panel))}
 .tbl td.ed{padding:3px 6px}.tbl td.ed .in{padding:3px 6px;font-size:var(--fb);border-color:transparent;background:transparent}
 .tbl td.ed .in:hover,.tbl td.ed .in:focus{border-color:var(--line);background:var(--panel)}
@@ -1087,7 +1087,7 @@ html.dark .menubar{box-shadow:none}
 .pm-win .pm-c .pm-n{width:76px;flex:none}
 /* the Parts Arrived cell washed faintly in its dot's colour; click it (outside the box) to pin the delivery card */
 .tbl td.eta{background:color-mix(in srgb,var(--eta) 10%,var(--panel));cursor:pointer}.tbl td.eta:hover{background:color-mix(in srgb,var(--eta) 18%,var(--panel))}
-.tbl tr.on td.eta{background:color-mix(in srgb,var(--eta) 16%,var(--th-t,var(--panel)))}
+
 .etapop.pin{box-shadow:0 0 0 2px var(--eta),0 10px 28px rgba(16,24,40,.16)}.ep-x{margin-left:auto}
 /* a tick column's card (click beside the box) */
 .tbl td.tkc{cursor:pointer}.tbl td.tkc:hover{background:color-mix(in srgb,var(--th) 6%,var(--panel))}
@@ -1181,8 +1181,7 @@ input.lk-hid{display:none!important}.lk-dt{width:100%;min-width:0}
 textarea.in.ta{resize:none;overflow:hidden;min-height:var(--ctl-h,28px)}
 .pt-foot:empty{display:none}
 /* the selected row: a faint slate tint across the whole row (no bar down the side); its boxes stay white */
-.tbl tbody tr.on td{background:color-mix(in srgb,var(--th) 13%,var(--panel))!important;box-shadow:none!important}.tbl tbody tr.on td:first-child{box-shadow:none!important}
-.tbl tbody tr.on td .in{background:var(--panel)}
+
 /* the slim MTO: short codes in narrow columns, thin headings by kind, a row still to fill in tinted yellow with a dot saying what's left */
 .mt-tbl td{padding:1px 3px;height:30px}.mt-tbl .pt-no{white-space:nowrap}
 .mt-tbl .mt-pk{font:var(--fb) ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:-.1px;cursor:pointer;padding:3px 6px}.mt-tbl .mt-pk:focus{cursor:text}
@@ -1364,7 +1363,7 @@ html.dark{--edf:#2a2117;--edh:#36291a;--autof:#1d2a40;--autoh:#253552}
 .tbl td.cell-sel{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--th) 55%,transparent)}
 .tbl td:focus-within:has(.in,.pt-in,.tagin){box-shadow:inset 0 0 0 2px var(--th);background:var(--panel)!important}
 .tbl td:focus-within .in,.tbl td:focus-within .pt-in,.tbl td:focus-within .tagin{background:var(--panel)!important;box-shadow:none!important}
-.tbl tr.row-sel>td{background-color:color-mix(in srgb,var(--th) 7%,var(--panel))}
+
 .ltpop.lt-inl{border-radius:0!important}.lt-inl textarea{border:0!important;border-radius:0!important;box-shadow:inset 0 0 0 2px var(--th),0 6px 18px rgba(0,0,0,.14)!important;font-size:var(--fb)!important;line-height:16px!important;padding:3px 6px!important;min-height:var(--row)!important;background:var(--panel)!important}
 /* column lines a shade darker than the row lines, in every table */
 .tbl tbody td+td,.tbl tbody td.tk{border-left:1px solid var(--line2)!important}
@@ -1433,3 +1432,11 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .hold-sw:focus-visible{outline:2px solid var(--th);outline-offset:2px}.hold-sw:disabled{opacity:.6;cursor:default}
 .hold-b{display:flex;flex-direction:column;gap:8px}.hold-b[hidden]{display:none}
 .rb-hold{position:relative}.rb-hold.miss::after{content:"";position:absolute;top:2px;right:2px;width:5px;height:5px;border-radius:50%;background:#c0392b}
+/* the selected action: no fill, a thick edge round the whole row (drawn over the cells so nothing in them hides it).
+   The dropdown arrow sits flush in the cell with no box of its own, and an open dropdown has no thick edge */
+.tbl tr.on>td{position:relative}
+.tbl tr.on>td::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;border-top:2px solid var(--rs,var(--th));border-bottom:2px solid var(--rs,var(--th))}
+.tbl tr.on>td:first-child::after{border-left:2px solid var(--rs,var(--th))}.tbl tr.on>td:last-child::after{border-right:2px solid var(--rs,var(--th))}
+.tbl td .lk-sel svg{border-left:0!important;background:none!important;margin:0!important}
+.tbl td .lk-sel[aria-expanded="true"]{box-shadow:none!important}
+:root{--rs:var(--th)}html.dark{--rs:#94a3b8}
