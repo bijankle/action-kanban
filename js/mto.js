@@ -302,7 +302,7 @@ const Mto = (() => {
     ph = pdr.map(pipeRow).join("");
     const lc = lastCl.get(akey(a));
     if (!ro) ph += '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="newp" data-c="cl" placeholder="+ Class" value="' + esc(lc || "") + '" title="' + (lc ? "New rows start in " + esc(lc) + ", the class last picked; pick another to change it" : "") + '" autocomplete="off" spellcheck="false"></td>'
-      + (lc ? '<td><input class="in pt-in mt-pk" data-r="newp" data-c="dn" placeholder="+ Size" autocomplete="off" spellcheck="false"></td><td colspan="' + (PC.length - 2) + '"></td></tr>' : '<td colspan="' + (PC.length - 1) + '"></td></tr>');
+      + (lc ? '<td><input class="in pt-in mt-pk" data-r="newp" data-c="dn" placeholder="+ Size" autocomplete="off" spellcheck="false"></td>' + '<td></td>'.repeat(PC.length - 2) + '</tr>' : '' + '<td></td>'.repeat(PC.length - 1) + '</tr>');
     pipes.forEach(it => { ph += head(it, PC.length, last) + pipeRow(it); last = GROUP(it); });
     /* ---- steel and the rest ---- */
     const hasPart = steel.concat(sdr).some(it => it.part || !type(it));
@@ -327,7 +327,7 @@ const Mto = (() => {
 
     const steelItem = it => { if (!isCut(it)) return steelRow(it); const G = gs.get(skey(it)); if (drawn.has(G.key)) return ""; drawn.add(G.key); return parentRow(G) + (openG.has(G.key) ? G.rows.map((r, i) => steelRow(r, n + "." + (i + 1))).join("") : ""); };
     sh = sdr.map(steelRow).join("");
-    if (!ro) sh += '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="new0" data-c="t" placeholder="+ Item" autocomplete="off" spellcheck="false"></td><td colspan="' + (SC.length - 1) + '"></td></tr>';
+    if (!ro) sh += '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="new0" data-c="t" placeholder="+ Item" autocomplete="off" spellcheck="false"></td>' + '<td></td>'.repeat(SC.length - 1) + '</tr>';
     steel.forEach(it => { const r = steelItem(it); if (!r) return; sh += head(it, SC.length, last) + r; last = GROUP(it); });
     const thead = cols => '<thead><tr><th class="pt-no" data-col="No.">#</th>' + cols.map(([c, nm]) => '<th data-col="' + (nm || c) + '">' + esc(nm) + (REQ.has(c) || c === "cl" || c === "sz" || c === "ms" ? '<span class="mt-rq" title="Needed">*</span>' : "") + '</th>').join("") + '</tr></thead>';
     return '<div class="mt-h">Piping' + tipI("To the plant's pipe spec (" + ((PipeSpec.meta() || {}).doc || "loading the spec…") + "): pick the class, the size and the item, and the spec gives the rest. N/A for anything not to a class.") + '</div>'

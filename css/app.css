@@ -1584,3 +1584,9 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 /* dragging a heading: the column slides with the pointer; the heading being moved is shaded and shows a grabbing hand */
 .tbl thead th[data-c]{cursor:grab}.tbl.coldrag,.tbl.coldrag *{cursor:grabbing!important;user-select:none}
 .tbl thead th.drag{background:color-mix(in srgb,var(--th) 18%,var(--hdr))!important;outline:2px solid var(--th);outline-offset:-2px}
+/* every table heading the same as the name cells (the shaded cell, grey semibold words), across the app */
+.tbl th,.tbl th .th-l,.str.str-h,.str.str-h>*,.mt-ct th{background:var(--hdr)!important;color:var(--muted)!important;font-weight:600!important;font-size:var(--fb)!important}
+.tbl th .th-v{color:var(--muted)!important;font-weight:600!important}.tbl th.addcol .addc{color:var(--muted)!important;font-weight:600!important}
+/* the MTO tab's top: no card round it (the supplier box is already a table); it starts on the same left edge as the tables below */
+.pt-top{border:0!important;border-radius:0!important;padding:0!important;gap:12px}.pt-l{padding:0!important}.pt-r{padding:0!important;border-left:0!important}
+.mt-wrap{margin:0!important}.mt-h{margin-left:0!important;margin-right:0!important}
