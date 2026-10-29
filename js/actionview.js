@@ -103,6 +103,24 @@ const ActionView = (() => {
     const lm = $('.det-m [data-f="modified"]', el); if (lm){ const hl = (a.hist || [])[(a.hist || []).length - 1], what = hl ? (hl.c || []).filter(([k, f, t]) => !/^(auto|hoNA|prevHold|prevStage|tkw)$/.test(k) && !/^[{[]/.test(String(t || f || ""))).map(([k, f, t]) => k + (t ? " " + t : f ? " cleared" : "")).join(", ") || hl.note || "" : "";
       lm.appendChild(h('<div class="lastch">' + (hl ? '<span class="lc-t">' + esc((hl.by || "Someone") + (what ? ": " + what : "")) + '</span> ' : "") + '<button type="button" class="link" data-k="hist" title="Change history: every change, who made it and when">more…</button></div>')); }
     $(".det-c", el).previousElementSibling.hidden = !$(".det-c", el).children.length;
+    /* handed over (Handover ticked): the Contractor section becomes Handover, who it went to and how to reach them, as on the
+       On hold card but its own details, and the date of handover (the day it was ticked, which can be changed). The contractor's
+       details are kept, and come back if Handover is unticked */
+    if (a.f.handover === true){ const dc = $(".det-c", el), hd = dc.previousElementSibling, H = a.ho || {};
+      hd.hidden = false; hd.textContent = "Handover"; dc.innerHTML = "";
+      const box = (k, lab, ex) => { const r = h('<div class="det-r"><label>' + lab + '</label><input class="in" data-ho="' + k + '" value="' + esc(H[k] || "") + '" autocomplete="off"' + (ex || "") + (ro ? " readonly" : "") + '></div>'); dc.appendChild(r); return $("input", r); };
+      const who = box("who", "Handed to", ' list="hoNames" placeholder="Name"');
+      dc.insertAdjacentHTML("beforeend", '<datalist id="hoNames">' + Store.contacts().map(c => '<option value="' + esc(c.name) + '">' + esc([c.company, c.mobile].filter(Boolean).join(" · ")) + '</option>').join("") + '</datalist>');
+      const mob = box("mobile", "Their mobile", ' type="tel"'), co = box("company", "Company");
+      const dr = h('<div class="det-r"><label>Date of handover</label></div>'), d = dateBox(H.date || "", { label: "Date of handover" }); dr.appendChild(d); dc.appendChild(dr);
+      const nr = h('<div class="det-r ho-note"><label>Note</label><textarea class="in" data-ho="why" rows="1" placeholder="What was handed over, and how (email, meeting)"' + (ro ? " readonly" : "") + '>' + esc(H.why || "") + '</textarea></div>'); dc.appendChild(nr);
+      const save = () => { if (ro) return; const n = { who: who.value.trim(), mobile: mob.value.trim(), company: co.value.trim(), date: d.value || "", why: $("textarea", nr).value.trim() };
+        if (JSON.stringify(n) === JSON.stringify(Object.assign({ who: "", mobile: "", company: "", date: "", why: "" }, a.ho || {}))) return;
+        Store.mutate("a:" + a._p, () => { a.ho = n; Store.touch(a); Hold.contact(n); }); Store.log("Handover details for " + Store.actId(a)); };
+      /* picking a known person fills in their mobile and company */
+      who.addEventListener("change", () => { const c = Store.contacts().find(x => x.name.toLowerCase() === who.value.trim().toLowerCase()); if (c){ if (!mob.value) mob.value = c.mobile || ""; if (!co.value) co.value = c.company || ""; } save(); });
+      [mob, co, $("textarea", nr)].forEach(i => i.addEventListener("change", save)); d.addEventListener("change", save);
+      Look.scan && Look.scan(dc); }
     $$("[data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a)); }
   async function act(k, a, list, i){
     if (k === "x") App.select(null);

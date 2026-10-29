@@ -1455,3 +1455,4 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .lk-hk{color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;margin-right:2px}
 /* the parts ETA card: snug to what's in it, every line one row high (it widens rather than wraps) */
 .etapop{width:max-content;min-width:0;max-width:calc(100vw - 16px)}.etapop .ep-g>span,.etapop .ep-r,.etapop .ep-h{white-space:nowrap}.ep-g{grid-template-columns:auto auto}
+.ov-l .det-c .ho-note{grid-column:1/-1}.ov-l .det-c .ho-note textarea{resize:vertical;min-height:28px;font:inherit}

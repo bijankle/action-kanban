@@ -192,7 +192,7 @@ const Flow = (() => {
      action waits in Hand Over; ticked off again (or marked not needed), those steps come back. It never completes the action:
      Complete is always ticked by hand, when the work is physically done */
   function handover(a, v){ const steps = open().map(stepOf).filter(f => f && f.type === "check" && f.id !== "handover");
-    if (v === true){ a.hoNA = a.hoNA || []; steps.forEach(f => { if (a.f[f.id] !== true && a.f[f.id] !== NA){ mark(a, f, NA); a.hoNA.push(f.id); } }); Store.log("Handed over " + Store.actId(a)); }
+    if (v === true){ a.hoNA = a.hoNA || []; a.ho = Object.assign({}, a.ho || {}); if (!a.ho.date){ const d = new Date(); a.ho.date = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }   /* (the date of handover: the day it's ticked, until changed) */ steps.forEach(f => { if (a.f[f.id] !== true && a.f[f.id] !== NA){ mark(a, f, NA); a.hoNA.push(f.id); } }); Store.log("Handed over " + Store.actId(a)); }
     else { (a.hoNA || []).forEach(id => { const f = Store.field(id); if (f && a.f[id] === NA) mark(a, f, ""); }); delete a.hoNA; }
     if (Store.stage(a.stage).kind === "open") sync(a); }
   /* the Category is the handover (Defect, Punchlist, Operations, Maintenance): once, the admin is asked to take the Defect tick

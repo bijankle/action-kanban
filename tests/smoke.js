@@ -111,6 +111,9 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
       Fields.set(A, Store.field("category"), "Defect"); Fields.set(A, ho, true); const before = A.f.pccr === Flow.NA; Fields.set(A, Store.field("category"), "Commissioning");
       return before + " " + A.f.category + " " + (A.f.handover === Flow.NA) + " " + (A.f.pccr === Flow.NA); });
     check("a handed over action made Commissioning has Handover unticked to not needed and its steps back to do", hc === "true Commissioning true false", hc);
+    /* ticking Handover dates the handover that day */
+    const hd = await a.p.evaluate(() => { const A = Store.all().filter(q => !q.del && Store.stage(q.stage).kind === "open" && q.f.handover !== true)[0]; Fields.set(A, Store.field("handover"), true); return (A.ho || {}).date; });
+    check("ticking Handover sets the date of handover to today", hd === new Date().toISOString().slice(0, 10) || /^\d{4}-\d\d-\d\d$/.test(hd || ""), hd);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
   } catch (e) { console.log("  FAIL  the checks stopped: " + e.message); code = 1; }
   await browser.close(); srv.kill(); fs.rmSync(dir, { recursive: true, force: true });

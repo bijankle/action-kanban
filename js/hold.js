@@ -37,11 +37,12 @@ const Hold = (() => {
     /* (it opens to read: nothing is picked for typing until a box is clicked; the card itself takes the focus so Esc and Tab work) */
     p.tabIndex = -1; p.style.outline = "none"; setTimeout(() => p.focus({ preventScroll: true }), 0); }
   function save(a, h){ if (!Store.S.edit) return App.viewOnly();
-    Store.mutate("a:" + a._p, () => { a.hold = h; Store.touch(a); Store.log("On hold details for " + Store.actId(a));
-      /* into the running contact list: a new person, or a known one's missing mobile or company */
+    Store.mutate("a:" + a._p, () => { a.hold = h; Store.touch(a); Store.log("On hold details for " + Store.actId(a)); contact(h); }); }
+  /* (inside a Store.mutate) into the running contact list: a new person, or a known one's missing mobile or company */
+  function contact(h){
       if (h.who){ const list = Store.S.config.contacts, c = list.find(x => !x.del && x.name.toLowerCase() === h.who.toLowerCase());
         if (!c){ const [first, ...rest] = h.who.split(/\s+/); list.push(Store.touch({ id: uid(), name: h.who, first, last: rest.join(" "), company: h.company || "", mobile: h.mobile || "", email: "" })); Store.S.dirty.add("config"); }
-        else if ((!c.mobile && h.mobile) || (!c.company && h.company)){ if (!c.mobile) c.mobile = h.mobile; if (!c.company) c.company = h.company; Store.touch(c); Store.S.dirty.add("config"); } } }); }
+        else if ((!c.mobile && h.mobile) || (!c.company && h.company)){ if (!c.mobile) c.mobile = h.mobile; if (!c.company) c.company = h.company; Store.touch(c); Store.S.dirty.add("config"); } } }
   const h_ = s => { const t = document.createElement("template"); t.innerHTML = s.trim(); return t.content.firstChild; };
   document.addEventListener("click", e => { const b = e.target.closest("[data-hold]"); if (!b) return; e.preventDefault(); e.stopPropagation(); open(b.dataset.hold, b); }, true);
   /* for the PDFs: who it's waiting on and how to reach them (their email from the contact list), as [label, value]
@@ -49,5 +50,5 @@ const Hold = (() => {
   function lines(a){ if (!on(a)) return []; const h = rec(a), c = h.who ? Store.contacts().find(x => !x.del && x.name.toLowerCase() === h.who.toLowerCase()) || {} : {};
     return [["Waiting on", [h.who, h.company || c.company].filter(Boolean).join(", ")], ["Mobile", h.mobile || c.mobile], ["Email", c.email], ["On hold since", h.since && fmtDate(h.since)], ["Notes", h.why]].filter(x => String(x[1] || "").trim()); }
   const hush = () => { pending = null; };   // (put on hold by the app itself: no form to open)
-  return { btn, entered, after, hush, open, missing, on, lines };
+  return { btn, entered, after, hush, open, missing, on, lines, contact };
 })();
