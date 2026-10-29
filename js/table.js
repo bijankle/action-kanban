@@ -23,16 +23,21 @@ const Table = (() => {
   /* (once: the headings now wrap a word at a time and the i sits underneath, so column widths saved before that are
      dropped and every column takes its new default; a title width someone set is kept) */
   if (lsGet("adColWv", 0) < 2){ const w = widths(), keep = {}; if (w.title) keep.title = w.title; lsSet("adColW", keep); lsSet("adColWv", 2); }
-  /* the ID and title always lead; the Status column goes after title until it's dragged elsewhere (config.actAfter is
-     the column it follows, shared like the field order) */
+  /* the ID and title always lead; On Hold and Delete go just right of Complete until dragged elsewhere (config.actAfter is
+     the column they follow, shared like the field order) */
   function cols(){ const t = Store.field("title"), rest = (Store.selected().length > 1 ? [{ id: "_proj", label: "Project", type: "proj" }] : []).concat(Store.fields().filter(f => f.table && f.id !== "title"));
     /* Complete: its own tick column, after the last step tick (Contractor); the Status cell keeps hold and delete */
     const cp = Store.fields().find(f => f.type === "complete"); if (cp && !rest.includes(cp)){ let k = -1; rest.forEach((f, n) => { if (f.type === "check" && f.stage) k = n; }); rest.splice(k < 0 ? rest.length : k + 1, 0, cp); }
-    const at = Store.S.config.actAfter; rest.splice(at && at !== "title" ? rest.findIndex(f => f.id === at) + 1 : 0, 0, { id: "_act", label: "", type: "act" });
+    /* On Hold and Delete sit just right of Complete (config.actAfter, when set, is the column they follow instead) */
+    const at = Store.S.config.actAfter || (cp && rest.includes(cp) ? cp.id : ""), ai = at && at !== "title" ? rest.findIndex(f => f.id === at) : -1; rest.splice(ai + 1, 0, { id: "_act", label: "", type: "act" });
     const base = [{ id: "_id", label: "ID", type: "id" }].concat(t && t.table !== false ? [t] : [], rest);
     /* once any column has been dragged, the whole order is kept (each person's own, on their computer: moving columns
        never changes anyone else's list); columns added since keep their place in the default order */
-    const ord = lsGet("adColOrder", null); if (!Array.isArray(ord) || !ord.length) return base;
+    let ord = lsGet("adColOrder", null); if (!Array.isArray(ord) || !ord.length) return base;
+    /* (once: Handover goes back to just left of PCCR in an order kept from before, as asked) */
+    if (!lsGet("adColFixHo", 0)){ if (ord.includes("handover") && ord.includes("pccr")){ ord = ord.filter(x => x !== "handover"); ord.splice(ord.indexOf("pccr"), 0, "handover"); }
+      const cpx = Store.fields().find(f => f.type === "complete"); if (cpx && ord.includes("_act") && ord.includes(cpx.id)){ ord = ord.filter(x => x !== "_act"); ord.splice(ord.indexOf(cpx.id) + 1, 0, "_act"); }   // (and On Hold and Delete just right of Complete)
+      lsSet("adColOrder", ord); lsSet("adColFixHo", 1); }
     const at2 = new Map(ord.map((id, n) => [id, n])), dflt = new Map(base.map((c, n) => [c.id, n]));
     const rank = c => at2.has(c.id) ? at2.get(c.id) : (() => { for (let n = dflt.get(c.id) - 1; n >= 0; n--) if (at2.has(base[n].id)) return at2.get(base[n].id) + 0.5; return -0.5; })();
     return base.slice().sort((x, y) => rank(x) - rank(y) || dflt.get(x.id) - dflt.get(y.id)); }
