@@ -77,6 +77,42 @@ const Flow = (() => {
     Store.projects().forEach(pj => Store.mutate("a:" + pj.id, () => Store.actsOf(pj.id).forEach(a => { const s0 = a.stage; sync(a); if (a.stage !== s0) Store.touch(a); })));
     Store.log("Made every tick column a step: " + plan.map(p => p.name).join(", ")); App.render(); }
   const a0 = a => a.stage;
+  /* once: the Handover tick column and its Hand Over step, before PCCR; the admin is asked first, with every action that changes:
+     Commissioning jobs get Handover not needed, actions already handed over and closed get it ticked (the rest of their steps
+     not needed), and open ones go to the step their ticks now say */
+  async function handoverSetup(){ if (!App.isAdmin() || Store.field("handover")) return;
+    const C = Store.S.config, pc = C.fields.findIndex(f => f.id === "pccr"), sp = C.stages.findIndex(s => s.id === (Store.field("pccr") || {}).stage);
+    const F = { id: "handover", label: "Handed over", short: "Handover", type: "check", table: true, na: false, stage: "stH" + uid(), desc: "Handed over to whoever owns it (Defect, Punchlist, Operations or Maintenance): the correspondence sent. Ticking it marks the other steps not needed and closes the action. Commissioning jobs don't need it." };
+    const S = { id: F.stage, name: "Hand Over", todo: "Hand Over", kind: "open", color: "#7C5CD6" };
+    const acts = Store.all().filter(a => !a.del), com = acts.filter(a => a.f.category === "Commissioning"), gone = acts.filter(a => HO.includes(a.f.category) && Store.stage(a.stage).kind === "done");
+    /* (who moves: worked out with the step in place, then put back) */
+    C.fields.splice(pc < 0 ? C.fields.length : pc, 0, F); C.stages.splice(sp < 0 ? C.stages.length : sp, 0, S);
+    const moves = acts.filter(a => Store.stage(a.stage).kind === "open" && a.f.category !== "Commissioning").map(a => ({ a, to: where(a) })).filter(m => m.to && m.to.id !== m.a.stage);
+    C.fields.splice(C.fields.indexOf(F), 1); C.stages.splice(C.stages.indexOf(S), 1);
+    const row = (a, what) => '<div class="fw-r"><span>' + esc(Store.actId(a)) + ' ' + esc((a.f.title || "").slice(0, 50)) + '</span><span class="dim">' + esc(what) + '</span></div>';
+    const ok = await new Promise(res => { const m = modal('<h3>Add the Handover step</h3><p class="dim">A Handover tick column before PCCR, and a Hand Over step in the Organizer after Categorize Issue. Ticking Handover marks the other steps not needed and closes the action; the Category no longer closes anything. Commissioning jobs don\'t need it.</p>'
+      + (gone.length ? '<div class="fw-h">Already handed over and closed: Handover ticked, the rest of their steps not needed</div>' + gone.map(a => row(a, a.f.category)).join("") : "")
+      + (com.length ? '<div class="fw-h">Commissioning jobs: Handover not needed</div>' + com.map(a => row(a, "stays at " + Store.todo(Store.stage(a.stage)))).join("") : "")
+      + (moves.length ? '<div class="fw-h">Open actions that go to the step their ticks now say</div>' + moves.map(x => row(x.a, Store.todo(Store.stage(x.a.stage)) + " → " + x.to.name)).join("") : "")
+      + '<div class="yn-btns"><button class="yn-no" type="button">Not now</button><button class="yn-yes" type="button">Add it</button></div>', { cls: "fw-win", onClose: () => res(false) });
+      $(".yn-no", m).onclick = () => m.close(); $(".yn-yes", m).onclick = () => { res(true); m.close(); }; });
+    if (!ok) return;
+    Store.mutate("config", () => { const at = C.fields.findIndex(f => f.id === "pccr"), as = C.stages.findIndex(s => s.id === (Store.field("pccr") || {}).stage);
+      C.fields.splice(at < 0 ? C.fields.length : at, 0, Store.touch(F)); C.stages.splice(as < 0 ? C.stages.length : as, 0, Store.touch(S)); C.mod = now(); });
+    const ho = Store.field("handover");
+    Store.projects().forEach(pj => Store.mutate("a:" + pj.id, () => Store.actsOf(pj.id).forEach(a => { if (a.del) return; const s0 = a.stage, f0 = JSON.stringify(a.f);
+      if (gone.includes(a)){ mark(a, ho, true); handover(a, true); }
+      else if (a.f.category === "Commissioning"){ mark(a, ho, NA); (a.auto = a.auto || {}).handover = true; }
+      if (Store.stage(a.stage).kind === "open") sync(a);
+      if (a.stage !== s0 || JSON.stringify(a.f) !== f0) Store.touch(a); })));
+    Store.log("Added the Handover step: " + gone.length + " handed over, " + com.length + " Commissioning not needed, " + moves.length + " moved"); App.render(); }
+  /* the Handover tick (inside a Store.mutate): ticked, every step still to do is marked not needed (remembered in a.hoNA) and the
+     action closes; ticked off again (or marked not needed), those steps come back and it reopens where its ticks say */
+  function handover(a, v){ const fin = Store.stages().find(s => s.kind === "done"), steps = open().map(stepOf).filter(f => f && f.type === "check" && f.id !== "handover");
+    if (v === true){ a.hoNA = a.hoNA || []; steps.forEach(f => { if (a.f[f.id] !== true && a.f[f.id] !== NA){ mark(a, f, NA); a.hoNA.push(f.id); } });
+      if (fin && Store.stage(a.stage).kind !== "done"){ Store.place(a, fin.id, 0); Store.log("Handed over and closed " + Store.actId(a)); } return; }
+    (a.hoNA || []).forEach(id => { const f = Store.field(id); if (f && a.f[id] === NA) mark(a, f, ""); }); delete a.hoNA;
+    if (Store.stage(a.stage).kind === "done"){ const to = where(a); if (to){ Store.place(a, to.id); Store.log("Reopened " + Store.actId(a)); } } }
   /* the Category is the handover (Defect, Punchlist, Operations, Maintenance): once, the admin is asked to take the Defect tick
      column and its Send Defect Notice step out of the list and the Organizer, and to close the open actions already handed
      over, each listed with a tick to leave any open */
@@ -97,5 +133,5 @@ const Flow = (() => {
       else if (st && a.stage === st.id) sync(a);
       if (a.stage !== s0) Store.touch(a); })));
     Store.log("The Category is now the handover: the Defect column and its step taken out, " + ok.size + " handed over action" + (ok.size === 1 ? "" : "s") + " closed"); App.render(); }
-  return { handoverTidy, NA, remove, linkAll, loose, where, sync, mark, who, moveTo, stepOf, state, leave };
+  return { handoverSetup, handover, handoverTidy, NA, remove, linkAll, loose, where, sync, mark, who, moveTo, stepOf, state, leave };
 })();

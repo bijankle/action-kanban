@@ -39,15 +39,7 @@ const Fields = (() => {
       case "phone": return v ? '<a href="tel:' + esc(String(v).replace(/\s/g, "")) + '">' + esc(v) + '</a>' : "";
       default: return v == null || v === "" ? "" : '<span class="' + (tbc(v) ? "tbc" : "") + '">' + esc(v) + '</span>'; } }
 
-  /* Defect, Punchlist, Operations and Maintenance are handovers to another division: picking one as the Category asks to hand
-     it over and close the action (it stays on record under Done); Commissioning is our own work and carries on */
-  const HANDOVER = new Set(["Defect", "Punchlist", "Operations", "Maintenance"]);
-  function handover(a, f, v){ return new Promise(res => { const m = modal('<h3>Hand ' + esc(Store.actId(a)) + ' over to ' + esc(v) + ' and close it?</h3><p class="dim">It stays on record under Done, with its history, and can be searched. Category only sets the Category and leaves it open.</p>'
-      + '<div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-no ho-cat" type="button">Category only</button><button class="yn-yes" type="button">Hand over and close</button></div>', { onClose: () => res(null) });
-    $(".yn-no", m).onclick = () => m.close(); $(".ho-cat", m).onclick = () => { res("cat"); m.close(); }; $(".yn-yes", m).onclick = () => { res("close"); m.close(); }; $(".yn-yes", m).focus(); })
-    .then(r => { if (!r) return App.render(); set(a, f, v, true); if (r === "close"){ const c = Store.fields().find(x => x.type === "complete"); if (c) set(a, c, true); note("Handed over to " + v + " and closed: " + Store.actId(a)); } }); }
   function set(a, f, v, quiet){ if (f.id === "title" && typeof v === "string") v = properTitle(v);   // (titles in proper case)
-    if (!quiet && f.id === "category" && HANDOVER.has(v) && a.f.category !== v && pref("handover") && !done(a) && Store.S.edit) return handover(a, f, v);
     if (f.id === "status"){ if (a.stage !== v) Flow.moveTo(a, v); return; }   // (picking a stage is like dragging the card there: it asks which steps change)
     if (!["stage", "rank", "complete"].includes(f.type) && JSON.stringify(a.f[f.id] == null ? "" : a.f[f.id]) === JSON.stringify(v == null ? "" : v)) return;   // nothing changed
     Store.mutate("a:" + a._p, () => {
@@ -62,6 +54,13 @@ const Fields = (() => {
       /* ticking Defect emailed makes it a defect (the ID becomes DEF-), and moves it on from Categorize Issue */
       if (f.id === "defect" && v === true && pref("defectCat")){ const c = Store.field("category"); if (c && a.f.category !== "Defect"){ Flow.mark(a, c, "Defect"); Flow.sync(a); note("Category set to Defect: " + Store.actId(a)); } }
       if (f.stage && (f.type === "check" || f.type === "choice")){ Flow.mark(a, f, v); Flow.sync(a); }
+      /* the Handover tick closes it out: ticked, the steps still to do are marked not needed and the action closes (kept as a record
+         under Done); unticked, they come back and it reopens. A Commissioning job isn't handed over: its Handover is marked not
+         needed (until someone changes it), and back again if the Category changes */
+      if (f.id === "handover" && pref("handover")) Flow.handover(a, v);
+      if (f.id === "category"){ const ho = Store.field("handover"), au = a.auto = a.auto || {};
+        if (ho && v === "Commissioning" && !a.f.handover){ Flow.mark(a, ho, Flow.NA); au.handover = true; Flow.sync(a); }
+        else if (ho && v !== "Commissioning" && au.handover && a.f.handover === Flow.NA){ Flow.mark(a, ho, ""); delete au.handover; Flow.sync(a); } }
       const auto = a.auto = a.auto || {}; delete auto[f.id]; if (f.id === "location") delete a.locAuto;
       const fill = (id, val) => { if (a.f[id] && !auto[id] && !(id === "location" && a.locAuto)) return; if (val){ a.f[id] = val; auto[id] = true; } else if (auto[id]){ a.f[id] = ""; delete auto[id]; } };
       /* the location follows the equipment's WBS area until someone types their own */
