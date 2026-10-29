@@ -117,9 +117,8 @@ const ActionView = (() => {
     else if (k === "addph") Media.pickFiles(a, "image/*");
     else if (k === "addf") Media.pickFiles(a);
     else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Flow.remove(a); App.select(null); } } }
-  /* every photo as an even tile under the attachments, click one to view it. The tiles fill the width, in the fewest
-     columns (at least 2) whose rows still fit the height left beside the map and details; if none fit, the smallest
-     tiles and the box grows */
+  /* every photo as an even 4:3 tile under the attachments, click one to view it. The tiles fill the left column down to
+     the bottom of the panel, as big as fits (few photos, big tiles; many, smaller); below the smallest, the box grows */
   const GRID = new Map();
   function photos(a, box, ro){ const g = $(".ph-g", box), up = Media.pendingOf(a), n = a.photos.length + up.length + (ro ? 0 : 1), GAP = 6, MIN = 64;
     g.innerHTML = a.photos.map((p, i) => '<div class="ph-c"><button type="button" class="ph-t" data-i="' + i + '" title="View photo ' + (i + 1) + '"><img alt="Photo ' + (i + 1) + '" loading="lazy"></button>' + (ro ? "" : '<button type="button" class="ph-del" data-i="' + i + '" title="Remove this photo" aria-label="Remove photo ' + (i + 1) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg></button>') + '</div>').join("")
@@ -141,14 +140,22 @@ const ActionView = (() => {
     const ad = $(".ph-add", g); if (ad) ad.onclick = () => Media.pickFiles(a, "image/*");
     if (!n) return;
     let last = ""; const was = GRID.get(a.u); if (was){ g.style.gridTemplateColumns = was[0]; g.style.gridAutoRows = was[1]; box.style.minHeight = was[2]; }   // (the last sizes straight away, so a redraw doesn't jump)
-    const fit = () => { if (!box.isConnected){ ro2.disconnect(); return; } box.style.minHeight = ""; const W = box.clientWidth, H = box.clientHeight; if (!W) return;
-      const one = getComputedStyle(box.closest(".ov-g")).gridTemplateColumns.split(" ").length < 2, size = c => (W - GAP * (c - 1)) / c, tall = c => { const r = Math.ceil(n / c); return r * size(c) + GAP * (r - 1); };
-      let c = one ? 3 : 2;   // stacked under the details there's no height to fill, so three across
-      if (!one) while (tall(c) > H && c < n && size(c + 1) >= MIN) c++;   // never more columns than tiles
-      const s = Math.floor(size(c)), need = Math.ceil(tall(c)), k = c + "," + s;
-      box.style.minHeight = need > H ? need + "px" : "";
-      if (k === last) return; last = k; g.style.gridTemplateColumns = "repeat(" + c + "," + s + "px)"; g.style.gridAutoRows = s + "px"; GRID.set(a.u, [g.style.gridTemplateColumns, g.style.gridAutoRows, box.style.minHeight]); };
-    const ro2 = new ResizeObserver(() => requestAnimationFrame(fit)); ro2.observe(box.closest(".ov-g") || box); requestAnimationFrame(fit); }
+    /* the space to fill: the photo box's own height, or down to the bottom of the panel when the column above it is short */
+    const room = () => { const sc = box.closest(".av-body,.sd-body,.ap-body") || box.closest("[class*=scroll]") || box.parentElement.parentElement; let H = box.clientHeight;
+      const sr = sc && sc.getBoundingClientRect(), br = box.getBoundingClientRect(); if (sr) H = Math.max(H, Math.floor(sr.bottom - br.top - 12)); return H; };
+    const fit = () => { if (!box.isConnected){ ro2.disconnect(); return; } box.style.minHeight = ""; const W = box.clientWidth, H = room(); if (!W) return;
+      const one = getComputedStyle(box.closest(".ov-g")).gridTemplateColumns.split(" ").length < 2;
+      /* even 4:3 tiles (a camera photo's shape): the column count that gives the biggest tiles that still fit the width and the height */
+      const ratio = 4 / 3; let best = null;
+      if (one){ const c = Math.max(2, Math.min(n, Math.floor((W + GAP) / (150 + GAP)))); best = { c, w: (W - GAP * (c - 1)) / c, rws: Math.ceil(n / c) }; }   // stacked under the details there's no height to fill: about 150px tiles across the width
+      else for (let c = 1; c <= n; c++){ const rws = Math.ceil(n / c); let w = (W - GAP * (c - 1)) / c; if (!one && rws * (w / ratio) + GAP * (rws - 1) > H) w = Math.min(w, ((H - GAP * (rws - 1)) / rws) * ratio); 
+        if (w >= MIN && (!best || w > best.w + .5)) best = { c, w, rws }; }
+      if (!best){ const c = Math.max(1, Math.floor((W + GAP) / (MIN + GAP))); best = { c, w: MIN, rws: Math.ceil(n / c) }; }
+      const w = Math.floor(best.w), h = Math.floor(best.w / ratio), need = best.rws * h + GAP * (best.rws - 1), k = best.c + "," + w + "," + h;
+      box.style.minHeight = need + "px";
+      if (k === last) return; last = k; g.style.gridTemplateColumns = "repeat(" + best.c + "," + w + "px)"; g.style.gridAutoRows = h + "px"; GRID.set(a.u, [g.style.gridTemplateColumns, g.style.gridAutoRows, box.style.minHeight]); };
+    const ro2 = new ResizeObserver(() => requestAnimationFrame(fit)); ro2.observe(box.closest(".ov-g") || box); requestAnimationFrame(fit);
+    $$("img", g).forEach(im => im.addEventListener("load", () => requestAnimationFrame(fit), { once: true })); }
   /* the files, then a slim dashed bar one box high to attach another (or drop one on it) */
   function files(a, l, ro){ l.innerHTML = a.files.length || !ro ? "" : '<div class="dim">No attachments.</div>';
     a.files.forEach(f => { const r = h('<div class="att"><span class="att-ic">' + (/pdf$/i.test(f.name) ? "PDF" : /xlsx?$|csv$/i.test(f.name) ? "XLS" : /docx?$/i.test(f.name) ? "DOC" : "FILE") + '</span><button type="button" class="link att-n">' + esc(f.name) + '</button><span class="dim">' + fmtSize(f.size || 0) + '</span>' + (ro ? "" : '<button type="button" class="ic-b sm" title="Remove">✕</button>') + '</div>');

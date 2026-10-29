@@ -50,7 +50,7 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - Plain, active step names that say what's done next ("Send RFQ", not "Draft RFQ"; "Categorize Issue").
 - Symbols over words where the meaning is obvious (a gear for mech equipment, a bolt for electrical), with the word in the tooltip.
 - Pointing shows, clicking pins: hover cards can also be clicked to stay open, with a ✕.
-- Uploads look the same everywhere: a slim dashed bar, one box high, that you can click or drop onto. Photos as tiles you can drag to reorder, with a bin on each.
+- Uploads look the same everywhere: a slim dashed bar, one box high, that you can click or drop onto. Photos as even 4:3 tiles you can drag to reorder, with a bin on each; in Details they grow to fill the left column down to the bottom of the panel (smaller when there's less room).
 - Avoid accidental triggers: no single key shortcuts that create things; deletes ask first.
 - Exports read well on paper: A4 portrait, blanks and unticked boxes left out, links that work without signing in, no browser header or footer.
 - The app remembers where you were: the last action viewed, the tab inside it (next and previous keep the tab), panel widths and filters.
