@@ -14,6 +14,8 @@ const Filters = (() => {
   /* the date filter at the top left, for every list: by the date created or modified, from and to (either can be blank) */
   const D = Object.assign({ by: "created", from: "", to: "", last: "" }, lsGet("adDate", {}));
   const day = t => { const d = new Date(t); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  /* (1 day, 1 week or 1 month picked from today rolls on with the days: opened tomorrow, it still ends today) */
+  if (D.span && D.to && D.to !== day(Date.now())){ const sp = { "1d": 1, "1w": 7, "1m": 0 }[D.span], d = new Date(); D.to = day(d); if (sp) d.setDate(d.getDate() - sp); else d.setMonth(d.getMonth() - 1); D.from = day(d); lsSet("adDate", D); }
   const dateOk = a => { if (!D.from && !D.to) return true; const t = D.by === "modified" ? a.mod || a.created : a.created; if (!t) return false; const d = day(t); return (!D.from || d >= D.from) && (!D.to || d <= D.to); };
   /* an action's value in each group */
   function val(a, k){ if (k === "st") return a.del ? "_del" : a.stage;
@@ -67,14 +69,19 @@ const Filters = (() => {
         + '<div class="gd-sp" role="group" aria-label="How long">' + SPANS.map(([k, n]) => '<button type="button" class="btn ghost sm" data-sp="' + k + '">' + n + '</button>').join("") + '</div>';
       $(".gd-by", el).onchange = e => { D.by = e.target.value; save(); };
       /* one box for the range (TOUCH: the phone's own two date pickers) */
-      $$(".gd-slot", el).forEach(x => { if (TOUCH){ const w = h('<span class="gd-two"></span>'); ["from", "to"].forEach((k, n) => { const i = dateBox(D[k], { ph: n ? "To" : "From", cls: "gd-d" }); i.addEventListener("change", () => { D[k] = i.value; D.last = i.value ? k : ""; save(); }); w.appendChild(i); }); x.replaceWith(w); return; }
-        const r = rangeBox(D.from, D.to, { label: "Date range", cls: "gd-d" }); x.replaceWith(r); r.addEventListener("change", () => { D.from = r.from; D.to = r.to; D.last = r.to ? "to" : ""; save(); }); });
+      $$(".gd-slot", el).forEach(x => { if (TOUCH){ const w = h('<span class="gd-two"></span>'); ["from", "to"].forEach((k, n) => { const i = dateBox(D[k], { ph: n ? "To" : "From", cls: "gd-d" }); i.addEventListener("change", () => { D[k] = i.value; D.last = i.value ? k : ""; D.span = ""; save(); }); w.appendChild(i); }); x.replaceWith(w); return; }
+        const r = rangeBox(D.from, D.to, { label: "Date range", cls: "gd-d" }); x.replaceWith(r); r.addEventListener("change", () => { D.from = r.from; D.to = r.to; D.last = r.to ? "to" : ""; D.span = ""; save(); }); });
       $$("[data-sp]", el).forEach(b => b.onclick = () => { const sp = SPANS.find(x => x[0] === b.dataset.sp);
         if (sp[2] < 0){ D.from = D.to = D.last = ""; return save(true); }
         const move = (iso, sign) => { const d = new Date(iso + "T12:00:00"); if (sp[2]) d.setDate(d.getDate() + sign * sp[2]); else d.setMonth(d.getMonth() + sign); return day(d); };
-        if (D.last === "from" && D.from) D.to = move(D.from, 1); else if (D.last === "to" && D.to) D.from = move(D.to, -1); else { D.to = day(now()); D.from = move(D.to, -1); D.last = ""; }
+        if (D.last === "from" && D.from){ D.to = move(D.from, 1); D.span = ""; } else if (D.last === "to" && D.to){ D.from = move(D.to, -1); D.span = ""; } else { D.to = day(now()); D.from = move(D.to, -1); D.last = ""; D.span = sp[0]; }
         save(true); }); };
     const save = redraw => { lsSet("adDate", D); if (redraw) draw(); App.render(); }; draw(); }
   const dateOn = () => !!(D.from || D.to);
-  return { render, apply, match, active, count, chipsHtml, wireChips, clear, val, dateBar, dateOn };
+  /* the list came out empty: say what's hiding the actions, and offer the way back */
+  function emptyHtml(){ const tot = Store.visible().length; if (!tot) return ""; const f0 = D.from, t0 = D.to; D.from = D.to = ""; const noDates = apply(Store.visible()).length; D.from = f0; D.to = t0;
+    const dates = dateOn() && noDates ? 'The dates (' + esc(D.by === "modified" ? "Date modified" : "Date created") + ', ' + esc([D.from && fmtDate(D.from), D.to && fmtDate(D.to)].filter(Boolean).join(" to ")) + ') leave out ' + noDates + ' action' + (noDates === 1 ? "" : "s") + '. <button type="button" class="link" data-fx="dates">Show all dates</button>' : "";
+    return 'No actions match. ' + (dates || (active() ? '<button type="button" class="link" data-fx="all">Clear the filters</button>' : "")); }
+  document.addEventListener("click", e => { const b = e.target.closest("[data-fx]"); if (!b) return; if (b.dataset.fx === "dates"){ D.from = D.to = D.last = D.span = ""; lsSet("adDate", D); App.render(); } else clear(); });
+  return { emptyHtml, render, apply, match, active, count, chipsHtml, wireChips, clear, val, dateBar, dateOn };
 })();
