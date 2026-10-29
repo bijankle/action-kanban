@@ -108,6 +108,19 @@ const Flow = (() => {
       if (Store.stage(a.stage).kind === "open") sync(a);
       if (a.stage !== s0 || JSON.stringify(a.f) !== f0) Store.touch(a); })));
     Store.log("Added the Handover step: " + gone.length + " handed over, " + com.length + " Commissioning not needed, " + moves.length + " moved"); App.render(); }
+  /* once: Handover used to complete the action; Complete is now ticked by hand, so the actions it closed are offered back,
+     each ticked to reopen (untick any whose work is physically done); they go back to waiting in Hand Over */
+  async function reopenHanded(){ const C = Store.S.config; if (!App.isAdmin() || C.hoReopen || !Store.field("handover")) return;
+    const list = Store.all().filter(a => !a.del && a.f.handover === true && Store.stage(a.stage).kind === "done");
+    const done = () => Store.mutate("config", () => { C.hoReopen = now(); C.mod = now(); });
+    if (!list.length) return done();
+    const keep = await new Promise(res => { const m = modal('<h3>Reopen the actions Handover closed</h3><p class="dim">Ticking Handover used to complete the action. Complete is now ticked by hand, when the work is physically done. These were closed by Handover; ticked ones reopen and wait in Hand Over. Untick any whose work is physically done.</p>'
+      + list.map(a => '<label class="fw-r"><span><input type="checkbox" data-u="' + esc(a._p + ":" + a.u) + '" checked> ' + esc(Store.actId(a)) + ' ' + esc((a.f.title || "").slice(0, 60)) + '</span><span class="dim">' + esc(a.f.category || "") + '</span></label>').join("")
+      + '<div class="yn-btns"><button class="yn-no" type="button">Not now</button><button class="yn-yes" type="button">Reopen the ticked ones</button></div>', { cls: "fw-win", onClose: () => res(null) });
+      $(".yn-no", m).onclick = () => m.close(); $(".yn-yes", m).onclick = () => { res(new Set($$("input[data-u]:checked", m).map(x => x.dataset.u))); m.close(); }; });
+    if (!keep) return;
+    Store.projects().forEach(pj => Store.mutate("a:" + pj.id, () => Store.actsOf(pj.id).forEach(a => { if (!keep.has(a._p + ":" + a.u) || Store.stage(a.stage).kind !== "done") return; const to = where(a); if (to){ Store.place(a, to.id); Store.touch(a); Store.log("Reopened " + Store.actId(a) + ": waiting in " + to.name); } })));
+    done(); App.render(); }
   /* the Handover tick (inside a Store.mutate): ticked, every step still to do is marked not needed (remembered in a.hoNA) and the
      action waits in Hand Over; ticked off again (or marked not needed), those steps come back. It never completes the action:
      Complete is always ticked by hand, when the work is physically done */
@@ -135,5 +148,5 @@ const Flow = (() => {
       else if (st && a.stage === st.id) sync(a);
       if (a.stage !== s0) Store.touch(a); })));
     Store.log("The Category is now the handover: the Defect column and its step taken out, " + ok.size + " handed over action" + (ok.size === 1 ? "" : "s") + " closed"); App.render(); }
-  return { handoverSetup, handover, handoverTidy, NA, remove, linkAll, loose, where, sync, mark, who, moveTo, stepOf, state, leave };
+  return { reopenHanded, handoverSetup, handover, handoverTidy, NA, remove, linkAll, loose, where, sync, mark, who, moveTo, stepOf, state, leave };
 })();
