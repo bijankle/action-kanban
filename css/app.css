@@ -1417,3 +1417,11 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 /* in a table, a hand over any cell (clicking selects it); the typing cursor only once a cell is open for typing */
 .tbl td,.tbl td .in,.tbl td .pt-in,.tbl td .lt-b,.tbl td .tg1,.tbl td .tagin,.tbl td .lk-sel{cursor:pointer!important}
 .tbl td .in:focus,.tbl td .pt-in:focus,.tbl td .tagin:focus,.tbl td textarea:focus,.lt-inl textarea{cursor:text!important}
+/* (On Hold and Delete fill the whole header height, so the line between them runs top to bottom like every other column's) */
+.tbl th.actc .th-2{position:absolute;inset:0;height:auto;align-items:stretch}
+.tbl th.actc .th-v{height:100%;display:block}
+/* On Hold and Delete: a heading set on end with its (i) under it, each in its own full height column of the header */
+.tbl th.actc .th-c{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;width:calc(var(--row) + 1px);height:100%;padding-bottom:4px;box-sizing:border-box}
+.tbl th.actc .th-c+.th-c{border-left:1px solid color-mix(in srgb,#fff 20%,transparent)}
+.tbl th.actc .th-c .th-v{height:auto;width:auto;padding:4px 0 5px;border:0!important}
+.tbl th.actc .th-i{position:static!important;transform:none!important;width:15px!important;height:15px!important;margin:0!important;flex:none}
