@@ -40,6 +40,11 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     check("each open stage reads as the step still to do", await p.evaluate(() => Store.stages().filter(s => s.kind === "open").every(s => s.name === Store.todo(s))));
     await p.evaluate(() => { const a = Store.all().find(x => x.no === 3); Fields.set(a, Store.field("defect"), true); });
     check("Defect emailed sets the Category to Defect", await p.evaluate(() => Store.all().find(x => x.no === 3).f.category === "Defect"));
+    /* an undo or redo that leaves an action out of the list says so and opens it in Details, so it never seems to vanish */
+    const ur = await p.evaluate(async () => { const a = Table.rows().find(x => Store.stage(x.stage).kind !== "done"), f = Store.field("complete"); App.select(null); Fields.set(a, f, true);
+      Store.undo(); await new Promise(r => setTimeout(r, 300)); Store.redo(); await new Promise(r => setTimeout(r, 400));
+      return (App.selRef === a._p + ":" + a.u) + " | " + (document.querySelector("#note") || {}).textContent; });
+    check("a redo that hides an action opens it and says so", /^true \| Redone on .*hidden by the list's filters/.test(ur), ur);
     /* taking a hold off and putting it back on keeps who it was waiting on */
     const hb = await p.evaluate(() => { const a = Store.all().find(x => x.no === 3), f = Store.field("onhold"); Fields.set(a, f, true); a.hold = Object.assign({}, a.hold, { who: "Jo Smith", mobile: "0400 000 000" });
       Fields.set(a, f, false); Fields.set(a, f, true); Fields.closePop(); return Hold.on(a) + " " + (a.hold || {}).who + " " + (a.hold || {}).mobile; });

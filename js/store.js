@@ -154,13 +154,13 @@ const Store = (() => {
 
   /* undo / redo: put back only the items that change touched (its copy from before, or after), each stamped as
      new so it also wins over the online copy; everything else, including other people's work, is left alone */
-  function apply(fromS, toS){ const F = JSON.parse(fromS), T = JSON.parse(toS), t = now();
+  function apply(fromS, toS){ const F = JSON.parse(fromS), T = JSON.parse(toS), t = now(), done = [];   // (done: each action it changed, and how, to say so)
     const put = (cur, from, to, key, mark) => { let changed = false; const fm = new Map((from || []).map(x => [x[key], x])), tm = new Map((to || []).map(x => [x[key], x]));
       new Set([...fm.keys(), ...tm.keys()]).forEach(id => { const f = fm.get(id), n = tm.get(id); if (eq(f, n)) return; changed = true;
         const i = cur.findIndex(x => x[key] === id), nv = n ? Object.assign(clone(n), { mod: t }) : null;
         if (i >= 0){ const o = cur[i], keep = o.hist; if (nv){ Object.keys(o).forEach(k => { if (k !== "_p") delete o[k]; }); Object.assign(o, nv); } else { o.del = true; o.mod = t; }
-          if (key === "u"){ o.hist = histUnion(keep, o.hist); const c = diff(f && clean(f), clean(o)); if (c.length) o.hist.push(entry(c, how)); } }
-        else if (nv) cur.push(nv); });
+          if (key === "u"){ o.hist = histUnion(keep, o.hist); const c = diff(f && clean(f), clean(o)); if (c.length){ o.hist.push(entry(c, how)); done.push({ a: o, c }); } } }
+        else if (nv){ cur.push(nv); if (key === "u") done.push({ a: nv, c: [["Brought the action back", "", ""]] }); } });
       const fo = (from || []).map(x => x[key]).join("|"), to2 = (to || []).map(x => x[key]).join("|");
       if (fo !== to2 && key === "id"){ const ix = new Map((to || []).map((x, i) => [x.id, i])); cur.sort((a, b) => (ix.has(a.id) ? ix.get(a.id) : 1e9) - (ix.has(b.id) ? ix.get(b.id) : 1e9)); changed = true; }
       if (changed) mark(); };
@@ -169,10 +169,17 @@ const Store = (() => {
     put(S.projects.projects, F.p.projects, T.p.projects, "id", () => S.dirty.add("projects"));
     new Set([...Object.keys(F.a), ...Object.keys(T.a)]).forEach(pid => { const pa = S.acts[pid] || (S.acts[pid] = { v: 1, nextNo: 1, actions: [] });
       put(pa.actions, (F.a[pid] || {}).actions, (T.a[pid] || {}).actions, "u", () => S.dirty.add("a:" + pid)); pa.nextNo = Math.max(pa.nextNo || 1, (T.a[pid] || {}).nextNo || 1, (F.a[pid] || {}).nextNo || 1); });
-    stash(); saveSoon(); App.render(); }
+    stash(); saveSoon(); App.render(); return done; }
+  /* undo and redo say what they changed, on which action; an action it leaves out of the list (done, deleted, or filtered
+     out) opens in Details, so it never seems to vanish */
+  function told(word, done){ if (!done.length) return note(word);
+    const one = done[0], a = one.a, what = one.c.slice(0, 2).map(([k, f, t]) => t || f ? k + (t ? " back to " + t : " cleared") : k).join(", ");
+    setTimeout(() => { const ref = a._p + ":" + a.u, shown = typeof Table !== "undefined" && Table.rows(true).some(x => x === a || (x._p === a._p && x.u === a.u));
+      if (!shown && !a.del) App.select(ref, App.sub);
+      note(word + " on " + actId(a) + ": " + what + (done.length > 1 ? " (and " + (done.length - 1) + " more)" : "") + (shown ? "" : a.del ? ". It's in the Deleted archive" : ". It's hidden by the list's filters, so it's open in Details"), 7000); }, 80); }
   let how = "";
-  function undo(){ if (!S.edit) return App.viewOnly(); const e = S.undo.pop(); if (!e) return note("Nothing to undo"); how = "Undo"; apply(e.post, e.pre); how = ""; S.redo.push(e); note("Undone"); }
-  function redo(){ if (!S.edit) return App.viewOnly(); const e = S.redo.pop(); if (!e) return note("Nothing to redo"); how = "Redo"; apply(e.pre, e.post); how = ""; S.undo.push(e); note("Redone"); }
+  function undo(){ if (!S.edit) return App.viewOnly(); const e = S.undo.pop(); if (!e) return note("Nothing to undo"); how = "Undo"; const d = apply(e.post, e.pre); how = ""; S.redo.push(e); told("Undone", d); }
+  function redo(){ if (!S.edit) return App.viewOnly(); const e = S.redo.pop(); if (!e) return note("Nothing to redo"); how = "Redo"; const d = apply(e.pre, e.post); how = ""; S.undo.push(e); told("Redone", d); }
 
   function newAction(pid, vals, stageId){ const pa = S.acts[pid] || (S.acts[pid] = { nextNo: 1, actions: [] });
     const st = stageId || stages()[0].id; const top = ranked(st)[0];
