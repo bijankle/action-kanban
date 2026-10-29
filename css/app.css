@@ -1551,3 +1551,7 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .dv-ed .opts:empty+[data-k=newopt]{border-top:1px solid var(--line2)!important}
 .dv-ed>.dv-h{margin-top:12px}
 .dv-body .stl,.dv-body .stl+[data-k=new]{width:100%!important;max-width:820px}
+/* a read only row (the type of a column the app fills in): its value with the (i) for what it means */
+.dv-ed>.fl-v>.fv{display:flex;align-items:center;gap:6px;height:var(--row,22px);border-left:1px solid var(--line2);background:var(--panel);padding:0 6px;font-weight:400;color:var(--ink);white-space:nowrap;overflow:hidden}
+.ov-tbl .lastch .lc-t{display:block!important;-webkit-line-clamp:unset;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ov-tbl .det-m>.lastch{height:var(--row,22px);padding:0 6px}
+.dv-ed>.fl,.opt,.str,.hp-tbl .fl.hf{box-sizing:content-box!important}
