@@ -97,9 +97,10 @@ const Isol = (() => {
       Store.mutate("a:" + a._p, () => { const i = list(a).indexOf(it); if (i >= 0) list(a).splice(i, 1); Store.touch(a); }); Store.log("Took an isolation off " + Store.actId(a)); }); }
   const cell = (r, c, v, ro, ph) => '<td' + (c !== "note" ? ' class="is-cb"' : "") + '><input class="in pt-in" autocomplete="off" data-r="' + r + '" data-c="' + c + '" value="' + esc(v || "") + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : "") + (ro ? " readonly" : "") + '></td>';
   /* write one or both of a row's values; a blank row becomes a new isolation */
-  function put(a, r, vals){ const key = "a:" + a._p, items = list(a);
+  /* (a note typed here is marked as the user's own (nu), so the exports show it; notes the app wrote in itself are left out of them) */
+  function put(a, r, vals){ const key = "a:" + a._p, items = list(a); if ("note" in vals) vals = Object.assign({}, vals, { nu: vals.note ? 1 : 0 });
     if (String(r).startsWith("new")){ if (!Object.values(vals).some(Boolean)) return; const it = Object.assign({ id: uid() }, vals); created.set(r, it.id); Store.mutate(key, () => { items.push(it); Store.touch(a); }); Store.log("Added an isolation to " + Store.actId(a)); return; }
-    const it = items.find(x => x.id === r); if (!it || Object.keys(vals).every(k => (it[k] || "") === vals[k])) return; Store.mutate(key, () => { Object.assign(it, vals); Store.touch(a); }); Store.log("Edited an isolation on " + Store.actId(a)); }
+    const it = items.find(x => x.id === r); if (!it || Object.keys(vals).every(k => (it[k] || (k === "nu" ? 0 : "")) === vals[k])) return; Store.mutate(key, () => { Object.assign(it, vals); Store.touch(a); }); Store.log("Edited an isolation on " + Store.actId(a)); }
   function wire(el, a, ro){
     $$(".pt-in", el).forEach(i => { if (ro) return; const c = i.dataset.c;
       i.onchange = () => { if (i._picked) return; put(a, i.dataset.r, { [c]: i.value.trim() }); };

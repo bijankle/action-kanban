@@ -176,7 +176,7 @@ const Flow = (() => {
           [[1200, 600], [800, 400], [2400, 1200], [300, 300], [1500, 750], [950, 450]].map(d => ({ id: id(), qty: "1", t: "plate", s: P.id, z: P.sizes[0].n, m: P.mats[0], L: P.defl, unit: "sheets", pl: String(d[0]), pw: String(d[1]) }))); } catch (e){}
       t2.mtoG = {};
       t2.spares = Array.from({ length: 15 }, (_, i) => i % 3 ? { id: id(), qty: String(i + 1), cl: "N/A", cat: "inst", desc: "Spare part " + (i + 1) + (i === 7 ? " with a really long description that has to be cut off with more… in the table" : ""), unit: "ea", part: "PN-" + (10000 + i) } : { id: id(), qty: "2", cl: "MSG3", dn: 25, it: "Elbow, 90°", unit: "ea", vt: "Press Connector", desc: "ELB 90 DN25 MDL 4316 PRESS MSG3" });
-      t2.isol = Array.from({ length: 12 }, (_, i) => ({ id: id(), tag: "F13-" + ["PS", "SW", "XV", "MCC"][i % 4] + "-" + (400 + i), name: ["Mill discharge sump pump", "Switchboard / MCC (from the SLD)", "Process water isolation valve", "Motor control centre bucket"][i % 4] + " " + (i + 1), note: i === 3 ? "Lock out at both ends, test for dead" : "" }));
+      t2.isol = Array.from({ length: 12 }, (_, i) => ({ id: id(), tag: "F13-" + ["PS", "SW", "XV", "MCC"][i % 4] + "-" + (400 + i), name: ["Mill discharge sump pump", "Switchboard / MCC (from the SLD)", "Process water isolation valve", "Motor control centre bucket"][i % 4] + " " + (i + 1), note: i === 3 ? "Lock out at both ends, test for dead" : "", nu: i === 3 ? 1 : 0 }));
       t2.f.eta = day(-5);
       /* Test3: the bare minimum and odd values */
       const t3 = Store.newAction(pj.id, { title: "Test3", equipment: ["–"] });
