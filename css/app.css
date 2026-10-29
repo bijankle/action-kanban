@@ -1624,3 +1624,16 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .is-o,.vd-o{display:grid!important;align-items:stretch!important;padding:0!important}
 .is-o>*,.vd-o>*{display:flex;align-items:center;min-width:0;padding:0 6px;border-left:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0!important}
 .is-o>:first-child,.vd-o>:first-child{border-left:0}
+/* (preview) the Tags picker: a little table like the dropdowns, a tick, the symbol, the tag and its name in cells */
+.tgp{width:460px!important;max-width:calc(100vw - 16px)!important;padding:0!important;border-radius:0!important;border:1px solid var(--line2)!important;max-height:360px;display:flex;flex-direction:column;overflow:hidden}
+.tgp .tgp-b{display:flex;flex-direction:column;min-height:0;flex:1}.tgp .tgp-m,.tgp .tgp-a{overflow:auto}
+.tgp .tgp-q{height:var(--row,22px)!important;min-height:0!important;border:0!important;border-bottom:1px solid var(--line2)!important;border-radius:0!important;padding:0 8px!important;font-size:var(--fb)!important;box-shadow:none!important;flex:none}
+.tgp-r{display:grid;grid-template-columns:22px 22px max-content minmax(0,1fr);height:var(--row,22px);border-bottom:1px solid var(--line);align-items:stretch;cursor:pointer;font-size:var(--fb)}
+.tgp-r>*{display:flex;align-items:center;min-width:0;border-right:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tgp-r>:last-child{border-right:0}
+.tgp-r .tgp-c{justify-content:center}.tgp-r .tgp-c input{width:14px;height:14px;margin:0}.tgp-r .tgp-s{justify-content:center}.tgp-r .tgp-s .ksym{width:16px}
+.tgp-r b{padding:0 8px 0 6px;min-width:110px;font-weight:600}.tgp-r small{padding:0 6px;color:var(--muted);font-size:var(--fb)}
+.tgp-r:hover{background:var(--hl,var(--th-t))}.tgp-r.on{background:color-mix(in srgb,var(--th) 6%,var(--panel))}
+.tgp-g{background:var(--hdr);color:var(--muted);font-weight:600;font-size:var(--fb);height:var(--row,22px);line-height:var(--row,22px);padding:0 6px;border-bottom:1px solid var(--line2)}.tgp-g:empty{display:none}
+.tgp2 .tgp-a{flex:none;max-height:150px}
+.tgp3{width:760px!important;flex-direction:row}.tgp3 .tgp-a{width:45%;border-right:1px solid var(--line2)}.tgp3 .tgp-b{width:55%}
+.tgp1 .tgp-a{flex:none;max-height:150px}
