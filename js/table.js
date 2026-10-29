@@ -2,11 +2,11 @@
    Click a row to open it in the side panel. Drag a header to reorder columns, drag its edge to resize. */
 "use strict";
 const Table = (() => {
-  const NEED = { act: 67, id: 200, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
+  const NEED = { act: 45, id: 200, stage: 150, rank: 60, check: 34, complete: 34, choice: 96, date: 104, meta: 96, mto: 64, sparelist: 64, isollist: 64, phone: 116, number: 64 };
   let cv = null; const TICK = new Set(["check", "complete"]);
   /* a tick column's heading is one word (its short name); the i beside it says what it means */
   /* a tick column is headed by one word, set on end (Parts for Parts Arrived), so the header stays short; its (i) gives the full name and what it means */
-  const head = c => TICK.has(c.type) ? String(c.short || c.label).trim().split(/\s+/)[0] : c.label;
+  const head = c => c.type === "complete" ? "Complete" : TICK.has(c.type) ? String(c.short || c.label).trim().split(/\s+/)[0] : c.label;
   document.addEventListener("click", e => { const b = e.target.closest(".th-i"); if (!b) return; e.stopPropagation(); e.preventDefault(); Fields.closePop(); const f = Store.field(b.dataset.c); if (!f) return;
     const p = h('<div class="pop thpop"><b>' + esc(f.label) + '</b>' + (f.desc ? '<p>' + esc(f.desc) + '</p>' : "") + '</div>'); document.body.appendChild(p); Fields.place(p, b); }, true);
   /* the width of a heading's longest word, plus the cell padding and room for the sort arrow */
@@ -20,6 +20,8 @@ const Table = (() => {
   /* the ID and title always lead; the Status column goes after title until it's dragged elsewhere (config.actAfter is
      the column it follows, shared like the field order) */
   function cols(){ const t = Store.field("title"), rest = (Store.selected().length > 1 ? [{ id: "_proj", label: "Project", type: "proj" }] : []).concat(Store.fields().filter(f => f.table && f.id !== "title"));
+    /* Complete: its own tick column, after the last step tick (Contractor); the Status cell keeps hold and delete */
+    const cp = Store.fields().find(f => f.type === "complete"); if (cp && !rest.includes(cp)){ let k = -1; rest.forEach((f, n) => { if (f.type === "check" && f.stage) k = n; }); rest.splice(k < 0 ? rest.length : k + 1, 0, cp); }
     const at = Store.S.config.actAfter; rest.splice(at && at !== "title" ? rest.findIndex(f => f.id === at) + 1 : 0, 0, { id: "_act", label: "", type: "act" });
     const base = [{ id: "_id", label: "ID", type: "id" }].concat(t && t.table !== false ? [t] : [], rest);
     /* once any column has been dragged, the whole order is kept (each person's own, on their computer: moving columns
@@ -52,10 +54,10 @@ const Table = (() => {
     hold: '<svg class="big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M8.75 7.25v9.5M15.25 7.25v9.5"/></svg>',
     del: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>' };
   /* (a deleted action is neither on hold nor complete: those two stay off, and only its red bin, to bring it back, works) */
-  function rowBtns(a){ const gone = !!a.del, dn = !gone && Store.stage(a.stage).kind === "done", hd = !gone && Hold.on(a), id = esc(Store.actId(a)), dis = Store.S.edit ? "" : " disabled";
+  function rowBtns(a, noDone){ const gone = !!a.del, dn = !gone && Store.stage(a.stage).kind === "done", hd = !gone && Hold.on(a), id = esc(Store.actId(a)), dis = Store.S.edit ? "" : " disabled";
     const b = (k, on, tip) => '<button type="button" class="rb rb-' + k + (on ? " on" : "") + '" data-rb="' + k + '" aria-pressed="' + on + '" title="' + (gone && k !== "del" ? "Deleted: bring it back with the red bin first" : tip) + '" aria-label="' + tip + '"' + (gone && k !== "del" ? " disabled" : dis) + '>' + IC[k] + '</button>';
     /* on hold (its i, who it's waiting on, red while details are missing, sits on the hold square's top right corner), complete and delete */
-    return '<span class="rbs"><span class="rb-hw">' + b("hold", hd, hd ? "On hold: click to take " + id + " off hold" : "Put " + id + " on hold") + (gone ? "" : Hold.btn(a)) + '</span>' + b("done", dn, dn ? "Complete: click to reopen " + id : "Mark " + id + " complete") + b("del", !!a.del, a.del ? "Deleted: click to bring " + id + " back" : "Delete " + id) + '</span>'; }
+    return '<span class="rbs"><span class="rb-hw">' + b("hold", hd, hd ? "On hold: click to take " + id + " off hold" : "Put " + id + " on hold") + (gone ? "" : Hold.btn(a)) + '</span>' + (noDone ? "" : b("done", dn, dn ? "Complete: click to reopen " + id : "Mark " + id + " complete")) + b("del", !!a.del, a.del ? "Deleted: click to bring " + id + " back" : "Delete " + id) + '</span>'; }
   /* the ID in a box; in the Details header it carries the PDF button too (the list shows just the ID) */
   const IDI = { copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M15.5 8.5V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7.5a2 2 0 002 2h2.5"/></svg>',
     tick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5 9.5-10"/></svg>',
@@ -122,7 +124,7 @@ const Table = (() => {
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     const wid = c => fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? pref("titleMin") : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
-    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" draggable="' + !!Store.S.edit + '" aria-label="Status: on hold, complete, delete" style="width:' + NEED.act + 'px">Status</th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + !!Store.S.edit + '" style="width:' + wid(c) + '">'
+    const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="_act" draggable="' + !!Store.S.edit + '" aria-label="On hold, delete" style="width:' + NEED.act + 'px"><span class="th-2"><span class="th-v">On Hold</span><span class="th-v">Delete</span></span></th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" draggable="' + !!Store.S.edit + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + (TICK.has(c.type) ? '<span class="th-v">' + esc(head(c)) + '</span>' : esc(head(c))) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">' + INFO_I + '</button>' : "") + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol"' + (flex.length ? ' style="width:' + ADD + 'px"' : "") + '>' + (App.isAdmin() ? (ADD < 60 ? '<button type="button" class="addc addc-s" aria-haspopup="true" title="Add a column" aria-label="Add a column">+</button>' : '<button type="button" class="addc" aria-haspopup="true">+ Add column</button>') : "") + '</th>' : "");
     const minW = cs.reduce((t, c) => t + least(c), 0) + ADD;
     el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
@@ -130,7 +132,7 @@ const Table = (() => {
     const tb = $("tbody", el), frag = document.createDocumentFragment();
     list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on";
       cs.forEach(c => { const td = document.createElement("td"); const l = lp(c).trim(); if (l) td.classList.add(l); if (TICK.has(c.type)) td.classList.add("tk");
-        if (c.type === "act"){ td.classList.add("actc"); td.innerHTML = rowBtns(a); }
+        if (c.type === "act"){ td.classList.add("actc"); td.innerHTML = rowBtns(a, true); }
         else if (c.type === "id"){ td.classList.add("idc"); td.innerHTML = '<span class="idw idt"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + esc(Store.actId(a)) + '</span></span>'; }   // (plain bold text in the list: it can't be edited, so no box)
         else if (c.type === "proj"){ const p = Store.project(a._p) || {}; td.innerHTML = '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>'; }
         else if (c.id === "equipment"){ td.classList.add("ed", "tgc"); tagCell(td, a, c); }

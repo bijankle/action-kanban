@@ -1390,3 +1390,7 @@ html.dark{--edf:#2a2117;--edh:#36291a;--autof:#1d2a40;--autoh:#253552}
 .tbl td .rb-hold.on{background:color-mix(in srgb,#c9820a 20%,var(--panel))!important;color:#b06f00!important}
 .tbl td .rb-del.on{background:color-mix(in srgb,#c0392b 16%,var(--panel))!important;color:#c0392b!important}
 html.dark .tbl td .rb-done.on{color:#3ccf8e!important}html.dark .tbl td .rb-hold.on{color:#f2b03d!important}html.dark .tbl td .rb-del.on{color:#ff6b5b!important}
+/* the On Hold and Delete squares: one heading each, set on end like the tick columns */
+.tbl th.actc{padding:0!important;vertical-align:bottom}.tbl th.actc .th-2{display:flex;height:100%;align-items:flex-end}
+.tbl th.actc .th-v{display:inline-block;width:calc(var(--row) + 1px);writing-mode:vertical-rl;transform:rotate(180deg);text-align:left;padding:6px 0 5px;line-height:var(--row);font-size:var(--fs);box-sizing:border-box}
+.tbl th.actc .th-v+.th-v{border-right:1px solid color-mix(in srgb,#fff 20%,transparent)}
