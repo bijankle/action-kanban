@@ -185,19 +185,23 @@ const Table = (() => {
      it's still to come, red once it's past, grey while it's TBC. Click it for the date and the MTO items */
   /* Parts Arrived, while the parts are still to come: a dot on the box's corner, red when they're overdue, yellow when
      they're due within 7 days, green when they're further off, grey while the ETA is to be confirmed. Pointing at the
-     box shows when they're expected, who from and who to call, and the MTO items with their ETAs */
+     box shows when the whole order is due, who from and who to call, and a short count of what's on it */
   const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
   const daysTo = e => Math.round((new Date(e + "T12:00") - new Date(today() + "T12:00")) / 864e5);
   function etaState(a){ if (a.f.parts === true || a.f.parts === Flow.NA) return ""; const e = Store.eta(a); if (!e) return ""; if (e === "TBC") return "tbc"; const n = daysTo(e); return n < 0 ? "late" : n <= pref("etaSoon") ? "soon" : "ok"; }
   let etaT = null;
-  function etaCard(td, pin){ Fields.closePop(); const a = App.act(td.closest("[data-ref]").dataset.ref); if (!a) return; const e0 = Store.eta(a), st = etaState(a), n = e0 && e0 !== "TBC" ? daysTo(e0) : null, rows = (a.mto || []).filter(it => it.desc || it.part);
+  function etaCard(td, pin){ Fields.closePop(); const a = App.act(td.closest("[data-ref]").dataset.ref); if (!a) return; const e0 = Store.eta(a), st = etaState(a), n = e0 && e0 !== "TBC" ? daysTo(e0) : null;
+    /* what's on the order, in a few lines: how many piping, structural, plate and other items (steel cut from stock counted as the lengths or sheets ordered) */
+    const kinds = [["piping items", it => it.cl && it.cl !== "N/A" || it.it], ["structural items", it => it.t && it.t !== "plate"], ["plate items", it => it.t === "plate"], ["other items", () => true]];
+    const lines = (typeof Mto !== "undefined" && Mto.orderRows ? Mto.orderRows(a) : a.mto || []).filter(it => it.grp || it.desc || it.part || it.qty).map(it => it.grp ? it.grp.first : it);
+    const sum = kinds.map(([t, f]) => [lines.filter(it => kinds.find(k => k[1](it)) [0] === t).length, t]).filter(([n]) => n);
     const ven = (a.rfqTo || [])[0], v = ven && Vendors.byName(ven) || {}, po = (a.pos || []).slice(-1)[0];
     const head = st === "tbc" ? "ETA to be confirmed" : st === "late" ? "Should have arrived" : st === "soon" ? "Due within a week" : "On track";
     const p = h('<div class="pop etapop ' + st + (pin ? " pin" : "") + '" role="' + (pin ? "dialog" : "tooltip") + '" aria-label="Delivery"><b class="ep-h"><i></i>' + head + (pin ? '<button type="button" class="ic-b sm ep-x" aria-label="Close">✕</button>' : "") + '</b><div class="ep-g">'
-      + '<span class="dim">Expected</span><span>' + (e0 === "TBC" ? "To be confirmed" : esc(fmtDate(e0)) + ' · ' + (n === 0 ? "today" : n > 0 ? "in " + n + " day" + (n === 1 ? "" : "s") : -n + " day" + (n === -1 ? "" : "s") + " late")) + '</span>'
+      + '<span class="dim">' + (n !== null && n < 0 ? "Was due" : "Due") + '</span><span>' + (e0 === "TBC" ? "To be confirmed" : esc(fmtDate(e0)) + ' · ' + (n === 0 ? "today" : n > 0 ? "in " + n + " day" + (n === 1 ? "" : "s") : "overdue by " + -n + " day" + (n === -1 ? "" : "s"))) + '</span>'
       + (ven ? '<span class="dim">From</span><span>' + esc(ven) + (po ? ', ' + esc(po.name.replace(/\.[a-z0-9]+$/i, "")) : "") + '</span>' : "")
       + (v.contact || v.phone || v.email ? '<span class="dim">Contact</span><span>' + esc(v.contact || "") + (v.phone ? (v.contact ? ", " : "") + '<a href="tel:' + esc(String(v.phone).replace(/\s/g, "")) + '">' + esc(v.phone) + '</a>' : "") + (!v.phone && v.email ? (v.contact ? ", " : "") + '<a href="mailto:' + esc(v.email) + '">' + esc(v.email) + '</a>' : "") + '</span>' : ven ? '<span class="dim">Contact</span><span class="dim">None on file for ' + esc(ven) + '</span>' : "") + '</div>'
-      + (rows.length ? '<div class="ep-items">' + rows.map(it => '<div class="ep-r"><span>' + esc(it.desc || it.part) + '</span><span class="' + (it.eta && it.eta !== "TBC" && it.eta < today() ? "bad" : "dim") + '">' + esc(it.eta ? (it.eta === "TBC" ? "TBC" : fmtDate(it.eta)) : "no ETA") + '</span></div>').join("") + '</div>' : "")
+      + (sum.length ? '<div class="ep-items">' + sum.map(([n, t]) => '<div class="ep-r">' + n + ' × ' + esc(n === 1 ? t.replace(/s$/, "") : t) + '</div>').join("") + '</div>' : "")
       + '<button type="button" class="link">Open the MTO</button></div>');
     document.body.appendChild(p); Fields.place(p, td); $(".link", p).onclick = () => { Fields.closePop(); App.openParts(a._p + ":" + a.u, "mto"); };
     const x = $(".ep-x", p); if (x) x.onclick = () => p.remove();

@@ -2,7 +2,7 @@
    quotes, and exports the RFQ as a PDF. */
 "use strict";
 const Parts = (() => {
-  const COLS = { mto: [["desc", "Description"], ["part", "Part / tag no."], ["qty", "Qty"], ["unit", "Unit"], ["eta", "ETA"], ["notes", "Notes"]],
+  const COLS = { mto: [["desc", "Description"], ["part", "Part / tag no."], ["qty", "Qty"], ["unit", "Unit"], ["notes", "Notes"]],
     spares: [["desc", "Description"], ["part", "Part / tag no."], ["qty", "Qty"], ["unit", "Unit"], ["notes", "Store location / notes"]] };
   const NAME = { mto: "MTO", spares: "Spares" }, OTHER = { mto: "spares", spares: "mto" };
   const list = (a, k) => a[k] || (a[k] = []);

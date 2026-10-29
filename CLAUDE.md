@@ -38,6 +38,7 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - Steps have three states where it makes sense: done, not needed, not done yet.
 - Handover is the tick for a handed over action (Defect, Punchlist, Operations, Maintenance): ticking it marks the other steps not needed and it waits in Hand Over; unticking brings them back. Complete is always ticked by hand, when the work is physically done; nothing completes an action by itself. The Category only sets what it is. Commissioning jobs get Handover not needed. Every tick column has a pill in the Filters panel's Ticked group.
 - Rules and presets live in File, Parameters, per person; the defaults are what he has tuned. Settings shared by everyone (photo quality) are admin only (bkhadembashi@nsrltd.com).
+- One ETA for the whole order (set on the MTO tab), never line by line. The Parts ETA card is a snug summary: when it's due (or overdue by how many days), who from, and counts like 12 × piping items, 1 × structural item; every line one row high.
 - All exports in File, Export (Excel, PDF, Word), with quick buttons above the list too.
 
 - Details (Overview): left is Problem, Solution, Tags, Notes, Attachments (three to a row, Attach file one third wide), Contractor; right is Photos then Record (Action owner, dates, last change). No ticks, Category, Location or hold/complete/delete buttons there (they're in the list); the title sits right of the ID.
