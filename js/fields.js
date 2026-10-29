@@ -56,10 +56,14 @@ const Fields = (() => {
       if (f.stage && (f.type === "check" || f.type === "choice")){ Flow.mark(a, f, v); Flow.sync(a); }
       /* the Handover tick closes it out: ticked, the steps still to do are marked not needed and the action closes (kept as a record
          under Done); unticked, they come back and it reopens. A Commissioning job isn't handed over: its Handover is marked not
-         needed (until someone changes it), and back again if the Category changes */
+         needed (until someone changes it, and even if it was ticked), and back again if the Category changes */
       if (f.id === "handover" && pref("handover")) Flow.handover(a, v);
       if (f.id === "category"){ const ho = Store.field("handover"), au = a.auto = a.auto || {};
-        if (ho && v === "Commissioning" && !a.f.handover){ Flow.mark(a, ho, Flow.NA); au.handover = true; Flow.sync(a); }
+        if (ho && v === "Commissioning" && a.f.handover === true){   // (a handed over action made Commissioning: Handover comes off, to not needed, and the steps it marked not needed come back to do; said, and Ctrl+Z undoes it)
+          const back = (a.hoNA || []).map(id => (Store.field(id) || {}).short || (Store.field(id) || {}).label).filter(Boolean);
+          Flow.handover(a, false); Flow.mark(a, ho, Flow.NA); au.handover = true; Flow.sync(a); Store.log("Commissioning: Handover not needed on " + Store.actId(a));
+          note("Commissioning isn't handed over: Handover unticked" + (back.length ? ", " + back.join(", ") + " back to do" : "") + " on " + Store.actId(a) + ". Ctrl+Z undoes it", 7000); }
+        else if (ho && v === "Commissioning" && !a.f.handover){ Flow.mark(a, ho, Flow.NA); au.handover = true; Flow.sync(a); }
         else if (ho && v !== "Commissioning" && au.handover && a.f.handover === Flow.NA){ Flow.mark(a, ho, ""); delete au.handover; Flow.sync(a); } }
       const auto = a.auto = a.auto || {}; delete auto[f.id]; if (f.id === "location") delete a.locAuto;
       const fill = (id, val) => { if (a.f[id] && !auto[id] && !(id === "location" && a.locAuto)) return; if (val){ a.f[id] = val; auto[id] = true; } else if (auto[id]){ a.f[id] = ""; delete auto[id]; } };

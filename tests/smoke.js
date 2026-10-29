@@ -106,6 +106,11 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
       Fields.set(A, ho, true); const closed = Store.stage(A.stage).kind + " " + (A.f.pccr === Flow.NA); Fields.set(A, ho, Flow.NA); const back = Store.stage(A.stage).kind + " " + (A.f.pccr === Flow.NA);
       Fields.set(B, Store.field("category"), "Commissioning"); return closed + " | " + back + " | " + (B.f.handover === Flow.NA) + " | " + Store.stages().map(s => s.name).slice(0, 3).join(","); });
     check("Handover marks the rest not needed but doesn't complete it; Commissioning doesn't need it", /^open true \| open false \| true \| Categorize Issue,Hand Over,/.test(hv), hv);
+    /* a handed over action made Commissioning: Handover comes off (not needed) and its steps come back to do */
+    const hc = await a.p.evaluate(() => { const ho = Store.field("handover"), A = Store.all().filter(q => !q.del && Store.stage(q.stage).kind === "open")[0];
+      Fields.set(A, Store.field("category"), "Defect"); Fields.set(A, ho, true); const before = A.f.pccr === Flow.NA; Fields.set(A, Store.field("category"), "Commissioning");
+      return before + " " + A.f.category + " " + (A.f.handover === Flow.NA) + " " + (A.f.pccr === Flow.NA); });
+    check("a handed over action made Commissioning has Handover unticked to not needed and its steps back to do", hc === "true Commissioning true false", hc);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
   } catch (e) { console.log("  FAIL  the checks stopped: " + e.message); code = 1; }
   await browser.close(); srv.kill(); fs.rmSync(dir, { recursive: true, force: true });
