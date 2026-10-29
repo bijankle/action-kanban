@@ -155,9 +155,10 @@ const Fields = (() => {
     const closeDD = () => { if (dd){ dd.remove(); dd = null; } i.setAttribute("aria-expanded", "false"); };
     const mark = (t, w) => { let o = esc(t); w.forEach(x => { const re = new RegExp("(" + x.split("").map(c => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^a-z0-9]*") + ")", "i"); o = o.replace(re, "<mark>$1</mark>"); }); return o; };
     const paint = () => { if (!dd) return; $$(".tg-o", dd).forEach((o, k) => { o.classList.toggle("on", k === hi); if (k === hi) o.scrollIntoView({ block: "nearest" }); }); };
-    const draw = () => { const { q } = seg(), w = qWords(q); if (!w.length){ closeDD(); return; }
+    const draw = () => { const { q } = seg(), w = qWords(q), dash = eq && /^(-|–|n\/?a?)$/i.test(q.trim());   // (– : there is no tag to give)
+      if (!w.length && !dash){ closeDD(); return; }
       const have = new Set(i.value.split(",").map(t => t.trim().toLowerCase()).filter(Boolean));
-      res = (eq ? (Equip.find(q, "t") || []).map(x => ({ t: x.t, n: x.n ? x.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "", k: x.k })) : [...new Set(pool())].filter(t => smartHit(t, w)).map(t => ({ t, n: "" })))
+      res = dash ? [{ t: "–", n: "No equipment tag for this action" }] : (eq ? (Equip.find(q, "t") || []).map(x => ({ t: x.t, n: x.n ? x.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "", k: x.k })) : [...new Set(pool())].filter(t => smartHit(t, w)).map(t => ({ t, n: "" })))
         .filter(x => !have.has(x.t.toLowerCase()) || x.t.toLowerCase() === q.trim().toLowerCase()).slice(0, 40);
       if (!res.length){ closeDD(); return; } hi = 0;
       if (!dd){ dd = h('<div class="tg-dd" role="listbox"></div>'); document.body.appendChild(dd); }
@@ -180,13 +181,13 @@ const Fields = (() => {
     return i; }
   function tagBox(a, f){ const v = Array.isArray(val(a, f)) ? val(a, f) : [], eq = f.id === "equipment";
     const nm = t => { const e = eq && Equip.get(t); return e && e.n ? e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : ""; };
-    const w = h('<div class="tagbox"><input class="in tagin" type="text" spellcheck="false" autocomplete="off" placeholder="' + (eq ? "Add tag" : "Add " + esc(f.label.toLowerCase())) + '"></div>'), i = $("input", w);
+    const w = h('<div class="tagbox' + (eq && !v.length ? " need" : "") + '"><input class="in tagin" type="text" spellcheck="false" autocomplete="off" placeholder="' + (eq ? "Add tag" : "Add " + esc(f.label.toLowerCase())) + '"></div>'), i = $("input", w);
     const show = () => { i.value = v.join(", "); i.title = v.map(t => t + (nm(t) ? "  " + nm(t) : "")).join("\n"); }; show();
     if (!Store.S.edit){ i.readOnly = true; return w; }
     suggest(i, f);
     const commit = () => { let tags = i.value.split(",").map(t => t.trim()).filter(Boolean);
-      tags = tags.map(t => { if (eq){ const hit = (Equip.find(t, "t") || []).find(x => x.t.toLowerCase() === t.toLowerCase()); return hit ? hit.t : t.toUpperCase(); } return optLabels(f).find(x => x.toLowerCase() === t.toLowerCase()) || t; });
-      tags = [...new Set(tags)];
+      tags = tags.map(t => { if (eq && /^(-|–|n\/?a)$/i.test(t)) return "–"; if (eq){ const hit = (Equip.find(t, "t") || []).find(x => x.t.toLowerCase() === t.toLowerCase()); return hit ? hit.t : t.toUpperCase(); } return optLabels(f).find(x => x.toLowerCase() === t.toLowerCase()) || t; });
+      tags = [...new Set(tags)]; if (eq && tags.length > 1) tags = tags.filter(t => t !== "–");   // (– is on its own: a real tag replaces it)
       if (!eq){ const fresh = tags.filter(t => !optLabels(f).includes(t)); if (fresh.length) Store.mutate("config", () => { f.options = f.options || []; fresh.forEach(t => f.options.push({ id: uid(), label: t, color: "" })); Store.touch(f); }); }
       if (JSON.stringify(tags) !== JSON.stringify(v)) set(a, f, tags); else show(); };
     i.onblur = commit;
@@ -202,9 +203,10 @@ const Fields = (() => {
     const draw = () => { const q = i.value.trim().toLowerCase(); const found = eq && q ? Equip.find(q, /^[a-z]{0,2}\d/i.test(q) ? "t" : "n").map(x => x.t) : [];
       const all = [...new Set(cur.concat(eq ? found : optLabels(f)))].filter(x => !q || cur.includes(x) || found.includes(x) || smartHit(x, q));
       const nm = x => { const e = eq && Equip.get(x); return e && e.n ? '<small>' + esc(e.n) + '</small>' : ""; };
-      l.innerHTML = (eq && !q && !cur.length ? '<div class="dd-n">Type a tag or a name, e.g. F13-MB-401 or ball mill</div>' : "") + all.map(x => '<label class="tp-o"><input type="checkbox"' + (cur.includes(x) ? " checked" : "") + ' data-v="' + esc(x) + '"><span>' + esc(x) + nm(x) + '</span></label>').join("")
+      const na = eq && (!q || /^(-|–|n\/?a?)$/i.test(q)) ? '<label class="tp-o tp-na"><input type="checkbox"' + (cur.includes("–") ? " checked" : "") + ' data-v="–"><span>–<small>no equipment tag for this action</small></span></label>' : "";   // (–: there is no tag to give)
+      l.innerHTML = na + (eq && !q && !cur.length ? '<div class="dd-n">Type a tag or a name, e.g. F13-MB-401 or ball mill</div>' : "") + all.filter(x => x !== "–").map(x => '<label class="tp-o"><input type="checkbox"' + (cur.includes(x) ? " checked" : "") + ' data-v="' + esc(x) + '"><span>' + esc(x) + nm(x) + '</span></label>').join("")
         + (q && !all.some(x => x.toLowerCase() === q) ? '<button type="button" class="tp-add">Add “' + esc(i.value.trim()) + '”</button>' : "") + (!all.length && !q && !eq ? '<div class="dd-n">No tags yet, type one above</div>' : "");
-      $$("input[type=checkbox]", l).forEach(c => c.onchange = () => { const x = c.dataset.v; cur = c.checked ? cur.concat(x) : cur.filter(y => y !== x); });
+      $$("input[type=checkbox]", l).forEach(c => c.onchange = () => { const x = c.dataset.v; cur = !c.checked ? cur.filter(y => y !== x) : x === "–" ? ["–"] : cur.filter(y => y !== "–").concat(x); if (eq) draw(); });
       const ad = $(".tp-add", l); if (ad) ad.onclick = add; };
     const add = () => { const t = i.value.trim(); if (!t) return; if (eq){ const hit = Equip.find(t, "t")[0]; const x = hit && hit.t.toLowerCase() === t.toLowerCase() ? hit.t : t.toUpperCase(); if (!cur.includes(x)) cur.push(x); i.value = ""; draw(); i.focus(); return; }
       if (!optLabels(f).some(x => x.toLowerCase() === t.toLowerCase())){

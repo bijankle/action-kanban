@@ -397,7 +397,7 @@ const CellEdit = (() => {
   const ED = ".in:not(.lk-sel),.pt-in,.lt-b,.tg1,.tagin";   // (a dropdown cell is a pick from a fixed list, as Excel's data validation: one click opens it)
   const box = t => { const el = t && t.closest && t.closest(ED), td = el && el.closest("td"); return td && td.closest("table.tbl") && !el.disabled && !el.readOnly ? el : null; };
   const fresh = el => !!el.closest("tr.pt-blank,tr.cts-new") || /^new/.test(el.dataset.r || "") || (el.placeholder && /^\+ /.test(el.placeholder) && !el.value);
-  let armed = null, at = null;   // (at: the marked cell, as its row and column, found again after a redraw)
+  let armed = null, at = null, selT = 0;   // (at: the marked cell, as its row and column, found again after a redraw)
   const rowKey = tr => tr && (tr.dataset.ref || tr.dataset.id);
   const again = () => { if (!at) return null; const tr = [...document.querySelectorAll("table.tbl tr[data-ref],table.tbl tr[data-id]")].find(t => rowKey(t) === at.r); const td = tr && tr.children[at.c]; if (td){ td.classList.add("cell-sel"); tr.classList.add("row-sel"); } return td; };
   const mark = td => { at = td ? { r: rowKey(td.parentElement), c: td.cellIndex } : null; document.querySelectorAll("td.cell-sel").forEach(x => { if (x !== td) x.classList.remove("cell-sel"); }); document.querySelectorAll("tr.row-sel").forEach(x => { if (!td || x !== td.parentElement) x.classList.remove("row-sel"); });
@@ -412,8 +412,10 @@ const CellEdit = (() => {
   document.addEventListener("mousedown", e => { const el = box(e.target); if (!el){ if (!e.target.closest || !e.target.closest(".pop,.lk-card")) mark(null); return; }
     if (el === document.activeElement || fresh(el) || el === armed) return; e.preventDefault(); if (document.activeElement && document.activeElement.blur && document.activeElement.closest && document.activeElement.closest("table.tbl")) document.activeElement.blur(); mark(el.closest("td")); }, true);
   document.addEventListener("click", e => { const el = box(e.target); if (!el || el === armed || el === document.activeElement || fresh(el)) return;
-    e.preventDefault(); e.stopImmediatePropagation(); const tr = el.closest("tr[data-ref]"); if (tr && typeof App !== "undefined" && App.selRef !== tr.dataset.ref) App.select(tr.dataset.ref); }, true);
-  document.addEventListener("dblclick", e => { const el = box(e.target); if (!el || fresh(el) || el === document.activeElement) return; e.preventDefault(); e.stopImmediatePropagation(); edit(el, e.clientX, e.clientY); }, true);
+    e.preventDefault(); e.stopImmediatePropagation(); const tr = el.closest("tr[data-ref]");
+    /* (the row is selected a moment later, so a double click isn't lost to the list being redrawn under the second click) */
+    clearTimeout(selT); if (tr && typeof App !== "undefined" && App.selRef !== tr.dataset.ref){ const ref = tr.dataset.ref; selT = setTimeout(() => App.select(ref), 260); } }, true);
+  document.addEventListener("dblclick", e => { const el = box(e.target); if (!el || fresh(el) || el === document.activeElement) return; e.preventDefault(); e.stopImmediatePropagation(); clearTimeout(selT); edit(el, e.clientX, e.clientY); }, true);
   document.addEventListener("keydown", e => { if (e.key !== "Enter" && e.key !== "F2") return; const a = document.activeElement; if (a && a !== document.body && a.matches("input,textarea,select,button,[contenteditable]")) return;
     const td = (() => { const t = document.querySelector("td.cell-sel"); return t && t.isConnected ? t : again(); })(), el = td && $(ED, td); if (!el || !el.isConnected) return; e.preventDefault(); edit(el); });
   new MutationObserver(() => { if (at && !document.querySelector("td.cell-sel")) again(); }).observe(document.body, { childList: true, subtree: true });

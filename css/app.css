@@ -1406,4 +1406,11 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 /* the Details panel: the Category still to pick */
 .det-c .lk-sel.lk-ph,.av .lk-sel.lk-ph[aria-label="Category"]{background:var(--need)!important}
 /* no hint text in a table's empty cells: the fill says what's needed */
-.tbl td .tg1.ph,.tbl td .lt-b .dim{visibility:hidden}.tbl td .tagin::placeholder{color:transparent}
+.tbl td .tg1.ph,.tbl td .lt-b .dim{color:transparent!important}   /* (invisible, but still there to click) */.tbl td .tagin::placeholder{color:transparent}
+/* still to fill in: faint orange (back from the lavender) */
+:root{--need:#fdeedd;--needh:#fbe2c5}html.dark{--need:#33261a;--needh:#3f2e1d}
+.av .tagbox.need .tagin,.det-c .tagbox.need .tagin{background:var(--need)!important}
+/* the dropdown arrow flush to the cell's right edge */
+.tbl td:has(.lk-sel){padding:0!important}.tbl td .lk-sel{margin:0!important;width:100%!important;max-width:none!important;height:var(--row)!important}
+.tbl td .lk-sel svg{margin:0!important;height:var(--row)!important;border-right:0}
+.tp-na{border-bottom:1px solid var(--line);margin-bottom:2px}

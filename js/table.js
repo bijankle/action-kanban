@@ -148,7 +148,7 @@ const Table = (() => {
         if (c.type === "check" && c.id !== "parts" && Store.S.edit !== undefined){ td.dataset.tk = c.id; td.classList.add("tkc"); }   // (click beside the box for its card)   // (a coloured dot on the box's corner; point at it for the delivery)
         /* the cell's fill: needed and still empty (the Category, a step still to tick) lavender; filled in by the app blue; by hand white */
         if (Store.S.edit && !a.del && Store.stage(a.stage).kind !== "done"){ const v = a.f[c.id];
-          if ((c.id === "category" && !v) || (c.type === "check" && c.stage && !v)) td.classList.add("need"); }
+          if ((c.id === "category" && !v) || (c.id === "equipment" && !(Array.isArray(v) && v.length)) || (c.type === "check" && c.stage && !v)) td.classList.add("need"); }
         if (c.type === "check" && a.f[c.id] === Flow.NA && ((a.hoNA || []).includes(c.id) || (a.auto || {})[c.id])) td.classList.add("autof");
         tr.appendChild(td); });
       if (ADD){ const td = document.createElement("td"); td.className = "addcol"; tr.appendChild(td); }
