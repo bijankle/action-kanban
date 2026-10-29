@@ -15,9 +15,10 @@ const Hold = (() => {
     return '<button type="button" class="hold-i' + (m.length ? " bad" : "") + '" data-hold="' + esc(ref) + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + INFO_I + '</button>'; }
   /* moving to On Hold (Store.enter): a new record, and the form opens once the screen has redrawn */
   function entered(a){ a.hold = Object.assign({}, a.hold || {}, { since: new Date().toISOString().slice(0, 10) }); pending = a._p + ":" + a.u; }   // (back on hold: who it waits on, their mobile and the note are kept; only the date starts again)
-  function after(){ if (!pending) return; const ref = pending; pending = null; setTimeout(() => { const b = $('[data-hold="' + CSS.escape(ref) + '"]'); if (b) open(ref, b); }, 60); }
+  function after(){ if (!pending) return; const ref = pending; pending = null; setTimeout(() => { const r = $('.av-head[data-ref="' + CSS.escape(ref) + '"] [data-rb="hold"]') || $('tr[data-ref="' + CSS.escape(ref) + '"] [data-rb="hold"]') || $('[data-hold="' + CSS.escape(ref) + '"]'); if (r) open(ref, r); }, 60); }
   function open(ref, anchor){ const a = App.act(ref); if (!a) return; Fields.closePop(); const h = rec(a), ro = !Store.S.edit;
-    const p = h_('<div class="pop holdpop"><b>On hold' + tipI("Who is it waiting on? They go into the contact list so whoever picks this up can chase them.") + '</b>'
+    /* the switch at the top: on, the details below; off, it comes off hold (to the step its ticks say) and they hide */
+    const p = h_('<div class="pop holdpop"><label class="hold-tg"><input type="checkbox" class="hold-sw" data-k="on"' + (on(a) ? " checked" : "") + (ro ? " disabled" : "") + '><b>On hold</b>' + tipI("Who is it waiting on? They go into the contact list so whoever picks this up can chase them.") + '</label><div class="hold-b"' + (on(a) ? "" : " hidden") + '>'
       + '<label class="fl">Waiting on<input class="in" data-k="who" list="holdNames" autocomplete="off" value="' + esc(h.who || "") + '" placeholder="Name"' + (ro ? " readonly" : "") + '></label>'
       + '<datalist id="holdNames">' + Store.contacts().map(c => '<option value="' + esc(c.name) + '">' + esc([c.company, c.mobile].filter(Boolean).join(" · ")) + '</option>').join("") + '</datalist>'
       + '<label class="fl">Their mobile<input class="in" data-k="mobile" type="tel" value="' + esc(h.mobile || "") + '"' + (ro ? " readonly" : "") + '></label>'
@@ -25,9 +26,10 @@ const Hold = (() => {
       + '<label class="fl">On hold since<input class="in" data-k="since" type="date" value="' + esc(h.since || "") + '"' + (ro ? " readonly" : "") + '></label>'
       + '<label class="fl"><span class="fl-h">Due back' + tipI("When it should come back to us.") + '</span>' + '<input class="in" data-k="due" type="date" value="' + esc(h.due || "") + '"' + (ro ? " readonly" : "") + '></label>'
       + '<label class="fl"><span class="fl-h">Note' + tipI("Why it's on hold.") + '</span>' + '<textarea class="in" data-k="why" rows="3" placeholder="e.g. waiting on the vendor\'s revised quote for the hoses"' + (ro ? " readonly" : "") + '>' + esc(h.why || "") + '</textarea></label>'
-      + (ro ? "" : '<div class="yn-btns"><button type="button" class="yn-yes" data-k="ok">Save</button></div>') + '</div>');
+      + (ro ? "" : '<div class="yn-btns"><button type="button" class="yn-yes" data-k="ok">Save</button></div>') + '</div></div>');
     document.body.appendChild(p); Fields.place(p, anchor); const pr = p.getBoundingClientRect(); if (pr.bottom > innerHeight - 8) p.style.top = Math.max(8, innerHeight - pr.height - 8) + "px";
-    const v = k => $('[data-k="' + k + '"]', p).value.trim(), who = $('[data-k="who"]', p);
+    const v = k => $('[data-k="' + k + '"]', p).value.trim(), who = $('[data-k="who"]', p), sw = $('[data-k="on"]', p);
+    sw.onchange = () => { const f = Store.field("onhold") || { id: "onhold", type: "check" }; Fields.set(a, f, sw.checked); $(".hold-b", p).hidden = !sw.checked; pending = null; };
     /* picking a known person fills in their mobile and company */
     who.oninput = () => { const c = Store.contacts().find(x => x.name.toLowerCase() === who.value.trim().toLowerCase()); if (c){ const m = $('[data-k="mobile"]', p), co = $('[data-k="company"]', p); if (!m.value) m.value = c.mobile || ""; if (!co.value) co.value = c.company || ""; } };
     const ok = $('[data-k="ok"]', p); if (ok) ok.onclick = () => { save(a, { who: v("who"), mobile: v("mobile"), company: v("company"), since: v("since"), due: v("due"), why: v("why") }); Fields.closePop(); };

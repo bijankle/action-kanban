@@ -1425,3 +1425,11 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .tbl th.actc .th-c+.th-c{border-left:1px solid color-mix(in srgb,#fff 20%,transparent)}
 .tbl th.actc .th-c .th-v{height:auto;width:auto;padding:4px 0 5px;border:0!important}
 .tbl th.actc .th-i{position:static!important;transform:none!important;width:15px!important;height:15px!important;margin:0!important;flex:none}
+/* the On hold callout: an on/off switch heads it; the details show only while it's on. The hold square has no (i): a small red dot says details are missing */
+.hold-tg{display:flex;align-items:center;gap:8px;height:28px;cursor:pointer;font-size:var(--fs)}
+.hold-sw{appearance:none;-webkit-appearance:none;flex:none;width:34px;height:18px;margin:0;border-radius:9px;background:var(--line,#c3cad3);position:relative;cursor:pointer;transition:background .15s}
+.hold-sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .15s}
+.hold-sw:checked{background:#c9820a}.hold-sw:checked::after{left:18px}
+.hold-sw:focus-visible{outline:2px solid var(--th);outline-offset:2px}.hold-sw:disabled{opacity:.6;cursor:default}
+.hold-b{display:flex;flex-direction:column;gap:8px}.hold-b[hidden]{display:none}
+.rb-hold{position:relative}.rb-hold.miss::after{content:"";position:absolute;top:2px;right:2px;width:5px;height:5px;border-radius:50%;background:#c0392b}

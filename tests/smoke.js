@@ -49,6 +49,12 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     const hb = await p.evaluate(() => { const a = Store.all().find(x => x.no === 3), f = Store.field("onhold"); Fields.set(a, f, true); a.hold = Object.assign({}, a.hold, { who: "Jo Smith", mobile: "0400 000 000" });
       Fields.set(a, f, false); Fields.set(a, f, true); Fields.closePop(); return Hold.on(a) + " " + (a.hold || {}).who + " " + (a.hold || {}).mobile; });
     check("back on hold keeps who it was waiting on", hb === "true Jo Smith 0400 000 000", hb);
+    /* the hold square: off hold, a click puts it on hold; on hold, a click only opens the callout (its switch takes it off) */
+    const hs = await p.evaluate(async () => { Fields.closePop(); const a = Store.all().find(x => x.no === 3), ref = a._p + ":" + a.u; App.render && App.render(); await new Promise(r => setTimeout(r, 300));
+      const sq = document.querySelector('tr[data-ref="' + CSS.escape(ref) + '"] [data-rb="hold"]'); if (!sq) return "no square"; sq.click(); await new Promise(r => setTimeout(r, 300));
+      const c = document.querySelector(".holdpop"), r1 = Hold.on(a) + " " + !!c + " " + (c && c.querySelector(".hold-sw").checked); if (c){ c.querySelector(".hold-sw").click(); }
+      const r2 = Hold.on(a); Fields.closePop(); return r1 + " " + r2; });
+    check("clicking the hold square on a held action opens the callout and keeps the hold; its switch takes it off", hs === "true true true false", hs);
     /* deleting takes it off hold */
     const dl = await p.evaluate(() => { const a = Store.all().find(x => x.no === 4); Fields.set(a, Store.field("onhold"), true); const held = Hold.on(a); Flow.remove(a); return held + " " + !!a.del + " " + Hold.on(a) + " " + Store.stage(a.stage).kind; });
     check("deleting an action takes it off hold", dl === "true true false open", dl);
