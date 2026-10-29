@@ -76,6 +76,7 @@ const Store = (() => {
   const findRef = ref => { const [pid, n] = String(ref || "").split(":"); const a = live((S.acts[pid] || {}).actions).find(x => String(x.no) === n || x.u === n); return a ? (a._p = pid, a) : null; };
   /* the ID's letters come from the action's category (DEF-0024); until it has one, the project's (ACT-0024) */
   const CAT = { Defect: "DEF", Maintenance: "MAN", Operations: "OPS", Punchlist: "PUN", Commissioning: "COM" };
+  const idLetters = () => [...new Set(Object.values(CAT).concat(projects().map(p => p.prefix || "ACT"), ["ACT"]))];   // (every ID's letters there can be: the widest sets the ID column)
   const actId = a => { const p = project(a._p) || {}; return (CAT[a.f && a.f.category] || p.prefix || "ACT") + "-" + String(a.no).padStart(4, "0"); };
   /* priority: the action's place in its stage column, counted over the projects on show */
   const ranked = st => visible().filter(a => a.stage === st).sort((x, y) => (x.rank || 0) - (y.rank || 0) || x.no - y.no);
@@ -313,5 +314,6 @@ const Store = (() => {
     const i = c.fields.findIndex(f => f.id === "complete"); if (i >= 0 && i !== c.fields.length - 1) c.fields.push(c.fields.splice(i, 1)[0]); }
 
   return { S, copyInfo, clearCopy, enter, stages, alignFields, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, deleted, find, findRef, actId, ranked, priority,
+    idLetters,
     stashNow: () => stash.flush ? stash.flush() : stash(), vendors: () => S.vendors, owner, people, fullName, addPerson, procurement, sparesAvail, eta, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();

@@ -86,7 +86,10 @@ const Table = (() => {
     let k = 1; while (k < tags.length && headW(tags.slice(0, k + 1).join(", "), font) <= (k + 1 === tags.length ? room + 34 : room)) k++;
     t1.textContent = tags.slice(0, k).join(", "); if (mb){ mb.hidden = k >= tags.length; mb.textContent = "+" + (tags.length - k); } }); }
   function cut(el){ moreFit(el); tagFit(el); const ids = $$(".idw .aid", el); el.style.removeProperty("--aid-w"); if (ids.length) el.style.setProperty("--aid-w", Math.ceil(Math.max(...ids.map(x => x.getBoundingClientRect().width))) + "px");
-    const bx = $$("td.idc .idw", el); if (bx.length){ const want = Math.ceil(Math.max(...bx.map(x => x.getBoundingClientRect().width))) + 20 + 2; if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
+    /* (the ID column is as wide as the widest ID there can be, every category's letters and the most digits, not the widest
+       showing: recategorising an action never moves the columns) */
+    const one = $("td.idc .aid", el); if (one){ const f = getComputedStyle(one).font, dg = "8".repeat(Math.max(4, String(Math.max(0, ...Store.all().map(x => x.no || 0))).length));
+      const want = Math.ceil(Math.max(...Store.idLetters().map(l => headW(l + "-" + dg, f)))) + 20 + 2; if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
     $$("td.ttl", el).forEach(td => { const t = $(".tt", td); if (t) td.classList.toggle("cut", t.scrollWidth > t.clientWidth + 1); });
     $$("td.ltc", el).forEach(td => { const t = $(".lt-b", td), v = String((App.act(td.closest("tr").dataset.ref) || { f: {} }).f[t.dataset.lt] || ""); td.classList.toggle("cut", v.includes("\n") || t.scrollWidth > t.clientWidth + 1); }); }
   /* long text (notes and the like) in the list: click the box, or its more…, and it opens over the cell in full to edit,
@@ -232,6 +235,8 @@ const Table = (() => {
     $$("[data-f]", p).forEach(b => b.onclick = () => { Fields.closePop(); Store.mutate("config", () => { const f = Store.field(b.dataset.f), fs = Store.S.config.fields; f.table = true; fs.splice(fs.indexOf(f), 1); fs.push(f); Store.S.config.mod = now(); Store.touch(f); }); Store.log("Added the " + b.textContent + " column"); }); }
   /* a column's tight width (as a double click on its edge gives): its heading's longest word, or its widest cell */
   function fitW(el, cs, th, i){ const l = $(".th-l", th); if (cs[i] && TICK.has(cs[i].type)) return 23;   // (a tick column: one square cell)
+    if (cs[i] && cs[i].type === "choice"){ const td = $("tbody td:nth-child(" + (i + 1) + ")", el), f = td ? getComputedStyle(td).font : "13px " + getComputedStyle(document.body).fontFamily;   // (a strict list: as wide as its widest choice, so picking another never moves the columns)
+      return Math.round(Math.max(headW(head(cs[i]), getComputedStyle(l).font), ...(cs[i].options || []).map(o => headW(o.label || o, f) + 6 + 22 + 8)) + 2); }
     let w = cs[i] && TICK.has(cs[i].type) ? headW(head(cs[i]), getComputedStyle(l).font) - 14 : headW(cs[i] ? head(cs[i]) : l.textContent, getComputedStyle(l).font);
     $$("tbody tr", el).forEach(tr => { const td = tr.children[i]; if (!td) return;
       const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML;
