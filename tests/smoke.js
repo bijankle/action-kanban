@@ -32,6 +32,12 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     /* a dropdown opens on one click and shows its list */
     const dd = await p.evaluate(async () => { const b = document.querySelector(".tbl tbody .lk-sel"); if (!b) return "no dropdown cell"; b.click(); await new Promise(r => setTimeout(r, 200)); const n = document.querySelectorAll(".lk-card .lk-o").length; Look.close && Look.close(); document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); return n > 0 ? "opens" : "no list"; });
     check("a dropdown cell opens its list on one click", dd === "opens", dd);
+    /* a Tags cell opens the Tags picker; ticking the dash row saves "–" (no tag) */
+    const tp = await p.evaluate(async () => { const td = document.querySelector(".tbl td.tgc"); if (!td) return "no tags cell"; const ref = td.closest("tr").dataset.ref, a = App.act(ref), was = JSON.stringify(a.f.equipment || []);
+      td.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 })); await new Promise(r => setTimeout(r, 200)); const pk = document.querySelector(".tgp"); if (!pk) return "no picker";
+      pk.querySelectorAll("input[type=checkbox]:checked").forEach(c => c.click()); await new Promise(r => setTimeout(r, 100)); const d = pk.querySelector('input[data-v="–"]'); if (!d) return "no dash row"; d.click();
+      const now = JSON.stringify(a.f.equipment); Fields.closePop(); return now; });
+    check("a Tags cell opens the Tags picker and a tick saves", tp === '["–"]', tp);
     /* On Hold and Delete sit just left of + Add column, and a column dropped past + Add column stays left of it */
     const hk = await p.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 400)), o = () => [...document.querySelectorAll(".tbl thead th")].map(th => th.dataset.c || (th.classList.contains("addcol") ? "ADD" : "")).filter(Boolean);
       const first = o().slice(-3).join(","); localStorage.setItem("adColOrder", JSON.stringify(o().filter(x => x !== "ADD").filter(x => x !== "_hold").concat(["ADD", "_hold"]))); App.render(); await w(); const after = o(); localStorage.removeItem("adColOrder"); App.render(); await w();

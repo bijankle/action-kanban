@@ -367,3 +367,7 @@ const Table = (() => {
     $$("input", p).forEach(c => c.onchange = () => Store.mutate("config", () => { const f = Store.field(c.dataset.f); f.table = c.checked; Store.touch(f); })); }
   return { render, rows, forget, columnsPop, sizePop, rowBtns, idBox, copySheet, IDI };
 })();
+/* one click on a Tags cell in the list opens the Tags picker (the cell itself isn't typed into) */
+document.addEventListener("mousedown", e => { const td = e.target.closest(".tbl td.tgc"); if (!td || !Store.S.edit || e.button !== 0) return; const tr = td.closest("tr[data-ref]"), a = tr && App.act(tr.dataset.ref), f = Store.field("equipment"); if (!a || !f) return;
+  e.preventDefault(); e.stopImmediatePropagation(); if ($(".tgp") && $(".tgp").__td === td) return Fields.closePop(); Fields.tagPick(td, a, f); const p = $(".tgp"); if (p) p.__td = td; }, true);
+document.addEventListener("click", e => { if (e.target.closest(".tbl td.tgc") && Store.S.edit){ e.preventDefault(); e.stopImmediatePropagation(); } }, true);

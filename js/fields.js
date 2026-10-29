@@ -218,23 +218,24 @@ const Fields = (() => {
       const ex = optLabels(f).find(x => x.toLowerCase() === t.toLowerCase()) || t; if (!cur.includes(ex)) cur.push(ex); i.value = ""; draw(); i.focus(); };
     i.oninput = draw; i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); add(); } if (e.key === "Escape"){ e.stopPropagation(); closePop(); } };
     draw(); i.focus(); p._done = commit; }
-  /* the Tags picker (a click on the Tags cell): a little table like the dropdowns, the tags on the action ticked, a search box
-     to find more in the plant lists (tick to add, untick to take off), – for no tag. Each tick saves at once (Ctrl+Z undoes it).
-     (window.__tgm picks the layout while previewing: 1 the action's tags on top, then the search; 2 the search on top, then
-     the action's tags and the matches under their own headings; 3 two panes, the action's tags left, the search right) */
-  function tagPick(anchor, a, f){ closePop(); const M = String(window.__tgm || "1"); let cur = (Array.isArray(a.f[f.id]) ? a.f[f.id] : []).slice(), q = "";
-    const p = h('<div class="pop tgp tgp' + M + '" role="dialog" aria-label="Tags"><div class="tgp-a"></div><div class="tgp-b"><input class="in tgp-q" type="text" placeholder="Search equipment by number or name" autocomplete="off" spellcheck="false"><div class="tgp-m"></div></div></div>');
+  /* the Tags picker (one click on a Tags cell in the list): a little table like the dropdowns. The tags on the action come
+     first, ticked (untick to take one off); then a search box to find more in the plant lists (tick to add); a tag the lists
+     don't have can be added as typed; – for no tag. Each tick saves at once (Ctrl+Z undoes it) */
+  function tagPick(anchor, a, f){ closePop(); let cur = (Array.isArray(a.f[f.id]) ? a.f[f.id] : []).slice(), q = "";
+    const p = h('<div class="pop tgp" role="dialog" aria-label="Tags"><div class="tgp-a"></div><input class="in tgp-q" type="text" placeholder="Search equipment by number or name" autocomplete="off" spellcheck="false"><div class="tgp-m"></div></div>');
     document.body.appendChild(p); place(p, anchor); Equip.load().then(() => p.isConnected && draw()).catch(() => {});
     const qi = $(".tgp-q", p), A = $(".tgp-a", p), R = $(".tgp-m", p);
-    if (M === "1") A.after(qi); else if (M === "2") p.prepend(qi);   /* (1: the search box between the action's tags and the matches; 2: on top) */
     const row = (t, on) => { const e = t === "–" ? { n: "No equipment tag for this action" } : Equip.get(t) || {}; return '<label class="tgp-r' + (on ? " on" : "") + '"><span class="tgp-c"><input type="checkbox" data-v="' + esc(t) + '"' + (on ? " checked" : "") + '></span><span class="tgp-s">' + (e.k ? kindSym(e.k) : "") + '</span><b>' + esc(t) + '</b><small>' + esc(e.n ? e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "") + '</small></label>'; };
+    const save = () => set(a, f, cur.slice());
     const draw = () => { const found = q ? (Equip.find(q, /^[a-z]{0,3}[\d-]/i.test(q) ? "t" : "n") || []).map(x => x.t).filter(t => !cur.includes(t)).slice(0, 60) : [];
       const dash = (!cur.length && !q) || /^(-|–|n\/?a?)$/i.test(q) ? row("–", false) : "";
-      A.innerHTML = (M !== "1" ? '<div class="tgp-g">On this action</div>' : "") + cur.map(t => row(t, true)).join("");
-      R.innerHTML = (M !== "1" && (found.length || dash) ? '<div class="tgp-g">' + (q ? "Matches in the plant lists" : "") + '</div>' : "") + (cur.includes("–") ? "" : dash) + found.map(t => row(t, false)).join("");
-      $$("input[type=checkbox]", p).forEach(c => c.onchange = () => { const x = c.dataset.v; cur = !c.checked ? cur.filter(y => y !== x) : x === "–" ? ["–"] : cur.filter(y => y !== "–").concat(x); set(a, f, cur.slice()); draw(); }); };
-    qi.oninput = () => { q = qi.value.trim(); draw(); }; qi.onkeydown = e => { if (e.key === "Escape"){ e.stopPropagation(); closePop(); } };
-    draw(); }
+      const typed = q && !/^(-|–|n\/?a?)$/i.test(q) && !found.concat(cur).some(t => t.toLowerCase() === q.toLowerCase()) ? '<button type="button" class="tgp-r tgp-add"><span class="tgp-c">+</span><span class="tgp-s"></span><b>' + esc(q.toUpperCase()) + '</b><small>Add as typed (not in the plant lists)</small></button>' : "";
+      A.innerHTML = cur.map(t => row(t, true)).join("");
+      R.innerHTML = (cur.includes("–") ? "" : dash) + found.map(t => row(t, false)).join("") + typed;
+      $$("input[type=checkbox]", p).forEach(c => c.onchange = () => { const x = c.dataset.v; cur = !c.checked ? cur.filter(y => y !== x) : x === "–" ? ["–"] : cur.filter(y => y !== "–").concat(x); save(); draw(); });
+      const ad = $(".tgp-add", R); if (ad) ad.onclick = () => { cur = cur.filter(y => y !== "–").concat(q.toUpperCase()); qi.value = ""; q = ""; save(); draw(); qi.focus(); }; };
+    qi.oninput = () => { q = qi.value.trim(); draw(); }; qi.onkeydown = e => { if (e.key === "Escape"){ e.stopPropagation(); closePop(); } if (e.key === "Enter"){ e.preventDefault(); const c = $(".tgp-m input[type=checkbox]", p) || $(".tgp-add", p); if (c) c.click(); } };
+    draw(); setTimeout(() => qi.focus(), 0); }
   function place(p, anchor){ const r = anchor.getBoundingClientRect(); p.style.left = Math.max(8, Math.min(r.left, innerWidth - Math.max(290, p.offsetWidth + 8))) + "px";
     const below = innerHeight - r.bottom > 300; p.style.top = (below ? r.bottom + 4 : Math.max(8, r.top - 304)) + "px"; }
   /* a text field opened over its box in full to read and edit: Enter or clicking away saves it and closes it, Shift+Enter
