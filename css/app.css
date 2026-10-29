@@ -1373,7 +1373,7 @@ html.dark{--edf:#2a2117;--edh:#36291a;--autof:#1d2a40;--autoh:#253552}
 /* a dropdown cell in a table, like Excel's data validation: the value, and a small square arrow button at the cell's right edge;
    one click opens a plain square list, the current one ticked, the one under the mouse or arrow keys in blue */
 .tbl td .lk-sel{display:flex!important;align-items:center;justify-content:space-between;width:100%;padding:0 0 0 6px!important;cursor:pointer;text-align:left}
-.tbl td .lk-sel svg{flex:none;width:var(--row);height:calc(var(--row) - 2px);padding:5px;box-sizing:border-box;border-left:1px solid var(--line2);background:color-mix(in srgb,var(--panel2) 70%,var(--panel));color:var(--muted);margin:1px 0}
+.tbl td .lk-sel svg{flex:none;width:var(--row);height:calc(var(--row) - 2px);padding:5px;box-sizing:border-box;border-left:1px solid var(--line2);background:var(--hdr);color:var(--muted);margin:1px 0}
 .tbl td .lk-sel:hover svg,.tbl td .lk-sel[aria-expanded="true"] svg{background:var(--panel2);color:var(--ink)}
 .tbl td .lk-sel[aria-expanded="true"]{box-shadow:inset 0 0 0 2px var(--th)!important;background:var(--panel)!important}
 .lk-card.lk-xl{border-radius:0;padding:0;gap:0;border:1px solid var(--line2);box-shadow:0 4px 12px rgba(0,0,0,.18);margin-top:-2px}
@@ -1471,7 +1471,7 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 /* the On hold card's boxes as a little table, like the Actions list rows: names in a shaded first column, boxes edge to edge */
 .hp-tbl .hp-grid{border:1px solid var(--line2);display:flex;flex-direction:column}
 .hp-tbl .fl.hf{grid-template-columns:72px minmax(0,1fr);gap:0;height:var(--row,22px);border-top:1px solid var(--line)}.hp-tbl .fl.hf:first-child{border-top:0}
-.hp-tbl .fl.hf{padding:0;background:color-mix(in srgb,var(--panel2) 70%,var(--panel));padding-left:6px;font-size:var(--fb);font-weight:600;color:var(--muted)}
+.hp-tbl .fl.hf{padding:0;background:var(--hdr);padding-left:6px;font-size:var(--fb);font-weight:600;color:var(--muted)}
 .hp-tbl .fl.hf>*:last-child{height:var(--row,22px)!important;min-height:0!important;border:0!important;border-left:1px solid var(--line2)!important;border-radius:0!important;background:var(--edf,#fff)!important;font-size:var(--fb);padding:0 6px!important;box-shadow:none!important}
 .hp-tbl .fl.hf>*:last-child:focus,.hp-tbl .fl.hf>*:last-child:focus-within{outline:2px solid var(--th);outline-offset:-2px}
 .hp-tbl .hp-grid{overflow:hidden}.hp-tbl .fl.hf>*:last-child{box-sizing:border-box;width:100%!important;max-width:100%}
@@ -1483,7 +1483,7 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .ov-tbl>.ov-l,.ov-tbl>.ov-r{container-type:inline-size}
 @container (max-width:400px){ .ov-tbl .det-c,.ov-tbl .det-m{grid-template-columns:max-content minmax(0,1fr)} }
 .ov-tbl .det-c>.det-r,.ov-tbl .det-m>.det-r{display:contents!important}
-.ov-tbl .det-r>label{display:flex;align-items:center;height:var(--row,22px);padding:0 8px 0 6px;background:color-mix(in srgb,var(--panel2) 70%,var(--panel));font-size:var(--fb)!important;font-weight:600;color:var(--muted);white-space:nowrap}
+.ov-tbl .det-r>label{display:flex;align-items:center;height:var(--row,22px);padding:0 8px 0 6px;background:var(--hdr);font-size:var(--fb)!important;font-weight:600;color:var(--muted);white-space:nowrap}
 .ov-tbl .det-r>:not(label){min-width:0;height:var(--row,22px);display:flex;align-items:center;overflow:hidden;background:var(--panel)}
 .ov-tbl .det-r>:not(label)>*{flex:1 1 auto;min-width:0}
 .ov-tbl .det-r .in,.ov-tbl .det-r .dchip,.ov-tbl .det-r .tchip,.ov-tbl .det-r .fv{height:var(--row,22px)!important;min-height:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--edf,#fff)!important;font-size:var(--fb)!important;padding:0 6px!important;width:100%!important;max-width:none!important;margin:0!important}
@@ -1501,7 +1501,7 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 /* a little table of name and box pairs (the supplier box on the MTO tab, and any other .kvt): like the Actions rows,
    a short name in a shaded cell, the box edge to edge, 22px rows, faint lines drawn by the gaps */
 .kvt{display:grid!important;grid-template-columns:max-content minmax(0,1fr);gap:1px!important;background:var(--line2);border:1px solid var(--line2);align-items:stretch!important;padding:0!important}
-.kvt>label,.kvt>.pt-lab{display:flex;align-items:center;gap:4px;height:var(--row,22px);margin:0!important;padding:0 8px 0 6px;background:color-mix(in srgb,var(--panel2) 70%,var(--panel));font-size:var(--fb)!important;font-weight:600;color:var(--muted);white-space:nowrap}
+.kvt>label,.kvt>.pt-lab{display:flex;align-items:center;gap:4px;height:var(--row,22px);margin:0!important;padding:0 8px 0 6px;background:var(--hdr);font-size:var(--fb)!important;font-weight:600;color:var(--muted);white-space:nowrap}
 .kvt>:not(label):not(.pt-lab){height:var(--row,22px);min-width:0;background:var(--panel);display:flex;align-items:center;margin:0!important}
 .kvt .in,.kvt .lk-sel,.kvt .dchip,.kvt .lk-dt,.kvt .combo{height:var(--row,22px)!important;min-height:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--edf,#fff)!important;padding:0 6px!important;width:100%!important;max-width:none!important;font-size:var(--fb)!important;margin:0!important}
 .kvt .combo{padding:0!important}.kvt .dchip{justify-content:flex-start;gap:6px}
@@ -1511,7 +1511,7 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .dv-list{gap:0!important}.dv-list .dv-f{border-radius:0!important;margin:0 0 -1px!important;height:var(--row,22px);min-height:0!important;padding:0 8px!important;border:1px solid var(--line2)!important;font-size:var(--fb)!important;display:flex;align-items:center;justify-content:space-between;box-shadow:none!important}
 .dv-list .dv-f small{font-size:var(--fb)!important}.dv-list .dv-f.on{background:color-mix(in srgb,var(--th) 10%,var(--panel))!important;position:relative;z-index:1;border-color:var(--th)!important}
 .dv-list .dv-addf{margin-top:8px}
-.dv-ed>.fl{display:grid!important;grid-template-columns:110px minmax(0,1fr);gap:0;align-items:stretch;height:var(--row,22px);margin:0 0 -1px!important;border:1px solid var(--line2);background:color-mix(in srgb,var(--panel2) 70%,var(--panel));font-size:var(--fb)!important;font-weight:600;color:var(--muted);padding:0 0 0 6px;line-height:var(--row,22px)}
+.dv-ed>.fl{display:grid!important;grid-template-columns:110px minmax(0,1fr);gap:0;align-items:stretch;height:var(--row,22px);margin:0 0 -1px!important;border:1px solid var(--line2);background:var(--hdr);font-size:var(--fb)!important;font-weight:600;color:var(--muted);padding:0 0 0 6px;line-height:var(--row,22px)}
 .dv-ed>.fl>.in,.dv-ed>.fl>.lk-sel{height:var(--row,22px)!important;min-height:0!important;border:0!important;border-left:1px solid var(--line2)!important;border-radius:0!important;box-shadow:none!important;background:var(--edf,#fff)!important;padding:0 6px!important;font-size:var(--fb)!important;font-weight:400;color:var(--ink);margin:0!important;width:100%!important}
 .dv-ed>.fl+.tp-o,.dv-ed>.fl+p{margin-top:10px}
 /* the drawings and documents list as table rows: one 22px row each, a faint line between, the parts in their own cells */
@@ -1527,7 +1527,7 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
    are rows too, the tick in the value cell */
 .dv-ed{border:0!important;border-radius:0!important;padding:0!important;background:none!important}
 .dv-cols{align-items:flex-start}
-.dv-ed>.fl-ck{background:linear-gradient(to right,color-mix(in srgb,var(--panel2) 70%,var(--panel)) 116px,var(--line2) 116px 117px,var(--edf,#fff) 117px)!important;cursor:pointer}
+.dv-ed>.fl-ck{background:linear-gradient(to right,var(--hdr) 116px,var(--line2) 116px 117px,var(--edf,#fff) 117px)!important;cursor:pointer}
 .dv-ed>.fl-ck>input{align-self:center;justify-self:start;width:16px;height:16px;margin:0 0 0 7px}
 /* Data validation lists (a column's allowed values, the Status stages) as tables like the Actions rows: one 22px row each,
    a cell for the grip, the colour, each box, the count and the ✕; the add box is the last row */
@@ -1555,3 +1555,14 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .dv-ed>.fl-v>.fv{display:flex;align-items:center;gap:6px;height:var(--row,22px);border-left:1px solid var(--line2);background:var(--panel);padding:0 6px;font-weight:400;color:var(--ink);white-space:nowrap;overflow:hidden}
 .ov-tbl .lastch .lc-t{display:block!important;-webkit-line-clamp:unset;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ov-tbl .det-m>.lastch{height:var(--row,22px);padding:0 6px}
 .dv-ed>.fl,.opt,.str,.hp-tbl .fl.hf{box-sizing:content-box!important}
+/* the ID in a table: the table's own body text, just bold */
+.tbl td.idc .aid,.tbl td.idc .idw{font:700 var(--fb)/var(--row,22px) var(--font)!important;letter-spacing:0!important;color:var(--ink)!important}
+/* table headings: the light shaded look of the name cells (not the dark bar), dark bold words, faint lines between */
+.tbl th,.str.str-h{background:var(--hdr)!important;color:var(--ink)!important;border-right:1px solid var(--line2)!important;border-bottom:1px solid var(--line2)!important}
+.str.str-h>*{border-left-color:var(--line2)!important}
+.tbl th .th-m,.tbl th .th-i,.tbl th svg{color:var(--muted)!important}.tbl th .th-m:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)!important}
+.tbl th .th-r:hover,.tbl th .tw-r:hover{background:color-mix(in srgb,var(--th) 35%,transparent)!important}
+/* the + Add column strip stays in sight at the list's right edge, even when the list is wider than its pane */
+.tbl th.addcol,.tbl td.addcol{position:sticky;right:0;z-index:3;background:var(--panel)}.tbl th.addcol{z-index:4;background:var(--hdr)!important}
+/* the heading and name cell colour: the light grey, with a faint tint of the theme colour (with the blue theme, the light grey) */
+:root{--hdr:color-mix(in srgb,var(--th) 5%,color-mix(in srgb,var(--panel2) 70%,var(--panel)))}

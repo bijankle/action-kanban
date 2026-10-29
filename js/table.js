@@ -280,7 +280,10 @@ const Table = (() => {
     let spare = W - used - add - 2 - lc.reduce((t, c) => t + ws[c.id], 0);
     if (spare > 0){ const t = lc.find(c => c.id === "title"); if (t){ const g = Math.min(spare, Math.max(0, Math.min(640, fitOf.title) - ws.title)); ws.title += g; spare -= g; }
       const ns = lc.filter(c => c.id !== "title"); if (ns.length && spare > 0) ns.forEach(c => { ws[c.id] += Math.floor(spare / ns.length); }); }
-    else if (spare < 0){ ws._add = 24; }
+    else if (spare < 0){   /* no room for it all: Notes (and any long text) gives first, down to a little, then the title, so the + column always shows; their text ends in more… */
+      let short = -spare; ws._add = 24; short -= add - 24;
+      lc.filter(c => c.id !== "title").forEach(c => { if (short <= 0) return; const g = Math.min(short, Math.max(0, ws[c.id] - 90)); ws[c.id] -= g; short -= g; });
+      const t = lc.find(c => c.id === "title"); if (t && short > 0){ const g = Math.min(short, Math.max(0, ws.title - 160)); ws.title -= g; short -= g; } }
     if (JSON.stringify(ws) !== JSON.stringify(old) || first){ lsSet("adColW", ws); requestAnimationFrame(() => App.render()); } }
   /* a long column set by hand is remembered from one opening to the next */
   const remember = (c, w) => { if (c && LONG(c)){ const m = longMem(); m[c.id] = Math.round(w); lsSet("adColLong", m); } };
