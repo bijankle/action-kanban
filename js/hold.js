@@ -1,8 +1,8 @@
 /* On Hold: who it's waiting on, their mobile and since when. An action on hold shows an i button beside its status
    (in the list, the Details panel and on the Organizer card); the button is red while the person, their mobile or the
    date is missing. Clicking it opens a small form. Whoever it waits on goes into the running contact list (Data
-   validation, Contacts), so at handover anyone can find them and chase them up. Moving an action to On Hold starts a
-   fresh record dated today and opens the form. */
+   validation, Contacts), so at handover anyone can find them and chase them up. Moving an action to On Hold dates it today
+   and opens the form; putting it back on hold keeps who it was waiting on, their mobile and the note from last time. */
 "use strict";
 const Hold = (() => {
   let pending = null;
@@ -14,7 +14,7 @@ const Hold = (() => {
     const tip = m.length ? "On hold: add " + m.map(k => NAMES[k]).join(", ") : "On hold since " + fmtDate(h.since) + ", waiting on " + h.who + " (" + h.mobile + ")";
     return '<button type="button" class="hold-i' + (m.length ? " bad" : "") + '" data-hold="' + esc(ref) + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + INFO_I + '</button>'; }
   /* moving to On Hold (Store.enter): a new record, and the form opens once the screen has redrawn */
-  function entered(a){ a.hold = { since: new Date().toISOString().slice(0, 10) }; pending = a._p + ":" + a.u; }
+  function entered(a){ a.hold = Object.assign({}, a.hold || {}, { since: new Date().toISOString().slice(0, 10) }); pending = a._p + ":" + a.u; }   // (back on hold: who it waits on, their mobile and the note are kept; only the date starts again)
   function after(){ if (!pending) return; const ref = pending; pending = null; setTimeout(() => { const b = $('[data-hold="' + CSS.escape(ref) + '"]'); if (b) open(ref, b); }, 60); }
   function open(ref, anchor){ const a = App.act(ref); if (!a) return; Fields.closePop(); const h = rec(a), ro = !Store.S.edit;
     const p = h_('<div class="pop holdpop"><b>On hold' + tipI("Who is it waiting on? They go into the contact list so whoever picks this up can chase them.") + '</b>'

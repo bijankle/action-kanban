@@ -40,6 +40,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     check("each open stage reads as the step still to do", await p.evaluate(() => Store.stages().filter(s => s.kind === "open").every(s => s.name === Store.todo(s))));
     await p.evaluate(() => { const a = Store.all().find(x => x.no === 3); Fields.set(a, Store.field("defect"), true); });
     check("Defect emailed sets the Category to Defect", await p.evaluate(() => Store.all().find(x => x.no === 3).f.category === "Defect"));
+    /* taking a hold off and putting it back on keeps who it was waiting on */
+    const hb = await p.evaluate(() => { const a = Store.all().find(x => x.no === 3), f = Store.field("onhold"); Fields.set(a, f, true); a.hold = Object.assign({}, a.hold, { who: "Jo Smith", mobile: "0400 000 000" });
+      Fields.set(a, f, false); Fields.set(a, f, true); Fields.closePop(); return Hold.on(a) + " " + (a.hold || {}).who + " " + (a.hold || {}).mobile; });
+    check("back on hold keeps who it was waiting on", hb === "true Jo Smith 0400 000 000", hb);
     /* deleting takes it off hold */
     const dl = await p.evaluate(() => { const a = Store.all().find(x => x.no === 4); Fields.set(a, Store.field("onhold"), true); const held = Hold.on(a); Flow.remove(a); return held + " " + !!a.del + " " + Hold.on(a) + " " + Store.stage(a.stage).kind; });
     check("deleting an action takes it off hold", dl === "true true false open", dl);
