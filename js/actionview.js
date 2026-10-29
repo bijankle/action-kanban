@@ -85,7 +85,7 @@ const ActionView = (() => {
       + '<h4>Attachments <span class="cnt">' + (a.files.length || "") + '</span></h4><div class="att-l"></div>'
       + '<h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span><button type="button" class="ph-cp" data-k="phcopy" title="Copy a picture of this action: ID and title, problem, solution and every photo" aria-label="Copy a picture of the problem, solution and photos">' + Table.IDI.copy + '</button></h4><div class="ph-fill"><div class="ph-g"></div></div></div>'
       + '<div class="ov-r">'
-      + '<h4>Status</h4><div class="stk-g"></div><h4>Details</h4><div class="det"></div><h4 class="det-h2" hidden>Contractor</h4><div class="det det-c"></div><h4 class="det-h2">Record</h4><div class="det det-m"></div><div class="sd-foot">' + (a.by ? "Last edited by " + esc(a.by) + " " + esc(fmtDate(a.mod)) + " · " : "") + '<button type="button" class="link ch-ln" data-k="hist">Change history</button>' + (a.gps ? ' · <a target="_blank" rel="noopener" href="https://maps.google.com/?q=' + a.gps.lat + "," + a.gps.lng + '">Map pin</a>' : "") + '</div></div></div>';
+      + '<h4>Status</h4><div class="stk-g"></div><h4>Details</h4><div class="det"></div><h4 class="det-h2" hidden>Contractor</h4><div class="det det-c"></div><h4 class="det-h2">Record</h4><div class="det det-m"></div></div></div></div>';
     $$("[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     $$("[data-f=problem] textarea,[data-f=solution] textarea,[data-f=notes] textarea", el).forEach(t => { t.rows = 1; t.dispatchEvent(new Event("input")); });   // (each fits its text)
     photos(a, $(".ph-fill", el), ro);
@@ -97,6 +97,9 @@ const ActionView = (() => {
     /* the details in three parts: the job, the contractor, and the record of when (created, modified, completed) */
     const CONTR = /^contractor/;
     Store.fields().filter(f => !CORE.has(f.id) && !["mto", "sparelist", "isollist", "complete"].includes(f.type) && !Fields.DERIVED[f.id] && !yesNo(f)).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); (CONTR.test(f.id) ? $(".det-c", el) : f.type === "meta" ? $(".det-m", el) : det).appendChild(r); });
+    /* under Last modified: the last change, who made it and what it was, on two lines at most, then more… for the whole history */
+    const lm = $('.det-m [data-f="modified"]', el); if (lm){ const hl = (a.hist || [])[(a.hist || []).length - 1], what = hl ? (hl.c || []).map(([k, f, t]) => k + (t ? " " + t : f ? " cleared" : "")).join(", ") || hl.note || "" : "";
+      lm.appendChild(h('<div class="lastch">' + (hl ? '<span class="lc-t">' + esc((hl.by || "Someone") + (what ? ": " + what : "")) + '</span> ' : "") + '<button type="button" class="link" data-k="hist" title="Change history: every change, who made it and when">more…</button></div>')); }
     $(".det-c", el).previousElementSibling.hidden = !$(".det-c", el).children.length;
     /* Status: the list's tick columns, in workflow order, down three columns like a checklist (each tick works as in the list) */
     const tks = Store.fields().filter(f => f.type === "check" && f.table), sg = $(".stk-g", el); sg.style.setProperty("--rows", Math.ceil(tks.length / 3) || 1);
