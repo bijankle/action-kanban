@@ -1523,3 +1523,9 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .dw-h .dw-dl,.dw-h .dw-dl0{width:var(--row,22px);height:var(--row,22px);flex:none;border:0!important;border-left:1px solid var(--line)!important;border-radius:0!important;display:grid;place-items:center;padding:2px!important}
 .dw-h .dw-dl svg{width:16px;height:17px}
 .dw-h .dw-ck input{width:15px;height:15px}
+/* Columns: the column's settings as plain table rows (no card behind them), level with the top of the list; tick settings
+   are rows too, the tick in the value cell */
+.dv-ed{border:0!important;border-radius:0!important;padding:0!important;background:none!important}
+.dv-cols{align-items:flex-start}
+.dv-ed>.fl-ck{background:linear-gradient(to right,color-mix(in srgb,var(--panel2) 70%,var(--panel)) 116px,var(--line2) 116px 117px,var(--edf,#fff) 117px)!important;cursor:pointer}
+.dv-ed>.fl-ck>input{align-self:center;justify-self:start;width:16px;height:16px;margin:0 0 0 7px}
