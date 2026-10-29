@@ -56,6 +56,7 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - Pointing shows, clicking pins: hover cards can also be clicked to stay open, with a ✕.
 - Uploads look the same everywhere: a slim dashed bar, one box high, that you can click or drop onto. Photos as even 4:3 tiles you can drag to reorder, with a bin on each; in Details they sit at the top of the right column, about 150px wide, with Record under them.
 - Avoid accidental triggers: no single key shortcuts that create things; deletes ask first.
+- The action PDF: an outlined header block; a Summary table like the app's (shaded name cells, plain values, links blue and underlined); Problem, Solution and Notes as text; a line down the middle between text and photos.
 - Exports read well on paper: A4 portrait, blanks and unticked boxes left out, links that work without signing in, no browser header or footer.
 - The app remembers where you were: the last action viewed, the tab inside it (next and previous keep the tab), panel widths and filters.
 - He can't comment on preview pages from this session; he replies in chat, and loses track of old ones, so keep pending choices listed with their links.

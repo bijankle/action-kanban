@@ -1566,3 +1566,11 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .tbl th.addcol,.tbl td.addcol{position:sticky;right:0;z-index:3;background:var(--panel)}.tbl th.addcol{z-index:4;background:var(--hdr)!important}
 /* the heading and name cell colour: the light grey, with a faint tint of the theme colour (with the blue theme, the light grey) */
 :root{--hdr:color-mix(in srgb,var(--th) 5%,color-mix(in srgb,var(--panel2) 70%,var(--panel)))}
+/* the action PDF: an outlined header block; the Summary as a little table like the app's (a shaded name cell, plain values,
+   a line round every cell; links blue and underlined); a line down the middle between the two columns */
+#printRoot .pa-h{border:1px solid #c9ced6!important;border-left:6px solid var(--c)!important;border-radius:3px!important}
+#printRoot .pa-det{border-collapse:collapse!important;width:100%;font-size:9pt!important;border:1px solid #c9ced6}
+#printRoot .pa-det th,#printRoot .pa-det td{border:1px solid #c9ced6!important;padding:2px 6px!important;vertical-align:middle!important;line-height:1.3}
+#printRoot .pa-det th{background:#f1f3f6!important;color:#333!important;font-weight:700!important;width:1%;white-space:nowrap}
+#printRoot .pa-det td{background:#fff;color:#111;font-weight:400}#printRoot .pa-det td a{color:#1a56c4;text-decoration:underline}
+#printRoot .pa-cols:not(.one){gap:0!important}#printRoot .pa-cols:not(.one)>.pa-l{padding-right:10px}#printRoot .pa-cols:not(.one)>.pa-r{padding-left:10px;border-left:1px solid #c9ced6;align-self:stretch}
