@@ -1,7 +1,7 @@
 /* The Filters panel on the left of the Actions and Organizer tabs: the search box, then pills for the things many
    actions share (Status, Action owner, WBS code), each with a live count; a pill with no actions isn't
-   shown. Status is one stage at a time; in the other groups pills add together (Jack or Bijan), and groups narrow
-   each other (Jack's, in F12). The stage pills are App.pills. When the
+   shown. In each group pills add together (Categorize Issue or On Hold; Jack or Bijan), groups narrow each
+   other (Jack's, in F12), and the picks are remembered for next time. The stage pills are App.pills. When the
    panel is hidden, what's filtering shows as removable chips above the list. */
 "use strict";
 const Filters = (() => {
@@ -33,14 +33,13 @@ const Filters = (() => {
       ["wbs", "WBS code", vals("wbs").map(v => ({ v, t: v }))]]; }
   /* the panel's body (the search box is moved in by the app, so it keeps its focus and value) */
   function render(el){ const list = Store.visible().concat(Store.deleted()), S = all();
-    if (S.st.size > 1){ const one = [...S.st].pop(); S.st.clear(); S.st.add(one); }   // (from before Status was one at a time)
     const html = groups().map(([k, name, items]) => '<div class="fg2" data-k="' + k + '"><div class="fgh"><span>' + name + '</span>' + (S[k].size ? '<button type="button" class="link fclr">Clear</button>' : "") + '</div>'
       + items.map(it => { const n = list.filter(a => val(a, k) === it.v && match(a, k)).length, on = S[k].has(it.v);
         if (!n && !on) return "";   // (a pill with nothing behind it isn't shown)
         return '<button type="button" class="pill fpill' + (on ? " on" : "") + (n ? "" : " zero") + (it.v === NS ? " ns" : "") + '" data-v="' + esc(it.v) + '" aria-pressed="' + on + '"' + (it.c ? ' style="' + esc(stageVars(it.c)) + '"' : "") + '>' + (it.c ? '<i class="dot"></i>' : "") + esc(it.t) + ' <b>' + n + '</b></button>'; }).join("") + '</div>').join("")
-      + '<p class="dim fshown">' + apply(list).length + " of " + Store.visible().length + " actions shown" + (active() ? ' <button type="button" class="link fall">Clear all</button>' : "") + '</p>';
+      + (active() ? '<p class="dim fshown"><button type="button" class="link fall">Clear all</button></p>' : "");
     let body = $(".fp-groups", el); if (!body){ body = document.createElement("div"); body.className = "fp-groups"; el.appendChild(body); } body.innerHTML = html;
-    $$(".fg2", body).forEach(g => { const k = g.dataset.k; g.onclick = e => { const b = e.target.closest(".fpill"); if (b){ const v = b.dataset.v, had = S[k].has(v); if (k === "st") S[k].clear(); had ? S[k].delete(v) : S[k].add(v); changed(); }   // (Status is one at a time: a click picks it, a second click clears it)
+    $$(".fg2", body).forEach(g => { const k = g.dataset.k; g.onclick = e => { const b = e.target.closest(".fpill"); if (b){ const v = b.dataset.v; S[k].has(v) ? S[k].delete(v) : S[k].add(v); changed(); }   // (a click adds the pill, a second click takes it off; several can be on at once)
       if (e.target.closest(".fclr")){ S[k].clear(); changed(); } }; });
     const fa = $(".fall", body); if (fa) fa.onclick = clear; }
   /* what's filtering, as chips for the list's header row */
@@ -54,7 +53,7 @@ const Filters = (() => {
   function wireChips(el){ el.onclick = e => { const b = e.target.closest(".fchip"); if (b){ const k = b.dataset.k; if (k === "q"){ App.q = ""; } else all()[k].delete(b.dataset.v); changed(); }
       if (e.target.closest(".fchip-all")) clear(); }; }
   function clear(){ App.q = ""; for (const k in all()) all()[k].clear(); changed(); }
-  function changed(){ keep(); App.render(); }
+  function changed(){ keep(); lsSet("adPills", [...App.pills]); App.render(); }   // (the Status picks too, so they're there next time)
   /* the date bar: Date created or Date modified, from, to, then 1 day, 1 week, 1 month or All time. A length counts
      on from the From date when that was set last, back from the To date when that was, or back from today */
   const SPANS = [["1d", "1 day", 1], ["1w", "1 week", 7], ["1m", "1 month", 0], ["all", "All time", -1]];

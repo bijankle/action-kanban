@@ -206,7 +206,8 @@ function dateBox(value, opts){ opts = opts || {}; if (TOUCH) return nativeBox("d
    end (in either order), with Clear and Today. .from and .to hold the days; it fires change when both are set or cleared */
 function rangeBox(from, to, opts){ opts = opts || {}; let f = from || "", t = to || "", half = "";
   const b = h('<button type="button" class="dchip drange' + (opts.cls ? " " + opts.cls : "") + '" aria-label="' + esc(opts.label || "Date range") + '">' + ICO_CAL + '<span class="dr-f"></span><span class="dr-to">to</span><span class="dr-t"></span></button>');
-  const show = () => { const a = $(".dr-f", b), z = $(".dr-t", b); a.textContent = f ? fmtDate(f) : "From"; z.textContent = t ? fmtDate(t) : "To"; a.classList.toggle("dc-ph", !f); z.classList.toggle("dc-ph", !t); };
+  const show = () => { const a = $(".dr-f", b), z = $(".dr-t", b); const sy = f && t && f.slice(0, 4) === t.slice(0, 4), sm = sy && f.slice(5, 7) === t.slice(5, 7);   // (21 to 28 Oct 2026; 21 Sep to 3 Oct 2026: the year, and the month, said once)
+    a.textContent = !f ? "From" : sm ? String(+f.slice(8, 10)) : sy ? fmtDate(f).replace(/\s+\d{4}$/, "") : fmtDate(f); z.textContent = t ? fmtDate(t) : "To"; a.classList.toggle("dc-ph", !f); z.classList.toggle("dc-ph", !t); };
   Object.defineProperty(b, "from", { get: () => f, set: x => { f = x || ""; show(); } }); Object.defineProperty(b, "to", { get: () => t, set: x => { t = x || ""; show(); } }); show();
   const fire = () => b.dispatchEvent(new Event("change", { bubbles: true }));
   b.onclick = () => { if (pickPop && pickPop.__for === b) return closePick(); closePick(); half = ""; let view = /^\d{4}-\d\d/.test(f) ? new Date(f.slice(0, 7) + "-01T12:00") : new Date(); view.setDate(1);
@@ -365,7 +366,7 @@ const PillF = (() => {
         + vals.map(v => { const n = cnt(v), p = on.has(v); if (!n && !p) return ""; return '<button type="button" class="pill fpill' + (p ? " on" : "") + (v === "Not set" ? " ns" : "") + '" data-v="' + esc(v) + '" aria-pressed="' + p + '" title="' + esc(v) + '"><span class="fp-t">' + esc(v) + '</span> <b>' + n + '</b></button>'; }).join("")
         + (few.length ? '<button type="button" class="link fco-more">' + (open[key + g.k] ? "fewer" : few.length + " more…") + '</button>' : "") + '</div>'; }).join("");
     const shown = apply(key, groups, items).length;
-    body.innerHTML = html + '<p class="dim fshown">' + shown + " of " + total.length + " shown" + (count(key, groups) ? ' <button type="button" class="link fall">Clear all</button>' : "") + '</p>';
+    body.innerHTML = html + (count(key, groups) ? '<p class="dim fshown"><button type="button" class="link fall">Clear all</button></p>' : "");
     $$(".fg2", body).forEach(gEl => { const k = gEl.dataset.k; gEl.onclick = e => { const b = e.target.closest(".fpill"), o = S[key] = S[key] || {};
       if (b){ const v = b.dataset.v, set = sel(key, k); set.has(v) ? set.delete(v) : set.add(v); o[k] = [...set]; keep(); App.render(); }
       else if (e.target.closest(".fclr")){ o[k] = []; keep(); App.render(); }
@@ -388,3 +389,33 @@ function pdfCols(doc, head, body, W, o){ o = o || {}; const fs = o.fs || 9, hfs 
   else { for (let g = 0; g < 60 && sum() > W + 0.1; g++){ const top = Math.max(...w.filter((x, j) => free(j) && x > min[j])); if (!isFinite(top)) break; const js = w.map((x, j) => j).filter(j => free(j) && w[j] === top);
       const next = Math.max(...w.filter((x, j) => free(j) && x < top), 0), cut = Math.min(top - next, (sum() - W) / js.length) || (sum() - W) / js.length; js.forEach(j => w[j] = Math.max(min[j], w[j] - cut)); } }
   const out = {}; for (let j = 0; j < n; j++) out[j] = Object.assign({}, fixed[j] || {}, { cellWidth: w[j] }); doc.setFont("helvetica", "normal"); return out; }
+
+/* tables work like Excel: one click on a cell you can type in selects its row (and marks the cell); a double click, or
+   Enter or F2 on the marked cell, edits it, with the cursor where the text was clicked. The rows for adding something
+   new (+ Class, + Item, Type a number, + New person) take typing on one click, as before */
+const CellEdit = (() => {
+  const ED = ".in,.pt-in,.lt-b,.tg1,.tagin,.lk-sel";
+  const box = t => { const el = t && t.closest && t.closest(ED), td = el && el.closest("td"); return td && td.closest("table.tbl") && !el.disabled && !el.readOnly ? el : null; };
+  const fresh = el => !!el.closest("tr.pt-blank,tr.cts-new") || /^new/.test(el.dataset.r || "") || (el.placeholder && /^\+ /.test(el.placeholder) && !el.value);
+  let armed = null, at = null;   // (at: the marked cell, as its row and column, found again after a redraw)
+  const rowKey = tr => tr && (tr.dataset.ref || tr.dataset.id);
+  const again = () => { if (!at) return null; const tr = [...document.querySelectorAll("table.tbl tr[data-ref],table.tbl tr[data-id]")].find(t => rowKey(t) === at.r); const td = tr && tr.children[at.c]; if (td){ td.classList.add("cell-sel"); tr.classList.add("row-sel"); } return td; };
+  const mark = td => { at = td ? { r: rowKey(td.parentElement), c: td.cellIndex } : null; document.querySelectorAll("td.cell-sel").forEach(x => { if (x !== td) x.classList.remove("cell-sel"); }); document.querySelectorAll("tr.row-sel").forEach(x => { if (!td || x !== td.parentElement) x.classList.remove("row-sel"); });
+    if (td){ td.classList.add("cell-sel"); td.parentElement.classList.add("row-sel"); } };
+  /* (where in an input's text a point falls, so the cursor goes where the double click was) */
+  const cv = document.createElement("canvas").getContext("2d");
+  function caretAt(el, x){ const cs = getComputedStyle(el), r = el.getBoundingClientRect(); cv.font = cs.font; const v = el.value, rel = x - r.left - parseFloat(cs.paddingLeft) - parseFloat(cs.borderLeftWidth) + el.scrollLeft;
+    for (let i = 0; i < v.length; i++){ const w0 = cv.measureText(v.slice(0, i)).width, w1 = cv.measureText(v.slice(0, i + 1)).width; if (rel < (w0 + w1) / 2) return i; } return v.length; }
+  function edit(el, x, y){ armed = el; mark(el.closest("td"));
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA"){ el.focus(); const i = x != null ? caretAt(el, x) : el.value.length; try { el.setSelectionRange(i, i); } catch (e){} armed = null; }
+    else { el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: x || 0, clientY: y || 0 })); armed = null; } }
+  document.addEventListener("mousedown", e => { const el = box(e.target); if (!el){ if (!e.target.closest || !e.target.closest(".pop,.lk-card")) mark(null); return; }
+    if (el === document.activeElement || fresh(el) || el === armed) return; e.preventDefault(); if (document.activeElement && document.activeElement.blur && document.activeElement.closest && document.activeElement.closest("table.tbl")) document.activeElement.blur(); mark(el.closest("td")); }, true);
+  document.addEventListener("click", e => { const el = box(e.target); if (!el || el === armed || el === document.activeElement || fresh(el)) return;
+    e.preventDefault(); e.stopImmediatePropagation(); const tr = el.closest("tr[data-ref]"); if (tr && typeof App !== "undefined" && App.selRef !== tr.dataset.ref) App.select(tr.dataset.ref); }, true);
+  document.addEventListener("dblclick", e => { const el = box(e.target); if (!el || fresh(el) || el === document.activeElement) return; e.preventDefault(); e.stopImmediatePropagation(); edit(el, e.clientX, e.clientY); }, true);
+  document.addEventListener("keydown", e => { if (e.key !== "Enter" && e.key !== "F2") return; const a = document.activeElement; if (a && a !== document.body && a.matches("input,textarea,select,button,[contenteditable]")) return;
+    const td = (() => { const t = document.querySelector("td.cell-sel"); return t && t.isConnected ? t : again(); })(), el = td && $(ED, td); if (!el || !el.isConnected) return; e.preventDefault(); edit(el); });
+  new MutationObserver(() => { if (at && !document.querySelector("td.cell-sel")) again(); }).observe(document.body, { childList: true, subtree: true });
+  return { edit, mark };
+})();

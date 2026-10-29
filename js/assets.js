@@ -108,7 +108,7 @@ const Assets = (() => {
         + vals.map(v => { const nm = st[0] === "t" || v === "?" ? "" : shortName(nameOf(st[0], ty(), v)), full = st[0] === "t" ? TN[v] : nameOf(st[0], ty(), v);
           return '<button type="button" class="pill fpill as-o" data-v="' + esc(v) + '" title="' + esc(label(st[0], v) + (full && full !== label(st[0], v) ? ", " + full : "")) + '"><span class="fp-t"><b class="as-c">' + esc(label(st[0], v)) + '</b>' + (nm ? " " + esc(nm) : "") + '</span> <b>' + c[v].toLocaleString() + '</b></button>'; }).join("") + '</div>'; }
     body.innerHTML = (crumbs ? '<div class="fg2 as-crs"><div class="fgh"><span>Picked</span><button type="button" class="link fall">Clear all</button></div>' + crumbs + '</div>' : "") + opts
-      + '<p class="dim fshown">' + list.length.toLocaleString() + " of " + build().length.toLocaleString() + " assets</p>";
+      + "";
     $$(".as-o", body).forEach(b => b.onclick = () => { path.push({ f: st[0], v: b.dataset.v }); more = 0; keepPath(); App.render(); });
     const any = $(".as-any", body); if (any) any.onclick = () => { path.push({ f: st[0], v: null }); more = 0; keepPath(); App.render(); };
     $$(".as-cr", body).forEach(b => b.onclick = () => { path = path.slice(0, +b.dataset.i); more = 0; keepPath(); App.render(); });
