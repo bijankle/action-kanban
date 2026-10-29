@@ -394,7 +394,7 @@ function pdfCols(doc, head, body, W, o){ o = o || {}; const fs = o.fs || 9, hfs 
    Enter or F2 on the marked cell, edits it, with the cursor where the text was clicked. The rows for adding something
    new (+ Class, + Item, Type a number, + New person) take typing on one click, as before */
 const CellEdit = (() => {
-  const ED = ".in,.pt-in,.lt-b,.tg1,.tagin,.lk-sel";
+  const ED = ".in:not(.lk-sel),.pt-in,.lt-b,.tg1,.tagin";   // (a dropdown cell is a pick from a fixed list, as Excel's data validation: one click opens it)
   const box = t => { const el = t && t.closest && t.closest(ED), td = el && el.closest("td"); return td && td.closest("table.tbl") && !el.disabled && !el.readOnly ? el : null; };
   const fresh = el => !!el.closest("tr.pt-blank,tr.cts-new") || /^new/.test(el.dataset.r || "") || (el.placeholder && /^\+ /.test(el.placeholder) && !el.value);
   let armed = null, at = null;   // (at: the marked cell, as its row and column, found again after a redraw)

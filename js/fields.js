@@ -100,7 +100,7 @@ const Fields = (() => {
         /* a step (a stage's, or any tick column of the list) has three states, round in turn: empty, done (✓), not needed (–) */
         i.onchange = () => set(a, f, step ? (v === true ? Flow.NA : na ? false : true) : i.checked); return c; }
       /* choices suggest, they don't restrict: pick one of the list or type your own (which isn't added to the list) */
-      case "choice": return combo(a, f, optLabels(f).map(o => ({ v: o, c: optColor(f, o) })).concat(extra(f).map(x => ({ v: x }))), true);
+      case "choice": return pickOnly(a, f, optLabels(f).concat(extra(f)));
       case "multi": return tagBox(a, f);
       case "contact": { const co = String(a.f.contractor || "").toLowerCase(), seen = new Set(), its = [];
         Store.contacts().slice().sort((x, y) => ((y.company || "").toLowerCase() === co) - ((x.company || "").toLowerCase() === co)).forEach(c => { seen.add(c.name.toLowerCase()); its.push({ v: c.name, sub: [c.company, c.mobile].filter(Boolean).join("  ") }); });
@@ -119,6 +119,14 @@ const Fields = (() => {
   function grow(t){ requestAnimationFrame(() => { t.style.height = "auto"; t.style.height = Math.min(420, t.scrollHeight + 2) + "px"; t.style.overflowY = t.scrollHeight > 420 ? "auto" : "hidden"; }); }
 
   /* combo box: type or pick (contacts) */
+  /* a choice is strict, like Excel's data validation: one click opens its list, only what's in it can be picked (Clear empties it) */
+  function pickOnly(a, f, opts){ const v = val(a, f) || "", CH = '<svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg>';
+    const b = h('<button type="button" class="in lk-sel' + (v ? "" : " lk-ph") + '" aria-haspopup="listbox" aria-expanded="false" aria-label="' + esc(f.label) + '"><span class="lk-t">' + esc(v || "Pick") + '</span>' + CH + '</button>');
+    let key = null; const isOpen = () => b.getAttribute("aria-expanded") === "true";
+    b.onclick = e => { e.stopPropagation(); if (isOpen()) return Look.close();
+      key = Look.open(b, opts.map(o => ({ v: o, t: o })).concat(v ? [{ v: "", t: "Clear" }] : []), v, x => { if (x.v !== v) set(a, f, x.v); }); };
+    b.onkeydown = e => { if (isOpen() && key) return key(e); if (e.key === "ArrowDown" || e.key === " " || e.key === "Enter"){ e.preventDefault(); b.onclick(e); } };
+    return b; }
   function combo(a, f, items, all){ const v = val(a, f) || "";
     const w = h('<div class="combo"><input class="in' + (tbc(v) ? " tbc" : "") + '" type="text" autocomplete="off"><div class="dd" hidden></div></div>'); const i = $("input", w), dd = $(".dd", w); i.value = v;
     const draw = () => { const q = all && i.value === v ? "" : i.value; const list = items.filter(x => smartHit(x.v + " " + (x.sub || ""), q));

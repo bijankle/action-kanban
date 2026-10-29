@@ -9,7 +9,7 @@ const Look = (() => {
   const close = () => { if (card){ card.remove(); card = null; } if (cardFor){ cardFor.setAttribute("aria-expanded", "false"); cardFor = null; } };
   /* the card under a box: options to pick from, the one under the arrow keys lit; typing narrows a long list */
   function open(anchor, items, cur, pick, opts){ close(); opts = opts || {};
-    const c = card = h('<div class="pop lk-card" role="listbox"></div>'); cardFor = anchor; openedAt = Date.now(); anchor.setAttribute("aria-expanded", "true");
+    const c = card = h('<div class="pop lk-card' + (anchor.closest(".tbl") ? " lk-xl" : "") + '" role="listbox"></div>'); cardFor = anchor; openedAt = Date.now(); anchor.setAttribute("aria-expanded", "true");
     /* (the words typed, in bold and underlined in each choice, as on the tags box) */
     const mk = t => { let o = esc(t); (opts.mark || []).concat(q ? [q] : []).filter(Boolean).forEach(w => { const re = new RegExp("(" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "i"); o = o.replace(re, "<mark>$1</mark>"); }); return o; };
     let q = "", hi = Math.max(0, items.findIndex(x => x.v === cur)), shown = items;
