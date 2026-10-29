@@ -9,13 +9,14 @@ const Look = (() => {
   const close = () => { if (card){ card.remove(); card = null; } if (cardFor){ cardFor.setAttribute("aria-expanded", "false"); cardFor = null; } };
   /* the card under a box: options to pick from, the one under the arrow keys lit; typing narrows a long list */
   function open(anchor, items, cur, pick, opts){ close(); opts = opts || {};
+    if (opts.num){ let n = 0; items = items.map(x => x.grp || x.dis || x.v === "" || n >= 9 ? x : Object.assign({}, x, { hk: ++n })); }   // (a strict list: each choice numbered, so the arrow then 1 to 9 picks it; Clear has no number)
     const c = card = h('<div class="pop lk-card' + (anchor.closest(".tbl") ? " lk-xl" : "") + '" role="listbox"></div>'); cardFor = anchor; openedAt = Date.now(); anchor.setAttribute("aria-expanded", "true");
     /* (the words typed, in bold and underlined in each choice, as on the tags box) */
     const mk = t => { let o = esc(t); (opts.mark || []).concat(q ? [q] : []).filter(Boolean).forEach(w => { const re = new RegExp("(" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "i"); o = o.replace(re, "<mark>$1</mark>"); }); return o; };
     let q = "", hi = Math.max(0, items.findIndex(x => x.v === cur)), shown = items;
     const draw = () => { shown = q ? items.filter(x => x.t.toLowerCase().includes(q.toLowerCase())) : items; hi = Math.min(hi, Math.max(0, shown.length - 1)); while (shown[hi] && shown[hi].grp && hi < shown.length - 1) hi++;   // (a heading is never the lit choice)
       c.innerHTML = (opts.search ? '<input class="in lk-q" placeholder="Type to narrow" aria-label="Narrow the list" value="' + esc(q) + '">' : "")
-        + '<div class="lk-ol">' + (shown.length ? shown.map((x, k) => x.grp ? '<div class="lk-g">' + esc(x.t) + '</div>' : '<button type="button" class="lk-o' + (k === hi ? " hi" : "") + (x.v === cur ? " on" : "") + (x.dis ? " dis" : "") + (x.sub ? " lk-2" : "") + '" data-k="' + k + '"' + (x.dis ? " disabled" : "") + '>' + (x.k ? kindSym(x.k) : "") + '<span class="lk-x"><b>' + mk(x.t) + '</b>' + (x.sub ? '<small>' + mk(x.sub) + '</small>' : "") + '</span></button>').join("") : '<div class="dim lk-none">Nothing matches</div>') + '</div>';
+        + '<div class="lk-ol">' + (shown.length ? shown.map((x, k) => x.grp ? '<div class="lk-g">' + esc(x.t) + '</div>' : '<button type="button" class="lk-o' + (k === hi ? " hi" : "") + (x.v === cur ? " on" : "") + (x.dis ? " dis" : "") + (x.sub ? " lk-2" : "") + '" data-k="' + k + '"' + (x.dis ? " disabled" : "") + '>' + (x.k ? kindSym(x.k) : "") + '<span class="lk-x"><b>' + (x.hk ? '<span class="lk-hk">[' + x.hk + ']</span> ' : "") + mk(x.t) + '</b>' + (x.sub ? '<small>' + mk(x.sub) + '</small>' : "") + '</span></button>').join("") : '<div class="dim lk-none">Nothing matches</div>') + '</div>';
       $$(".lk-o", c).forEach(b => b.onmousedown = e => { e.preventDefault(); const x = shown[+b.dataset.k]; close(); pick(x); });
       $$(".lk-o", c).forEach(b => b.onmousemove = () => { const k = +b.dataset.k; if (hi === k || b.disabled) return; hi = k; $$(".lk-o", c).forEach(o => o.classList.toggle("hi", +o.dataset.k === k)); });   // (one choice lit at a time: the mouse moves it like the arrow keys)
       const qi = $(".lk-q", c); if (qi){ qi.oninput = () => { q = qi.value; hi = 0; draw(); const n = $(".lk-q", c); n.focus(); n.setSelectionRange(q.length, q.length); }; qi.onkeydown = key; }
@@ -23,7 +24,8 @@ const Look = (() => {
     const key = e => { const real = shown.filter(x => !x.grp && !x.dis);
       if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); let k = hi; do { k = (k + (e.key === "ArrowDown" ? 1 : -1) + shown.length) % shown.length; } while ((shown[k].grp || shown[k].dis) && real.length); hi = k; draw(); }
       else if (e.key === "Enter"){ e.preventDefault(); const x = shown[hi]; if (x && !x.grp){ close(); pick(x); } }
-      else if (e.key === "Escape"){ e.stopPropagation(); close(); anchor.focus(); } else if (e.key === "Tab") close(); };
+      else if (e.key === "Escape"){ e.stopPropagation(); close(); anchor.focus(); } else if (e.key === "Tab") close();
+      else if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey){ const x = items.find(y => y.hk === +e.key); if (x){ e.preventDefault(); close(); pick(x); } } };
     c.__key = key; c.classList.toggle("lk-two", items.some(x => x.sub)); document.body.appendChild(c); draw();   // (a list where some choices have a line under them: every choice in the same bold type)
     const r = anchor.getBoundingClientRect(); c.style.minWidth = Math.min(innerWidth - 16, Math.max(r.width, items.some(x => x.sub) ? 420 : 160)) + "px"; c.style.left = Math.max(8, Math.min(r.left, innerWidth - c.offsetWidth - 8)) + "px";
     const below = innerHeight - r.bottom > Math.min(300, c.offsetHeight + 8); c.style.top = (below ? r.bottom + 3 : Math.max(8, r.top - c.offsetHeight - 3)) + "px";
@@ -42,7 +44,7 @@ const Look = (() => {
     new MutationObserver(sync).observe(s, { attributes: true, attributeFilter: ["disabled"], childList: true, subtree: true });
     const items = () => { const out = []; [...s.children].forEach(n => { if (n.tagName === "OPTGROUP"){ out.push({ grp: true, t: n.label }); [...n.children].forEach(o => out.push({ v: o.value, t: o.text, dis: o.disabled })); } else if (n.tagName === "OPTION" && !(n.hidden)) out.push({ v: n.value, t: n.text, dis: n.disabled }); }); return out; };
     let key = null;
-    b.onclick = () => { if (cardFor === b) return close(); sync(); const it = items(); key = open(b, it, s.value, x => { if (s.value !== x.v){ s.value = x.v; s.dispatchEvent(new Event("input", { bubbles: true })); s.dispatchEvent(new Event("change", { bubbles: true })); } sync(); b.focus(); }, { search: it.length > 12 }); };
+    b.onclick = () => { if (cardFor === b) return close(); sync(); const it = items(); key = open(b, it, s.value, x => { if (s.value !== x.v){ s.value = x.v; s.dispatchEvent(new Event("input", { bubbles: true })); s.dispatchEvent(new Event("change", { bubbles: true })); } sync(); b.focus(); }, { search: it.length > 12, num: it.length <= 12 }); };
     b.onkeydown = e => { if (cardFor === b && key && !$(".lk-q", card)) return key(e); if ((e.key === "ArrowDown" || e.key === " ") && cardFor !== b){ e.preventDefault(); b.onclick(); } };
     /* a value set from code (s.value = …) shows too */
     const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");

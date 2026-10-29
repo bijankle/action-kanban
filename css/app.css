@@ -1451,3 +1451,5 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .ov-g .att-l{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.ov-g .att-l .att{min-width:0;margin:0}.ov-g .att-l .att-add{margin:0;width:100%;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 
 .ov-g .att-l .att>.dim{display:none}.ov-g .att-l .att{gap:5px}
+/* the number of each choice in a strict list (press it to pick); only in the list, never in the box */
+.lk-hk{color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;margin-right:2px}

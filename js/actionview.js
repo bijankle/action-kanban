@@ -100,7 +100,7 @@ const ActionView = (() => {
     const CONTR = /^contractor/;
     Store.fields().filter(f => !CORE.has(f.id) && !["mto", "sparelist", "isollist", "complete"].includes(f.type) && !Fields.DERIVED[f.id] && !yesNo(f) && !OFF.has(f.id)).forEach(f => { const r = h('<div class="det-r" data-f="' + f.id + '"><label>' + esc(f.label) + '</label></div>'); r.appendChild(Fields.editor(a, f, ro)); (CONTR.test(f.id) ? $(".det-c", el) : f.type === "meta" ? $(".det-m", el) : $(".det-m", el)).appendChild(r); });
     /* under Last modified: the last change, who made it and what it was, on two lines at most, then more… for the whole history */
-    const lm = $('.det-m [data-f="modified"]', el); if (lm){ const hl = (a.hist || [])[(a.hist || []).length - 1], what = hl ? (hl.c || []).map(([k, f, t]) => k + (t ? " " + t : f ? " cleared" : "")).join(", ") || hl.note || "" : "";
+    const lm = $('.det-m [data-f="modified"]', el); if (lm){ const hl = (a.hist || [])[(a.hist || []).length - 1], what = hl ? (hl.c || []).filter(([k, f, t]) => !/^(auto|hoNA|prevHold|prevStage|tkw)$/.test(k) && !/^[{[]/.test(String(t || f || ""))).map(([k, f, t]) => k + (t ? " " + t : f ? " cleared" : "")).join(", ") || hl.note || "" : "";
       lm.appendChild(h('<div class="lastch">' + (hl ? '<span class="lc-t">' + esc((hl.by || "Someone") + (what ? ": " + what : "")) + '</span> ' : "") + '<button type="button" class="link" data-k="hist" title="Change history: every change, who made it and when">more…</button></div>')); }
     $(".det-c", el).previousElementSibling.hidden = !$(".det-c", el).children.length;
     $$("[data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a)); }

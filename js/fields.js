@@ -123,7 +123,7 @@ const Fields = (() => {
     const b = h('<button type="button" class="in lk-sel' + (v ? "" : " lk-ph") + '" aria-haspopup="listbox" aria-expanded="false" aria-label="' + esc(f.label) + '"><span class="lk-t">' + esc(v || "Pick") + '</span>' + CH + '</button>');
     let key = null; const isOpen = () => b.getAttribute("aria-expanded") === "true";
     b.onclick = e => { e.stopPropagation(); if (isOpen()) return Look.close();
-      key = Look.open(b, opts.map(o => ({ v: o, t: o })).concat(v ? [{ v: "", t: "Clear" }] : []), v, x => { if (x.v !== v) set(a, f, x.v); }); };
+      key = Look.open(b, opts.map(o => ({ v: o, t: o })).concat(v ? [{ v: "", t: "Clear" }] : []), v, x => { if (x.v !== v) set(a, f, x.v); }, { num: true }); };
     b.onkeydown = e => { if (isOpen() && key) return key(e); if (e.key === "ArrowDown" || e.key === " " || e.key === "Enter"){ e.preventDefault(); b.onclick(e); } };
     return b; }
   function combo(a, f, items, all){ const v = val(a, f) || "";
