@@ -15,7 +15,7 @@ const Vendors = (() => {
      The suppliers picked show in the Supplier box itself, by name; its list has them ticked at the top, with their contact details */
   function box(a, ro, more){ const c = a.rfqCat || "", to = a.rfqTo || [];
     if (!all().length) return '<div class="vd-box"><div class="dim">No approved vendor list yet. Import it on the Data validation tab, Suppliers.</div></div>' + (more ? '<div class="pt-g">' + more + '</div>' : "");
-    return '<div class="vd-box pt-g">'
+    return '<div class="vd-box pt-g kvt">'
       + '<label class="pt-lab" for="vdCat">Supplier category</label><select class="in" id="vdCat" data-k="cat"' + (ro ? " disabled" : "") + '><option value="">Pick a category</option>' + cats().map(x => '<option' + (x.name === c ? " selected" : "") + ' title="' + esc(x.look) + '">' + esc(x.name) + '</option>').join("") + '</select>'
       + '<label class="pt-lab" for="vdVen">Supplier</label><div class="combo"><input class="in" id="vdVen" data-k="ven" autocomplete="off" value="' + esc(to.join(", ")) + '" placeholder="' + (c ? "Pick from " + inCat(c).length + " approved suppliers" : "Search all approved suppliers") + '"' + (ro ? " readonly" : "") + ' title="' + esc(to.length ? to.join("\n") + "\nClick to add or remove, and for contact details" : "") + '"></div>'
       + (more || "") + '</div>'; }
@@ -63,7 +63,7 @@ const Vendors = (() => {
     const list = Valid.pf("vendors", all().filter(hit)).sort((a, b) => a.cat.localeCompare(b.cat) || (b.po || 0) - (a.po || 0));
     /* (just the list: the import is the upload symbol in the toolbar above) */
     body.innerHTML = '<div class="tw-wrap"><table class="tbl ct vd-tbl"><thead><tr><th>Supplier</th><th>Category</th><th>Supply type</th><th>What we have ordered from them</th><th data-col="po">POs</th><th data-col="last">Last PO</th><th data-col="ct">Contact</th></tr></thead><tbody>'
-      + list.slice(0, 600).map(v => '<tr><td><b>' + esc(v.name) + '</b></td><td>' + esc(v.cat) + '</td><td>' + esc(v.type) + '</td><td>' + esc(v.ordered) + '</td><td>' + (v.po || "") + '</td><td>' + esc(fmtDate(v.last)) + '</td><td><button type="button" class="link vd-det' + (v.contact || v.email || v.phone ? "" : " dim") + '" data-vd="' + esc(v.name) + '">' + esc([v.contact, v.phone, v.email].filter(Boolean).join(", ") || (ro ? "" : "Add")) + '</button></td></tr>').join("") + '</tbody></table></div>'; gridCols($(".vd-tbl", body), "vendors", { fixed: { po: 60, last: 110 }, max: 700 });
+      + list.slice(0, 600).map(v => '<tr><td>' + esc(v.name) + '</td><td>' + esc(v.cat) + '</td><td>' + esc(v.type) + '</td><td>' + esc(v.ordered) + '</td><td>' + (v.po || "") + '</td><td>' + esc(fmtDate(v.last)) + '</td><td><button type="button" class="link vd-det' + (v.contact || v.email || v.phone ? "" : " dim") + '" data-vd="' + esc(v.name) + '">' + esc([v.contact, v.phone, v.email].filter(Boolean).join(", ") || (ro ? "" : "Add")) + '</button></td></tr>').join("") + '</tbody></table></div>'; gridCols($(".vd-tbl", body), "vendors", { fixed: { po: 60, last: 110 }, max: 700 });
     $$("[data-vd]", body).forEach(x => x.onclick = () => details(x.dataset.vd, x)); }
   /* a vendor's contact details, which go on the RFQ: who to send it to, their phone, email and address */
   const DET = [["contact", "Contact person"], ["phone", "Phone"], ["email", "Email"], ["address", "Address"]];

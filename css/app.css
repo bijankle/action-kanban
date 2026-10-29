@@ -1496,3 +1496,30 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .ov-tbl .ho-note textarea.in{border:1px solid var(--line2);border-radius:6px;min-height:44px;padding:5px 8px;resize:vertical;font:inherit}
 .ov-tbl .det-r.ho-note>label{background:none;height:auto;padding:0;color:inherit;font-size:var(--fs)!important}
 .ov-tbl .det-r.ho-note textarea.in{border:1px solid var(--line2)!important;border-radius:6px!important;height:auto!important;min-height:44px!important;padding:5px 8px!important;width:100%!important}
+/* every Data validation table the same distance from its pane's left edge and top: 12px, nothing else in between */
+.dv-body{padding:12px!important}.dv-body .cts{padding:0!important}.dv-body .tw-wrap,.dv-body .cts,.dv-body table{margin-top:0!important;margin-left:0!important}
+/* a little table of name and box pairs (the supplier box on the MTO tab, and any other .kvt): like the Actions rows,
+   a short name in a shaded cell, the box edge to edge, 22px rows, faint lines drawn by the gaps */
+.kvt{display:grid!important;grid-template-columns:max-content minmax(0,1fr);gap:1px!important;background:var(--line2);border:1px solid var(--line2);align-items:stretch!important;padding:0!important}
+.kvt>label,.kvt>.pt-lab{display:flex;align-items:center;gap:4px;height:var(--row,22px);margin:0!important;padding:0 8px 0 6px;background:color-mix(in srgb,var(--panel2) 70%,var(--panel));font-size:var(--fb)!important;font-weight:600;color:var(--muted);white-space:nowrap}
+.kvt>:not(label):not(.pt-lab){height:var(--row,22px);min-width:0;background:var(--panel);display:flex;align-items:center;margin:0!important}
+.kvt .in,.kvt .lk-sel,.kvt .dchip,.kvt .lk-dt,.kvt .combo{height:var(--row,22px)!important;min-height:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--edf,#fff)!important;padding:0 6px!important;width:100%!important;max-width:none!important;font-size:var(--fb)!important;margin:0!important}
+.kvt .combo{padding:0!important}.kvt .dchip{justify-content:flex-start;gap:6px}
+.kvt .in:focus,.kvt .lk-sel:focus-visible,.kvt .dchip:focus-visible{outline:2px solid var(--th);outline-offset:-2px}
+/* Data validation, Columns: the list of columns as table rows (name, its type on the right), and the column's own settings as
+   name and box rows */
+.dv-list{gap:0!important}.dv-list .dv-f{border-radius:0!important;margin:0 0 -1px!important;height:var(--row,22px);min-height:0!important;padding:0 8px!important;border:1px solid var(--line2)!important;font-size:var(--fb)!important;display:flex;align-items:center;justify-content:space-between;box-shadow:none!important}
+.dv-list .dv-f small{font-size:var(--fb)!important}.dv-list .dv-f.on{background:color-mix(in srgb,var(--th) 10%,var(--panel))!important;position:relative;z-index:1;border-color:var(--th)!important}
+.dv-list .dv-addf{margin-top:8px}
+.dv-ed>.fl{display:grid!important;grid-template-columns:110px minmax(0,1fr);gap:0;align-items:stretch;height:var(--row,22px);margin:0 0 -1px!important;border:1px solid var(--line2);background:color-mix(in srgb,var(--panel2) 70%,var(--panel));font-size:var(--fb)!important;font-weight:600;color:var(--muted);padding:0 0 0 6px;line-height:var(--row,22px)}
+.dv-ed>.fl>.in,.dv-ed>.fl>.lk-sel{height:var(--row,22px)!important;min-height:0!important;border:0!important;border-left:1px solid var(--line2)!important;border-radius:0!important;box-shadow:none!important;background:var(--edf,#fff)!important;padding:0 6px!important;font-size:var(--fb)!important;font-weight:400;color:var(--ink);margin:0!important;width:100%!important}
+.dv-ed>.fl+.tp-o,.dv-ed>.fl+p{margin-top:10px}
+/* the drawings and documents list as table rows: one 22px row each, a faint line between, the parts in their own cells */
+.dw-l{gap:0!important;border:1px solid var(--line2)}
+.dw-b{border:0!important;border-radius:0!important;border-bottom:1px solid var(--line)!important}.dw-b:last-child{border-bottom:0!important}
+.dw-h{min-height:0!important;height:var(--row,22px);padding:0 0 0 4px!important;gap:8px!important}
+.dw-h .dw-a,.dw-h .dw-t{font-size:var(--fb)!important}.dw-h .dw-t{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden}
+.dw-h .dw-of{font-size:var(--fb);padding:0 6px;border-radius:0;height:var(--row,22px);display:flex;align-items:center;border-left:1px solid var(--line)}
+.dw-h .dw-dl,.dw-h .dw-dl0{width:var(--row,22px);height:var(--row,22px);flex:none;border:0!important;border-left:1px solid var(--line)!important;border-radius:0!important;display:grid;place-items:center;padding:2px!important}
+.dw-h .dw-dl svg{width:16px;height:17px}
+.dw-h .dw-ck input{width:15px;height:15px}
