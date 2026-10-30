@@ -405,7 +405,7 @@ function pdfCols(doc, head, body, W, o){ o = o || {}; const fs = o.fs || 9, hfs 
 const CellEdit = (() => {
   const ED = ".in:not(.lk-sel):not(.mt-pk),.pt-in:not(.mt-pk),.mt-pk.mt-fr,.lt-b,.tg1,.tagin";   // (a dropdown cell is a pick from a fixed list, as Excel's data validation: one click opens it)
   const box = t => { const el = t && t.closest && t.closest(ED), td = el && el.closest("td"); return td && td.closest("table.tbl") && !el.disabled && !el.readOnly ? el : null; };
-  const fresh = el => !!el.closest("tr.pt-blank,tr.cts-new,tr.nr") || /^new/.test(el.dataset.r || "") || (el.placeholder && /^\+ /.test(el.placeholder) && !el.value);
+  const fresh = el => !!el.closest("tr.pt-blank,tr.cts-new,tr.nr") || !!(el.closest("tr") && el.closest("tr").querySelector(".mt-okx")) || /^new/.test(el.dataset.r || "") || (el.placeholder && /^\+ /.test(el.placeholder) && !el.value);
   let armed = null, at = null, selT = 0;   // (at: the marked cell, as its row and column, found again after a redraw)
   const rowKey = tr => tr && (tr.dataset.ref || tr.dataset.id);
   const again = () => { if (!at) return null; const tr = [...document.querySelectorAll("table.tbl tr[data-ref],table.tbl tr[data-id]")].find(t => rowKey(t) === at.r); const td = tr && tr.children[at.c]; if (td){ td.classList.add("cell-sel"); tr.classList.add("row-sel"); } return td; };
@@ -425,6 +425,10 @@ const CellEdit = (() => {
     /* (the row is selected a moment later, so a double click isn't lost to the list being redrawn under the second click) */
     clearTimeout(selT); if (tr && typeof App !== "undefined" && App.selRef !== tr.dataset.ref){ const ref = tr.dataset.ref; selT = setTimeout(() => App.select(ref), 260); } }, true);
   document.addEventListener("dblclick", e => { const el = box(e.target); if (!el || fresh(el) || el === document.activeElement) return; e.preventDefault(); e.stopImmediatePropagation(); clearTimeout(selT); edit(el, e.clientX, e.clientY); }, true);
+  /* typing on a marked cell starts editing it with that key, as in Excel (so a number typed there never acts as a shortcut) */
+  document.addEventListener("keydown", e => { if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return; const a = document.activeElement; if (a && a !== document.body && a.matches("input,textarea,select,[contenteditable]")) return;
+    const td = document.querySelector("td.cell-sel"), el = td && td.isConnected && $(ED, td); if (!el || el.tagName !== "INPUT" && el.tagName !== "TEXTAREA") return;
+    e.stopImmediatePropagation(); armed = el; el.focus(); el.value = ""; armed = null; });
   document.addEventListener("keydown", e => { if (e.key !== "Enter" && e.key !== "F2") return; const a = document.activeElement; if (a && a !== document.body && a.matches("input,textarea,select,button,[contenteditable]")) return;
     const td = (() => { const t = document.querySelector("td.cell-sel"); return t && t.isConnected ? t : again(); })(), el = td && $(ED, td); if (!el || !el.isConnected) return; e.preventDefault(); edit(el); });
   new MutationObserver(() => { if (at && !document.querySelector("td.cell-sel")) again(); }).observe(document.body, { childList: true, subtree: true });
