@@ -94,7 +94,7 @@ const Table = (() => {
     else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Flow.remove(a); if (App.selRef === tr.dataset.ref) App.select(null); } } }, true);
   /* titles are one line: a title too long for its column ends in … with a more… that shows it in full */
   /* the ID column is just wide enough for its box with an 8px margin each side, like the Status buttons */
-  let idW = NEED.id;
+  let idW = NEED.id; const NR = 48;   /* (NR: room kept in the ID column for the new row's ✓ and ✕, so nothing shifts when they show) */
   /* a tags cell shows as many tags as fit its width, the rest as +N (widen the column to see more) */
   function tagFit(el){ const vs = $$("td.tgc .tgv", el), rooms = vs.map(v => v.clientWidth), fonts = new Map(); vs.forEach((v, n) => { const a = App.act(v.closest("tr").dataset.ref), tags = a ? [].concat(a.f.equipment || []).filter(Boolean) : []; if (tags.length < 2) return;
     const t1 = $(".tg1", v), mb = $(".tg-more", v), font = fonts.get(t1.className) || (fonts.set(t1.className, getComputedStyle(t1).font), fonts.get(t1.className)), room = rooms[n] - 20 - (mb ? 34 : 0);
@@ -104,7 +104,7 @@ const Table = (() => {
     /* (the ID column is as wide as the widest ID there can be, every category's letters and the most digits, not the widest
        showing: recategorising an action never moves the columns) */
     const one = $("td.idc .aid", el); if (one){ const f = getComputedStyle(one).font, dg = "8".repeat(Math.max(4, String(Math.max(0, ...Store.all().map(x => x.no || 0))).length));
-      const want = Math.ceil(Math.max(...Store.idLetters().map(l => headW(l + "-" + dg, f)))) + 20 + 2; if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
+      const want = Math.ceil(Math.max(...Store.idLetters().map(l => headW(l + "-" + dg, f)))) + 20 + 2 + (Store.S.edit ? NR : 0); if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
     /* (all measured first, then all marked: one layout, not one per cell) */
     const tt = $$("td.ttl", el).map(td => { const t = $(".tt", td); return [td, !!t && t.scrollWidth > t.clientWidth + 1, !!t]; });
     const lt = $$("td.ltc", el).map(td => { const t = $(".lt-b", td), v = String((App.act(td.closest("tr").dataset.ref) || { f: {} }).f[t.dataset.lt] || ""); return [td, v.includes("\n") || t.scrollWidth > t.clientWidth + 1, true]; });
@@ -144,11 +144,12 @@ const Table = (() => {
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     /* (Notes, and any long text column, has no set width: it takes whatever room is left, so widening the list widens Notes, never + Add column) */
-    const wid = c => c.type === "longtext" && !tight ? "auto" : fix(c) ? fw(c) + "px" : tight ? least(c) + "px" : "max(" + (c.id === "title" ? pref("titleMin") : 110) + "px, calc((100% - " + fixW + "px) * " + (px(c) / ftot).toFixed(4) + "))";
+    /* every column its own width (the long ones too): the table is as wide as its columns, so narrowing one brings the right edge in */
+    const wid = c => (fix(c) ? fw(c) : ws[c.id] || (c.type === "longtext" ? pref("notesW") : c.id === "title" ? pref("titleMin") : px(c))) + "px";
     const th = cs.map(c => c.type === "act" ? '<th class="actc" data-c="' + c.id + '" aria-label="' + c.label + '" style="width:' + NEED.act + 'px"><span class="th-2"><span class="th-c"><span class="th-v">' + c.label + '</span><button type="button" class="th-i" data-c="' + c.id + '" aria-label="What ' + c.label + ' means">' + INFO_I + '</button></span></span></th>' : '<th class="' + (lp(c) + (TICK.has(c.type) ? " tk" : "")).trim() + '" data-c="' + c.id + '" style="width:' + wid(c) + '">'
       + '<span class="th-l">' + (TICK.has(c.type) ? '<span class="th-v">' + esc(head(c)) + '</span><span class="th-so" aria-hidden="true">' + (App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? "▲" : "▼") : "") + '</span>' : esc(head(c))) + (TICK.has(c.type) ? '<button type="button" class="th-i" data-c="' + esc(c.id) + '" title="' + esc(c.label) + '" aria-label="What ' + esc(head(c)) + ' means">' + INFO_I + '</button>' : "") + (!TICK.has(c.type) && App.sort && App.sort.id === c.id ? (App.sort.dir > 0 ? " ▲" : " ▼") : "") + '</span><button type="button" class="th-m" data-c="' + esc(c.id) + '" title="Sort, fit or remove this column" aria-label="' + esc(c.label) + ' column options" aria-haspopup="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button><i class="th-r"></i></th>').join("") + (ADD ? '<th class="addcol" style="width:' + ADD + 'px">' + (App.isAdmin() ? (ADD < 60 ? '<button type="button" class="addc addc-s" aria-haspopup="true" title="Add a column" aria-label="Add a column">+</button>' : '<button type="button" class="addc" aria-haspopup="true">+ Add column</button>') : "") + '</th>' : "");
-    const minW = cs.reduce((t, c) => t + least(c), 0) + ADD;
-    el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
+    const minW = cs.reduce((t, c) => t + (c.type === "act" ? NEED.act : parseFloat(wid(c)) || least(c)), 0) + 2;   /* (the table is the sum of its columns) */
+    el.innerHTML = '<div class="tbl-wrap"><table class="tbl" style="width:' + minW + 'px;min-width:' + minW + 'px"><colgroup></colgroup><thead><tr>' + th + '</tr></thead><tbody></tbody></table>'
       + (list.length ? "" : '<div class="empty">' + (Store.visible().length ? Filters.emptyHtml() : "No actions yet. Click <b>+ New action</b>, or the upload with AI button beside it to make one from an email.") + '</div>') + '</div>';
     const tb = $("tbody", el), frag = document.createDocumentFragment();
     list.forEach(a => { const ref = a._p + ":" + a.u; const tr = document.createElement("tr"); tr.dataset.ref = ref; if (ref === sel) tr.className = "on"; if (a.del || a.f.handover === true || Store.stage(a.stage).kind === "done") tr.classList.add("struck");   // (handed over, complete or deleted: a line through the whole row)
@@ -171,7 +172,7 @@ const Table = (() => {
         tr.appendChild(td); });
       if (ADD){ const td = document.createElement("td"); td.className = "addcol"; tr.appendChild(td); }
       frag.appendChild(tr); });
-    tb.appendChild(frag); cut(el);
+    tb.appendChild(frag); if (Store.S.edit) newRow(el, tb, cs); cut(el);
     tb.onclick = e => { const tr0 = e.target.closest("tr"); const pl = e.target.closest("[data-parts]"); if (pl){ e.preventDefault(); return App.openParts(pl.dataset.ref, pl.dataset.parts); } 
       if (e.target.closest("select,input,label,button,a")) return; const tr = e.target.closest("tr"); if (tr) App.select(tr.dataset.ref); };
     /* files dropped on a row go to that action */
@@ -240,6 +241,25 @@ const Table = (() => {
   document.addEventListener("click", e => { const td = e.target.closest("td[data-eta]"); if (!td || e.target.closest(".ck,input,label")) return; e.stopPropagation(); clearTimeout(etaT); const open = $(".etapop.pin"); if (open && open.__td === td){ open.remove(); return; } etaCard(td, true); const p = $(".etapop.pin"); if (p) p.__td = td; }, true);
   document.addEventListener("mouseover", e => { const td = e.target.closest("td[data-eta]"); if (!td || td.__on || $(".etapop.pin")) return; td.__on = true; clearTimeout(etaT); etaT = setTimeout(() => etaCard(td), pref("etaHover"));
     td.addEventListener("mouseleave", () => { td.__on = false; clearTimeout(etaT); etaT = setTimeout(() => { const p = $(".etapop"); if (p && !p.matches(":hover") && !p.classList.contains("pin")) p.remove(); }, 250); }, { once: true }); });
+  /* the new action row: always the top row, pinned under the headings. Type a title (orange: it comes first); the ✓ beside the
+     + (or Enter) makes the action with the next ID and opens it, the ✕ (or Esc) clears it. The ✓ and ✕ show once something is typed */
+  let nrText = "", nrFocus = false;
+  function newRow(el, tb, cs){ const tr = document.createElement("tr"); tr.className = "nr"; const top = $("thead", el.querySelector(".tbl")).offsetHeight;
+    cs.forEach(c => { const td = document.createElement("td"); td.style.top = top + "px";
+      if (c.type === "id"){ td.className = "idc nr-id"; td.innerHTML = '<span class="nr-p">+</span><span class="nr-okx"' + (nrText ? "" : " hidden") + '><button type="button" class="nr-ok" title="Make the action" aria-label="Make the action">✓</button><button type="button" class="nr-cx" title="Clear" aria-label="Clear">✕</button></span>'; }
+      else if (c.id === "title"){ td.className = "ed nr-t"; td.innerHTML = '<input class="in nr-in" aria-label="New action title" autocomplete="off" spellcheck="true" value="' + esc(nrText) + '">'; }
+      else if (TICK.has(c.type)) td.classList.add("tk");
+      tr.appendChild(td); });
+    tb.insertBefore(tr, tb.firstChild);
+    const i = $(".nr-in", tr), okx = $(".nr-okx", tr), show = () => { okx.hidden = !i.value.trim(); };
+    const make = () => { const t = i.value.trim(); if (!t) return i.focus(); const sel = Store.selected(), last = lsGet("adLastProj", sel[0]), pid = sel.includes(last) ? last : sel[0]; if (!pid) return alert("Make a project first: the project box, then All projects, then New project.");
+      let a; Store.mutate("a:" + pid, () => { a = Store.newAction(pid, { title: t }); }); if (!a) return; Store.log("Created " + Store.actId(a)); nrText = ""; nrFocus = false; App.select(pid + ":" + a.u); };
+    const clear = () => { nrText = ""; nrFocus = false; i.value = ""; show(); i.blur(); };
+    i.oninput = () => { nrText = i.value; show(); };
+    /* (a redraw of the list while typing keeps the cursor in the box) */
+    i.onfocus = () => { nrFocus = true; }; i.onblur = () => setTimeout(() => { if (document.activeElement && document.activeElement !== document.body) nrFocus = false; }, 0);
+    if (nrFocus){ i.focus(); i.setSelectionRange(i.value.length, i.value.length); } i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); make(); } else if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); clear(); } };
+    $(".nr-ok", tr).onclick = e => { e.stopPropagation(); make(); }; $(".nr-cx", tr).onclick = e => { e.stopPropagation(); clear(); }; }
   /* a column heading's ▾: sort it either way, or fit it to its contents */
   function colMenu(anchor, id, fit){ Fields.closePop(); const f = Store.field(id), keep = id[0] === "_" || id === "title";
     const p = h('<div class="pop colm"><button type="button" data-m="asc">Sort A to Z</button><button type="button" data-m="desc">Sort Z to A</button>' + (App.sort && App.sort.id === id ? '<button type="button" data-m="off">Clear the sort</button>' : "")
@@ -280,7 +300,7 @@ const Table = (() => {
      spare room: the title first, up to its longest title, then Notes takes the rest. The + Add column strip stays about
      the ID column's width, and shrinks to a + only when there's no room. The tick columns share one even width. A
      column dragged to a width keeps it until the app is next opened (a long one, from then on) */
-  let fitted = false, fitKey = "", fitW0 = 0, lastCs = null, modSeen = new Map(); const dragged = new Set(), LONG = c => c.id === "title" || c.type === "longtext";
+  let fitted = false, fitKey = "", fitW0 = 0, lastCs = null, modSeen = new Map(); const dragged = new Set(lsGet("adColDrag", []) || []), LONG = c => c.id === "title" || c.type === "longtext";
   const longMem = () => lsGet("adColLong", {}) || {};
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitW0 = -1; fitKey = ""; if (typeof App !== "undefined" && App.render) App.render(); });   // (measured again with the real font)
   function autoFit(el, cs){ if (!pref("autoFit") || !$$("tbody tr", el).length) return; const first = !fitted; fitted = true;
@@ -296,17 +316,13 @@ const Table = (() => {
     lc.forEach(c => { const n = cs.indexOf(c), th = ths[n]; fitOf[c.id] = th ? fitW(el, cs, th, n) : 0; ws[c.id] = mem[c.id] || (c.id === "title" ? Math.max(pref("titleMin"), fitOf[c.id]) : pref("notesW")); });
     const used = cs.filter(c => !lc.includes(c)).reduce((t, c) => t + (c.type === "act" ? NEED.act : c.type === "id" ? idW : ws[c.id] || 0), 0);
     let spare = W - used - add - 2 - lc.reduce((t, c) => t + ws[c.id], 0);
-    if (spare > 0){ const t = lc.find(c => c.id === "title"); if (t){ const g = Math.min(spare, Math.max(0, Math.min(640, fitOf.title) - ws.title)); ws.title += g; spare -= g; }
-      const ns = lc.filter(c => c.id !== "title"); if (ns.length && spare > 0) ns.forEach(c => { ws[c.id] += Math.floor(spare / ns.length); }); }
-    else if (spare < 0){   /* no room for it all: Notes (and any long text) gives first, down to a little, then the title, so the + column always shows; their text ends in more… */
-      let short = -spare; ws._add = 24; short -= add - 24;
-      lc.filter(c => c.id !== "title").forEach(c => { if (short <= 0) return; const g = Math.min(short, Math.max(0, ws[c.id] - 60)); ws[c.id] -= g; short -= g; });
-      const t = lc.find(c => c.id === "title"); if (t && short > 0){ const g = Math.min(short, Math.max(0, ws.title - 160)); ws.title -= g; short -= g; } }
+    /* (the long columns aren't stretched to fill the screen: the title fits its text up to a limit, Notes keeps its set width; past the screen the list scrolls sideways) */
+    lc.filter(c => c.id === "title" && !mem.title).forEach(c => { ws.title = Math.max(pref("titleMin"), Math.min(640, fitOf.title)); }); void spare;
     if (JSON.stringify(ws) !== JSON.stringify(old) || first){ lsSet("adColW", ws);
       /* the new widths go straight onto the columns (live while a panel edge is dragged: the spare room goes to Notes, never to + Add column) */
-      const tb = $("table.tbl", el); if (tb){ $$("thead th[data-c]", tb).forEach(th => { const c = cs.find(x => x.id === th.dataset.c); if (c && c.type === "longtext"){ th.style.width = "auto"; return; } if (!c || c.type === "act") return; const w = c.type === "id" ? idW : ws[c.id]; if (w) th.style.width = w + "px"; });
+      const tb = $("table.tbl", el); if (tb){ $$("thead th[data-c]", tb).forEach(th => { const c = cs.find(x => x.id === th.dataset.c); if (!c || c.type === "act") return; const w = c.type === "id" ? idW : ws[c.id]; if (w) th.style.width = w + "px"; });
         const ad = $("th.addcol", tb); if (ad) ad.style.width = (ws._add || 24) + "px";
-        tb.style.minWidth = $$("thead th", tb).reduce((t, th) => { const c = cs.find(x => x.id === th.dataset.c); return t + (c && c.type === "longtext" ? 60 : parseFloat(th.style.width) || th.offsetWidth); }, 0) + "px"; }
+        const tot = $$("thead th", tb).reduce((t, th) => t + (parseFloat(th.style.width) || th.offsetWidth), 0) + 2; tb.style.minWidth = tb.style.width = tot + "px"; }
       requestAnimationFrame(() => App.render()); } }
   /* a long column set by hand is remembered from one opening to the next */
   const remember = (c, w) => { if (c && LONG(c)){ const m = longMem(); m[c.id] = Math.round(w); lsSet("adColLong", m); } };
@@ -324,7 +340,8 @@ const Table = (() => {
         let moved = false, raf = 0; r.onpointermove = ev => { if (Math.abs(ev.clientX - x0) > 2) moved = true; if (!moved) return; th.style.width = Math.max(50, w0 + ev.clientX - x0) + "px";
           if (!raf) raf = requestAnimationFrame(() => { raf = 0; tagFit(el); moreFit(el); }); };   // (the tags and more… follow the width as it's dragged)
         r.onpointercancel = () => { r.onpointermove = null; };
-        r.onpointerup = () => { r.onpointermove = null; if (!moved) return; dragged.add(id); remember(Store.field(id) || { id }, parseFloat(th.style.width) || th.offsetWidth); const ws = widths(); ws[id] = Math.round(parseFloat(th.style.width) || th.offsetWidth); lsSet("adColW", ws); App.render(); }; };   // (only the column dragged)
+        r.onpointerup = () => { r.onpointermove = null; if (!moved) return; dragged.add(id); lsSet("adColDrag", [...dragged]);   /* (a width set by hand is kept from one session to the next) */
+          remember(Store.field(id) || { id }, parseFloat(th.style.width) || th.offsetWidth); const ws = widths(); ws[id] = Math.round(parseFloat(th.style.width) || th.offsetWidth); lsSet("adColW", ws); App.render(); }; };   // (only the column dragged)
     }); dragHead(el, cs); }
   /* reorder by dragging a heading, live: once the pointer has moved a little, the whole column (heading and every cell) slides
      to wherever the pointer is, so what you see while dragging is what you get on release (nothing jumps). The + Add column

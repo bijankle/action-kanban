@@ -405,7 +405,7 @@ function pdfCols(doc, head, body, W, o){ o = o || {}; const fs = o.fs || 9, hfs 
 const CellEdit = (() => {
   const ED = ".in:not(.lk-sel):not(.mt-pk),.pt-in:not(.mt-pk),.mt-pk.mt-fr,.lt-b,.tg1,.tagin";   // (a dropdown cell is a pick from a fixed list, as Excel's data validation: one click opens it)
   const box = t => { const el = t && t.closest && t.closest(ED), td = el && el.closest("td"); return td && td.closest("table.tbl") && !el.disabled && !el.readOnly ? el : null; };
-  const fresh = el => !!el.closest("tr.pt-blank,tr.cts-new") || /^new/.test(el.dataset.r || "") || (el.placeholder && /^\+ /.test(el.placeholder) && !el.value);
+  const fresh = el => !!el.closest("tr.pt-blank,tr.cts-new,tr.nr") || /^new/.test(el.dataset.r || "") || (el.placeholder && /^\+ /.test(el.placeholder) && !el.value);
   let armed = null, at = null, selT = 0;   // (at: the marked cell, as its row and column, found again after a redraw)
   const rowKey = tr => tr && (tr.dataset.ref || tr.dataset.id);
   const again = () => { if (!at) return null; const tr = [...document.querySelectorAll("table.tbl tr[data-ref],table.tbl tr[data-id]")].find(t => rowKey(t) === at.r); const td = tr && tr.children[at.c]; if (td){ td.classList.add("cell-sel"); tr.classList.add("row-sel"); } return td; };

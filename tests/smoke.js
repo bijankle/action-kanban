@@ -48,6 +48,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     /* On Hold and Delete are the last columns, and there's no + Add column (columns are picked in Data validation) */
     const hk = await p.evaluate(() => { const o = [...document.querySelectorAll(".tbl thead th")].map(th => th.dataset.c || (th.classList.contains("addcol") ? "ADD" : "")).filter(Boolean); return o.slice(-2).join(",") + " | " + o.includes("ADD"); });
     check("On Hold and Delete are the last columns, with no + Add column", hk === "_hold,_del | false", hk);
+    /* the new action row at the top: a title and Enter make the action, which opens */
+    const nrb = await p.evaluate(() => Store.all().length); await p.click(".nr-in"); await p.keyboard.type("Smoke check new row"); await p.keyboard.press("Enter"); await p.waitForTimeout(800);
+    const nr = await p.evaluate(n => (Store.all().length - n) + " " + (App.selRef ? App.act(App.selRef).f.title : ""), nrb);
+    check("a title typed in the top row and Enter makes the action and opens it", nr === "1 Smoke Check New Row", nr);
     /* ticks lead: picking a category and ticking PCCR move the card on */
     const at = () => p.evaluate(() => { const a = Store.all().find(x => x.no === 1); return Store.actId(a) + " " + Store.todo(Store.stage(a.stage)); });
     await p.evaluate(() => { const a = Store.all().find(x => x.no === 1); Fields.set(a, Store.field("category"), "Maintenance"); }); const s1 = await at();

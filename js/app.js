@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.256";
+const APP_VERSION = "1.10.257";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -21,7 +21,7 @@ const App = (() => {
     /* the list (Actions table or Organizer) stays on the left; the open action is in the panel on the right (or, with the
        panel switched off in View, in a pop up over the list) */
     const sideTab = A.tab === "actions" || A.tab === "kanban", panel = A.tab === "actions" && lsGet("adPanel", true),   /* (the Organizer has no Details panel: a card opens as a pop up) */ sel = sideTab && !!act(A.selRef), inAct = false, list = A.tab === "actions";
-    $$("#xlsB,#printB,#docB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = A.tab === "valid"; $("#dvT").hidden = A.tab !== "valid"; const ctOn = isCt(); $("#gdate").hidden = !(A.tab === "actions" || A.tab === "kanban"); $("#ctImpB").hidden = !Store.S.edit || !(ctOn || (A.tab === "valid" && Valid.section() === "vendors")); $("#ctImpB").title = ctOn ? "Import a contact list from Excel (Name or First and Last name, Company, Mobile, Email). Anyone already in the list is filled in, not doubled." : "Import the latest Approved Vendor List from Excel. It replaces the list for everyone, and keeps the contact details already entered.";
+    $$("#xlsB,#printB,#docB,#pasteB").forEach(b => b.hidden = !(list || A.tab === "kanban")); $("#newB").hidden = true; $("#dvT").hidden = A.tab !== "valid"; const ctOn = isCt(); $("#gdate").hidden = !(A.tab === "actions" || A.tab === "kanban"); $("#ctImpB").hidden = !Store.S.edit || !(ctOn || (A.tab === "valid" && Valid.section() === "vendors")); $("#ctImpB").title = ctOn ? "Import a contact list from Excel (Name or First and Last name, Company, Mobile, Email). Anyone already in the list is filled in, not doubled." : "Import the latest Approved Vendor List from Excel. It replaces the list for everyone, and keeps the contact details already entered.";
     $("#q").placeholder = inAct ? "Search actions (back to the list)" : { actions: "Search actions", kanban: "Search, filters every stage", valid: Valid.place() }[A.tab] || "Search";
     if ($("#q").value !== A.q) $("#q").value = A.q; panels(sideTab, panel);
     const v = $("#view"); v.dataset.tab = A.tab;

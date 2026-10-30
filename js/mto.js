@@ -328,7 +328,7 @@ const Mto = (() => {
     const sub = (it, res, cols) => { const T = type(it); return open.has(it.id) && T && (T.k === "len" || T.k === "plate") && !isCut(it) ? '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="' + (cols + 1) + '"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>' : ""; };
     /* ---- piping: Class, Size, Item, Ends / type, Qty ---- */
     /* one table for everything, general headings: Spec is a pipe's class or a steel's grade and standard, Details its schedule, finish or the rest */
-    const PC = [["ty", "Type"], ["sp", "Spec"], ["sz", "Size"], ["t", "Item"], ["et", "Details"], ["qty", "Qty"], ["un", "Unit"], ["sq", "Spare"], ["tot", "Total"], ["notes", "Notes"], ["x", ""]];
+    const PC = [["ty", "Type"], ["sp", "Spec"], ["sz", "Size"], ["t", "Item"], ["et", "Details"], ["qty", "Value"], ["un", "Unit"], ["sq", "Spare"], ["tot", "Total"], ["notes", "Notes"], ["x", ""]];
     let last = null, ph = "";
     const pipeRow = it => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it); let ph = "";
       ph += '<tr data-id="' + it.id + '" class="mt-row' + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res)) + tyIn(it);
@@ -456,7 +456,7 @@ const Mto = (() => {
       Store.mutate(key, () => { items.push(c); Store.touch(a); }); Store.log("Copied a row of the MTO of " + Store.actId(a)); focusNext = { id: c.id, c: isPlate(c) ? "pl" : "qty" }; App.render(); });
     $$("[data-cx]", el).forEach(b => b.onclick = async () => { const it = find(b.dataset.cx); if (!it) return;
       const bare = !it.t && !it.it && !it.dn && !it.z && !it.part && !String(it.qty || "").trim() && !String(it.desc || "").trim() && !it.notes && !(it.cuts || []).length;
-      if (!bare && !await confirmBox("Clear this row? What's filled in on it goes.", "Clear", true)) return;
+      void bare;   /* (the ✕ clears it straight away, back to the empty add row; Ctrl+Z brings it back) */
       Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); Store.touch(a); }); focusNext = { id: "newt", c: "ty", quiet: true }; App.render(); });
     $$("[data-x]", el).forEach(b => b.onclick = async () => { const it = find(b.dataset.x); if (!it) return;
       if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?" + (it.auto ? " It won't be added again from the flanges." : ""), "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); if (it.auto && !(a.mtoOff = a.mtoOff || []).includes(it.auto)) a.mtoOff.push(it.auto); bolts(); Store.touch(a); }); });
@@ -571,6 +571,8 @@ const Mto = (() => {
     /* the total follows the spare as it's typed */
     $$(".mt-sq", el).forEach(i => i.addEventListener("input", () => { i.classList.remove("mt-sqa"); const it = find(i.dataset.r), td = i.closest("td").nextElementSibling; if (!it || !td || i.dataset.c !== "sq") return; const t = ord(Object.assign({}, it, { sq: i.value })); td.innerHTML = esc(t) + (t ? ' <span class="dim">' + esc(uShort(it.unit) || "EA") + '</span>' : ""); }));
     /* after a pick: the next box still to fill in on that row */
+    /* the row being made: its ✓ and ✕ sit just right of the # (the column always keeps room for them, so nothing shifts) */
+    $$(".mt-okx", el).forEach(x => { const tr = x.closest("tr"); if (tr && tr.cells[0]) tr.cells[0].appendChild(x); });
     /* the one box to fill in next on each row still being entered is orange (not every empty one) */
     items.filter(it => it.draft || missing(it).length).forEach(it => { const nx = after(it.id), b = nx && boxOf(nx); if (b) b.closest("td").classList.add("mt-nx"); });
     if (focusNext && focusNext.nx){ const it = find(focusNext.id), nx = it && after(it.id); focusNext = nx ? nx : it && it.draft && !missing(it).length ? { id: it.id, done: 1 } : focusNext.alt || null; }
