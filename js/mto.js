@@ -256,7 +256,7 @@ const Mto = (() => {
     if (c === "t") return itemCode(it); if (!T) return c === "unit" ? it.unit || "" : it[c] || "";
     if (c === "z") return zShort(it); if (c === "r") return rShort(it.r); if (c === "m") return (v => /^\d{3}[A-Z0-9]*$/.test(v) ? "GR" + v : v)(mShort(it.m));   /* (a steel grade reads GR300) */ if (c === "s") return S && !it.sx ? stShort(S.n) : ""; if (c === "unit") return uShort(it.unit); return it[c] == null ? "" : it[c]; };
   const titleOf = (it, c) => { const T = type(it), S = std(it), z = sz(it); return c === "t" ? (T ? T.n : "") : c === "z" ? (z && z.a ? z.a : "") : c === "r" ? it.r || "" : c === "m" ? it.m || "" : c === "s" ? (S ? S.n : "") : ""; };
-  let focusNext = null;
+  let focusNext = null, hush = false;
   /* the class last picked on an action's MTO: new piping rows start in it (rows already there keep theirs), and it can still be changed */
   const lastCl = new Map(), akey = a => a._p + ":" + a.u;   // (after a pick, the next box still to fill in on that row)
   /* steel cut from stock lengths: always one parent per stock item (section, size, grade, finish, standard and stock length), which is
@@ -531,8 +531,9 @@ const Mto = (() => {
         /* the headings in the list (the class list by material, the items by kind) when there is more than one */
         if (new Set(list.map(x => x.g).filter(Boolean)).size > 1){ const o = []; let g0 = null; list.forEach(x => { if (x.g && x.g !== g0){ o.push({ grp: true, t: x.g }); g0 = x.g; } o.push(x); }); list = o; }
         if (pt && typed && !list.some(x => x.t.toLowerCase() === q)) list = list.concat([{ v: "typed:" + i.value.trim(), t: "Use “" + i.value.trim() + "” as typed", sub: "not in the plant lists" }]);
-        key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], c === "t" ? [it.t, it.mk, it.end].filter(Boolean).join("|") : c === "dn" ? it.dn : it[c], x => { if (x.v === "") return; if (!String(r).startsWith("new")) i.value = x.t; save(r, c, x.v); App.render(); }, { mark: ws }); };
-      i.onfocus = () => { i.select(); show(); };
+        key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], c === "t" ? [it.t, it.mk, it.end].filter(Boolean).join("|") : c === "dn" ? it.dn : it[c], x => { if (x.v === "") return; if (!String(r).startsWith("new")) i.value = x.t; save(r, c, x.v); hush = true; App.render(); setTimeout(() => { hush = false; }, 400); }, { mark: ws }); };
+      /* (the redraw after a pick, a frame later, puts the cursor back in the box: that mustn't open its list again, a flash before the cursor moves on) */
+      i.onfocus = () => { i.select(); if (hush){ hush = false; return; } show(); };
       i.oninput = () => { if (free && !pt) return; show(); };
       i.onkeydown = e => { if (key2 && /^(ArrowDown|ArrowUp|Escape)$/.test(e.key)) return key2(e);
         if (e.key === "Enter" || e.key === "Tab"){ const v = i.value.trim(); const lit = document.querySelector(".lk-card .lk-o.hi:not(.dis)");
