@@ -14,10 +14,18 @@ const Workpack = (() => {
       g.drawImage(i, (480 - w) / 2, (360 - h) / 2, w, h); try { res(c.toDataURL("image/jpeg", 0.82)); } catch (e){ rej(e); } };
     i.onerror = () => alt && alt !== src ? thumb(alt).then(res, rej) : rej(new Error("photo")); i.src = src; });
   const size = src => new Promise(res => { const i = new Image(); i.onload = () => res([i.naturalWidth, i.naturalHeight]); i.onerror = () => res([4, 3]); i.src = src; });
-  async function run(a){ if (!a) return; note("Making the work pack for " + Store.actId(a) + "…", 30000);
-    try { const blob = await build(a); Excel.save(blob, Store.actId(a) + " Work pack.pdf"); note("Work pack downloaded"); }
+  /* the work pack's window: a tick for each of its headings (only the ones this action has), the site map too; remembered */
+  const WP = [["job", "Job and scope"], ["map", "Site map"], ["isol", "Isolations"], ["sk", "Sketches"], ["parts", "Parts"], ["cut", "Cutting list"], ["reg", "References"], ["photos", "Photos"], ["att", "Attachments"]];
+  function dialog(a){ if (!a) return; const pk = lsGet("adWpSec", {}) || {}, has = { job: 1, map: 1, isol: (a.isol || []).length, sk: (a.sketches || []).length, parts: (a.mto || []).length + (a.spares || []).length, cut: Mto.hasCuts(a), reg: (a.dwgPick || []).length, photos: a.photos.length, att: a.files.length };
+    const m = modal('<h3>Export the work pack' + tipI("One PDF for the trades: the job, where it is, the isolations, sketches, parts, cutting list, references (the documents ticked on References, each linked to its PDF copy), photos and attachments.") + '</h3><div class="lbl">What\'s in it</div><div class="pr-sec">'
+      + WP.filter(([k]) => has[k]).map(([k, n]) => '<label class="tp-o"><input type="checkbox" data-sec="' + k + '"' + (pk[k] !== false ? " checked" : "") + '><span>' + n + '</span></label>').join("") + '</div>'
+      + '<div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Export</button></div>', { cls: "pr-win" });
+    $(".yn-no", m).onclick = () => m.close();
+    $(".yn-yes", m).onclick = () => { const o = Object.assign({}, pk); $$("[data-sec]", m).forEach(c => o[c.dataset.sec] = c.checked); lsSet("adWpSec", o); m.close(); run(a, o); }; }
+  async function run(a, sec){ if (!a) return; sec = sec || lsGet("adWpSec", {}) || {}; note("Making the work pack for " + Store.actId(a) + "…", 30000);
+    try { const blob = await build(a, sec); Excel.save(blob, Store.actId(a) + " Work pack.pdf"); note("Work pack downloaded"); }
     catch (e){ console.error(e); alert("Couldn't make the work pack: " + e.message); } }
-  async function build(a){ const jsPDF = await Parts.loadPdf(), doc = new jsPDF({ unit: "mm", format: "a4" });
+  async function build(a, sec){ sec = sec || {}; const jsPDF = await Parts.loadPdf(), doc = new jsPDF({ unit: "mm", format: "a4" });
     const W = 210, H = 297, M = 14, CW = W - 2 * M, BOT = 282;
     const thb = (getComputedStyle(document.documentElement).getPropertyValue("--thb") || "#475569").trim(), rgb = /^#[0-9a-f]{6}$/i.test(thb) ? [1, 3, 5].map(i => parseInt(thb.substr(i, 2), 16)) : [71, 85, 105];
     let y = 0; const need = n => { if (y + n > BOT){ doc.addPage("a4", "portrait"); y = 18; } };
@@ -37,7 +45,7 @@ const Workpack = (() => {
     /* the parts, in reading order; each one present gets a line in the contents and starts a page */
     const parts = Mto.orderRows(a).map(it => Object.assign({ src: "New" }, it, { qty: Mto.ord(it) })).concat((a.spares || []).map(it => Object.assign({ src: "Site spares" }, it)));
     const S = [["job", "Job and scope", true], ["isol", "Isolations", (a.isol || []).length], ["sk", "Sketches", (a.sketches || []).length], ["parts", "Parts", parts.length], ["cut", "Cutting list", Mto.hasCuts(a)], ["reg", "References", all.size], ["photos", "Photos (" + a.photos.length + ")", a.photos.length],
-      ["att", "Attachments", a.files.length]].filter(x => x[2]);
+      ["att", "Attachments", a.files.length]].filter(x => x[2] && sec[x[0]] !== false);   /* (and ticked in the window) */
     /* cover: the job, who to contact, the contents */
     doc.setFillColor(...rgb); doc.rect(0, 0, W, 32, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.text("WORK PACK", M, 9);
     doc.setFontSize(16); doc.splitTextToSize(a.f.title || "Work pack", CW - 46).slice(0, 2).forEach((l, i) => doc.text(l, M, 17.5 + i * 7));
@@ -65,7 +73,7 @@ const Workpack = (() => {
         const job = [["Location", a.f.location], ["Done", Store.fields().filter(f => f.type === "check" && a.f[f.id] === true).map(f => f.label).join(", ")], ...Hold.lines(a).map(([k, v]) => [k === "Waiting on" ? "On hold, waiting on" : k, v]), ["Equipment", names.join("\n")], ["Contractor", [a.f.contractor, /^\d{4}-\d\d-\d\d(T\d\d:\d\d)?$/.test(a.f.contractorDate || "") ? "on site " + fmtDate(a.f.contractorDate) : ""].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")], ["Contractor contact", [a.f.contractorContact, a.f.contractorPhone].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")]].filter(r => r[1]);
         if (job.length){ doc.autoTable({ startY: y, body: job, margin: { top: 16, left: M, right: M, bottom: 16 }, theme: "plain", styles: { font: "helvetica", fontSize: 10, cellPadding: 1.5 }, columnStyles: { 0: { cellWidth: 34, textColor: [90, 100, 112], fontStyle: "bold" } } }); y = doc.lastAutoTable.finalY + 4; }
         /* the expected location, with a few of the photos beside it (a link to the rest above them) */
-        let sm = null; try { sm = await SiteMap.forAction(a, true); } catch (e){ console.warn("site map", e); }   // (the whole site, the colour map: red circles on the area)
+        let sm = null; if (sec.map !== false) try { sm = await SiteMap.forAction(a, true); } catch (e){ console.warn("site map", e); }   // (the whole site, the colour map: red circles on the area)
         if (sm || a.photos.length){ const ip = sm ? doc.getImageProperties(sm.url) : null, mw = sm ? 112 : 0, mh = sm ? mw * ip.height / ip.width : 0, gx = sm ? M + mw + 6 : M, gw = sm ? CW - mw - 6 : CW;
           need(Math.max(mh, 40) + 30); head(sm ? "Expected location and photos" : "Photos"); const top = y;   // (the heading goes over to the next page with the map, never left on its own)
           if (sm) doc.addImage(sm.url, "JPEG", M, y, mw, mh, undefined, "FAST");
@@ -134,5 +142,5 @@ const Workpack = (() => {
     P.y = doc.lastAutoTable.finalY + 2.5; doc.setFontSize(7.8); doc.setTextColor(110); doc.setFont("helvetica", "italic");
     doc.splitTextToSize("Click a number or title to download its PDF copy (no SharePoint login needed). Check each revision against SharePoint before use.", P.CW).forEach(l => { P.need(4); doc.text(l, P.M, P.y + 2); P.y += 3.6; });
     doc.setFont("helvetica", "normal"); P.y += 4; }
-  return { run, build };
+  return { run, build, dialog };
 })();

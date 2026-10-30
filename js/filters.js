@@ -31,7 +31,7 @@ const Filters = (() => {
     if (k === "tk") return ticks().filter(f => a.f[f.id] === true).map(f => f.id); }
   const hasV = (a, k, v) => { const x = val(a, k); return Array.isArray(x) ? x.includes(v) : x === v; };
   /* does it pass every group (but skip, so a group's own counts show what picking another pill there would add) */
-  function match(a, skip, noStage){ const q = (App.q || "").trim(); if (q && !Store.matches(a, q)) return false; if (!dateOk(a)) return false;
+  function match(a, skip, noStage, noDate){ const q = (App.q || "").trim(); if (q && !Store.matches(a, q)) return false; if (!noDate && !dateOk(a)) return false;
     const S = all();
     /* with no Status pill picked, the list is the open actions: done and deleted ones show only when their pill is picked */
     if (!noStage && skip !== "st" && !S.st.size && (a.del || Store.stage(a.stage).kind === "done")) return false;
@@ -93,5 +93,5 @@ const Filters = (() => {
     const dates = dateOn() && noDates ? 'The dates (' + esc(D.by === "modified" ? "Date modified" : "Date created") + ', ' + esc([D.from && fmtDate(D.from), D.to && fmtDate(D.to)].filter(Boolean).join(" to ")) + ') leave out ' + noDates + ' action' + (noDates === 1 ? "" : "s") + '. <button type="button" class="link" data-fx="dates">Show all dates</button>' : "";
     return 'No actions match. ' + (dates || (active() ? '<button type="button" class="link" data-fx="all">Clear the filters</button>' : "")); }
   document.addEventListener("click", e => { const b = e.target.closest("[data-fx]"); if (!b) return; if (b.dataset.fx === "dates"){ D.from = D.to = D.last = D.span = ""; lsSet("adDate", D); const g = $("#gdate"); if (g) dateBar(g); App.render(); }   /* (the date box shows it cleared too) */ else clear(); });
-  return { emptyHtml, render, apply, match, active, count, chipsHtml, wireChips, clear, val, dateBar, dateOn };
+  return { dates: () => Object.assign({}, D), emptyHtml, render, apply, match, active, count, chipsHtml, wireChips, clear, val, dateBar, dateOn };
 })();

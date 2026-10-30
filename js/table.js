@@ -80,7 +80,7 @@ const Table = (() => {
   function idBox(a, big){ const id = esc(Store.actId(a));
     return '<span class="idw' + (big ? " big" : "") + '"' + (a.oldId ? ' title="Was ' + esc(a.oldId) + '"' : "") + '><span class="aid">' + id + '</span>' + (big ? '<button type="button" class="pj" data-idk="pdf" title="Download the workpack PDF: details, problem, solution, notes, photos, isolations, MTO and spares" aria-label="Download the PDF of ' + id + '">' + fileIco("PDF") + '</button>' : "") + '</span>'; }
   document.addEventListener("click", async e => { const b = e.target.closest("[data-idk]"); if (!b) return; e.stopPropagation(); const r = b.closest("[data-ref]"), a = r && App.act(r.dataset.ref); if (!a) return;
-    if (b.dataset.idk === "pdf") return Workpack.run(a); }, true);
+    if (b.dataset.idk === "pdf") return Workpack.dialog(a); }, true);
   /* a picture of the action on the clipboard (Sheet, from the copy button by Photos: problem, solution and photos);
      the button shows a tick when it's there */
   async function copySheet(b, a){ note("Copying " + Store.actId(a) + " as a picture…", 8000); const ok = await Sheet.copy(a);

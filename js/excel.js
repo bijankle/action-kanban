@@ -16,12 +16,13 @@ const Excel = (() => {
     return new Blob(parts.concat(cen, [new Uint8Array(end.buffer)]), { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }); }
   const x = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
   const col = i => { let s = ""; i++; while (i){ const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = (i - m - 1) / 26; } return s; };
-  function exportRows(list){ const fs = Store.fields(), base = GH.appUrl();
+  function exportRows(list, cols){ const on = k => !cols || cols[k] !== false, fs = Store.fields().filter(f => on(f.id)), base = GH.appUrl();   /* (cols: the columns ticked in the export window) */
     const head = ["ID", "Project"].concat(fs.map(f => f.label), ["Photos", "Attachments", "Created"]);
     const rows = list.map(a => ["ID", "Project"].map((k, i) => i ? (Store.project(a._p) || {}).name : Store.actId(a))
       .concat(fs.map(f => f.type === "date" && /^\d{4}-/.test(Fields.val(a, f) || "") ? { d: Fields.val(a, f) } : f.type === "meta" && Fields.val(a, f) ? { d: isoDay(new Date(Fields.val(a, f))) } : Fields.text(a, f)),
         [a.photos.length ? { link: base + "?a=" + encodeURIComponent(a._p + ":" + a.no) + "&photo=1", text: "Photos (" + a.photos.length + ")" } : "", a.files.map(f => f.name).join("\n"), { d: isoDay(new Date(a.created)) }]));
-    return book(head, rows, "Actions"); }
+    const x3 = [on("_photos"), on("_files"), on("_created")], n0 = head.length - 3, cut = r => r.filter((v, k) => k < n0 || x3[k - n0]);
+    return book(cut(head), rows.map(cut), "Actions"); }
   /* one sheet workbook: head is the header row, rows hold strings, {d: "YYYY-MM-DD"} dates or {link, text} links */
   function book(head, rows, name){ name = String(name || "Sheet1").replace(/[\\/?*\[\]:]/g, " ").slice(0, 31);
     const cell = (v, r, c) => { const ref = col(c) + (r + 1);
@@ -41,8 +42,8 @@ const Excel = (() => {
       ["xl/_rels/workbook.xml.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
       ["xl/worksheets/sheet1.xml", sheet], ["xl/styles.xml", styles]]); }
   function save(blob, fname){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fname; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
-  function run(pick){ const list = Array.isArray(pick) ? pick : Table.rows(true); if (!list.length) return alert("No actions to export.");
-    const b = exportRows(list), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "Actions " + isoDay(new Date()) + ".xlsx"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  function run(pick, cols){ const list = Array.isArray(pick) ? pick : Table.rows(true); if (!list.length) return alert("No actions to export.");
+    const b = exportRows(list, cols), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "Actions " + isoDay(new Date()) + ".xlsx"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     note("Exported " + list.length + " action" + (list.length === 1 ? "" : "s")); }
   /* ---------- reading an .xlsx (for importing the approved vendor list): every sheet as rows of cell values ---------- */
   async function read(file){ const buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer), files = {};

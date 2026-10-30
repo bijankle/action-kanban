@@ -1741,3 +1741,5 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .mt-tbl td.mt-qu .mt-dm,.mt-tbl td.mt-dims .mt-dm{border:0!important;border-radius:0!important;background:transparent!important;height:var(--row)!important;outline:0!important;box-shadow:none}
 .mt-tbl td.mt-qu .mt-dm:focus,.mt-tbl td.mt-dims .mt-dm:focus{box-shadow:inset 0 -2px 0 var(--focus)!important}
 .mt-tbl td.mt-dims.cell-sel .mt-dm,.mt-tbl td.mt-qu.cell-sel .mt-dm{outline:0!important}
+/* the export window's What's in it (and Excel's Columns): a tick for each heading, two to a row */
+.pr-sec{display:grid;grid-template-columns:1fr 1fr;column-gap:14px}

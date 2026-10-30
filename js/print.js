@@ -8,12 +8,16 @@ const Print = (() => {
   /* what goes into an export (the list's PDF and Excel buttons): which statuses, Deleted included, and a date range
      on the date created, last modified or completed (blank is all time). The search and the other Filters panel pills
      still apply. Done and Deleted are unticked to start with; the choice is remembered per export. */
+  /* the headings of the PDF and Word exports, each with its own tick in the window (board, photos and blanks keep their own settings) */
+  const SECS = [["board", "Organizer overview"], ["sum", "Summary"], ["problem", "Problem"], ["solution", "Solution"], ["notes", "Notes"], ["photos", "Photos"], ["att", "Attachments"], ["sk", "Sketches"], ["isol", "Isolations"], ["mto", "MTO"], ["spares", "Spares"], ["blanks", "Blank fields"]];
+  const secOn = (o, k) => !o.sec || o.sec[k] !== false;
   const DATES = [["created", "Date created"], ["mod", "Last modified"], ["doneAt", "Date completed"]];
   /* an action's line in the export's Include list: its Organizer stage, or Deleted (not the Status filter's Open / On Hold groups) */
   const stOf = a => a.del ? "_del" : a.stage;
-  function pickHtml(key){ const pick = lsGet(key, null), base = Store.visible().concat(Store.deleted()).filter(a => Filters.match(a, "st"));
-    const sts = Store.stages().map(s => ({ id: s.id, name: s.name, c: s.color, def: s.kind !== "done" })).concat({ id: "_del", name: "Deleted", c: "#9aa3ad", def: false });
-    const on = s => pick && pick.st && s.id in pick.st ? pick.st[s.id] : s.def, d = (pick && pick.d) || {};
+  function pickHtml(key){ const base = Store.visible().concat(Store.deleted()).filter(a => Filters.match(a, "st", false, true)), shown = Filters.apply(Store.visible().concat(Store.deleted()));
+    const sts = Store.stages().map(s => ({ id: s.id, name: s.name, c: s.color })).concat({ id: "_del", name: "Deleted", c: "#9aa3ad" });
+    /* (it opens with what the list shows: the stages of the actions listed now, and the date bar's range; any of it can be changed here) */
+    const on = s => shown.some(a => stOf(a) === s.id), fd = Filters.dates(), d = { by: fd.by === "modified" ? "mod" : "created", from: fd.from || "", to: fd.to || "" };
     return '<div class="lbl">Include</div><div class="pr-st">' + sts.map(s => '<label class="tp-o"><input type="checkbox" data-s="' + s.id + '"' + (on(s) ? " checked" : "") + '><span class="stg" style="--c:' + esc(s.c) + '">' + esc(s.name) + '</span><span class="dim">' + base.filter(a => stOf(a) === s.id).length + '</span></label>').join("") + '</div>'
       + '<div class="msep"></div><div class="lbl">Dates <span class="dim">blank is all time</span></div><div class="pr-dt"><select class="in sm" data-d="by">' + DATES.map(([k, n]) => '<option value="' + k + '"' + (d.by === k ? " selected" : "") + '>' + n + '</option>').join("") + '</select>'
       + '<input type="hidden" data-d="from" value="' + esc(d.from || "") + '"><input type="hidden" data-d="to" value="' + esc(d.to || "") + '"><i class="pr-rg"></i></div>' + (setTimeout(() => $$(".pr-rg").forEach(x => rangeIn(x.closest(".yn-win"))), 0), ""); }
@@ -23,25 +27,26 @@ const Print = (() => {
     const from = d.from ? new Date(d.from + "T00:00:00").getTime() : -Infinity, to = d.to ? new Date(d.to + "T23:59:59").getTime() : Infinity;
     const inRange = a => { if (!d.from && !d.to) return true; const t = a[d.by] || (d.by === "created" ? a.mod : null); if (!t) return false; const x = typeof t === "number" ? t : new Date(t).getTime(); return x >= from && x <= to; };
     const ord = new Map(Store.stages().map((s, i) => [s.id, i]));
-    return Store.visible().concat(Store.deleted()).filter(a => st[stOf(a)] && Filters.match(a, "st") && inRange(a))
+    return Store.visible().concat(Store.deleted()).filter(a => st[stOf(a)] && Filters.match(a, "st", false, true) && inRange(a))
       .sort((x, y) => (x.del - y.del) || (ord.get(x.stage) - ord.get(y.stage)) || (x.rank || 0) - (y.rank || 0) || x.no - y.no); }
   /* (kind "word": the same choices, made into a Word file instead of printed) */
   function dialog(kind){ const pf = prefs(), word = kind === "word";
     const m = modal('<h3>' + (word ? "Export to Word" + tipI("An editable .docx with the same content as the PDF. Only the projects ticked in the project box are included, and only what the search and the other filters show.") : "Export to PDF or print" + tipI("Pick “Save as PDF” as the printer for a PDF. Only the projects ticked in the project box are included, and only what the search and the other filters show.")) + '</h3>' + pickHtml("adPrintPick")
-      + '<div class="msep"></div><label class="tp-o"><input type="checkbox" data-o="board"' + (pf.board ? " checked" : "") + '><span>Organizer overview first</span></label>'
-      + '<label class="tp-o"><input type="checkbox" data-o="photos"' + (pf.photos ? " checked" : "") + '><span>Photos</span></label><label class="fl in-row">Photos per row <select class="in sm" data-o="per">' + [1, 2, 3, 4].map(n => '<option' + (n === pf.per ? " selected" : "") + '>' + n + '</option>').join("") + '</select></label>'
+      + '<div class="msep"></div><div class="lbl">What\'s in it</div><div class="pr-sec">' + SECS.map(([k, n]) => '<label class="tp-o"><input type="checkbox" ' + (["board", "photos", "blanks"].includes(k) ? 'data-o="' + k + '"' + (pf[k] ? " checked" : "") : 'data-sec="' + k + '"' + ((pf.sec || {})[k] !== false ? " checked" : "")) + '><span>' + n + '</span></label>').join("") + '</div>'
+      + '<div class="msep"></div><label class="fl in-row">Photos per row <select class="in sm" data-o="per">' + [1, 2, 3, 4].map(n => '<option' + (n === pf.per ? " selected" : "") + '>' + n + '</option>').join("") + '</select></label>'
       + (word ? "" : '<label class="fl in-row">Pages per action <select class="in sm" data-o="pages">' + [[0, "No limit"], [1, "1"], [2, "2"], [3, "3"], [4, "4"]].map(([v, n]) => '<option value="' + v + '"' + (v === (pf.pages || 0) ? " selected" : "") + '>' + n + '</option>').join("") + '</select>' + tipI("The photos are made smaller, and more go on each row, until each action fits this many pages.") + '</label>')
       + '<label class="tp-o"><input type="checkbox" data-o="newPage"' + (pf.newPage ? " checked" : "") + '><span>Each action on a new page</span></label>'
-      + '<label class="tp-o"><input type="checkbox" data-o="blanks"' + (pf.blanks ? " checked" : "") + '><span>Include blank fields' + tipI("For records that may be audited: every field is listed, with a dash where nothing was filled in, and the steps not done yet.") + '</span></label>'
       + '<div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Export</button></div>', { cls: "pr-win" });
     $(".yn-no", m).onclick = () => m.close();
-    $(".yn-yes", m).onclick = () => { const list = pickList(m, "adPrintPick"); const o = {}; $$("[data-o]", m).forEach(c => o[c.dataset.o] = c.type === "checkbox" ? c.checked : +c.value); lsSet("adPrint", Object.assign(prefs(), o));
+    $(".yn-yes", m).onclick = () => { const list = pickList(m, "adPrintPick"); const o = {}; $$("[data-o]", m).forEach(c => o[c.dataset.o] = c.type === "checkbox" ? c.checked : +c.value); o.sec = {}; $$("[data-sec]", m).forEach(c => o.sec[c.dataset.sec] = c.checked); lsSet("adPrint", Object.assign(prefs(), o));
       if (!list.length) return alert("Nothing matches those choices."); m.close(); if (word) Word.run(list, o).catch(e => alert("Couldn't make the Word file: " + e.message)); else run(list, o); }; }
-  /* the Excel export's window: the same choices, then the list as a spreadsheet */
-  function excelDialog(){ const m = modal('<h3>Export to Excel' + tipI("Only the projects ticked in the project box are included, and only what the search and the other filters show.") + '</h3>' + pickHtml("adXlsPick")
+  /* the Excel export's window: the same choices, a tick for each column, then the list as a spreadsheet */
+  function excelDialog(){ const cs = lsGet("adXlsCols", {}) || {}, cols = Store.fields().map(f => [f.id, f.label]).concat([["_photos", "Photos"], ["_files", "Attachments"], ["_created", "Created"]]);
+    const m = modal('<h3>Export to Excel' + tipI("Only the projects ticked in the project box are included, and only what the search and the other filters show.") + '</h3>' + pickHtml("adXlsPick")
+      + '<div class="msep"></div><div class="lbl">Columns</div><div class="pr-sec">' + cols.map(([k, n]) => '<label class="tp-o"><input type="checkbox" data-col="' + esc(k) + '"' + (cs[k] !== false ? " checked" : "") + '><span>' + esc(n) + '</span></label>').join("") + '</div>'
       + '<div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Export</button></div>', { cls: "pr-win" });
     $(".yn-no", m).onclick = () => m.close();
-    $(".yn-yes", m).onclick = () => { const list = pickList(m, "adXlsPick"); if (!list.length) return alert("Nothing matches those choices."); m.close(); Excel.run(list); }; }
+    $(".yn-yes", m).onclick = () => { const list = pickList(m, "adXlsPick"); if (!list.length) return alert("Nothing matches those choices."); const c = {}; $$("[data-col]", m).forEach(x => c[x.dataset.col] = x.checked); lsSet("adXlsCols", c); m.close(); Excel.run(list, c); }; }
   async function run(list, o){ o = Object.assign(prefs(), o || {}); if (list.length === 1 && !arguments[1]) o.board = false;
     $$("#printRoot").forEach(x => x.remove());
     const root = h('<div id="printRoot"></div>'), projs = [...new Set(list.map(a => a._p))].map(p => (Store.project(p) || {}).name).join(", ");
@@ -61,7 +66,7 @@ const Print = (() => {
       const notDone = o.blanks ? Store.fields().filter(f => f.type === "check" && a.f[f.id] !== true).map(f => a.f[f.id] === Flow.NA ? esc(f.label) + " (not needed)" : esc(f.label)).join(", ") : "";
       const det = (ticks ? '<tr><th>Done</th><td class="pa-tks">' + ticks + '</td></tr>' : "") + (notDone ? '<tr><th>Not done</th><td class="pa-tks">' + notDone + '</td></tr>' : "") + Store.fields().filter(f => !skip.has(f.id) && f.type !== "check").map(f => [f, Fields.show(a, f)]).filter(([, v]) => { const t = String(v || "").replace(/<[^>]*>/g, "").trim(); return o.blanks || (t && !/^(none|–|-|0 items?)$/i.test(t)); }).map(([f, v]) => '<tr><th>' + esc(f.label) + '</th><td>' + (String(v || "").replace(/<[^>]*>/g, "").trim() ? plain(v) : "–") + '</td></tr>').join("");
       const tbl = (title, cols, rows) => { const keep = cols.map((c, k) => k === 0 || rows.some(r => String(r[k] == null ? "" : r[k]).trim())); return rows.length ? '<div class="pa-b"><h5>' + title + '</h5><table class="pa-mto"><tr>' + cols.filter((c, k) => keep[k]).map(c => '<th>' + c + '</th>').join("") + '</tr>' + rows.map(r => '<tr>' + r.filter((c, k) => keep[k]).map(c => '<td>' + esc(c == null ? "" : c) + '</td>').join("") + '</tr>').join("") + '</table></div>' : ""; };
-      const txt = [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([, v]) => o.blanks || String(v || "").trim()).map(([k, v]) => '<div class="pa-b"><h5>' + k + '</h5><div class="pa-tx">' + (String(v || "").trim() ? esc(v) : '<span class="dim">–</span>') + '</div></div>').join("");
+      const txt = [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([k, v]) => secOn(o, k.toLowerCase()) && (o.blanks || String(v || "").trim())).map(([k, v]) => '<div class="pa-b"><h5>' + k + '</h5><div class="pa-tx">' + (String(v || "").trim() ? esc(v) : '<span class="dim">–</span>') + '</div></div>').join("");
       root.appendChild(h('<section class="pr-act' + (o.newPage || (!o.board && i === 0) ? " np" : "") + '">' + (!o.board && i === 0 ? head : "") + '<div class="pa-h" style="--c:' + esc(s.color) + '"><b>' + esc(Store.actId(a)) + '</b><span class="pa-t">' + esc(a.f.title || "") + '</span><span class="stg">' + esc(s.name) + '</span></div>'
         /* on hold: who it's waiting on and how to reach them on one row (symbols, not labels), the notes underneath */
         + (Hold.lines(a).length ? (() => { const L = Object.fromEntries(Hold.lines(a)), it = (e, lab, v) => v ? '<span><svg class="pa-ic" viewBox="0 0 24 24" role="img" aria-label="' + lab + '"><path d="' + HI[e] + '"/></svg>' + v + '</span>' : "";
@@ -69,14 +74,14 @@ const Print = (() => {
               + it("mail", "Email", L.Email && '<a href="mailto:' + esc(L.Email) + '">' + esc(L.Email) + '</a>') + it("cal", "On hold since", L["On hold since"] && "Since " + esc(L["On hold since"])) + '</div>' + (L.Notes ? '<div class="pa-hn">' + it("note", "Notes", esc(L.Notes)) + '</div>' : "") + '</div>'; })() : "")
         /* the text down the left column, the photos down the right; text that runs longer than the photos moves across
            under them (balance, below) */
-        + '<div class="pa-cols' + (o.photos && a.photos.length ? "" : " one") + '"><div class="pa-l">' + (det ? '<div class="pa-b"><h5>Summary</h5><table class="pa-det">' + det + '</table></div>' : "") + txt
-        + tbl("Isolations", ["#", "Equipment number", "Equipment name", "Note"], (a.isol || []).map((it, k) => [k + 1, it.tag, it.name, it.nu ? it.note : ""]))
-        + (a.files.length ? '<div class="pa-b"><h5>Attachments</h5>' + a.files.map(f => '<div class="pa-file">📎 <a href="' + esc(links.get(f) || Media.fileUrlOnline(a, f)) + '">' + esc(f.name) + '</a> <span class="dim">' + fmtSize(f.size || 0) + '</span></div>').join("") + '</div>' : "") + '</div>'
+        + '<div class="pa-cols' + (o.photos && a.photos.length ? "" : " one") + '"><div class="pa-l">' + (det && secOn(o, "sum") ? '<div class="pa-b"><h5>Summary</h5><table class="pa-det">' + det + '</table></div>' : "") + txt
+        + (secOn(o, "isol") ? tbl("Isolations", ["#", "Equipment number", "Equipment name", "Note"], (a.isol || []).map((it, k) => [k + 1, it.tag, it.name, it.nu ? it.note : ""])) : "")
+        + (secOn(o, "att") && a.files.length ? '<div class="pa-b"><h5>Attachments</h5>' + a.files.map(f => '<div class="pa-file">📎 <a href="' + esc(links.get(f) || Media.fileUrlOnline(a, f)) + '">' + esc(f.name) + '</a> <span class="dim">' + fmtSize(f.size || 0) + '</span></div>').join("") + '</div>' : "") + '</div>'
         + (o.photos && a.photos.length ? '<div class="pa-r"><h5>Photos</h5><div class="pa-ph" style="--per:' + Math.max(1, o.per - 1) + '">' + a.photos.map(ph => '<figure><img src="' + esc(Media.src(a, ph)) + '" alt="' + esc(ph.name || "") + '"></figure>').join("") + '</div></div>' : "") + '</div>'
         /* the full width of the page under the two columns: the sketches (each as wide as the page, one after another), then the MTO and the spares */
-        + ((a.sketches || []).length ? '<div class="pa-b pa-sks"><h5>Sketches</h5>' + a.sketches.map((sk, k) => '<figure class="pa-sk"><figcaption>' + (k + 1) + '  ' + esc(sk.name || "") + '</figcaption><img src="' + esc(Sketch.src(a, sk)) + '" alt="' + esc(sk.name || "") + '"></figure>').join("") + '</div>' : "")
-        + tbl("MTO", ["#", "Description", "Part / tag no.", "Qty", "Unit", "Notes"], Mto.orderRows(a).map((it, k) => [k + 1, it.desc, it.part, Mto.ord(it), it.unit, it.notes]))
-        + tbl("From spares", ["#", "Description", "Part / tag no.", "Qty", "Unit", "Store location / notes", "Secured"], (a.spares || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes, it.secured ? "Yes" : ""])) + '</section>')); });
+        + (secOn(o, "sk") && (a.sketches || []).length ? '<div class="pa-b pa-sks"><h5>Sketches</h5>' + a.sketches.map((sk, k) => '<figure class="pa-sk"><figcaption>' + (k + 1) + '  ' + esc(sk.name || "") + '</figcaption><img src="' + esc(Sketch.src(a, sk)) + '" alt="' + esc(sk.name || "") + '"></figure>').join("") + '</div>' : "")
+        + (secOn(o, "mto") ? tbl("MTO", ["#", "Description", "Part / tag no.", "Qty", "Unit", "Notes"], Mto.orderRows(a).map((it, k) => [k + 1, it.desc, it.part, Mto.ord(it), it.unit, it.notes])) : "")
+        + (!secOn(o, "spares") ? "" : tbl("From spares", ["#", "Description", "Part / tag no.", "Qty", "Unit", "Store location / notes", "Secured"], (a.spares || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes, it.secured ? "Yes" : ""]))) + '</section>')); });
     document.body.appendChild(root); note("Getting the photos ready to print…", 8000);
     await Promise.race([Promise.all($$("img", root).map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))), new Promise(r => setTimeout(r, 20000))]);
     balance(root); if (o.pages > 0) fit(root, o);
@@ -106,5 +111,5 @@ const Print = (() => {
       const tries = []; for (let per = Math.max(1, o.per - 1); per <= 4; per++) tries.push([per, 85]); [70, 55, 45, 35, 28, 22].forEach(hh => tries.push([4, hh]));   // (in the half width photo column)
       for (const [per, hh] of tries){ $$(".pa-ph", sec).forEach(ph => ph.style.setProperty("--per", per)); imgs.forEach(im => im.style.maxHeight = hh + "mm"); bal(cols); if (sec.offsetHeight <= room) break; } });
     root.classList.remove("measure"); }
-  return { excelDialog, dialog, run };
+  return { excelDialog, dialog, run, SECS, secOn };
 })();
