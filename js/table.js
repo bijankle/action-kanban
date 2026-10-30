@@ -16,7 +16,8 @@ const Table = (() => {
     const f = Store.field(b.dataset.c); if (!f) return;
     const p = h('<div class="pop thpop"><b>' + esc(f.label) + '</b>' + (f.desc ? '<p>' + esc(f.desc) + '</p>' : "") + '</div>'); document.body.appendChild(p); Fields.place(p, b); }, true);
   /* the width of a heading's longest word, plus the cell padding and room for the sort arrow */
-  function headW(label, font){ cv = cv || document.createElement("canvas").getContext("2d"); cv.font = font || "700 13px " + getComputedStyle(document.body).fontFamily;
+  let cvF = null;
+  function headW(label, font){ cv = cv || document.createElement("canvas").getContext("2d"); const f = font || "700 13px " + getComputedStyle(document.body).fontFamily; if (f !== cvF){ cv.font = f; cvF = f; }   /* (the font set only when it changes: setting it is the slow part) */
     return Math.ceil(Math.max(...String(label || "").split(/\s+/).map(w => cv.measureText(w).width), 0)) + 20 + 10; }
   const W = { text: 200, longtext: 260, multi: 170, stage: 170, rank: 74, check: 90, choice: 120, date: 120, contact: 160, phone: 130, number: 90 };
   const widths = () => lsGet("adColW", {});
@@ -92,8 +93,8 @@ const Table = (() => {
   /* the ID column is just wide enough for its box with an 8px margin each side, like the Status buttons */
   let idW = NEED.id;
   /* a tags cell shows as many tags as fit its width, the rest as +N (widen the column to see more) */
-  function tagFit(el){ $$("td.tgc .tgv", el).forEach(v => { const a = App.act(v.closest("tr").dataset.ref), tags = a ? [].concat(a.f.equipment || []).filter(Boolean) : []; if (tags.length < 2) return;
-    const t1 = $(".tg1", v), mb = $(".tg-more", v), font = getComputedStyle(t1).font, room = v.clientWidth - 20 - (mb ? 34 : 0);
+  function tagFit(el){ const vs = $$("td.tgc .tgv", el), rooms = vs.map(v => v.clientWidth), fonts = new Map(); vs.forEach((v, n) => { const a = App.act(v.closest("tr").dataset.ref), tags = a ? [].concat(a.f.equipment || []).filter(Boolean) : []; if (tags.length < 2) return;
+    const t1 = $(".tg1", v), mb = $(".tg-more", v), font = fonts.get(t1.className) || (fonts.set(t1.className, getComputedStyle(t1).font), fonts.get(t1.className)), room = rooms[n] - 20 - (mb ? 34 : 0);
     let k = 1; while (k < tags.length && headW(tags.slice(0, k + 1).join(", "), font) <= (k + 1 === tags.length ? room + 34 : room)) k++;
     t1.textContent = tags.slice(0, k).join(", "); if (mb){ mb.hidden = k >= tags.length; mb.textContent = "+" + (tags.length - k); } }); }
   function cut(el){ moreFit(el); tagFit(el); const ids = $$(".idw .aid", el); el.style.removeProperty("--aid-w"); if (ids.length) el.style.setProperty("--aid-w", Math.ceil(Math.max(...ids.map(x => x.getBoundingClientRect().width))) + "px");
@@ -101,8 +102,10 @@ const Table = (() => {
        showing: recategorising an action never moves the columns) */
     const one = $("td.idc .aid", el); if (one){ const f = getComputedStyle(one).font, dg = "8".repeat(Math.max(4, String(Math.max(0, ...Store.all().map(x => x.no || 0))).length));
       const want = Math.ceil(Math.max(...Store.idLetters().map(l => headW(l + "-" + dg, f)))) + 20 + 2; if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
-    $$("td.ttl", el).forEach(td => { const t = $(".tt", td); if (t) td.classList.toggle("cut", t.scrollWidth > t.clientWidth + 1); });
-    $$("td.ltc", el).forEach(td => { const t = $(".lt-b", td), v = String((App.act(td.closest("tr").dataset.ref) || { f: {} }).f[t.dataset.lt] || ""); td.classList.toggle("cut", v.includes("\n") || t.scrollWidth > t.clientWidth + 1); }); }
+    /* (all measured first, then all marked: one layout, not one per cell) */
+    const tt = $$("td.ttl", el).map(td => { const t = $(".tt", td); return [td, !!t && t.scrollWidth > t.clientWidth + 1, !!t]; });
+    const lt = $$("td.ltc", el).map(td => { const t = $(".lt-b", td), v = String((App.act(td.closest("tr").dataset.ref) || { f: {} }).f[t.dataset.lt] || ""); return [td, v.includes("\n") || t.scrollWidth > t.clientWidth + 1, true]; });
+    tt.concat(lt).forEach(([td, on, has]) => { if (has) td.classList.toggle("cut", on); }); }
   /* long text (notes and the like) in the list: click the box, or its more…, and it opens over the cell in full to edit,
      saved when you click away or press Ctrl+Enter, Esc to leave it as it was */
   document.addEventListener("click", e => { const b = e.target.closest("[data-lt]"); if (!b || !b.closest(".tbl")) return; e.stopPropagation(); Fields.closePop();
@@ -250,18 +253,22 @@ const Table = (() => {
       q.onkeydown = e => { if (e.key === "Enter"){ const b = $$("[data-f]", p).find(x => !x.hidden); if (b) b.click(); } if (e.key === "Escape") Fields.closePop(); }; }
     $$("[data-f]", p).forEach(b => b.onclick = () => { Fields.closePop(); Store.mutate("config", () => { const f = Store.field(b.dataset.f), fs = Store.S.config.fields; f.table = true; fs.splice(fs.indexOf(f), 1); fs.push(f); Store.S.config.mod = now(); Store.touch(f); }); Store.log("Added the " + b.textContent + " column"); }); }
   /* a column's tight width (as a double click on its edge gives): its heading's longest word, or its widest cell */
-  function fitW(el, cs, th, i){ const l = $(".th-l", th); if (cs[i] && TICK.has(cs[i].type)) return 23;   // (a tick column: one square cell)
+  function fitW(el, cs, th, i, only){ const l = $(".th-l", th); if (cs[i] && TICK.has(cs[i].type)) return 23;   // (a tick column: one square cell)
     if (cs[i] && cs[i].type === "choice"){ const td = $("tbody td:nth-child(" + (i + 1) + ")", el), f = td ? getComputedStyle(td).font : "13px " + getComputedStyle(document.body).fontFamily;   // (a strict list: as wide as its widest choice, so picking another never moves the columns)
       return Math.round(Math.max(headW(head(cs[i]), getComputedStyle(l).font), ...(cs[i].options || []).map(o => headW(o.label || o, f) + 6 + 22 + 8)) + 2); }
     let w = cs[i] && TICK.has(cs[i].type) ? headW(head(cs[i]), getComputedStyle(l).font) - 14 : headW(cs[i] ? head(cs[i]) : l.textContent, getComputedStyle(l).font);
-    $$("tbody tr", el).forEach(tr => { const td = tr.children[i]; if (!td) return;
-      const m = document.createElement("div"); m.style.cssText = "position:absolute;visibility:hidden;white-space:nowrap;left:-9999px;top:0;font:" + getComputedStyle(td).font; m.innerHTML = td.innerHTML;
+    /* (every cell copied into one hidden box and measured together: one layout for the column, not one per row, so a change is quick) */
+    const td0 = $("tbody td:nth-child(" + (i + 1) + ")", el), font = td0 ? getComputedStyle(td0).font : "", box = document.createElement("div"), ms = [];
+    box.style.cssText = "position:absolute;visibility:hidden;left:-9999px;top:0"; const trs = only ? $$("tbody tr", el).filter(tr => only.has(tr.dataset.ref)) : $$("tbody tr", el);
+    trs.forEach(tr => { const td = tr.children[i]; if (!td) return;
+      const m = document.createElement("div"); m.style.cssText = "position:absolute;white-space:nowrap;left:0;top:0;font:" + font; m.innerHTML = td.innerHTML;
       /* (a box you type in measures by what's in it, or its hint when empty, not by the box's default width) */
       $$("input,select,textarea", m).forEach((x, n) => { const src = $$("input,select,textarea", td)[n], t = document.createElement("span");
         t.textContent = src.tagName === "SELECT" ? ((src.options[src.selectedIndex] || {}).text || "") : (src.value || src.placeholder || ""); t.style.padding = "0 " + (src.tagName === "SELECT" ? 28 : 12) + "px"; x.replaceWith(t); });   // (a box's own padding and border, and a dropdown's arrow)
       $$(".mc-more,.lt-more,.tt-more", m).forEach(x => x.remove());
       $$(".tgv", m).forEach(v => { const n = +v.dataset.n || 0, t = $(".tg1", v), b = $(".tg-more", v); if (t && n > 1) t.textContent = t.textContent.split(", ")[0]; if (b){ b.hidden = false; b.textContent = "+" + (n - 1); } });   // (Tags fits its first tag and the +N)   // (the more… links only show when cut off)
-      document.body.appendChild(m); w = Math.max(w, Math.min(cs[i] && cs[i].type === "longtext" ? 220 : 640, m.scrollWidth + 22)); m.remove(); });
+      box.appendChild(m); ms.push(m); });
+    document.body.appendChild(box); ms.forEach(m => { w = Math.max(w, Math.min(cs[i] && cs[i].type === "longtext" ? 220 : 640, m.scrollWidth + 22)); }); box.remove();
     return Math.round(w); }
   /* the column widths. The short columns fit their contents fully when the app opens, when a side panel opens or
      closes (the list's width changes) and once the app's font has loaded; while working they only ever widen to fit
@@ -270,14 +277,16 @@ const Table = (() => {
      spare room: the title first, up to its longest title, then Notes takes the rest. The + Add column strip stays about
      the ID column's width, and shrinks to a + only when there's no room. The tick columns share one even width. A
      column dragged to a width keeps it until the app is next opened (a long one, from then on) */
-  let fitted = false, fitKey = "", fitW0 = 0, lastCs = null; const dragged = new Set(), LONG = c => c.id === "title" || c.type === "longtext";
+  let fitted = false, fitKey = "", fitW0 = 0, lastCs = null, modSeen = new Map(); const dragged = new Set(), LONG = c => c.id === "title" || c.type === "longtext";
   const longMem = () => lsGet("adColLong", {}) || {};
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitW0 = -1; fitKey = ""; if (typeof App !== "undefined" && App.render) App.render(); });   // (measured again with the real font)
   function autoFit(el, cs){ if (!pref("autoFit") || !$$("tbody tr", el).length) return; const first = !fitted; fitted = true;
     const W = el.clientWidth, key = W + "|" + cs.map(c => c.id).join() + "|" + $$("tbody tr", el).map(tr => { const a = App.act(tr.dataset.ref); return a ? a.u + ":" + (a.mod || 0) : ""; }).join();
     if (!first && key === fitKey) return; fitKey = key; const full = first || W !== fitW0; fitW0 = W;
+    /* (while working, columns only widen: only the rows that changed since last time are measured, not the whole list) */
+    const mods = new Map($$("tbody tr", el).map(tr => { const a = App.act(tr.dataset.ref); return [tr.dataset.ref, a ? String(a.mod || 0) : ""]; })), only = full ? null : new Set([...mods].filter(([r, m]) => modSeen.get(r) !== m).map(([r]) => r)); modSeen = mods;
     const old = widths(), ws = Object.assign({}, old), mem = longMem(), ths = $$("th[data-c]", el);
-    ths.forEach((th, i) => { const c = cs[i]; if (!c || c.type === "act" || c.type === "id" || dragged.has(c.id) || LONG(c)) return; const w = fitW(el, cs, th, i); ws[c.id] = full ? w : Math.max(old[c.id] || 0, w); });
+    ths.forEach((th, i) => { const c = cs[i]; if (!c || c.type === "act" || c.type === "id" || dragged.has(c.id) || LONG(c)) return; if (only && !only.size){ ws[c.id] = old[c.id] || fitW(el, cs, th, i); return; } const w = only && old[c.id] ? fitW(el, cs, th, i, only) : fitW(el, cs, th, i); ws[c.id] = full ? w : Math.max(old[c.id] || 0, w); });
     const tk = cs.filter(c => TICK.has(c.type) && !dragged.has(c.id)), tw = Math.max(0, ...tk.map(c => ws[c.id] || 0)); tk.forEach(c => { if (tw) ws[c.id] = tw; });
     const add = App.isAdmin() ? Math.max(90, idW) : 24; ws._add = add;
     const lc = cs.filter(c => LONG(c) && !dragged.has(c.id)), fitOf = {};

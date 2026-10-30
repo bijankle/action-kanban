@@ -73,18 +73,19 @@ const Mto = (() => {
 
   /* ---------- how a total was worked out, in words ---------- */
   const mm = x => Math.round(x).toLocaleString() + " mm", m_ = x => n1(x / 1000) + " m";
-  function explain(it, res){ if (!res) return ""; const { kerf, keep } = rules(), sp = Math.max(0, Math.round(+it.spare || 0)), k = kg(it);
-    if (res.kind === "len"){ const n = res.bars.length, N = stockN(res), keepO = res.bars.filter(b => b.off && b.keep), scrap = res.bars.filter(b => b.off && !b.keep);
-      return res.pieces + " piece" + (res.pieces === 1 ? "" : "s") + ", " + m_(res.need) + " in all" + (res.green ? " (with " + mm(res.green) + " of green for site trimming)" : "") + ". They fit on " + n + " × " + lenTxt(res.L) + " length" + (n === 1 ? "" : "s") + " with a " + kerf + " mm saw cut between pieces"
-        + (N > n ? ", plus " + (N - n) + " for the piece" + (res.long.length === 1 ? "" : "s") + " longer than a stock length (below)" : "") + (sp ? ", plus " + sp + " spare length" + (sp === 1 ? "" : "s") : "") + ", so " + (N + sp) + " × " + lenTxt(res.L) + " = " + m_((N + sp) * res.L) + " to order."
-        + (keepO.length ? " Offcuts kept (" + keep + " mm or more): " + keepO.map(b => mm(b.off)).join(", ") + "." : "") + (scrap.length ? " Scrap: " + scrap.map(b => mm(b.off)).join(", ") + "." : "")
-        + (k ? " Weight about " + Math.round((N + sp) * res.L / 1000 * k).toLocaleString() + " kg (" + k + " kg/m)." : "")
-        + (res.long.length ? " " + res.long.length + " piece" + (res.long.length === 1 ? " is" : "s are") + " longer than a stock length (" + res.long.map(p => mm(p.l)).join(", ") + "), so " + (res.long.length === 1 ? "it needs" : "they need") + " a joint or a longer stock length: " + (res.long.length === 1 ? "it is" : "they are") + " counted as " + res.long.map(p => Math.ceil(p.t / res.L) + " lengths joined").join(", ") + "." : ""); }
-    const n = res.sheets.length, s = res.sh, N = stockN(res), big = res.big || [];
-    return res.pieces + " piece" + (res.pieces === 1 ? "" : "s") + ", " + n1(res.need / 1e6) + " m² in all. They nest onto " + n + " × " + s.l + " x " + s.w + " sheet" + (n === 1 ? "" : "s") + " with a " + kerf + " mm cut between pieces"
-      + (N > n ? ", plus " + (N - n) + " for the piece" + (big.length === 1 ? "" : "s") + " bigger than a sheet (" + big.map(p => p.l + " x " + p.w).join(", ") + ": " + (big.length === 1 ? "it needs" : "they need") + " a joint, or pick a bigger sheet)" : "")
-      + (sp ? ", plus " + sp + " spare sheet" + (sp === 1 ? "" : "s") : "") + ", so " + (N + sp) + " sheet" + (N + sp === 1 ? "" : "s") + " to order. Use: " + res.sheets.map((x, i) => "sheet " + (i + 1) + " " + Math.round(x.use * 100) + "%").join(", ") + "."
-      + (k ? " Weight about " + Math.round((N + sp) * s.l * s.w / 1e6 * k).toLocaleString() + " kg (" + k + " kg/m²)." : ""); }
+  /* how the order is worked out, as plain totals: one row each (what, how much) */
+  function sums(it, res){ if (!res) return []; const { kerf, keep } = rules(), sp = Math.max(0, Math.round(+it.spare || 0)), k = kg(it), N = stockN(res), pl = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+    if (res.kind === "len"){ const keepO = res.bars.filter(b => b.off && b.keep), scrap = res.bars.filter(b => b.off && !b.keep), saws = res.bars.reduce((t, b) => t + Math.max(0, b.ps.length - 1), 0), tot = (N + sp) * res.L, offT = res.bars.reduce((t, b) => t + (b.off || 0), 0);
+      return [["Cuts", pl(res.pieces + res.long.length, "piece") + ", " + m_(res.need + res.long.reduce((t, p) => t + p.t, 0))], res.green ? ["Green", m_(res.green) + " in all"] : null, saws ? ["Saw cuts", saws + " × " + kerf + " mm = " + mm(saws * kerf)] : null,
+        ["Lengths needed", N + " × " + lenTxt(res.L)], res.long.length ? ["Joined", res.long.map(p => mm(p.l)).join(", ")] : null, ["Spare", pl(sp, "length") + (it.spWhy ? " (" + it.spWhy + ")" : "")],
+        ["To order", (N + sp) + " × " + lenTxt(res.L) + " = " + m_(tot)], keepO.length ? ["Offcuts kept", m_(keepO.reduce((t, b) => t + b.off, 0)) + " (" + pl(keepO.length, "piece") + ")"] : null,
+        scrap.length ? ["Scrap", m_(scrap.reduce((t, b) => t + b.off, 0))] : null, ["Waste", Math.round(offT / Math.max(1, res.bars.length * res.L) * 100) + "% of the lengths cut"], k ? ["Weight", "about " + Math.round(tot / 1000 * k).toLocaleString() + " kg (" + k + " kg/m)"] : null].filter(Boolean); }
+    const n = res.sheets.length, s = res.sh, big = res.big || [], use = n ? res.sheets.reduce((t, x) => t + x.use, 0) / n : 0;
+    return [["Pieces", pl(res.pieces + big.length, "piece") + ", " + n1(res.need / 1e6) + " m²"], ["Sheets needed", N + " × " + s.l + " × " + s.w], big.length ? ["Joined", pl(big.length, "piece") + " bigger than a sheet (" + big.map(p => p.l + " × " + p.w).join(", ") + ")"] : null,
+      ["Spare", pl(sp, "sheet") + (it.spWhy ? " (" + it.spWhy + ")" : "")], ["To order", pl(N + sp, "sheet")], ["Use", Math.round(use * 100) + "% of the sheets"], k ? ["Weight", "about " + Math.round((N + sp) * s.l * s.w / 1e6 * k).toLocaleString() + " kg (" + k + " kg/m²)"] : null].filter(Boolean); }
+  const explain = (it, res) => sums(it, res).map(r => r[0] + ": " + r[1]).join(". ") + (res ? "." : "");
+  /* the same as a little table: a shaded name cell, the value beside it */
+  const sumTbl = (it, res) => '<table class="mt-sum"><tbody>' + sums(it, res).map(r => '<tr><th>' + esc(r[0]) + '</th><td>' + esc(r[1]) + '</td></tr>').join("") + '</tbody></table>';
 
   /* ---------- short form (standard MTO wording: ELB 90 LR, FLG WN, CL150 RF, A403 WP316L, B16.9) ---------- */
   const SHORT = { pipe: "PIPE", sspipe: "PIPE", sstube: "TUBE", pe: "PIPE HDPE", ub: "UB", uc: "UC", wb: "WB", pfc: "PFC", tfb: "TFB", ea: "EA", ua: "UA", shs: "SHS", rhs: "RHS", chs: "CHS",
@@ -428,9 +429,8 @@ const Mto = (() => {
       Store.mutate(key, () => { G.rows.forEach(r => { const i = items.indexOf(r); if (i >= 0) items.splice(i, 1); }); if (a.mtoG) delete a.mtoG[G.key]; Store.touch(a); }); openG.delete(G.key); Store.log("Removed from the MTO of " + Store.actId(a)); App.render(); });
     $$("[data-ginfo]", el).forEach(b => b.onclick = e => { e.stopPropagation(); const G = grp(b.dataset.ginfo); if (!G) return; Fields.closePop(); const sp = gSpare(a, G), st = (a.mtoG || {})[G.key] || {};
       const p = document.createElement("div"); p.className = "pop mt-pop";
-      p.innerHTML = '<div class="mt-ph">As printed on the MTO</div><b>' + esc(desc(G.first)) + '</b><div class="lbl">How the order is worked out</div><p>' + esc(G.res ? explain(Object.assign({}, G.v, { spare: sp }), G.res) : (isPlate(G.first) ? "Pick a sheet size for the pieces first." : "Pick a stock length for the cuts first.")) + '</p>'
-        + (G.res ? '<p>' + esc("Spare: " + sp + (isPlate(G.first) ? " sheet" : " length") + (sp === 1 ? "" : "s") + (st.sqm ? ", set by hand." : ", " + (+pref(gPk(G.first)) || 0) + "% of the " + G.n + " rounded up (File, Parameters, MTO spares).")) + '</p>' : "")
-        + '<p class="dim">' + (isPlate(G.first) ? "Each row under it is one piece: its length and width, its notes as the mark." : "Each row under it is one cut: its length, the green from Settings, its notes as the mark.") + " The cutting list in the work pack shows where to cut. Only this row goes to the supplier." + '</p>';
+      p.innerHTML = '<div class="mt-ph">As printed on the MTO</div><b>' + esc(desc(G.first)) + '</b><div class="lbl">How the order is worked out</div>' + (G.res ? sumTbl(Object.assign({}, G.v, { spare: sp, spWhy: st.sqm ? "set by hand" : (+pref(gPk(G.first)) || 0) + "%, rounded up" }), G.res) : '<p>' + esc(isPlate(G.first) ? "Pick a sheet size for the pieces first." : "Pick a stock length for the cuts first.") + '</p>')
+        + '<p class="dim">' + (isPlate(G.first) ? "Each row under it is one piece." : "Each row under it is one cut.") + " Only this row goes to the supplier." + '</p>';
       document.body.appendChild(p); Fields.place(p, b); const pr = p.getBoundingClientRect(); if (pr.bottom > innerHeight - 8) p.style.top = Math.max(8, innerHeight - pr.height - 8) + "px"; if (pr.right > innerWidth - 8) p.style.left = Math.max(8, innerWidth - pr.width - 8) + "px"; });
     /* the ⋯ at the row's end: about this item (sizes, weight, how the total was worked out, notes), move it to Spares, remove it */
     /* the row's end: move it to Spares, or remove it (asks first) */
@@ -578,7 +578,7 @@ const Mto = (() => {
     const p = document.createElement("div"); p.className = "pop mt-pop";   // (in full first, then the sizes, weight and how the total was worked out)
     const F = inFull(it);
     p.innerHTML = '<div class="mt-ph">As printed on the MTO</div><b>' + esc(desc(it) || "Item") + '</b>' + (isSpec(it) ? "" : '<p class="mt-full">' + esc(F.line) + '</p>') + '<dl class="mt-fl">' + F.rows.map(([t, v]) => '<dt>' + esc(t) + '</dt><dd>' + esc(v) + '</dd>').join("") + '</dl>' + (facts.length ? '<dl>' + facts.map(([t, v]) => '<dt>' + esc(t) + '</dt><dd>' + esc(v) + '</dd>').join("") + '</dl>' : "")
-      + (res ? '<div class="lbl">How the total was worked out</div><p>' + esc(explain(it, res)) + '</p>'
+      + (res ? '<div class="lbl">How the total was worked out</div>' + sumTbl(it, res)
         : T && (T.k === "len" || T.k === "plate") ? '<div class="lbl">How the total is worked out</div><p>' + esc(!it.L ? "Pick a stock " + (T.k === "plate" ? "sheet size" : "length") + " first." : "Add the pieces the job needs (▸). They're packed onto the fewest " + (T.k === "plate" ? "sheets" : "stock lengths, keeping offcuts of " + rules().keep + " mm or more,") + " with a " + rules().kerf + " mm saw cut between pieces, and Qty becomes the total.") + '</p>' : "")
       + (T && !z && it.z ? '<p class="bad">' + esc(it.z) + " isn't in the library for " + esc(S.n) + ". Check the size.</p>" : "")
       + '<label class="fl"><span class="fl-h">Notes' + tipI("Anything too long for a column.") + '</span>' + '<textarea class="in" rows="4"' + (ro ? " readonly" : "") + ' placeholder="e.g. Allowed 1 spare length for site fit up">' + esc(it.info || "") + '</textarea></label>';

@@ -1695,3 +1695,8 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 /* the Type cell worked out by the app (from the item, the AI's reply or the row's words): faint blue until a Type is picked */
 .mt-tbl td:has(>.mt-tya),.mt-tbl td .pt-in.mt-tya{background:var(--autof)!important}
 .lk-ol{min-height:0;flex:1 1 auto}
+/* how an order is worked out: a little table of totals, a shaded name cell and its value (as the forms) */
+.mt-sum{border-collapse:collapse;width:100%;font-size:var(--fb)}
+.mt-sum th,.mt-sum td{height:var(--row);padding:0 6px;border:1px solid var(--line);white-space:nowrap;text-align:left;vertical-align:middle}
+.mt-sum th{background:var(--hdr);color:var(--dim);font-weight:600;width:1%}
+.mt-sum td{overflow:hidden;text-overflow:ellipsis;max-width:0;width:99%}
