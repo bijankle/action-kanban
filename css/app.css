@@ -1686,3 +1686,6 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .mt-tbl tr:hover td>.mt-dd,.mt-tbl tr.row-sel td>.mt-dd,.mt-tbl td:has(>.mt-pk:focus)>.mt-dd{visibility:visible}.mt-tbl td:has(>.mt-pk:focus)>.mt-dd{color:var(--ink);background:var(--panel2)}
 .mt-tbl td>.mt-pk.mt-fr+.mt-dd{display:none}
 .mt-tbl td>.mt-dd:has(~.mt-dd){display:none}
+/* size × count: one space each side of the × (the boxes hug their digits) */
+.mt-tbl td.mt-qu .mt-dm,.mt-tbl tr.mt-par td.mt-pq .mt-gl,.mt-tbl td.mt-dims .mt-dm{padding:0 1px!important;min-width:1ch}.mt-tbl td.mt-qu .dim,.mt-tbl td.mt-dims .dim,.mt-tbl tr.mt-par td.mt-pq .dim{margin:0 .25em!important}
+.mt-tbl td.mt-qu>.mt-n:only-child{width:100%!important}   /* (a count on its own fills its cell, so it is easy to click) */
