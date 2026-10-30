@@ -1671,4 +1671,6 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .mt-tbl td.mt-szd .mt-sep{color:var(--muted);margin:0 3px 0 -2px}
 /* the MTO, same fills as the Actions rows: no hint text in a filled row's empty cells, and what the app works out (Total) faint blue */
 .mt-tbl tr.mt-row .pt-in::placeholder{color:transparent}
-.mt-tbl tr.mt-row td.mt-tot{background:var(--autof)!important}
+.mt-tbl td.mt-tot,.mt-tbl tr.mt-par td.mt-pq{background:var(--autof)!important}.mt-tbl tr.mt-par td.mt-tot{font-weight:700!important}
+/* a stock item's row is a row like any other: body text, the same faint lines (its group row above it is the heading) */
+.mt-tbl tr.mt-par>td{font-weight:400!important;border-bottom:1px solid var(--line)!important}.mt-tbl tr.mt-par .mt-pv{font-family:inherit}
