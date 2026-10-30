@@ -211,8 +211,10 @@ const Mto = (() => {
   const isInst = it => it.cat === "inst";
   /* the boxes' lists */
   /* a row given its Type first: the item list keeps to that Type (gaskets only for Gaskets), with the typed in choices still there */
-  function choices(it, c, q){ const l = choices0(it, c, q); if (!it.ty || !PIPETY.has(it.ty) || !(c === "it" || (c === "t" && it.cl === "N/A" && !type(it)))) return l;
-    const tyOpt = x => c === "it" ? GROUP({ cl: it.cl, it: x.v }) : x.g && (LIBH[x.g] || x.g), keep = l.filter(x => !x.v || /^(cat:|other|X:|typed:)/.test(x.v) || tyOpt(x) === it.ty);
+  /* the Item list holds only what the row's Type is: pipe for Pipes, flanges for Flanges, sections for Structural steel, bar for Bar and so on
+     (with Other and the typed in choices); a Type with nothing of its own in the list shows it all */
+  function choices(it, c, q){ const l = choices0(it, c, q); if (!it.ty || !(c === "it" || c === "t") || isInst(it)) return l;
+    const tyOpt = x => c === "it" ? GROUP({ cl: it.cl, it: x.v }) : x.g && (GMAP[LIBH[x.g] || x.g] || LIBH[x.g] || x.g), keep = l.filter(x => !x.v || /^(cat:|other|X:|typed:)/.test(x.v) || tyOpt(x) === it.ty);
     return keep.some(x => x.v && !/^(cat:|other|X:|typed:)/.test(x.v)) ? keep : l; }
   function choices0(it, c, q){
     if (c === "ty") return TYPESH.map(t => ({ v: t, t }));
@@ -499,7 +501,14 @@ const Mto = (() => {
       const o = order(items); items.splice(0, items.length, ...o); }
     const save = (id, c, v) => { const isNew = String(id).startsWith("new"); let it = isNew ? { id: uid(), qty: "", draft: 1 } : find(id); if (!it) return;
       /* a new row from its Type: piping starts in the class last picked (or N/A), an instrument or special as one, supports and the rest typed in, steel picked from the steel */
-      if (id === "newt" && c === "ty"){ it.ty = v; if (PIPETY.has(v)) it.cl = lastCl.get(akey(a)) || "N/A"; else if (v === "Instruments") set(it, "cl", "cat:inst"); else if (v === "Specials"){ it.cl = "N/A"; it.cat = "spec"; it.desc = ""; it.unit = "ea"; } else if (v === "Supports" || v === "Other"){ it.desc = ""; it.unit = "ea"; }
+      const initTy = (it, v) => { it.ty = v; if (PIPETY.has(v)) it.cl = lastCl.get(akey(a)) || "N/A"; else if (v === "Instruments") set(it, "cl", "cat:inst"); else if (v === "Specials"){ it.cl = "N/A"; it.cat = "spec"; it.desc = ""; it.unit = "ea"; } else if (v === "Supports" || v === "Other"){ it.desc = ""; it.unit = "ea"; } };
+      /* the Type of a row changed: when its item isn't that Type, the row starts again as one of the new Type (its quantity and notes kept),
+         to be finished and Done; a Type that already fits (a row the app had put under the wrong heading) just moves */
+      if (!isNew && c === "ty"){ if (v === typeOf(it)) return; const fits = (() => { const t0 = it.ty; delete it.ty; const w = autoTy(it); it.ty = t0; return w === v; })();
+        Store.mutate(key, () => { if (fits) it.ty = v; else { const keep = { id: it.id, qty: it.qty, notes: it.notes, n: it.n }; Object.keys(it).forEach(k => delete it[k]); Object.assign(it, keep, { draft: 1 }); Object.keys(it).forEach(k => it[k] === undefined && delete it[k]); initTy(it, v); }
+          const o = order(items); items.splice(0, items.length, ...o); Store.touch(a); });
+        Store.log("Edited the MTO of " + Store.actId(a)); focusNext = fits ? null : after(it.id, "ty") || { id: it.id, c: isPipe(it) ? "cl" : "t" }; return; }
+      if (id === "newt" && c === "ty"){ initTy(it, v);
         Store.mutate(key, () => { items.push(it); const o = order(items); items.splice(0, items.length, ...o); Store.touch(a); }); Store.log("Added to the MTO of " + Store.actId(a)); focusNext = after(it.id, "ty") || { id: it.id, c: isPipe(it) ? "cl" : "t" }; return; }
       if (c === "cl" && PipeSpec.classes().includes(v)) lastCl.set(akey(a), v);
       Store.mutate(key, () => { if (id === "newp" && c !== "cl" && lastCl.get(akey(a))) set(it, "cl", lastCl.get(akey(a))); set(it, c, v); recalc(it); if (isNew) items.push(it); const o = order(items); items.splice(0, items.length, ...o); bolts(); Store.touch(a); });
@@ -531,9 +540,9 @@ const Mto = (() => {
         /* the headings in the list (the class list by material, the items by kind) when there is more than one */
         if (new Set(list.map(x => x.g).filter(Boolean)).size > 1){ const o = []; let g0 = null; list.forEach(x => { if (x.g && x.g !== g0){ o.push({ grp: true, t: x.g }); g0 = x.g; } o.push(x); }); list = o; }
         if (pt && typed && !list.some(x => x.t.toLowerCase() === q)) list = list.concat([{ v: "typed:" + i.value.trim(), t: "Use “" + i.value.trim() + "” as typed", sub: "not in the plant lists" }]);
-        key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], c === "t" ? [it.t, it.mk, it.end].filter(Boolean).join("|") : c === "dn" ? it.dn : it[c], x => { if (x.v === "") return; if (!String(r).startsWith("new")) i.value = x.t; save(r, c, x.v); hush = true; App.render(); setTimeout(() => { hush = false; }, 400); }, { mark: ws }); };
+        key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], c === "t" ? [it.t, it.mk, it.end].filter(Boolean).join("|") : c === "dn" ? it.dn : it[c], x => { if (x.v === "") return; if (!String(r).startsWith("new")) i.value = x.t; save(r, c, x.v); hush = r + "|" + c; App.render(); setTimeout(() => { hush = false; }, 400); }, { mark: ws }); };
       /* (the redraw after a pick, a frame later, puts the cursor back in the box: that mustn't open its list again, a flash before the cursor moves on) */
-      i.onfocus = () => { i.select(); if (hush){ hush = false; return; } show(); };
+      i.onfocus = () => { i.select(); if (hush === r + "|" + c){ hush = false; return; } show(); };
       i.oninput = () => { if (free && !pt) return; show(); };
       i.onkeydown = e => { if (key2 && /^(ArrowDown|ArrowUp|Escape)$/.test(e.key)) return key2(e);
         if (e.key === "Enter" || e.key === "Tab"){ const v = i.value.trim(); const lit = document.querySelector(".lk-card .lk-o.hi:not(.dis)");

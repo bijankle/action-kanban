@@ -1700,3 +1700,6 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .mt-sum th,.mt-sum td{height:var(--row);padding:0 6px;border:1px solid var(--line);white-space:nowrap;text-align:left;vertical-align:middle}
 .mt-sum th{background:var(--hdr);color:var(--dim);font-weight:600;width:1%}
 .mt-sum td{overflow:hidden;text-overflow:ellipsis;max-width:0;width:99%}
+/* a cut's length or count box: the focus edge drawn inside it (outside, the cell cut it off); empty and needed, it keeps room for a length and shows orange */
+.mt-tbl td .mt-dm:focus,.mt-tbl tr.mt-par td.mt-pq .mt-gl:focus{box-shadow:inset 0 0 0 1px var(--focus)!important}
+.mt-tbl td.mt-qu .mt-dm[value=""],.mt-tbl td.mt-dims .mt-dm[value=""]{min-width:5ch!important;background:var(--need)}
