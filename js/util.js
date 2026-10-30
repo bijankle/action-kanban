@@ -280,9 +280,11 @@ function tblKit(table, key, opts){ const hr = table.tHead && table.tHead.rows[0]
   const cmp = (a, b) => { if (a === b) return 0; if (a === "") return 1; if (b === "") return -1; const x = num(a), y = num(b); if (x != null && y != null) return x - y;
     const dx = day(a), dy = day(b); if (!isNaN(dx) && !isNaN(dy)) return dx - dy; return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }); };
   const tb0 = table.tBodies[0]; if (tb0 && !tb0._orig) tb0._orig = [...tb0.rows];   /* (the order the rows came in, for a third click) */
-  const sortNow = () => { const st = S[key], tb = table.tBodies[0]; ths.forEach(th => { const m = th.querySelector(".tk-s"); if (m) m.remove(); });
+  /* (each heading that sorts keeps a slot for its arrow, so the words never move when it comes or turns) */
+  if (opts.sort !== false) ths.forEach(th => { if (!th.textContent.trim() || th.querySelector(".tk-s")) return; (th.querySelector(".th-l") || th).insertAdjacentHTML("beforeend", '<span class="tk-s" aria-hidden="true"></span>'); });
+  const sortNow = () => { const st = S[key], tb = table.tBodies[0]; ths.forEach(th => { const m = th.querySelector(".tk-s"); if (m) m.textContent = ""; });
     if (!st){ if (tb && tb._orig) tb._orig.forEach(r => { if (r.parentNode === tb) tb.appendChild(r); }); return; } const i = ths.findIndex((th, k) => cid(th, k) === st.c); if (i < 0) return;
-    const lab = ths[i].querySelector(".th-l") || ths[i]; lab.insertAdjacentHTML("beforeend", '<span class="tk-s">' + (st.d > 0 ? " ▲" : " ▼") + '</span>');
+    const mk = ths[i].querySelector(".tk-s"); if (mk) mk.textContent = st.d > 0 ? "▲" : "▼";
     /* (a row that belongs under the one before it, such as an MTO row's pieces, moves with it) */
     const rows = [...tb.rows], att = r => r.matches(".mt-sub, .tk-att"), data = r => plain(r) && !r.matches(".pt-blank, .ct-new, .is-sep, .nosort"); let run = [];
     const flush = () => { if (run.length > 1){ const last = run[run.length - 1], anchor = (last.sub.length ? last.sub[last.sub.length - 1] : last.r).nextSibling;
@@ -316,7 +318,7 @@ function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts)
   const textW = (t, font) => { cv.font = font; return cv.measureText(String(t || "")).width; };
   const rows = [...table.tBodies[0].rows].slice(0, 300);
   /* a column's natural width: its heading or its widest entry (a box measures by what's typed in it, or its hint) */
-  const natural = i => { const th = ths[i], hf = getComputedStyle(th).font; let w = textW(th.textContent.trim(), hf) + (opts.hPad || 34);
+  const natural = i => { const th = ths[i], hf = getComputedStyle(th).font; let w = textW(th.textContent.trim(), hf) + (opts.hPad || 34) + (th.querySelector(".tk-s") ? 14 : 0);   /* (and the arrow's slot) */
     rows.forEach(r => { const td = r.cells[i]; if (!td) return; const f = td.querySelector("input,select,textarea"), tx = !f && td.querySelector("[data-fit]"), font = getComputedStyle(f || tx || td).font;   // (data-fit: the element whose own font sets the width)
       const t = f ? (f.tagName === "SELECT" ? (f.options[f.selectedIndex] || {}).text : f.value || f.placeholder) : td.textContent.trim(); const more = [...td.querySelectorAll("input:not([type=checkbox]):not([hidden])")].slice(1).reduce((t2, g) => t2 + textW(g.value || g.placeholder, getComputedStyle(g).font) + (opts.inPad || 36) + 2, 0);   // (two boxes in a cell, a reducing fitting's sizes: room for both)
       const side = f ? [...td.querySelectorAll("[data-fit]")].reduce((t2, g) => t2 + textW(g.textContent, getComputedStyle(g).font) + 28, 0) : 0;   // (a box with words beside it: room for both)

@@ -1743,3 +1743,5 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .mt-tbl td.mt-dims.cell-sel .mt-dm,.mt-tbl td.mt-qu.cell-sel .mt-dm{outline:0!important}
 /* the export window's What's in it (and Excel's Columns): a tick for each heading, two to a row */
 .pr-sec{display:grid;grid-template-columns:1fr 1fr;column-gap:14px}
+/* a sideways heading's sort arrow: a slot kept beside the word, so the word never moves when the arrow comes or turns */
+.tbl th .th-sa,.tbl th .tk-s{display:inline-block;width:1.1em;text-align:center;font-size:.8em;color:var(--muted)}

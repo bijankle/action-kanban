@@ -47,7 +47,7 @@ const Contacts = (() => {
     el.innerHTML = '<div class="cts"><table class="tbl cts-t"><thead><tr>' + COLS.map(([k, n]) => '<th data-s="' + k + '" data-col="' + k + '"><span class="th-l">' + n + (sort.k === k ? (sort.dir > 0 ? " ▲" : " ▼") : "") + '</span></th>').join("") + '<th data-col="by"><span class="th-l">Modified by</span></th><th data-col="at"><span class="th-l">Date modified</span></th><th class="cts-o" data-col="ow"><span class="th-l">Outstanding</span></th><th class="cts-x" data-col="x"></th></tr></thead><tbody>'
       + (ro ? "" : '<tr class="ct-new">' + COLS.map(([k, n]) => '<td><input class="in" data-k="' + k + '" placeholder="' + (k === "first" ? "+ New person" : n) + '"></td>').join("") + '<td></td><td></td><td></td><td><button type="button" class="btn sm" data-k="add">Add</button></td></tr>')
       + cs.map(c => { const o = owed(c); return '<tr data-id="' + esc(c.id) + '">' + COLS.map(([k]) => '<td>' + (ro ? (k === "first" || k === "last" ? '<button type="button" class="link ct-who">' + esc(c[k] || "") + '</button>' : esc(c[k] || "")) : '<input class="in" data-k="' + k + '" value="' + esc(c[k] || "") + '">') + '</td>').join("")
-        + '<td class="dim">' + esc(whoBy(c)) + '</td><td class="dim">' + esc(whenBy(c)) + '</td><td class="cts-o"><button type="button" class="ct-n' + (o.n ? " on" : "") + '" title="See what\'s outstanding on ' + esc(full(c)) + '">' + (o.n ? o.n + " action" + (o.n === 1 ? "" : "s") : "") + '</button></td>'
+        + '<td class="dim">' + esc(nat(c) ? "Native" : whoBy(c)) + '</td><td class="dim">' + esc(nat(c) ? "" : whenBy(c)) + '</td><td class="cts-o"><button type="button" class="ct-n' + (o.n ? " on" : "") + '" title="See what\'s outstanding on ' + esc(full(c)) + '">' + (o.n ? o.n + " action" + (o.n === 1 ? "" : "s") : "") + '</button></td>'
         + '<td class="cts-x">' + (ro ? "" : '<button type="button" class="ic-b sm" data-k="del" title="Remove ' + esc(full(c)) + ' from the list">✕</button>') + '</td></tr>'; }).join("")
       + '</tbody></table>' + (cs.length ? "" : '<div class="empty">' + (all.length ? "No one matches the search." : "No contacts yet. Add someone above, or import a contact list.") + '</div>') + '</div>';
     gridCols($(".cts-t", el), "contacts", { fixed: { x: 52, by: 150, at: 116 }, sort: false });   // (it sorts itself by its headings; columns fit what they hold, drag or double click to size)
@@ -62,6 +62,11 @@ const Contacts = (() => {
       $("[data-k=add]", nr).onclick = add; $$("input", nr).forEach(i => i.onkeydown = e => { if (e.key === "Enter") add(); }); }
     }
   const pickImport = () => { if (!Store.S.edit) return App.viewOnly(); pickFile(".xlsx", false, importFile); };
+  /* Native: a contact from the plant list import that nobody has changed by hand. Ones imported before that was marked are
+     known by having come in together: five or more added by the same person in the same minute */
+  const nat = c => { if (c.imp) return true; if (!c.by) return false; const k = c.by + "|" + Math.floor((c.mod || 0) / 6e4), m = nat.m || (nat.m = { at: 0 });
+    if (m.at !== Store.S.config.mod){ m.n = new Map(); (Store.S.config.contacts || []).forEach(x => { if (!x.by || x.imp) return; const q = x.by + "|" + Math.floor((x.mod || 0) / 6e4); m.n.set(q, (m.n.get(q) || 0) + 1); }); m.at = Store.S.config.mod; }
+    return (m.n.get(k) || 0) >= 5; };
   const up = (c, fn) => { if (!Store.S.edit) return App.viewOnly(); Store.mutate("config", () => { fn(); delete c.imp; Store.touch(c); }); };   /* (changed by hand: now says who) */
   /* everything outstanding on one person */
   function person(c){ norm(c); const o = owed(c), due = d => d && d < today();
