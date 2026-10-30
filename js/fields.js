@@ -189,6 +189,9 @@ const Fields = (() => {
     const w = h('<div class="tagbox' + (eq && !v.length ? " need" : "") + '"><input class="in tagin" type="text" spellcheck="false" autocomplete="off" placeholder="' + (eq ? "Add tag" : "Add " + esc(f.label.toLowerCase())) + '"></div>'), i = $("input", w);
     const show = () => { i.value = v.join(", "); i.title = v.map(t => t + (nm(t) ? "  " + nm(t) : "")).join("\n"); }; show();
     if (!Store.S.edit){ i.readOnly = true; return w; }
+    /* the Tags box opens the same Tags picker as a Tags cell in the list: one click, the action's tags ticked on top, a search, the plant list below */
+    if (eq){ i.readOnly = true; i.placeholder = ""; i.style.cursor = "pointer"; const open = () => { if ($(".tgp") && $(".tgp").__td === w) return closePop(); tagPick(w, a, f); const p = $(".tgp"); if (p) p.__td = w; };
+      i.onmousedown = e => e.preventDefault(); i.onclick = e => { e.stopPropagation(); open(); }; i.onkeydown = e => { if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown"){ e.preventDefault(); open(); } }; return w; }
     suggest(i, f);
     const commit = () => { let tags = i.value.split(",").map(t => t.trim()).filter(Boolean);
       tags = tags.map(t => { if (eq && /^(-|–|n\/?a)$/i.test(t)) return "–"; if (eq){ const hit = (Equip.find(t, "t") || []).find(x => x.t.toLowerCase() === t.toLowerCase()); return hit ? hit.t : t.toUpperCase(); } return optLabels(f).find(x => x.toLowerCase() === t.toLowerCase()) || t; });

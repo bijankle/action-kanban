@@ -62,7 +62,7 @@ const Contacts = (() => {
       $("[data-k=add]", nr).onclick = add; $$("input", nr).forEach(i => i.onkeydown = e => { if (e.key === "Enter") add(); }); }
     }
   const pickImport = () => { if (!Store.S.edit) return App.viewOnly(); pickFile(".xlsx", false, importFile); };
-  const up = (c, fn) => { if (!Store.S.edit) return App.viewOnly(); Store.mutate("config", () => { fn(); Store.touch(c); }); };
+  const up = (c, fn) => { if (!Store.S.edit) return App.viewOnly(); Store.mutate("config", () => { fn(); delete c.imp; Store.touch(c); }); };   /* (changed by hand: now says who) */
   /* everything outstanding on one person */
   function person(c){ norm(c); const o = owed(c), due = d => d && d < today();
     const row = (a, extra) => '<tr data-ref="' + esc(a._p + ":" + a.u) + '"><td class="aid">' + esc(Store.actId(a)) + '</td><td>' + esc(a.f.title || "") + '</td><td><span class="ps" style="--c:' + esc(Store.stage(a.stage).color) + '">' + esc(Store.stage(a.stage).name) + '</span></td>' + extra + '</tr>';
@@ -88,8 +88,8 @@ const Contacts = (() => {
       let added = 0, updated = 0;
       Store.mutate("config", () => { const L = Store.S.config.contacts;
         rows.forEach(r => { r.name = full(r); const c = L.find(x => !x.del && ((r.email && same(x.email, r.email)) || same(x.name, r.name)));
-          if (!c){ L.push(Store.touch(Object.assign({ id: uid() }, r))); added++; return; }
-          let ch = false; norm(c); ["first", "last", "company", "mobile", "email"].forEach(k => { if (r[k] && !c[k]){ c[k] = r[k]; ch = true; } }); if (ch){ c.name = full(c); Store.touch(c); updated++; } });
+          if (!c){ const n = Store.touch(Object.assign({ id: uid(), imp: 1 }, r)); delete n.by; delete n.byE; L.push(n); added++; return; }   /* (from the plant list: Native, as anything that came with the lists) */
+          let ch = false; norm(c); ["first", "last", "company", "mobile", "email"].forEach(k => { if (r[k] && !c[k]){ c[k] = r[k]; ch = true; } }); if (ch){ c.name = full(c); const by = c.by, byE = c.byE; Store.touch(c); if (c.imp || !by){ c.imp = 1; delete c.by; delete c.byE; } else { c.by = by; if (byE) c.byE = byE; } updated++; } });   /* (filled in from the list: still who last changed it by hand, or Native) */
         Store.log("Imported the contact list " + file.name); });
       note("Imported " + rows.length + " contacts: " + added + " new, " + updated + " filled in"); }
     catch (e){ console.error(e); alert("Couldn't import the contact list: " + e.message); } }
