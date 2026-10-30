@@ -369,10 +369,10 @@ const Mto = (() => {
       const one = (k, v) => '<input class="' + cl + '" data-gl="' + esc(G.key) + '" data-k="' + k + '" inputmode="numeric" value="' + esc(v) + '"' + (ro ? " readonly" : "") + ' title="Stock ' + (isPlate(f) ? (k === "a" ? "sheet length" : "sheet width") : "length") + ', mm' + (f.Lm ? ", changed for this job" : isSpec(f) ? ", the usual length" : ", from the standard") + '">';
       return sh ? one("a", sh.l) + '<span class="dim">×</span>' + one("b", sh.w) : one("L", f.L || ""); }
     const steelItem = it => { if (!isCut(it)) return steelRow(it); const G = gs.get(skey(it)); if (drawn.has(G.key)) return ""; drawn.add(G.key); return parentRow(G) + (openG.has(G.key) ? G.rows.map((r, i) => steelRow(r, n + "." + (i + 1))).join("") : ""); };
-    /* rows still being entered first (each under its sub heading), then the add row, then the rest under their sub headings, in the ISOs' order */
+    /* the add row at the top, then the rows still being entered (each under its sub heading), then the rest under their sub headings, in the ISOs' order */
     let body = ""; last = null;
-    items.filter(it => it.draft).forEach(it => { body += head(it, PC.length, last) + (isPipe(it) ? pipeRow(it) : steelRow(it)); last = typeOf(it); });
     if (!ro) body += '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="newt" data-c="ty" placeholder="+ Type" autocomplete="off" spellcheck="false" title="What it is: pipe, a flange, a fitting, structural steel and so on. The row then asks for what that needs"></td>' + '<td></td>'.repeat(PC.length - 1) + '</tr>';
+    items.filter(it => it.draft).forEach(it => { body += head(it, PC.length, last) + (isPipe(it) ? pipeRow(it) : steelRow(it)); last = typeOf(it); });
     last = null; items.filter(it => !it.draft).forEach(it => { const r = isPipe(it) && !isCut(it) ? pipeRow(it) : steelItem(it); if (!r) return; body += head(it, PC.length, last) + r; last = typeOf(it); });
     const thead = cols => '<thead><tr><th class="pt-no" data-col="No.">#</th>' + cols.map(([c, nm]) => '<th data-col="' + (nm || c) + '">' + esc(nm) + (REQ.has(c) || c === "ty" || c === "sp" || c === "sz" ? '<span class="mt-rq" title="Needed">*</span>' : "") + '</th>').join("") + '</tr></thead>';
     return '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-pipe">' + thead(PC) + '<tbody>' + body + '</tbody></table></div>'; }
