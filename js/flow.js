@@ -144,7 +144,7 @@ const Flow = (() => {
     const pj = Store.projects()[0]; if (!pj) return;
     const done = () => Store.mutate("config", () => { C.testActs = now(); C.mod = now(); });
     const L = ["Test1: very long text everywhere, 14 tags, every contractor box, on hold with an overdue due date, odd characters (° ± Ø µ ½ ≥ “quotes” & <angle> brackets)",
-      "Test2: the workflow and materials, ticks done, not needed and still to do, 40 MTO lines with steel cuts and plate, 15 spares, 12 isolations, an ETA in the past",
+      "Test2: the workflow and materials, ticks done, not needed and still to do, 28 MTO lines with pipe and steel cuts and plate, 15 spares, 12 isolations, an ETA in the past",
       "Test3: the bare minimum, no problem or notes, tag –, Commissioning, ticked Complete, created in 2019"];
     const go = await new Promise(res => { const m = modal('<h3>Add three test actions</h3><p class="dim">For trying the app out. They are ordinary actions (you can delete them afterwards with the bin) and go into ' + esc(pj.name || "the project") + '. Nothing else changes.</p>'
       + L.map(t => '<div class="fw-r"><span>' + esc(t) + '</span></div>').join("")
@@ -170,11 +170,11 @@ const Flow = (() => {
         equipment: ["F13-PS-404", "F13-SW-002"], location: "F13 Grinding", pccr: true, mtodone: true, secured: NA, rfq: true });
       const pipe = q => ({ id: id(), qty: String(q), cl: "RL2", dn: 300, it: "Pipe", unit: "m", sq: "0.1", sqm: false });
       const free = (d, q, u) => ({ id: id(), desc: d, qty: String(q), unit: u });
-      t2.mto = [].concat(Array.from({ length: 12 }, (_, i) => pipe(i + 1)), Array.from({ length: 16 }, (_, i) => free(["GASKET DN150 CNAF 3MM", "BOLT M20 X 90 GR 8.8 GALV", "NUT M20 GR 8 GALV", "WASHER M20 FLAT GALV"][i % 4] + " LINE " + (i + 1), (i % 5) + 1, "ea")));
+      t2.mto = [].concat(Array.from({ length: 12 }, (_, i) => pipe(i + 1)), Array.from({ length: 16 }, (_, i) => free(["GASKET DN150 CNAF 3MM", "BOLT M20 X 90 GR 8.8 GALV", "NUT M20 GR 8 GALV", "WASHER M20 FLAT GALV"][i % 4], (i % 5) + 1, "ea")));
       try { const S = Mto.TY.wb.stds[0], P = Mto.TY.plate.stds[0];
         t2.mto = t2.mto.concat([2.4, 3.1, 4.75, 5.2, 1.8, 6].map(q => ({ id: id(), qty: String(q), t: "wb", s: S.id, z: S.sizes[0].n, m: S.mats[0], L: S.defl, unit: "m" })),
           [[1200, 600], [800, 400], [2400, 1200], [300, 300], [1500, 750], [950, 450]].map(d => ({ id: id(), qty: "1", t: "plate", s: P.id, z: P.sizes[0].n, m: P.mats[0], L: P.defl, unit: "sheets", pl: String(d[0]), pw: String(d[1]) }))); } catch (e){}
-      t2.mtoG = {};
+      t2.mtoG = {}; Mto.combine(t2.mto);   /* (the same item twice is one row with the quantities added, as the MTO does) */
       t2.spares = Array.from({ length: 15 }, (_, i) => i % 3 ? { id: id(), qty: String(i + 1), cl: "N/A", cat: "inst", desc: "Spare part " + (i + 1) + (i === 7 ? " with a really long description that has to be cut off with more… in the table" : ""), unit: "ea", part: "PN-" + (10000 + i) } : { id: id(), qty: "2", cl: "MSG3", dn: 25, it: "Elbow, 90°", unit: "ea", vt: "Press Connector", desc: "ELB 90 DN25 MDL 4316 PRESS MSG3" });
       t2.isol = Array.from({ length: 12 }, (_, i) => ({ id: id(), tag: "F13-" + ["PS", "SW", "XV", "MCC"][i % 4] + "-" + (400 + i), name: ["Mill discharge sump pump", "Switchboard / MCC (from the SLD)", "Process water isolation valve", "Motor control centre bucket"][i % 4] + " " + (i + 1), note: i === 3 ? "Lock out at both ends, test for dead" : "", nu: i === 3 ? 1 : 0 }));
       t2.f.eta = day(-5);
