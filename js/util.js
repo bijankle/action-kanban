@@ -425,7 +425,7 @@ const CellEdit = (() => {
   document.addEventListener("click", e => { const el = box(e.target); if (!el || el === armed || el === document.activeElement || fresh(el)) return;
     e.preventDefault(); e.stopImmediatePropagation(); const tr = el.closest("tr[data-ref]");
     /* (the row is selected a moment later, so a double click isn't lost to the list being redrawn under the second click) */
-    clearTimeout(selT); if (tr && typeof App !== "undefined" && App.selRef !== tr.dataset.ref){ const ref = tr.dataset.ref; selT = setTimeout(() => App.select(ref), 260); } }, true);
+    clearTimeout(selT); if (tr && typeof App !== "undefined" && App.selRef !== tr.dataset.ref){ const ref = tr.dataset.ref; selT = setTimeout(() => App.select(ref), 130); } }, true);
   document.addEventListener("dblclick", e => { const el = box(e.target); if (!el || fresh(el) || el === document.activeElement) return; e.preventDefault(); e.stopImmediatePropagation(); clearTimeout(selT); edit(el, e.clientX, e.clientY); }, true);
   /* typing on a marked cell starts editing it with that key, as in Excel (so a number typed there never acts as a shortcut) */
   document.addEventListener("keydown", e => { if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return; const a = document.activeElement; if (a && a !== document.body && a.matches("input,textarea,select,[contenteditable]")) return;
