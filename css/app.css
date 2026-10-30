@@ -1280,7 +1280,7 @@ table input[inputmode=decimal],table input[inputmode=numeric]{text-align:center}
 /* steel parents (what is ordered) with their cuts under them, indented a shade darker */
 .mt-tbl tr.mt-par{cursor:pointer}.mt-tbl tr.mt-par>td{font-weight:700;background:var(--panel);border-bottom:1.5px solid color-mix(in srgb,var(--th) 45%,var(--line))}.mt-tbl tr.mt-par:hover>td{background:color-mix(in srgb,var(--th) 5%,var(--panel))}
 .mt-tbl .mt-pv{font-family:ui-monospace,Menlo,monospace;font-size:var(--fb);white-space:nowrap}.mt-tbl .mt-pq{font-weight:700;white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums}.mt-tbl .mt-par .mt-tg{pointer-events:none}
-.mt-tbl tr.mt-kid>td{background:color-mix(in srgb,var(--th) 4%,var(--panel2))}.mt-tbl tr.mt-kid>td:first-child{padding-left:22px}.mt-tbl tr.mt-kid>td:first-child::before{content:"↳";color:var(--dim);margin-right:4px}
+.mt-tbl tr.mt-kid>td{background:color-mix(in srgb,var(--th) 4%,var(--panel2))}
 /* a plate piece: length × width in the Qty cell */
 .mt-tbl .mt-dims{white-space:nowrap}.mt-tbl .mt-dm{width:58px!important}.mt-tbl .mt-dims .dim{margin:0 3px}.mt-tbl .mt-mm{font-size:var(--fs)}
 
@@ -1662,9 +1662,13 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 /* the MTO's Qty and Unit: two columns, both centred */
 .mt-tbl td.mt-qu,.mt-tbl td.mt-unc,.mt-tbl td.mt-qu .mt-q,.mt-tbl td.mt-unc .in,.mt-tbl td.mt-unc .lk-sel{text-align:center!important;justify-content:center}
 .mt-tbl td.mt-unc{color:var(--muted);white-space:nowrap}.mt-tbl td.mt-unc .in,.mt-tbl td.mt-unc .mt-un{width:100%!important;margin:0!important}
-.mt-tbl td.mt-qu .mt-q{width:100%!important}.mt-tbl td.mt-dims .mt-dm{width:calc(50% - 8px)!important}
+.mt-tbl td.mt-qu .mt-q{width:100%!important}.mt-tbl td.mt-dims{text-align:center}.mt-tbl td.mt-dims .mt-dm{width:5ch!important;padding:0 2px!important;text-align:center}.mt-tbl td.mt-dims .dim{margin:0 3px}
 /* the MTO row buttons (duplicate, ✕): square cells of the grid, flush to the right edge, the column just as wide as they are */
 .mt-tbl td.mt-ic{padding:0!important;text-align:right;white-space:nowrap}.mt-tbl td.mt-ic>*{vertical-align:top}
 .mt-tbl td.mt-ic .ic-b,.mt-tbl td.mt-ic .mt-x,.mt-tbl td.mt-ic .mt-dup{width:var(--row,22px)!important;height:var(--row,22px)!important;margin:0!important;padding:0!important;border:0!important;border-left:1px solid var(--line)!important;border-radius:0!important;display:inline-grid;place-items:center}
 .mt-tbl td.mt-ic .ic-b svg{width:13px;height:13px}
 .mt-tbl td.mt-ic .mt-done{height:var(--row,22px)!important;border-radius:0!important;margin:0!important}
+.mt-tbl td.mt-szd .mt-sep{color:var(--muted);margin:0 3px 0 -2px}
+/* the MTO, same fills as the Actions rows: no hint text in a filled row's empty cells, and what the app works out (Total) faint blue */
+.mt-tbl tr.mt-row .pt-in::placeholder{color:transparent}
+.mt-tbl tr.mt-row td.mt-tot{background:var(--autof)!important}

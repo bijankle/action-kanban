@@ -236,7 +236,7 @@ const Mto = (() => {
   const shown = (it, c) => { const T = type(it), S = std(it);
     if (c === "cl") return it.cl || ""; if (c === "dn") return PipeSpec.lab(it.cl, it.dn); if (c === "dn2") return it.dn2 ? (it.dn2 === it.dn ? "equal" : "x " + PipeSpec.lab(it.cl, it.dn2)) : ""; if (c === "it") return itName(it.it); if (c === "vt") return it.vt || "";
     if (c === "t") return itemCode(it); if (!T) return c === "unit" ? it.unit || "" : it[c] || "";
-    if (c === "z") return zShort(it); if (c === "r") return rShort(it.r); if (c === "m") return mShort(it.m); if (c === "s") return S && !it.sx ? stShort(S.n) : ""; if (c === "unit") return uShort(it.unit); return it[c] == null ? "" : it[c]; };
+    if (c === "z") return zShort(it); if (c === "r") return rShort(it.r); if (c === "m") return (v => /^\d{3}[A-Z0-9]*$/.test(v) ? "GR" + v : v)(mShort(it.m));   /* (a steel grade reads GR300) */ if (c === "s") return S && !it.sx ? stShort(S.n) : ""; if (c === "unit") return uShort(it.unit); return it[c] == null ? "" : it[c]; };
   const titleOf = (it, c) => { const T = type(it), S = std(it), z = sz(it); return c === "t" ? (T ? T.n : "") : c === "z" ? (z && z.a ? z.a : "") : c === "r" ? it.r || "" : c === "m" ? it.m || "" : c === "s" ? (S ? S.n : "") : ""; };
   let focusNext = null;
   /* the class last picked on an action's MTO: new piping rows start in it (rows already there keep theirs), and it can still be changed */
@@ -280,7 +280,7 @@ const Mto = (() => {
       + '<td class="mt-tot" title="Quantity plus spares: what is ordered">' + esc(ord(it)) + '</td>');   /* (the unit is in its own column) */
     const tail = it => '<td class="mt-itd"><input class="in pt-in" data-r="' + it.id + '" data-c="notes" value="' + esc(it.notes || "") + '"' + (it.auto ? ' placeholder="' + esc(it.an || "from the flanges") + '"' : "") + (ro ? " readonly" : "") + '>' + (type(it) || (isSpec(it) && it.it) || it.desc ? iBtn(it) : "") + '</td>'
       + '<td class="mt-ic">' + (it.draft && !ro && !missing(it).length ? '<button type="button" class="btn sm mt-done" data-done="' + it.id + '" title="Put it under its heading in the MTO">Done</button>' : "") + '' + (ro ? "" : (it.auto ? "" : '<button type="button" class="ic-b sm mt-dup" data-dup="' + it.id + '" title="Duplicate this row" aria-label="Duplicate this row">' + DUP_I + '</button>') + '<button type="button" class="ic-b sm pt-x mt-x" data-x="' + it.id + '" title="Remove this row">✕</button>') + '</td></tr>';
-    const head = (it, cols, last) => GROUP(it) !== last ? '<tr class="mt-grp nosort"><td colspan="' + (cols + 1) + '">' + esc(GROUP(it)) + '</td></tr>' : "";
+    const head = (it, cols, last) => GROUP(it) !== last ? '<tr class="mt-grp nosort"><td colspan="' + (cols + 1) + '">' + esc(GROUP(it) === "Structural" ? "Structural steel" : GROUP(it)) + '</td></tr>' : "";
     const no = (it, miss, tg, kid) => '<td class="pt-no">' + (miss.length ? '<span class="mt-dot" title="Still to pick: ' + esc(miss.join(", ")) + '"></span>' : it.draft ? "" : kid || ++n) + ((c => c ? '<span class="mt-chk" title="Check: ' + esc(c) + '">' + WARN + '</span>' : "")(it.chk || (isSpec(it) ? specRes(it).chk : ((pack(it) || {}).long || []).length ? "a piece is longer than the stock length: it needs a joint, or pick a longer stock length" : ""))) + (tg || "") + '</td>';
     const toggle = (it, res) => { const T = type(it), on = open.has(it.id); return T && (T.k === "len" || T.k === "plate") && cuts(it).length && !isCut(it) ? '<button type="button" class="mt-tg' + (on ? " on" : "") + '" data-tg="' + it.id + '" title="' + (on ? "Hide" : "Show") + ' the pieces to cut">' + CHEV + (cuts(it).length ? '<b>' + cuts(it).reduce((t, c) => t + Math.max(1, Math.round(+c.n || 1)), 0) + '</b>' : "") + '</button>' : ""; };
     const sub = (it, res, cols) => { const T = type(it); return open.has(it.id) && T && (T.k === "len" || T.k === "plate") && !isCut(it) ? '<tr class="mt-sub" data-sub="' + it.id + '"><td colspan="' + (cols + 1) + '"><div class="mt-subin">' + piecesHtml(it, res, ro) + '</div></td></tr>' : ""; };
@@ -308,31 +308,33 @@ const Mto = (() => {
     const hasPart = steel.concat(sdr).some(it => it.part || !type(it));
     /* (the same number of columns as the piping table, so the two line up: material and standard share a column, as do the type and part of a row typed in) */
     /* (steel's third pick is its finish, black, galvanised or primed: a coating, not a rating) */
-    const SC = [["t", "Item"], ["z", "Size"], ["ms", "Material / std"], ["r", "Finish"], ["qty", "Qty"], ["un", "Unit"], ["sq", "Spare"], ["tot", "Total"], ["notes", "Notes"], ["x", ""]];
+    const SC = [["ms", "Class"], ["z", "Size"], ["t", "Item"], ["r", "Details"], ["qty", "Qty"], ["un", "Unit"], ["sq", "Spare"], ["tot", "Total"], ["notes", "Notes"], ["x", ""]];
     let sh = ""; last = null;
     const steelRow = (it, kid) => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it);
       return '<tr data-id="' + it.id + '" class="mt-row' + (kid ? " mt-kid" : "") + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res), kid)
-        + (kid ? '<td></td><td></td><td></td><td></td>' : '<td>' + box(it, "t", "Item") + '</td><td>' + box(it, "z", "Size") + '</td>'
-        + '<td class="mt-szd">' + (T ? box(it, "m", "Material") + box(it, "s", "Std", ' data-opt="1"') : box(it, "part", "Part / model")) + '</td><td>' + (T && ratings(it).length ? box(it, "r", T.rl || "Finish") : "") + '</td>')   // (a cut is always its parent's item: only its length, notes and buttons)
+        + (kid ? '<td></td><td></td><td></td><td></td>' : '<td class="mt-szd">' + (T ? box(it, "m", "Material") + (shown(it, "s") ? '<span class="mt-sep">,</span>' : "") + box(it, "s", "Std", ' data-opt="1"') : box(it, "part", "Part / model")) + '</td><td>' + box(it, "z", "Size") + '</td><td>' + box(it, "t", "Item") + '</td><td>' + (T && ratings(it).length ? box(it, "r", T.rl || "Finish") : "") + '</td>')
         + qtyCell(it, !!res, kid) + tail(it) + sub(it, res, SC.length); };
     /* a parent row: the stock to order (worked out), its spare lengths, the total; clicking it shows or hides its cuts */
     const gs = groupsOf(items), drawn = new Set();
     const parentRow = G => { const sp = gSpare(a, G), st = (a.mtoG || {})[G.key] || {}, on = openG.has(G.key), R = G.res, f = G.first, T = type(f), S = std(f);
       return '<tr class="mt-par' + (on ? " on" : "") + '" data-g="' + esc(G.key) + '" title="Click to ' + (on ? "hide" : "show") + ' the ' + (isPlate(f) ? "pieces" : "cuts") + '"><td class="pt-no">' + (++n) + '</td>'
-        + '<td class="mt-pv">' + esc(itemCode(f)) + '</td><td class="mt-pv">' + esc(zShort(f)) + '</td><td class="mt-pv">' + esc([mShort(f.m), S && !f.sx ? stShort(S.n) : ""].filter(Boolean).join("  ")) + '</td><td class="mt-pv">' + esc(rShort(f.r)) + '</td>'
+        + '<td class="mt-pv">' + esc([shown(f, "m"), S && !f.sx ? stShort(S.n) : ""].filter(Boolean).join(", ")) + '</td><td class="mt-pv">' + esc(zShort(f)) + '</td><td class="mt-pv">' + esc(itemCode(f)) + '</td><td class="mt-pv">' + esc(rShort(f.r)) + '</td>'
         + '<td class="mt-qu mt-pq" title="' + (isPlate(f) ? "Sheets to cut the " + G.rows.length + " piece" + (G.rows.length === 1 ? "" : "s") : "Stock lengths to cut the " + G.rows.length + " cut" + (G.rows.length === 1 ? "" : "s")) + ' from (' + esc(lenTot(G, G.n)) + ')">' + esc(G.res ? G.n : "?") + '</td><td class="mt-unc">' + (isPlate(f) ? "SHT" : "LG") + '</td>'
         + '<td><input class="in pt-in mt-q mt-sq mt-gsq' + (st.sqm ? "" : sp ? " mt-sqa" : "") + '" data-gs="' + esc(G.key) + '" inputmode="numeric" value="' + esc(sp || "") + '" placeholder="0"' + (ro ? " readonly" : "") + ' title="' + (st.sqm ? "Spare " + (isPlate(f) ? "sheets" : "lengths") + ", set by hand. Clear it to have it worked out again" : "Spare " + (isPlate(f) ? "sheets" : "lengths") + ", worked out (File, Parameters, MTO spares). Type over it to change it") + '"></td>'
         + '<td class="mt-tot" title="' + esc(lenTot(G, G.n + sp)) + '">' + esc(G.res ? G.n + sp : "?") + '</td><td class="mt-itd"><button type="button" class="mt-ii" data-ginfo="' + esc(G.key) + '" title="How the order is worked out" aria-label="How the order is worked out">' + INFO_I + '</button></td>'
         + '<td class="mt-ic">' + (ro ? "" : '<button type="button" class="ic-b sm pt-x mt-x" data-gx="' + esc(G.key) + '" title="Remove this item and all its cuts">✕</button>') + '</td></tr>'; };
 
     const steelItem = it => { if (!isCut(it)) return steelRow(it); const G = gs.get(skey(it)); if (drawn.has(G.key)) return ""; drawn.add(G.key); return parentRow(G) + (openG.has(G.key) ? G.rows.map((r, i) => steelRow(r, n + "." + (i + 1))).join("") : ""); };
-    sh = sdr.map(steelRow).join("");
-    if (!ro) sh += '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="new0" data-c="t" placeholder="+ Item" autocomplete="off" spellcheck="false"></td>' + '<td></td>'.repeat(SC.length - 1) + '</tr>';
+    sh = sdr.map(it => { const h = head(it, SC.length, last); last = GROUP(it); return h + steelRow(it); }).join("");   /* (a row still being filled in sits under its group row too) */
+    if (!ro) sh += '<tr class="pt-blank"><td class="pt-no"></td><td></td><td></td><td><input class="in pt-in mt-pk" data-r="new0" data-c="t" placeholder="+ Item" autocomplete="off" spellcheck="false"></td>' + '<td></td>'.repeat(SC.length - 3) + '</tr>';
     steel.forEach(it => { const r = steelItem(it); if (!r) return; sh += head(it, SC.length, last) + r; last = GROUP(it); });
     const thead = cols => '<thead><tr><th class="pt-no" data-col="No.">#</th>' + cols.map(([c, nm]) => '<th data-col="' + (nm || c) + '">' + esc(nm) + (REQ.has(c) || c === "cl" || c === "sz" || c === "ms" ? '<span class="mt-rq" title="Needed">*</span>' : "") + '</th>').join("") + '</tr></thead>';
-    return '<div class="mt-h">Piping' + tipI("To the plant's pipe spec (" + ((PipeSpec.meta() || {}).doc || "loading the spec…") + "): pick the class, the size and the item, and the spec gives the rest. N/A for anything not to a class.") + '</div>'
-      + '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-pipe">' + thead(PC) + '<tbody>' + ph + '</tbody></table></div>'
-      + '<div class="mt-h">Steel and other</div>' + '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-steel">' + thead(SC) + '<tbody>' + sh + '</tbody></table></div>'; }
+    /* one table, one set of headings (the steel rows use the same columns: their material and standard under Class, their
+       finish under Details); Piping is a shaded section row, the steel and the rest come under their group rows */
+    const sec = (t, tip) => '<tr class="mt-grp mt-sec nosort"><td colspan="' + (PC.length + 1) + '">' + t + (tip || "") + '</td></tr>';
+    return '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-pipe">' + thead(PC) + '<tbody>'
+      + sec("Piping", tipI("To the plant's pipe spec (" + ((PipeSpec.meta() || {}).doc || "loading the spec…") + "): pick the class, the size and the item, and the spec gives the rest. N/A for anything not to a class.")) + ph
+      + sh + '</tbody></table></div>'; }   /* (the steel and the rest come under their own group rows, Steel and Other) */
 
   /* the pieces under a row, with the packing drawn */
   function piecesHtml(it, res, ro){ const pl = isPlate(it), cs = it.cuts || [];
