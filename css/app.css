@@ -1347,12 +1347,12 @@ html.dark{--edf:#2a2117;--edh:#36291a;--autof:#1d2a40;--autoh:#253552}
 .tbl th.tk .th-m{top:2px!important;bottom:auto!important;right:50%!important;transform:translateX(50%)!important}
 .tbl td.tk{padding:0!important;width:23px;min-width:23px;max-width:23px}
 .tbl td.tk .ck{display:block!important;width:100%!important;max-width:none!important;height:var(--row);margin:0!important}
-.tbl td.tk .ck input{-webkit-appearance:none;appearance:none;display:block;width:100%!important;height:var(--row)!important;margin:0;border:0;border-radius:0;background:var(--edf) center/12px no-repeat;cursor:pointer}
-.tbl td.tk .ck input:hover{background-color:var(--edh)}
-.tbl td.tk .ck input:checked{background-color:color-mix(in srgb,#1f8a58 18%,var(--panel));background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6.5l2.6 2.6L10 3.4' fill='none' stroke='%231f8a58' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
-.tbl td.tk .ck input:indeterminate,.tbl td.tk .ck.na input{background-color:color-mix(in srgb,#9aa3ad 22%,var(--panel));background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6h6' stroke='%237a8591' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
-.tbl td.tk .ck input:disabled{cursor:default;opacity:.6}
-.tbl td.tk .ck input:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.tbl td.tk .ck input,td.is-pk .ck input{-webkit-appearance:none;appearance:none;display:block;width:100%!important;height:var(--row)!important;margin:0;border:0;border-radius:0;background:var(--edf) center/12px no-repeat;cursor:pointer}
+.tbl td.tk .ck input:hover,td.is-pk .ck input:hover{background-color:var(--edh)}
+.tbl td.tk .ck input:checked,td.is-pk .ck input:checked{background-color:color-mix(in srgb,#1f8a58 18%,var(--panel));background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6.5l2.6 2.6L10 3.4' fill='none' stroke='%231f8a58' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.tbl td.tk .ck input:indeterminate,.tbl td.tk .ck.na input,td.is-pk .ck input:indeterminate,td.is-pk .ck.na input{background-color:color-mix(in srgb,#9aa3ad 22%,var(--panel));background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 6h6' stroke='%237a8591' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")}
+.tbl td.tk .ck input:disabled,td.is-pk .ck input:disabled{cursor:default;opacity:.6}
+.tbl td.tk .ck input:focus-visible,td.is-pk .ck input:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 /* one row height, always: nothing in a table cell wraps; what doesn't fit ends in more… */
 .tbl td,.vd-tbl td{white-space:nowrap!important;height:var(--row)!important;vertical-align:middle!important}
 .tbl td .mc-t>div,.tbl td .mc-t>p{display:inline;margin:0}.tbl td .mc-t>div+div::before,.tbl td .mc-t>p+p::before{content:"  ·  "}.tbl td .mc-t br{display:none}
@@ -1401,7 +1401,9 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .tbl td.tk.need .ck input:not(:checked):not(:indeterminate){background-color:var(--need)}.tbl td.tk.need .ck input:not(:checked):not(:indeterminate):hover{background-color:var(--needh)}
 .tbl td.tk.autof .ck input:indeterminate{background-color:var(--autof)!important}
 /* the MTO: a needed box still empty on a row being filled in (the columns marked *) */
-.mt-tbl tr.mt-part td:has(>input.mt-pk:placeholder-shown),.mt-tbl tr.mt-part td.mt-qu:has(>input[data-c="qty"]:placeholder-shown){background:var(--need)!important}
+/* orange: only the one box to fill in next on a row still being entered (mt-nx, set by Mto), and the + Type box that starts a row */
+.mt-tbl td.mt-nx,.mt-tbl tr.pt-blank td:has(>input[data-r="newt"]){background:var(--need)!important}
+.mt-tbl td.mt-nx .pt-in,.mt-tbl tr.pt-blank td:has(>input[data-r="newt"]) .pt-in{background:transparent!important}
 /* the Details panel: the Category still to pick */
 .det-c .lk-sel.lk-ph,.av .lk-sel.lk-ph[aria-label="Category"]{background:var(--need)!important}
 /* no hint text in a table's empty cells: the fill says what's needed */
@@ -1702,4 +1704,11 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .mt-sum td{overflow:hidden;text-overflow:ellipsis;max-width:0;width:99%}
 /* a cut's length or count box: the focus edge drawn inside it (outside, the cell cut it off); empty and needed, it keeps room for a length and shows orange */
 .mt-tbl td .mt-dm:focus,.mt-tbl tr.mt-par td.mt-pq .mt-gl:focus{box-shadow:inset 0 0 0 1px var(--focus)!important}
-.mt-tbl td.mt-qu .mt-dm[value=""],.mt-tbl td.mt-dims .mt-dm[value=""]{min-width:5ch!important;background:var(--need)}
+.mt-tbl td.mt-qu .mt-dm[value=""],.mt-tbl td.mt-dims .mt-dm[value=""]{min-width:5ch!important}
+/* a row button alone in its cell (On Hold, Delete): the cell's own lines are its edge, no extra line beside it */
+.tbl td .rb:last-child,.tbl td .rbs>.rb:last-child,.tbl td .rb-hi:last-child{border-right:0!important}
+/* the Isolations tick: the same square tick cell as the Actions rows (green ✓), flush at the cell's left, its padlock beside it */
+.is-tbl td.is-pk{padding-left:0!important}.is-tbl td.is-pk .ck{width:var(--row);max-width:none;height:var(--row);margin-right:6px;border-right:1px solid var(--line)}
+.is-tbl td.is-pk .ck input{width:var(--row)!important;height:var(--row)!important}
+/* an upright heading's sort arrow sits just under the word, in a space kept for it, so the word never moves when it comes or turns */
+.tbl th .th-so{display:block;height:12px;line-height:12px;font-size:9px;text-align:center;color:var(--muted)}

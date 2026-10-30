@@ -372,10 +372,10 @@ const Mto = (() => {
       const one = (k, v) => '<input class="' + cl + '" data-gl="' + esc(G.key) + '" data-k="' + k + '" inputmode="numeric" value="' + esc(v) + '"' + (ro ? " readonly" : "") + ' title="Stock ' + (isPlate(f) ? (k === "a" ? "sheet length" : "sheet width") : "length") + ', mm' + (f.Lm ? ", changed for this job" : isSpec(f) ? ", the usual length" : ", from the standard") + '">';
       return sh ? one("a", sh.l) + '<span class="dim">×</span>' + one("b", sh.w) : one("L", f.L || ""); }
     const steelItem = it => { if (!isCut(it)) return steelRow(it); const G = gs.get(skey(it)); if (drawn.has(G.key)) return ""; drawn.add(G.key); return parentRow(G) + (openG.has(G.key) ? G.rows.map((r, i) => steelRow(r, n + "." + (i + 1))).join("") : ""); };
-    /* the add row at the top, then the rows still being entered (each under its sub heading), then the rest under their sub headings, in the ISOs' order */
+    /* the add row at the top, then the rows still being entered, then the rest under their sub headings, in the ISOs' order */
     let body = ""; last = null;
     if (!ro) body += '<tr class="pt-blank"><td class="pt-no"></td><td><input class="in pt-in mt-pk" data-r="newt" data-c="ty" placeholder="+ Type" autocomplete="off" spellcheck="false" title="What it is: pipe, a flange, a fitting, structural steel and so on. The row then asks for what that needs"></td>' + '<td></td>'.repeat(PC.length - 1) + '</tr>';
-    items.filter(it => it.draft).forEach(it => { body += head(it, PC.length, last) + (isPipe(it) ? pipeRow(it) : steelRow(it)); last = typeOf(it); });
+    items.filter(it => it.draft).forEach(it => { body += isPipe(it) ? pipeRow(it) : steelRow(it); });   /* (a row still being filled in stays at the top, under the add row, until it's Done) */
     last = null; items.filter(it => !it.draft).forEach(it => { const r = isPipe(it) && !isCut(it) ? pipeRow(it) : steelItem(it); if (!r) return; body += head(it, PC.length, last) + r; last = typeOf(it); });
     const thead = cols => '<thead><tr><th class="pt-no" data-col="No.">#</th>' + cols.map(([c, nm]) => '<th data-col="' + (nm || c) + '">' + esc(nm) + (REQ.has(c) || c === "ty" || c === "sp" || c === "sz" ? '<span class="mt-rq" title="Needed">*</span>' : "") + '</th>').join("") + '</tr></thead>';
     return '<div class="mt-wrap"><table class="tbl pt-tbl mt-tbl mt-pipe">' + thead(PC) + '<tbody>' + body + '</tbody></table></div>'; }
@@ -460,8 +460,8 @@ const Mto = (() => {
     const needs = (it, x) => x === "z" && isInst(it) ? !it.z && (instType(it.desc) || {}).g === "Control valves" : x === "part" ? isInst(it) && !it.part && !!(instType(it.desc) || { mm: [] }).mm.length : x === "cl" ? !it.cl : x === "dn" ? !it.dn : x === "dn2" ? PipeSpec.reducing(it.it) && !it.dn2 : x === "it" ? !it.it : x === "vt" ? specRes(it).need === "ends or type" : x === "pl" ? !it.pl : x === "pw" ? !it.pw : x === "qty" ? !String(it.qty || "").trim()
       : x === "t" ? !type(it) && !String(it.desc || "").trim() : x === "z" ? (type(it) || it.cl === "N/A") && !it.z && !(it.desc != null && !type(it)) : x === "r" ? !!type(it) && ratings(it).length > 0 && !it.r : x === "m" ? !!type(it) && !it.m : false;
     /* the next box on the row still to fill in (after a pick, the cursor goes there and its list opens) */
-    const after = (id, c) => { const it = find(id); if (!it || !missing(it).length) return null; const O = orderOf(it), from = O.indexOf(c);
-      for (const x of O.slice(Math.max(0, from + 1)).concat(O)) if (needs(it, x)) return { id, c: x }; return null; };
+    const after = id => { const it = find(id); if (!it || !missing(it).length) return null; for (const x of orderOf(it)) if (needs(it, x)) return { id, c: x }; return null; };   /* (the first box still to fill in, in the row's order: the one shown orange) */
+    const boxOf = f => $('.mt-tbl [data-r="' + f.id + '"][data-c="' + f.c + '"]:not([data-cut])', el) || (f.c === "qty" ? $('.mt-tbl [data-r="' + f.id + '"][data-c="len"]', el) : null);
     const set = (it, c, v) => { const T = type(it); delete it.dup;
       if (c === "cl" && v === "cat:inst"){ ["dn", "it", "vt", "t", "s", "m", "r", "L", "mk", "end", "sx", "cuts"].forEach(k => delete it[k]); it.cl = "N/A"; it.cat = "inst"; it.desc = it.desc || ""; it.unit = it.unit || "ea"; return; }
       if (isInst(it) && (c === "t" || c === "part" || c === "z") && /^typed:/.test(v)){ it[c === "t" ? "desc" : c] = v.slice(6); return; }
@@ -531,7 +531,7 @@ const Mto = (() => {
     $$(".mt-pk", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c, it = find(r) || (r === "newp" && lastCl.get(akey(a)) ? { qty: "", cl: lastCl.get(akey(a)) } : { qty: "" }); let key2 = null;
       const pt = isInst(it) && (c === "t" || c === "part" || c === "z");   // (an instrument's type and make / model: pick from the plant lists, or type it in)
       const free = c === "part" || c === "spec" || (c === "z" && !type(it) && !(it.cl === "N/A" && it.desc == null)) || (c === "t" && !type(it) && it.desc != null && r !== "new0");
-      i.classList.toggle("mt-fr", free && !pt);   /* (a typed box: one click selects it and a double click edits, as other typed cells; a pick from a list opens on one click) */
+      i.classList.toggle("mt-fr", free && !pt && c !== "t");   /* (an Item typed in still opens its list on one click, to pick from it again) */   /* (a typed box: one click selects it and a double click edits, as other typed cells; a pick from a list opens on one click) */
       const show = () => { if (free && c !== "t" && !pt) return;
         typedRaw = c === "it" ? i.value : ""; const q = i.value.trim().toLowerCase(), cur0 = String(c === "t" && isInst(it) ? it.desc || "" : shown(it, c)).toLowerCase(), typed = q && q !== cur0, ws = typed ? q.split(/\s+/) : [];
         const all = choices(it, c, typed ? q : ""); if (!all.length && !(pt && typed)) return Look.close();
@@ -541,30 +541,33 @@ const Mto = (() => {
         /* the headings in the list (the class list by material, the items by kind) when there is more than one */
         if (new Set(list.map(x => x.g).filter(Boolean)).size > 1){ const o = []; let g0 = null; list.forEach(x => { if (x.g && x.g !== g0){ o.push({ grp: true, t: x.g }); g0 = x.g; } o.push(x); }); list = o; }
         if (pt && typed && !list.some(x => x.t.toLowerCase() === q)) list = list.concat([{ v: "typed:" + i.value.trim(), t: "Use “" + i.value.trim() + "” as typed", sub: "not in the plant lists" }]);
-        key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], c === "t" ? [it.t, it.mk, it.end].filter(Boolean).join("|") : c === "dn" ? it.dn : it[c], x => { if (x.v === "") return; if (!String(r).startsWith("new")) i.value = x.t; save(r, c, x.v); hush = r + "|" + c; App.render(); setTimeout(() => { hush = false; }, 400); }, { mark: ws }); };
+        key2 = Look.open(i, list.length ? list : [{ v: "", t: "Nothing matches" + (c === "t" ? ", press Enter to use it as typed" : ""), dis: true }], c === "t" ? [it.t, it.mk, it.end].filter(Boolean).join("|") : c === "dn" ? it.dn : it[c], x => { if (x.v === "") return; if (!String(r).startsWith("new")) i.value = x.v === "other" ? "" : x.t; save(r, c, x.v);   /* (Other: the box is left empty, to type the item in) */ hush = r + "|" + c; App.render(); setTimeout(() => { hush = false; }, 400); }, { mark: ws }); };
       /* (the redraw after a pick, a frame later, puts the cursor back in the box: that mustn't open its list again, a flash before the cursor moves on) */
       i.onfocus = () => { i.select(); if (hush === r + "|" + c){ hush = false; return; } show(); };
-      i.oninput = () => { if (free && !pt) return; show(); };
+      i.oninput = () => { if (free && !pt && c !== "t") return; show(); };
       i.onkeydown = e => { if (key2 && /^(ArrowDown|ArrowUp|Escape)$/.test(e.key)) return key2(e);
         if (e.key === "Enter" || e.key === "Tab"){ const v = i.value.trim(); const lit = document.querySelector(".lk-card .lk-o.hi:not(.dis)");
-          if (lit && (!free || pt)){ e.preventDefault(); lit.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })); return; }
+          if (lit && (!free || pt || c === "t")){ e.preventDefault(); lit.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })); return; }
           if (c === "t" && v && (r === "new0" || !type(it))){ e.preventDefault(); Look.close(); Store.mutate(key, () => { let x = r === "new0" ? null : find(r); if (!x){ x = { id: uid(), desc: v, unit: "ea", qty: "", draft: 1 }; items.push(x); } else x.desc = v; Store.touch(a); focusNext = { id: x.id, c: "qty" }; }); App.render(); return; }
           if (free && v !== String(it[c] || "")){ e.preventDefault(); save(r, c, v); App.render(); } } };
       i.onblur = () => { setTimeout(() => { if (document.activeElement !== i) Look.closeFor(i); }, 150);
-        if (free){ const v = i.value.trim(); if (v !== String((c === "t" ? it.desc : it[c]) || "")) { save(r, c === "t" ? "desc" : c, v); } } }; });
+        if (free && hush !== r + "|" + c){ const v = i.value.trim(); if (v !== String((c === "t" ? it.desc : it[c]) || "")) { save(r, c === "t" ? "desc" : c, v); } } }; });   /* (not after a pick from the list: the pick saved it) */
     /* quantity, unit (for one typed in) and notes: typed */
     $$(".mt-tbl .pt-in:not(.mt-pk):not(.mt-cin):not(.mt-gl)", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c;
       i.onchange = () => { const v = i.value.trim(), it = find(r); if (!it || String(it[c] == null ? "" : it[c]) === v) return; if (c === "spare"){ Store.mutate(key, () => { it.spare = Math.max(0, Math.round(+v || 0)) || undefined; recalc(it); Store.touch(a); }); return; }
         if (c === "len" || c === "n"){ const x = Math.round(nq(v)); if (!(x > 0)){ i.value = c === "n" ? cnt(it) : lenMm(it) || ""; return; }
           Store.mutate(key, () => { delete it.dup; if (c === "n") it.n = x; else { if (!it.unit) it.unit = "m"; it.qty = String(String(it.unit) === "m" ? x / 1000 : x); } recalc(it); combine(items); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "len" && !missing(it).length && it.draft) focusNext = { id: it.id, c: "n" }; return; }
         Store.mutate(key, () => { it[c] = v; delete it.dup; if (it.auto && c === "qty") it.qman = v !== ""; if (c === "sq") it.sqm = v !== ""; recalc(it); fillSpare(it); bolts(); if (c === "pl" || c === "pw" || c === "notes") combine(items); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if ((c === "qty" || c === "pw") && !missing(it).length) focusNext = doneNext(it); else if (c === "pl" && !it.pw) focusNext = { id: it.id, c: "pw" }; };
-      i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }; });
+      i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); const it = find(r); if (it && it.draft) focusNext = { id: r, nx: 1 }; i.blur(); if (focusNext && focusNext.nx) App.render(); } }; });
     /* details too long for the column end in more…, which opens the item in full */
     requestAnimationFrame(() => requestAnimationFrame(() => $$(".mt-det", el).forEach(d => { if (d.scrollWidth <= d.clientWidth + 1 || d.nextElementSibling) return;
       const m = h('<button type="button" class="link mt-more2">more…</button>'); d.after(m); d.parentElement.classList.add("mt-cut"); m.onclick = e => { e.stopPropagation(); info(a, find(d.dataset.det), m, ro); }; })));
     /* the total follows the spare as it's typed */
     $$(".mt-sq", el).forEach(i => i.addEventListener("input", () => { i.classList.remove("mt-sqa"); const it = find(i.dataset.r), td = i.closest("td").nextElementSibling; if (!it || !td || i.dataset.c !== "sq") return; const t = ord(Object.assign({}, it, { sq: i.value })); td.innerHTML = esc(t) + (t ? ' <span class="dim">' + esc(uShort(it.unit) || "EA") + '</span>' : ""); }));
     /* after a pick: the next box still to fill in on that row */
+    /* the one box to fill in next on each row still being entered is orange (not every empty one) */
+    items.filter(it => it.draft).forEach(it => { const nx = after(it.id), b = nx && boxOf(nx); if (b) b.closest("td").classList.add("mt-nx"); });
+    if (focusNext && focusNext.nx){ const it = find(focusNext.id), nx = it && after(it.id); focusNext = nx ? nx : it && it.draft && !missing(it).length ? { id: it.id, done: 1 } : focusNext.alt || null; }
     if (focusNext){ const f = focusNext; focusNext = null; const t = f.done ? $('.mt-tbl [data-done="' + f.id + '"]', el) : f.cut ? $('.mt-tbl [data-r="' + f.id + '"][data-c="' + f.c + '"][data-cut="' + f.cut + '"]', el) : ($('.mt-tbl [data-r="' + f.id + '"][data-c="' + f.c + '"]', el) || (f.c === "qty" ? $('.mt-tbl [data-r="' + f.id + '"][data-c="len"]', el) : null)); if (t) setTimeout(() => { t.focus(); if (f.quiet) Look.closeFor(t); }, 0); }
     /* the pieces */
     $$(".mt-cin", el).forEach(i => { i.onchange = () => { const it = find(i.dataset.r), c = i.dataset.c, id = i.dataset.cut; if (!it) return; let v = i.value.trim();
