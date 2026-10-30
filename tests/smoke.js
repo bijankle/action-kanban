@@ -136,6 +136,8 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     /* ticking Handover dates the handover that day */
     const hd = await a.p.evaluate(() => { const A = Store.all().filter(q => !q.del && Store.stage(q.stage).kind === "open" && q.f.handover !== true)[0]; Fields.set(A, Store.field("handover"), true); return (A.ho || {}).date; });
     check("ticking Handover sets the date of handover to today", hd === new Date().toISOString().slice(0, 10) || /^\d{4}-\d\d-\d\d$/.test(hd || ""), hd);
+    const cq = await a.p.evaluate(() => { const t = Object.keys(Mto.TY).find(k => Mto.TY[k].k === "len"); const r = Mto.pack({ t, L: 6000, cuts: [{ id: "c1", l: 2400, n: 2 }, { id: "c2", l: 3100, n: 1 }] }); return r ? r.pieces + " " + r.bars.length : "none"; });
+    check("a cut with a count of 2 packs as two pieces onto the stock lengths", cq === "3 2", cq);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
   } catch (e) { console.log("  FAIL  the checks stopped: " + e.message); code = 1; }
   await browser.close(); srv.kill(); fs.rmSync(dir, { recursive: true, force: true });
