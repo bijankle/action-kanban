@@ -571,8 +571,8 @@ const Mto = (() => {
     /* the total follows the spare as it's typed */
     $$(".mt-sq", el).forEach(i => i.addEventListener("input", () => { i.classList.remove("mt-sqa"); const it = find(i.dataset.r), td = i.closest("td").nextElementSibling; if (!it || !td || i.dataset.c !== "sq") return; const t = ord(Object.assign({}, it, { sq: i.value })); td.innerHTML = esc(t) + (t ? ' <span class="dim">' + esc(uShort(it.unit) || "EA") + '</span>' : ""); }));
     /* after a pick: the next box still to fill in on that row */
-    /* the row being made: its ✓ and ✕ sit just right of the # (the column always keeps room for them, so nothing shifts) */
-    $$(".mt-okx", el).forEach(x => { const tr = x.closest("tr"); if (tr && tr.cells[0]) tr.cells[0].appendChild(x); });
+    /* the row being made: its ✓ and ✕ in its # cell */
+    $$(".mt-okx", el).forEach(x => { const tr = x.closest("tr"); if (tr && tr.cells[0]){ tr.cells[0].textContent = ""; tr.cells[0].appendChild(x); } });   /* (just the ✓ and ✕ in its # cell; the column fits them only while a row is being made) */
     /* the one box to fill in next on each row still being entered is orange (not every empty one) */
     items.filter(it => it.draft || missing(it).length).forEach(it => { const nx = after(it.id), b = nx && boxOf(nx); if (b) b.closest("td").classList.add("mt-nx"); });
     if (focusNext && focusNext.nx){ const it = find(focusNext.id), nx = it && after(it.id); focusNext = nx ? nx : it && it.draft && !missing(it).length ? { id: it.id, done: 1 } : focusNext.alt || null; }

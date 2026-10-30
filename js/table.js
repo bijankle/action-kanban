@@ -94,7 +94,7 @@ const Table = (() => {
     else if (k === "del"){ if (await confirmBox("Delete " + Store.actId(a) + "? It goes to the Deleted pill, where its bin brings it back.", "Delete", true)){ Flow.remove(a); if (App.selRef === tr.dataset.ref) App.select(null); } } }, true);
   /* titles are one line: a title too long for its column ends in … with a more… that shows it in full */
   /* the ID column is just wide enough for its box with an 8px margin each side, like the Status buttons */
-  let idW = NEED.id; const NR = 48;   /* (NR: room kept in the ID column for the new row's ✓ and ✕, so nothing shifts when they show) */
+  let idW = NEED.id;
   /* a tags cell shows as many tags as fit its width, the rest as +N (widen the column to see more) */
   function tagFit(el){ const vs = $$("td.tgc .tgv", el), rooms = vs.map(v => v.clientWidth), fonts = new Map(); vs.forEach((v, n) => { const a = App.act(v.closest("tr").dataset.ref), tags = a ? [].concat(a.f.equipment || []).filter(Boolean) : []; if (tags.length < 2) return;
     const t1 = $(".tg1", v), mb = $(".tg-more", v), font = fonts.get(t1.className) || (fonts.set(t1.className, getComputedStyle(t1).font), fonts.get(t1.className)), room = rooms[n] - 20 - (mb ? 34 : 0);
@@ -104,7 +104,7 @@ const Table = (() => {
     /* (the ID column is as wide as the widest ID there can be, every category's letters and the most digits, not the widest
        showing: recategorising an action never moves the columns) */
     const one = $("td.idc .aid", el); if (one){ const f = getComputedStyle(one).font, dg = "8".repeat(Math.max(4, String(Math.max(0, ...Store.all().map(x => x.no || 0))).length));
-      const want = Math.ceil(Math.max(...Store.idLetters().map(l => headW(l + "-" + dg, f)))) + 20 + 2 + (Store.S.edit ? NR : 0); if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
+      const want = Math.ceil(Math.max(...Store.idLetters().map(l => headW(l + "-" + dg, f)))) + 20 + 2; if (Math.abs(want - idW) > 1){ idW = want; requestAnimationFrame(() => App.render()); } }
     /* (all measured first, then all marked: one layout, not one per cell) */
     const tt = $$("td.ttl", el).map(td => { const t = $(".tt", td); return [td, !!t && t.scrollWidth > t.clientWidth + 1, !!t]; });
     const lt = $$("td.ltc", el).map(td => { const t = $(".lt-b", td), v = String((App.act(td.closest("tr").dataset.ref) || { f: {} }).f[t.dataset.lt] || ""); return [td, v.includes("\n") || t.scrollWidth > t.clientWidth + 1, true]; });
@@ -246,8 +246,8 @@ const Table = (() => {
   let nrText = "", nrFocus = false;
   function newRow(el, tb, cs){ const tr = document.createElement("tr"); tr.className = "nr"; const top = $("thead", el.querySelector(".tbl")).offsetHeight;
     cs.forEach(c => { const td = document.createElement("td"); td.style.top = top + "px";
-      if (c.type === "id"){ td.className = "idc nr-id"; td.innerHTML = '<span class="nr-p">+</span><span class="nr-okx"' + (nrText ? "" : " hidden") + '><button type="button" class="nr-ok" title="Make the action" aria-label="Make the action">✓</button><button type="button" class="nr-cx" title="Clear" aria-label="Clear">✕</button></span>'; }
-      else if (c.id === "title"){ td.className = "ed nr-t"; td.innerHTML = '<input class="in nr-in" aria-label="New action title" autocomplete="off" spellcheck="true" value="' + esc(nrText) + '">'; }
+      if (c.type === "id"){ td.className = "idc nr-id"; td.innerHTML = '<span class="nr-okx"' + (nrText ? "" : " hidden") + '><button type="button" class="nr-ok" title="Make the action" aria-label="Make the action">✓</button><button type="button" class="nr-cx" title="Clear" aria-label="Clear">✕</button></span>'; }
+      else if (c.id === "title"){ td.className = "ed nr-t"; td.innerHTML = '<input class="in nr-in" aria-label="New action title" placeholder="+ New action" autocomplete="off" spellcheck="true" value="' + esc(nrText) + '">'; }
       else if (TICK.has(c.type)) td.classList.add("tk");
       tr.appendChild(td); });
     tb.insertBefore(tr, tb.firstChild);
