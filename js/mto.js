@@ -245,8 +245,15 @@ const Mto = (() => {
      what's ordered; each row entered is one cut of it (its length in Qty, the green from Settings, its notes as the mark). The parent
      packs the cuts onto stock lengths with the green and the saw cuts, and adds the spare lengths. Only parents go to the supplier */
   const skey = x => [x.t, x.s, x.z, x.r, x.m, x.L, x.mk, x.end].join("|");
+  /* a cut or piece: how many the same (n), and a cut's length in mm (kept in Qty, in the row's unit) */
+  const cnt = it => Math.max(1, Math.round(+it.n || 1));
+  const lenMm = it => Math.round(nq(it.qty) * (String(it.unit || "m") === "m" ? 1000 : 1));
+  const pieceKey = it => skey(it) + "#" + (isPlate(it) ? (+it.pl || 0) + "x" + (+it.pw || 0) : lenMm(it)) + "#" + String(it.notes || "").trim().toLowerCase();
+  /* the same cut twice (same stock item, same length or size, same mark) is one row with its count added up: 2 × 2400, not two rows */
+  function combine(items){ const seen = new Map(); for (let i = 0; i < items.length; i++){ const it = items[i]; if (!isCut(it)) continue; const k = pieceKey(it), o = seen.get(k);
+      if (o){ o.n = cnt(o) + cnt(it); items.splice(i--, 1); } else seen.set(k, it); } }
   const isCut = it => { const T = type(it); return !!T && (T.k === "len" || T.k === "plate") && !isPipe(it) && !it.draft; };
-  const piecesOf = it => cuts(it).length ? it.cuts : isPlate(it) ? (+it.pl > 0 && +it.pw > 0 ? [{ id: it.id, l: +it.pl, w: +it.pw, n: 1, mk: it.notes || "" }] : []) : nq(it.qty) > 0 ? [{ id: it.id, l: Math.round(nq(it.qty) * (String(it.unit || "m") === "m" ? 1000 : 1)), n: 1, g: it.g != null ? it.g : rules().green, mk: it.notes || "" }] : [];
+  const piecesOf = it => cuts(it).length ? it.cuts : isPlate(it) ? (+it.pl > 0 && +it.pw > 0 ? [{ id: it.id, l: +it.pl, w: +it.pw, n: cnt(it), mk: it.notes || "" }] : []) : nq(it.qty) > 0 ? [{ id: it.id, l: lenMm(it), n: cnt(it), g: it.g != null ? it.g : rules().green, mk: it.notes || "" }] : [];
   function groupsOf(items){ const g = new Map(); items.forEach(it => { if (!isCut(it)) return; const k = skey(it); if (!g.has(k)) g.set(k, { key: k, rows: [] }); g.get(k).rows.push(it); });
     g.forEach(G => { G.first = G.rows[0]; G.v = Object.assign({}, G.first, { cuts: G.rows.flatMap(piecesOf) }); G.res = pack(G.v); G.n = stockN(G.res); }); return g; }
   /* a parent's spare lengths: the team's share for its heading, rounded up, unless typed over (kept with the action, by stock item) */
@@ -312,18 +319,28 @@ const Mto = (() => {
     let sh = ""; last = null;
     const steelRow = (it, kid) => { const T = type(it), miss = ro ? [] : missing(it), res = T && pack(it);
       return '<tr data-id="' + it.id + '" class="mt-row' + (kid ? " mt-kid" : "") + (miss.length ? " mt-part" : "") + '">' + no(it, miss, toggle(it, res), kid)
-        + (kid ? '<td></td><td></td><td></td><td></td>' : '<td class="mt-szd">' + (T ? box(it, "m", "Material") + (shown(it, "s") ? '<span class="mt-sep">,</span>' : "") + box(it, "s", "Std", ' data-opt="1"') : box(it, "part", "Part / model")) + '</td><td>' + box(it, "z", "Size") + '</td><td>' + box(it, "t", "Item") + '</td><td>' + (T && ratings(it).length ? box(it, "r", T.rl || "Finish") : "") + '</td>')
-        + qtyCell(it, cuts(it).length > 0, kid) + tail(it) + sub(it, res, SC.length); };   /* (a row's own length is typed; only pieces listed under it work it out) */
+        + (kid ? '<td></td><td class="mt-dims mt-csz">' + (pc(it) ? sizeIn(it) + '<span class="dim" data-fit="1">mm</span>' : "") + '</td><td></td><td></td>' : '<td class="mt-szd">' + (T ? box(it, "m", "Material") + (shown(it, "s") ? '<span class="mt-sep">,</span>' : "") + box(it, "s", "Std", ' data-opt="1"') : box(it, "part", "Part / model")) + '</td><td>' + box(it, "z", "Size") + '</td><td>' + box(it, "t", "Item") + '</td><td>' + (T && ratings(it).length ? box(it, "r", T.rl || "Finish") : "") + '</td>')
+        + (pc(it) ? '<td class="mt-qu mt-dims">' + (kid ? nIn(it) : sizeIn(it) + '<span class="dim">×</span>' + nIn(it)) + '</td><td class="mt-unc">EA</td><td></td><td></td>' : qtyCell(it, cuts(it).length > 0, kid)) + tail(it) + sub(it, res, SC.length); };
+    /* a cut of steel or a piece of plate: its size (a cut's length, a piece's L × W, in mm) and how many the same; under its stock item
+       the size sits under Size and the count under Qty, on a row still being entered they share the Qty cell (size × count) */
+    function pc(it){ const T = type(it); return !!T && (T.k === "len" || T.k === "plate") && !isPipe(it) && !cuts(it).length; }
+    function dm(it, c, v, t){ return '<input class="in pt-in mt-q mt-dm" data-r="' + it.id + '" data-c="' + c + '" inputmode="numeric" value="' + esc(v || "") + '"' + (ro ? " readonly" : "") + ' title="' + t + '">'; }
+    function sizeIn(it){ return isPlate(it) ? dm(it, "pl", it.pl, "Length of the piece, mm") + '<span class="dim">×</span>' + dm(it, "pw", it.pw, "Width of the piece, mm") : dm(it, "len", lenMm(it) || "", "Length of the cut, mm (the green from Settings is added for site trimming)"); }
+    function nIn(it){ return '<input class="in pt-in mt-q mt-dm mt-n" data-r="' + it.id + '" data-c="n" inputmode="numeric" value="' + cnt(it) + '"' + (ro ? " readonly" : "") + ' title="How many the same">'; }
     /* a parent row: the stock to order (worked out), its spare lengths, the total; clicking it shows or hides its cuts */
     const gs = groupsOf(items), drawn = new Set();
     const parentRow = G => { const sp = gSpare(a, G), st = (a.mtoG || {})[G.key] || {}, on = openG.has(G.key), R = G.res, f = G.first, T = type(f), S = std(f);
       return '<tr class="mt-par' + (on ? " on" : "") + '" data-g="' + esc(G.key) + '" title="Click to ' + (on ? "hide" : "show") + ' the ' + (isPlate(f) ? "pieces" : "cuts") + '"><td class="pt-no">' + (++n) + '</td>'
         + '<td class="mt-pv">' + esc([shown(f, "m"), S && !f.sx ? stShort(S.n) : ""].filter(Boolean).join(", ")) + '</td><td class="mt-pv">' + esc(zShort(f)) + '</td><td class="mt-pv">' + esc(itemCode(f)) + '</td><td class="mt-pv">' + esc(rShort(f.r)) + '</td>'
-        + '<td class="mt-qu mt-pq" title="' + (isPlate(f) ? "Sheets to cut the " + G.rows.length + " piece" + (G.rows.length === 1 ? "" : "s") : "Stock lengths to cut the " + G.rows.length + " cut" + (G.rows.length === 1 ? "" : "s")) + ' from (' + esc(lenTot(G, G.n)) + ')">' + esc(G.res ? G.n : "?") + '</td><td class="mt-unc">' + (isPlate(f) ? "SHT" : "LG") + '</td>'
+        + '<td class="mt-qu mt-pq" title="' + (isPlate(f) ? "Sheets to cut the " + G.rows.length + " piece" + (G.rows.length === 1 ? "" : "s") : "Stock lengths to cut the " + G.rows.length + " cut" + (G.rows.length === 1 ? "" : "s")) + ' from (' + esc(lenTot(G, G.n)) + '). Double click the stock ' + (isPlate(f) ? "sheet size" : "length") + ' to change it for this job">' + stockIn(G) + '<span class="dim">×</span><b>' + esc(G.res ? G.n : "?") + '</b></td><td class="mt-unc">EA</td>'
         + '<td><input class="in pt-in mt-q mt-sq mt-gsq' + (st.sqm ? "" : sp ? " mt-sqa" : "") + '" data-gs="' + esc(G.key) + '" inputmode="numeric" value="' + esc(sp || "") + '" placeholder="0"' + (ro ? " readonly" : "") + ' title="' + (st.sqm ? "Spare " + (isPlate(f) ? "sheets" : "lengths") + ", set by hand. Clear it to have it worked out again" : "Spare " + (isPlate(f) ? "sheets" : "lengths") + ", worked out (File, Parameters, MTO spares). Type over it to change it") + '"></td>'
         + '<td class="mt-tot" title="' + esc(lenTot(G, G.n + sp)) + '">' + esc(G.res ? G.n + sp : "?") + '</td><td class="mt-itd"><button type="button" class="mt-ii" data-ginfo="' + esc(G.key) + '" title="How the order is worked out" aria-label="How the order is worked out">' + INFO_I + '</button></td>'
         + '<td class="mt-ic">' + (ro ? "" : '<button type="button" class="ic-b sm mt-dup" data-gdup="' + esc(G.key) + '" title="Copy this item into a new row, to change what differs" aria-label="Copy this item">' + DUP_I + '</button><button type="button" class="ic-b sm pt-x mt-x" data-gx="' + esc(G.key) + '" title="Remove this item and all its cuts">✕</button>') + '</td></tr>'; };
 
+    /* the stock length (or sheet, L × W) in mm, from the standard; it can be changed for this job, and the count follows */
+    function stockIn(G){ const f = G.first, sh = isPlate(f) ? sheet(f.L) || { l: "", w: "" } : null, cl = "in pt-in mt-q mt-dm mt-gl" + (f.Lm ? " mt-man" : "");
+      const one = (k, v) => '<input class="' + cl + '" data-gl="' + esc(G.key) + '" data-k="' + k + '" inputmode="numeric" value="' + esc(v) + '"' + (ro ? " readonly" : "") + ' title="Stock ' + (isPlate(f) ? (k === "a" ? "sheet length" : "sheet width") : "length") + ', mm' + (f.Lm ? ", changed for this job" : ", from the standard") + '">';
+      return sh ? one("a", sh.l) + '<span class="dim">×</span>' + one("b", sh.w) : one("L", f.L || ""); }
     const steelItem = it => { if (!isCut(it)) return steelRow(it); const G = gs.get(skey(it)); if (drawn.has(G.key)) return ""; drawn.add(G.key); return parentRow(G) + (openG.has(G.key) ? G.rows.map((r, i) => steelRow(r, n + "." + (i + 1))).join("") : ""); };
     sh = sdr.map(it => { const h = head(it, SC.length, last); last = GROUP(it); return h + steelRow(it); }).join("");   /* (a row still being filled in sits under its group row too) */
     if (!ro) sh += '<tr class="pt-blank"><td class="pt-no"></td><td></td><td></td><td><input class="in pt-in mt-pk" data-r="new0" data-c="t" placeholder="+ Item" autocomplete="off" spellcheck="false"></td>' + '<td></td>'.repeat(SC.length - 3) + '</tr>';
@@ -396,6 +413,15 @@ const Mto = (() => {
     /* duplicate: a copy of the row straight under it, to change what differs (the studs and nuts that follow the flanges aren't copied: they are worked out) */
     $$("[data-dup]", el).forEach(b => b.onclick = () => { const it = find(b.dataset.dup); if (!it) return; const c = JSON.parse(JSON.stringify(it)); c.id = uid(); delete c.auto; delete c.qman;
       (c.cuts || []).forEach(x => x.id = uid()); Store.mutate(key, () => { items.splice(items.indexOf(it) + 1, 0, c); bolts(); Store.touch(a); }); Store.log("Duplicated a row of the MTO of " + Store.actId(a)); focusNext = { id: c.id, c: "qty" }; App.render(); });
+    /* a stock length or sheet changed for this job: every cut of the item moves to it, its spare and open state follow, the count is worked out again */
+    $$(".mt-gl", el).forEach(i => i.onchange = () => { const G = groupsOf(items).get(i.dataset.gl); if (!G) return; const f = G.first;
+      let L; if (isPlate(f)){ const bx = [...i.closest("td").querySelectorAll(".mt-gl")].map(x => Math.round(nq(x.value))); if (!(bx[0] > 0 && bx[1] > 0)) return; L = Math.max(...bx) + "x" + Math.min(...bx); }
+      else { L = Math.round(nq(i.value)); if (!(L > 0)){ i.value = f.L || ""; return; } }
+      if (String(L) === String(f.L)) return; const S = std(f), dflt = S && S.defl != null && String(S.defl) === String(L);
+      Store.mutate(key, () => { const old = G.key; G.rows.forEach(r => { r.L = L; if (dflt) delete r.Lm; else r.Lm = 1; }); const nk = skey(G.rows[0]);
+        if (a.mtoG && a.mtoG[old]){ a.mtoG[nk] = a.mtoG[old]; delete a.mtoG[old]; } if (openG.has(old)){ openG.delete(old); openG.add(nk); } combine(items); Store.touch(a); });
+      Store.log("Changed a stock " + (isPlate(f) ? "sheet" : "length") + " in the MTO of " + Store.actId(a)); App.render(); });
+    $$(".mt-gl", el).forEach(i => i.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }));
     /* a copy of a stock item: a new row to finish, with Done (the pieces aren't copied) */
     $$("[data-gdup]", el).forEach(b => b.onclick = () => { const G = groupsOf(items).get(b.dataset.gdup); if (!G) return; const c = JSON.parse(JSON.stringify(G.first)); c.id = uid(); c.draft = 1; delete c.cuts;
       Store.mutate(key, () => { items.push(c); Store.touch(a); }); Store.log("Copied a row of the MTO of " + Store.actId(a)); focusNext = { id: c.id, c: isPlate(c) ? "pl" : "qty" }; App.render(); });
@@ -461,7 +487,7 @@ const Mto = (() => {
     $$("[data-done]", el).forEach(b => b.onclick = () => { const it = find(b.dataset.done); if (!it) return; const into = same(it);
       if (into){ Store.mutate(key, () => { into.cuts = (into.cuts || []).concat((it.cuts || []).map(c => Object.assign({}, c, { id: uid() }))); const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); recalc(into); fillSpare(into); Store.touch(a); });
         open.add(into.id); Store.log("Added pieces to a row of the MTO of " + Store.actId(a)); note("Added to the " + desc(into) + " row: its pieces are listed under it"); focusNext = doneNext({}); App.render(); return; }
-      Store.mutate(key, () => { delete it.draft; const o = order(items); items.splice(0, items.length, ...o); bolts(); Store.touch(a); }); Store.log("Added to the MTO of " + Store.actId(a)); focusNext = doneNext(it); App.render(); });
+      Store.mutate(key, () => { delete it.draft; const o = order(items); items.splice(0, items.length, ...o); combine(items); bolts(); Store.touch(a); }); Store.log("Added to the MTO of " + Store.actId(a)); focusNext = doneNext(it); App.render(); });
     /* the pick boxes: the app's card with what fits; typing narrows it */
     $$(".mt-pk", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c, it = find(r) || (r === "newp" && lastCl.get(akey(a)) ? { qty: "", cl: lastCl.get(akey(a)) } : { qty: "" }); let key2 = null;
       const pt = isInst(it) && (c === "t" || c === "part" || c === "z");   // (an instrument's type and make / model: pick from the plant lists, or type it in)
@@ -486,9 +512,11 @@ const Mto = (() => {
       i.onblur = () => { setTimeout(() => { if (document.activeElement !== i) Look.closeFor(i); }, 150);
         if (free){ const v = i.value.trim(); if (v !== String((c === "t" ? it.desc : it[c]) || "")) { save(r, c === "t" ? "desc" : c, v); } } }; });
     /* quantity, unit (for one typed in) and notes: typed */
-    $$(".mt-tbl .pt-in:not(.mt-pk):not(.mt-cin)", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c;
+    $$(".mt-tbl .pt-in:not(.mt-pk):not(.mt-cin):not(.mt-gl)", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c;
       i.onchange = () => { const v = i.value.trim(), it = find(r); if (!it || String(it[c] == null ? "" : it[c]) === v) return; if (c === "spare"){ Store.mutate(key, () => { it.spare = Math.max(0, Math.round(+v || 0)) || undefined; recalc(it); Store.touch(a); }); return; }
-        Store.mutate(key, () => { it[c] = v; if (it.auto && c === "qty") it.qman = v !== ""; if (c === "sq") it.sqm = v !== ""; recalc(it); bolts(); fillSpare(it); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if ((c === "qty" || c === "pw") && !missing(it).length) focusNext = doneNext(it); else if (c === "pl" && !it.pw) focusNext = { id: it.id, c: "pw" }; };
+        if (c === "len" || c === "n"){ const x = Math.round(nq(v)); if (!(x > 0)){ i.value = c === "n" ? cnt(it) : lenMm(it) || ""; return; }
+          Store.mutate(key, () => { if (c === "n") it.n = x; else { if (!it.unit) it.unit = "m"; it.qty = String(String(it.unit) === "m" ? x / 1000 : x); } recalc(it); combine(items); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "len" && !missing(it).length && it.draft) focusNext = { id: it.id, c: "n" }; return; }
+        Store.mutate(key, () => { it[c] = v; if (it.auto && c === "qty") it.qman = v !== ""; if (c === "sq") it.sqm = v !== ""; recalc(it); bolts(); fillSpare(it); if (c === "pl" || c === "pw" || c === "notes") combine(items); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if ((c === "qty" || c === "pw") && !missing(it).length) focusNext = doneNext(it); else if (c === "pl" && !it.pw) focusNext = { id: it.id, c: "pw" }; };
       i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }; });
     /* details too long for the column end in more…, which opens the item in full */
     requestAnimationFrame(() => requestAnimationFrame(() => $$(".mt-det", el).forEach(d => { if (d.scrollWidth <= d.clientWidth + 1 || d.nextElementSibling) return;

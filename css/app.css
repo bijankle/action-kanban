@@ -1674,3 +1674,6 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .mt-tbl td.mt-tot,.mt-tbl tr.mt-par td.mt-pq{background:var(--autof)!important}.mt-tbl tr.mt-par td.mt-tot{font-weight:700!important}
 /* a stock item's row is a row like any other: body text, the same faint lines (its group row above it is the heading) */
 .mt-tbl tr.mt-par>td{font-weight:400!important;border-bottom:1px solid var(--line)!important}.mt-tbl tr.mt-par .mt-pv{font-family:inherit}
+/* steel cuts and plate pieces: the size boxes snug, the count narrow; a stock length typed over for this job is white (from the standard, blue) */
+.mt-tbl td.mt-dims .mt-n{width:3ch!important}.mt-tbl td.mt-csz{text-align:left}.mt-tbl td.mt-csz .dim{margin:0 3px}
+.mt-tbl tr.mt-par td.mt-pq .mt-gl{width:5.5ch!important;font-weight:400}.mt-tbl tr.mt-par td.mt-pq .mt-gl.mt-man{background:var(--panel)!important}.mt-tbl tr.mt-par td.mt-pq .dim{margin:0 3px}
