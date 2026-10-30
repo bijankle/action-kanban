@@ -246,7 +246,7 @@ function timeBox(value, opts){ opts = opts || {}; if (TOUCH) return nativeBox("t
 const PREF_DEF = { etaSoon: 7, etaHover: 300, defTime: "07:00", timeStep: 30, passDefault: "done", defectCat: true, handover: true, quoteTick: true, poTick: true,
   autoFit: true, notesW: 220, titleMin: 260, openLast: true, kbClear: true, pasteInto: true, locFromWbs: true,
   /* MTO spares, as a share of the quantity, by heading (the usual construction allowances; small bore is DN50 / OD63 and under) */
-  spAuto: true, spPipe: 5, spPipeSB: 10, spFit: 5, spFitSB: 10, spFlg: 5, spGk: 20, spBolt: 10, spValve: 0, spInst: 0, spSteel: 5, spPlate: 10 };
+  mtoGuess: true, spAuto: true, spPipe: 5, spPipeSB: 10, spFit: 5, spFitSB: 10, spFlg: 5, spGk: 20, spBolt: 10, spValve: 0, spInst: 0, spSteel: 5, spPlate: 10 };
 /* the team rules (they change shared data, so they're the same for everyone and set by the admin) are kept in the shared
    config; the rest are each person's own, on their computer */
 const TEAM_RULES = new Set(["passDefault", "defectCat", "handover", "quoteTick", "poTick", "locFromWbs"]);

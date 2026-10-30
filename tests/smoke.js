@@ -138,6 +138,8 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     check("ticking Handover sets the date of handover to today", hd === new Date().toISOString().slice(0, 10) || /^\d{4}-\d\d-\d\d$/.test(hd || ""), hd);
     const cq = await a.p.evaluate(() => { const t = Object.keys(Mto.TY).find(k => Mto.TY[k].k === "len"); const r = Mto.pack({ t, L: 6000, cuts: [{ id: "c1", l: 2400, n: 2 }, { id: "c2", l: 3100, n: 1 }] }); return r ? r.pieces + " " + r.bars.length : "none"; });
     check("a cut with a count of 2 packs as two pieces onto the stock lengths", cq === "3 2", cq);
+    const tq = await a.p.evaluate(() => [{ desc: "GASKET DN150 CNAF 3MM" }, { desc: "NUT M20 GR 8 GALV" }, { desc: "PG02-300 insulated U-bolt guide" }, { desc: "GASKET DN150", ty: "Specials" }].map(x => Mto.typeOf(x)).join(","));
+    check("a row typed in goes under its ISO heading, and a Type picked wins", tq === "Gaskets,Bolts,Supports,Specials", tq);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
   } catch (e) { console.log("  FAIL  the checks stopped: " + e.message); code = 1; }
   await browser.close(); srv.kill(); fs.rmSync(dir, { recursive: true, force: true });
