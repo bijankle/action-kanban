@@ -27,8 +27,8 @@ const Sketch = (() => {
         const parts = isPdf(f) ? await pdfPages(f) : [await (async () => { const b = await createImageBitmap(f).catch(() => null); return { blob: f, name: (f.name && !/^image\.\w+$/.test(f.name) ? f.name.replace(/\.\w+$/, "") : "Pasted sketch"), w: b ? b.width : 0, ht: b ? b.height : 0, ext: extOf(f) }; })()];
         for (const p of parts){ const buf = await p.blob.arrayBuffer(), h = (await sha1(buf)).slice(0, 16); if (list(a).some(s => s.h === h)) continue;
           const s = { h, name: properTitle(p.name), w: p.w, ht: p.ht, ext: p.ext, added: now(), by: Profile.name(), at: now() }; mem.set(h, URL.createObjectURL(p.blob));
-          Store.mutate("a:" + a._p, () => { list(a).push(s); Store.touch(a); });   /* (shows at once; the file uploads behind it) */
-          await Store.addBlob(path(a._p, s), bufToB64(buf)); }
+          await Store.addBlob(path(a._p, s), bufToB64(buf));   /* (the file first, as for photos, so a save never lists a sketch whose file isn't there) */
+          Store.mutate("a:" + a._p, () => { list(a).push(s); Store.touch(a); }); }
         Store.log("Added sketches to " + Store.actId(a)); }
       catch (e){ console.error(e); alert("Couldn't add " + f.name + ": " + e.message); } }
     note("Sketches added to " + Store.actId(a) + ", saving online…"); }

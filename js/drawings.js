@@ -53,8 +53,8 @@ const Drawings = (() => {
     $$(".dw-ck input", el).forEach(c => c.onchange = () => pick(c.dataset.n, c.checked));
     const dl = $("[data-k=dl]", el); if (dl) dl.onclick = () => download(el, a, all, dl);
     const fx = $("[data-k=fx]", el); if (fx) fx.onclick = () => { fails.delete(ref); draw(el, a); };
-    /* the box above the ticks: clears them all if any are ticked, else ticks every one shown */
-    const ta = $("[data-k=all]", el); if (ta) ta.onchange = () => Store.mutate("a:" + a._p, () => { a.dwgPick = anyOn ? [] : [...new Set((a.dwgPick || []).concat(list.map(([, d]) => d.n)))]; Store.touch(a); });
+    /* the box above the ticks: clears the ones shown if any are ticked (ticks hidden by the filter stay), else ticks every one shown */
+    const ta = $("[data-k=all]", el); if (ta) ta.onchange = () => Store.mutate("a:" + a._p, () => { a.dwgPick = anyOn ? (a.dwgPick || []).filter(n => !list.some(([, d]) => d.n === n)) : [...new Set((a.dwgPick || []).concat(list.map(([, d]) => d.n)))]; Store.touch(a); });
     moreFit(el);
     $$(".dw-b", el).forEach(r => { const k = r.dataset.key, [t, d] = list.find(([t, d]) => key(t, d) === k) || [];
       $(".dw-i", r).onclick = e => { e.stopPropagation(); info(e.currentTarget, t, d); }; }); }

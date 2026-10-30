@@ -280,9 +280,9 @@ const Mto = (() => {
      returns the rows that took others in, so the user is told */
   const fitKey = it => ["cl", "dn", "dn2", "it", "vt", "t", "s", "z", "r", "m", "mk", "end", "cat", "part", "ty", "unit"].map(k => it[k] == null ? "" : String(it[k])).join("|") + "|" + (type(it) || isSpec(it) ? "" : String(it.desc || "").trim().toLowerCase()) + "|" + String(it.notes || "").trim().toLowerCase();
   function combine(items){ const seen = new Map(), fits = new Map(), took = []; for (let i = 0; i < items.length; i++){ const it = items[i];
-      if (!isCut(it)){ if (it.draft || it.auto || cuts(it).length || !(nq(it.qty) > 0)) continue; const k = fitKey(it), o = fits.get(k); if (!o){ fits.set(k, it); continue; }
+      if (!isCut(it)){ if (it.draft || it.auto || it.dup || cuts(it).length || !(nq(it.qty) > 0)) continue; const k = fitKey(it), o = fits.get(k); if (!o){ fits.set(k, it); continue; }
         o.qty = String(+(nq(o.qty) + nq(it.qty)).toFixed(3)); if (o.sqm || it.sqm){ o.sq = String(+(nq(o.sq) + nq(it.sq)).toFixed(3)); o.sqm = true; } else if (pref("spAuto")) o.sq = autoSpare(o); items.splice(i--, 1); if (!took.includes(o)) took.push(o); continue; }
-      const k = pieceKey(it), o = seen.get(k);
+      if (it.dup) continue; const k = pieceKey(it), o = seen.get(k);
       if (o){ o.n = cnt(o) + cnt(it); items.splice(i--, 1); } else seen.set(k, it); } return took; }
   const isCut = it => { const T = type(it); return (!!T && (T.k === "len" || T.k === "plate") && !isPipe(it) || pipeLen(it)) && !it.draft; };
   const piecesOf = it => cuts(it).length ? it.cuts : isPlate(it) ? (+it.pl > 0 && +it.pw > 0 ? [{ id: it.id, l: +it.pl, w: +it.pw, n: cnt(it), mk: it.notes || "" }] : []) : nq(it.qty) > 0 ? [{ id: it.id, l: lenMm(it), n: cnt(it), g: it.g != null ? it.g : rules().green, mk: it.notes || "" }] : [];
@@ -437,7 +437,8 @@ const Mto = (() => {
     /* the ⋯ at the row's end: about this item (sizes, weight, how the total was worked out, notes), move it to Spares, remove it */
     /* the row's end: move it to Spares, or remove it (asks first) */
     /* duplicate: a copy of the row straight under it, to change what differs (the studs and nuts that follow the flanges aren't copied: they are worked out) */
-    $$("[data-dup]", el).forEach(b => b.onclick = () => { const it = find(b.dataset.dup); if (!it) return; const c = JSON.parse(JSON.stringify(it)); c.id = uid(); delete c.auto; delete c.qman;
+    $$("[data-dup]", el).forEach(b => b.onclick = () => { const it = find(b.dataset.dup); if (!it) return; const c = JSON.parse(JSON.stringify(it)); c.id = uid(); c.dup = 1; delete c.auto; delete c.qman;   /* (dup: not merged back into the row it was copied from until it's edited) */
+     
       (c.cuts || []).forEach(x => x.id = uid()); Store.mutate(key, () => { items.splice(items.indexOf(it) + 1, 0, c); bolts(); Store.touch(a); }); Store.log("Duplicated a row of the MTO of " + Store.actId(a)); focusNext = { id: c.id, c: "qty" }; App.render(); });
     /* a stock length or sheet changed for this job: every cut of the item moves to it, its spare and open state follow, the count is worked out again */
     $$(".mt-gl", el).forEach(i => i.onchange = () => { const G = groupsOf(items).get(i.dataset.gl); if (!G) return; const f = G.first;
@@ -445,14 +446,14 @@ const Mto = (() => {
       else { L = Math.round(nq(i.value)); if (!(L > 0)){ i.value = G.v.L || ""; return; } }
       if (String(L) === String(G.v.L)) return; const S = std(f), dflt = S ? S.defl != null && String(S.defl) === String(L) : isSpec(f) && L === PIPEL;
       Store.mutate(key, () => { const old = G.key; G.rows.forEach(r => { r.L = L; if (dflt) delete r.Lm; else r.Lm = 1; }); const nk = skey(G.rows[0]);
-        if (a.mtoG && a.mtoG[old]){ a.mtoG[nk] = a.mtoG[old]; delete a.mtoG[old]; } if (openG.has(old)){ openG.delete(old); openG.add(nk); } combine(items); Store.touch(a); });
+        if (a.mtoG && a.mtoG[old]){ if (!a.mtoG[nk]) a.mtoG[nk] = a.mtoG[old]; delete a.mtoG[old]; } if (openG.has(old)){ openG.delete(old); openG.add(nk); } combine(items); Store.touch(a); });
       Store.log("Changed a stock " + (isPlate(f) ? "sheet" : "length") + " in the MTO of " + Store.actId(a)); App.render(); });
     $$(".mt-gl", el).forEach(i => i.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }));
     /* a copy of a stock item: a new row to finish, with Done (the pieces aren't copied) */
     $$("[data-gdup]", el).forEach(b => b.onclick = () => { const G = groupsOf(items).get(b.dataset.gdup); if (!G) return; const c = JSON.parse(JSON.stringify(G.first)); c.id = uid(); c.draft = 1; delete c.cuts;
       Store.mutate(key, () => { items.push(c); Store.touch(a); }); Store.log("Copied a row of the MTO of " + Store.actId(a)); focusNext = { id: c.id, c: isPlate(c) ? "pl" : "qty" }; App.render(); });
     $$("[data-x]", el).forEach(b => b.onclick = async () => { const it = find(b.dataset.x); if (!it) return;
-      if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?", "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); bolts(); Store.touch(a); }); });
+      if (await confirmBox("Remove " + (desc(it) || "this row") + " from the MTO?" + (it.auto ? " It won't be added again from the flanges." : ""), "Remove", true)) Store.mutate(key, () => { const k = items.indexOf(it); if (k >= 0) items.splice(k, 1); if (it.auto && !(a.mtoOff = a.mtoOff || []).includes(it.auto)) a.mtoOff.push(it.auto); bolts(); Store.touch(a); }); });
     if (ro) return;
     /* the order the boxes are filled in: to a class, Class Size Item (Ends / type) Qty; N/A, Class Size Item Rating Material Qty; the rest, Item Size Rating Material Qty */
     const orderOf = it => isInst(it) ? ["cl", "t", "part", "z", "qty"] : isSpec(it) ? ["cl", "dn", "it", "dn2", "vt", "qty"] : isPipe(it) ? ["cl", "z", "t", "r", "m", "qty"] : isPlate(it) ? ["t", "z", "m", "r", "pl", "pw"] : ["t", "z", "m", "r", "qty"];
@@ -461,7 +462,7 @@ const Mto = (() => {
     /* the next box on the row still to fill in (after a pick, the cursor goes there and its list opens) */
     const after = (id, c) => { const it = find(id); if (!it || !missing(it).length) return null; const O = orderOf(it), from = O.indexOf(c);
       for (const x of O.slice(Math.max(0, from + 1)).concat(O)) if (needs(it, x)) return { id, c: x }; return null; };
-    const set = (it, c, v) => { const T = type(it);
+    const set = (it, c, v) => { const T = type(it); delete it.dup;
       if (c === "cl" && v === "cat:inst"){ ["dn", "it", "vt", "t", "s", "m", "r", "L", "mk", "end", "sx", "cuts"].forEach(k => delete it[k]); it.cl = "N/A"; it.cat = "inst"; it.desc = it.desc || ""; it.unit = it.unit || "ea"; return; }
       if (isInst(it) && (c === "t" || c === "part" || c === "z") && /^typed:/.test(v)){ it[c === "t" ? "desc" : c] = v.slice(6); return; }
       if (isInst(it) && c === "t" && /^ity:/.test(v)){ it.desc = v.slice(4); const e = instType(it.desc); if (e && e.mm.length === 1) it.part = e.mm[0][0]; else if (e && it.part && !e.mm.some(m => m[0] === it.part)) delete it.part; return; }
@@ -494,7 +495,7 @@ const Mto = (() => {
       items.filter(it => isSpec(it) && !it.draft && !it.auto && it.it && F.test(it.it) && it.dn).forEach(it => { const k = it.cl + "|" + it.dn, w = want.get(k) || { cl: it.cl, dn: it.dn, n: 0 }; w.n += nq(ord(it)); want.set(k, w); });
       const has = new Map(items.filter(it => it.auto).map(it => [it.auto, it]));
       want.forEach(w => { const J = PipeSpec.joint(w.cl, w.dn), joints = Math.ceil(w.n / 2), cs = (PipeSpec.spec(w.cl) || { comps: [] }).comps, nm = re => { const c = cs.find(c => re.test(PipeSpec.clean(c.d))); return c ? PipeSpec.clean(c.d) : null; };
-        (PipeSpec.SAE(w.cl) ? [["kit", "B:kit", w.n]] : [["stud", nm(/^stud bolts/i) || "B:stud", J.n ? joints * J.n : ""], ["nut", nm(/^nuts?\b/i) || "B:nut", J.n ? joints * J.n * 2 : ""]]).forEach(([k, itn, q]) => { const key = "bolts|" + w.cl + "|" + w.dn + "|" + k; let r = has.get(key);
+        (PipeSpec.SAE(w.cl) ? [["kit", "B:kit", w.n]] : [["stud", nm(/^stud bolts/i) || "B:stud", J.n ? joints * J.n : ""], ["nut", nm(/^nuts?\b/i) || "B:nut", J.n ? joints * J.n * 2 : ""]]).forEach(([k, itn, q]) => { const key = "bolts|" + w.cl + "|" + w.dn + "|" + k; if ((a.mtoOff || []).includes(key)) return; let r = has.get(key);
           if (!r){ r = { id: uid(), cl: w.cl, dn: w.dn, it: itn, qty: "", unit: "ea", auto: key }; items.push(r); } has.delete(key);
           if (!r.qman) r.qty = String(q); fillSpare(r); r.an = "from " + w.n + " flange" + (w.n === 1 ? "" : "s") + " (" + joints + " joint" + (joints === 1 ? "" : "s") + ")" + (J.n ? ", " + J.n + " per joint" : ""); }); });
       has.forEach(r => { if (!r.qman){ const k = items.indexOf(r); if (k >= 0) items.splice(k, 1); } });
@@ -555,8 +556,8 @@ const Mto = (() => {
     $$(".mt-tbl .pt-in:not(.mt-pk):not(.mt-cin):not(.mt-gl)", el).forEach(i => { const r = i.dataset.r, c = i.dataset.c;
       i.onchange = () => { const v = i.value.trim(), it = find(r); if (!it || String(it[c] == null ? "" : it[c]) === v) return; if (c === "spare"){ Store.mutate(key, () => { it.spare = Math.max(0, Math.round(+v || 0)) || undefined; recalc(it); Store.touch(a); }); return; }
         if (c === "len" || c === "n"){ const x = Math.round(nq(v)); if (!(x > 0)){ i.value = c === "n" ? cnt(it) : lenMm(it) || ""; return; }
-          Store.mutate(key, () => { if (c === "n") it.n = x; else { if (!it.unit) it.unit = "m"; it.qty = String(String(it.unit) === "m" ? x / 1000 : x); } recalc(it); combine(items); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "len" && !missing(it).length && it.draft) focusNext = { id: it.id, c: "n" }; return; }
-        Store.mutate(key, () => { it[c] = v; if (it.auto && c === "qty") it.qman = v !== ""; if (c === "sq") it.sqm = v !== ""; recalc(it); bolts(); fillSpare(it); if (c === "pl" || c === "pw" || c === "notes") combine(items); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if ((c === "qty" || c === "pw") && !missing(it).length) focusNext = doneNext(it); else if (c === "pl" && !it.pw) focusNext = { id: it.id, c: "pw" }; };
+          Store.mutate(key, () => { delete it.dup; if (c === "n") it.n = x; else { if (!it.unit) it.unit = "m"; it.qty = String(String(it.unit) === "m" ? x / 1000 : x); } recalc(it); combine(items); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if (c === "len" && !missing(it).length && it.draft) focusNext = { id: it.id, c: "n" }; return; }
+        Store.mutate(key, () => { it[c] = v; delete it.dup; if (it.auto && c === "qty") it.qman = v !== ""; if (c === "sq") it.sqm = v !== ""; recalc(it); fillSpare(it); bolts(); if (c === "pl" || c === "pw" || c === "notes") combine(items); Store.touch(a); }); Store.log("Edited the MTO of " + Store.actId(a)); if ((c === "qty" || c === "pw") && !missing(it).length) focusNext = doneNext(it); else if (c === "pl" && !it.pw) focusNext = { id: it.id, c: "pw" }; };
       i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); i.blur(); } }; });
     /* details too long for the column end in more…, which opens the item in full */
     requestAnimationFrame(() => requestAnimationFrame(() => $$(".mt-det", el).forEach(d => { if (d.scrollWidth <= d.clientWidth + 1 || d.nextElementSibling) return;
@@ -568,7 +569,7 @@ const Mto = (() => {
     /* the pieces */
     $$(".mt-cin", el).forEach(i => { i.onchange = () => { const it = find(i.dataset.r), c = i.dataset.c, id = i.dataset.cut; if (!it) return; let v = i.value.trim();
         if (c !== "mk"){ if (v === "") { if (id === "new") return; } else { const x = c === "n" ? Math.round(+v) : num(v); if (!(x > 0) && !(c === "g" && x === 0)){ i.classList.add("bad"); i.title = c === "n" ? "A whole number" : "A length in mm, or in m with an m (2.4m)"; return; } v = x; } }
-        if (id === "new"){ if (v === "") return; const cu = { id: uid(), n: 1 }; if (!isPlate(it) && rules().green) cu.g = rules().green; cu[c] = v;   // (a new length starts with the team's green) Parts.created.set("cut:" + it.id, cu.id);
+        if (id === "new"){ if (v === "") return; const cu = { id: uid(), n: 1 }; if (!isPlate(it) && rules().green) cu.g = rules().green; cu[c] = v; Parts.created.set("cut:" + it.id, cu.id);   // (a new length starts with the team's green)
           Store.mutate(key, () => { (it.cuts = it.cuts || []).push(cu); recalc(it); Store.touch(a); }); return; }
         const cu = (it.cuts || []).find(x => x.id === id); if (!cu || String(cu[c] == null ? "" : cu[c]) === String(v)) return;
         Store.mutate(key, () => { cu[c] = v === "" ? undefined : v; recalc(it); Store.touch(a); }); };

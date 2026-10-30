@@ -22,7 +22,7 @@ const Look = (() => {
       const qi = $(".lk-q", c); if (qi){ qi.oninput = () => { q = qi.value; hi = 0; draw(); const n = $(".lk-q", c); n.focus(); n.setSelectionRange(q.length, q.length); }; qi.onkeydown = key; }
       const o = $(".lk-o.hi", c); if (o) o.scrollIntoView({ block: "nearest" }); };
     const key = e => { const real = shown.filter(x => !x.grp && !x.dis);
-      if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); let k = hi; do { k = (k + (e.key === "ArrowDown" ? 1 : -1) + shown.length) % shown.length; } while ((shown[k].grp || shown[k].dis) && real.length); hi = k; draw(); }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); if (!real.length) return; let k = hi; do { k = (k + (e.key === "ArrowDown" ? 1 : -1) + shown.length) % shown.length; } while ((shown[k].grp || shown[k].dis) && real.length); hi = k; draw(); }
       else if (e.key === "Enter"){ e.preventDefault(); const x = shown[hi]; if (x && !x.grp){ close(); pick(x); } }
       else if (e.key === "Escape"){ e.stopPropagation(); close(); anchor.focus(); } else if (e.key === "Tab") close();
       else if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey){ const x = items.find(y => y.hk === +e.key); if (x){ e.preventDefault(); close(); pick(x); } } };

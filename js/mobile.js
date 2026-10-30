@@ -24,7 +24,7 @@ const Mobile = (() => {
     const pg = shell(root); root.classList.toggle("m-in", !!a); requestAnimationFrame(() => { const t = $(".m-top", root); if (t) root.style.setProperty("--mtop", t.offsetHeight + "px"); });   // what sticks under the top row sits just below it, whatever the sizes
     if (a) return detail(pg, a);
     if (tab === "settings") return settings(pg, root);
-    const pills = App.pills, all = Store.visible(), list = Table.rows(), sy = scrollY;
+    const pills = App.pills, all = Store.visible(), list = pills.size ? all.filter(a => pills.has(a.stage)) : Table.rows(), sy = scrollY;   /* (a stage pill shows that stage's actions, the count it says) */
     pg.innerHTML = top()
       + '<div class="m-pills"><button type="button" class="pill' + (!pills.size ? " on" : "") + '" data-s="">All <b>' + all.length + '</b></button>' + Store.stages().map(s => '<button type="button" class="pill' + (pills.has(s.id) ? " on" : "") + '" data-s="' + s.id + '" style="--c:' + esc(s.color) + '"><i class="dot"></i>' + esc(s.name) + ' <b>' + all.filter(a => a.stage === s.id).length + '</b></button>').join("") + '</div>'
       + '<div class="m-list">' + (list.length ? list.map(card).join("") : '<div class="empty">No actions match.</div>') + '</div>';

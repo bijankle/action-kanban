@@ -5,7 +5,8 @@
    New person: email, their details and a password, then "waiting for approval". The admin gets an email with
    Approve and Deny buttons. Once approved, they sign in with their email and password on any computer.
    Forgot password: they choose a new one, and it works once the admin approves it the same way.
-   The admin (ADMIN_EMAIL) is approved without asking, and has an Accounts page (/admin) to remove people.
+   The admin (ADMIN_EMAIL) approves their own account and password changes the same way, from the email (so nobody
+   else can claim the admin email), and has an Accounts page (/admin) to remove people.
 
    The app itself is fetched from GitHub Pages (APP_ORIGIN) and passed through, so updating the app needs no
    change here. Reads and saves go through /api to the data repository with the one GitHub key, which never
@@ -20,6 +21,7 @@
      MAIL_FROM    variable  optional sender, default "Action Database <onboarding@resend.dev>"
      REPO         variable  optional data repository, default bijankle/action-kanban-data
      APP_ORIGIN   variable  optional, where the app's files are, default https://bijankle.github.io/action-kanban */
+const APPROVE_K = ["account", "reset"];
 const API = "https://api.github.com", AUTH = "data/auth.json", HIDDEN = new Set([AUTH, "data/keys.json"]);
 const enc = new TextEncoder(), DAY = 864e5, SESSION_DAYS = 30;
 const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -36,9 +38,11 @@ async function newPw(pw){ const s = crypto.randomUUID(); return { s, h: await ha
 /* signed tokens (sign in cookies, approval links), with a key made from the GitHub key */
 async function sign(env, msg){ const raw = await crypto.subtle.digest("SHA-256", enc.encode("ad-site|" + env.GH_TOKEN)), k = await crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return b64u(b64(await crypto.subtle.sign("HMAC", k, enc.encode(msg)))); }
-async function seal(env, o){ const p = b64u(btoa(JSON.stringify(o))); return p + "." + await sign(env, p); }
+async function seal(env, o){ const p = b64u(toB64(JSON.stringify(o)));   /* (UTF-8 first, so any file name or email can be sealed) */
+  return p + "." + await sign(env, p); }
 async function unseal(env, t){ const [p, s] = String(t || "").split("."); if (!p || !s || !same(await sign(env, p), s)) return null;
-  try { const o = JSON.parse(unb64u(p)); return o.x > Date.now() ? o : null; } catch (e){ return null; } }
+  try { const raw = unb64u(p); let j; try { j = decodeURIComponent(escape(raw)); } catch (e){ j = raw; }   /* (older links were sealed without UTF-8) */
+    const o = JSON.parse(j); return o.x > Date.now() ? o : null; } catch (e){ return null; } }
 
 const cookie = (req, name) => { const m = (req.headers.get("Cookie") || "").match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)")); return m ? m[1] : ""; };
 const setCookie = (v, days) => "ads=" + v + "; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=" + Math.round(days * 86400);
@@ -51,7 +55,8 @@ export default {
     const repo = env.REPO || "bijankle/action-kanban-data", admin = norm(env.ADMIN_EMAIL), url = new URL(req.url), p = url.pathname, m = req.method;
     const gh = (path, init) => fetch((env.API || API) + path, Object.assign({}, init, { headers: Object.assign({ Authorization: "Bearer " + env.GH_TOKEN, "User-Agent": "action-database-site", "X-GitHub-Api-Version": "2022-11-28" }, (init || {}).headers || {}) }));
     const A = accounts(env, gh, repo);
-    const me = async () => { const s = await unseal(env, cookie(req, "ads")); if (!s) return null; const u = (await A.read()).d.users[s.e]; return u && u.status === "active" && (u.sv || 0) === (s.v || 0) ? Object.assign({ email: s.e }, u) : null; };
+    const me = async () => { const s = await unseal(env, cookie(req, "ads")); if (!s || s.k || s.p || !s.e) return null;   /* (only a sign in token, not an approval or share link) */
+  const u = (await A.read()).d.users[s.e]; return u && u.status === "active" && (u.sv || 0) === (s.v || 0) ? Object.assign({ email: s.e }, u) : null; };
     const mail = (subject, body) => sendMail(env, admin, subject, body);
 
     /* ---------- signing in ---------- */
@@ -73,14 +78,12 @@ export default {
         const pw = String(q.password || ""); if (pw.length < 8) return json({ message: "Use at least 8 characters for the password" }, 400);
         const first = String(q.first || "").trim().slice(0, 60); if (!first) return json({ message: "Add your first name" }, 400);
         const rec = Object.assign({ first, last: String(q.last || "").trim().slice(0, 60), role: String(q.role || "").trim().slice(0, 80), mobile: String(q.mobile || "").trim().slice(0, 30),
-          status: email === admin ? "active" : "pending", t: Date.now(), sv: 0 }, await newPw(pw));
+          status: "pending", t: Date.now(), sv: 0 }, await newPw(pw));
         await A.write(x => { if (!x.users[email]) x.users[email] = rec; }, "Account request: " + email);
-        if (email === admin) return json({ ok: true, active: true }, 200, { "Set-Cookie": setCookie(await seal(env, { e: email, v: 0, x: Date.now() + SESSION_DAYS * DAY }), SESSION_DAYS) });
         const sent = await mail("Approve " + rec.first + " " + rec.last + " for Action Database", ask(await approveLink(env, url, email, "account"), "wants to sign in to Action Database", rec, email));
         return json({ ok: true, pending: true, mailed: sent }); }
       if (p === "/auth/forgot"){
         if (!u) return json({ message: "There's no account for this email yet." }, 404);
-        if (email === admin) return json({ message: "As the admin, change your password by deleting your entry in data/auth.json on GitHub and making the account again." }, 400);
         const pw = String(q.password || ""); if (pw.length < 8) return json({ message: "Use at least 8 characters for the password" }, 400);
         const r = Object.assign({ t: Date.now() }, await newPw(pw)); await A.write(x => { if (x.users[email]) x.users[email].reset = r; }, "Password change request: " + email);
         const sent = await mail("Approve a new password for " + u.first + " " + u.last, ask(await approveLink(env, url, email, "reset"), "asked for a new password for Action Database", u, email));
@@ -109,7 +112,7 @@ export default {
 
     /* stored files (photos, thumbnails, attachments): content addressed paths never change, so they're cached */
     if (p.startsWith("/api/raw/") && m === "GET"){
-      const path = decodeURIComponent(p.slice(9)); if (!/^data\/[\w\-./ %()&+,']+$/.test(path) || path.includes("..") || HIDDEN.has(path)) return json({ message: "Not a data file" }, 400);
+      const path = cleanPath(p.slice(9)); if (!path || !/^data\/[\w\-./ %()&+,']+$/.test(path) || HIDDEN.has(path)) return json({ message: "Not a data file" }, 400);
       const fixed = /\/(img|thumb|files|rfq|quotes)\//.test(path), cache = caches.default, key = new Request(url.origin + "/__raw/" + encodeURI(path));
       if (fixed){ const hit = await cache.match(key); if (hit) return withHeaders(hit, { "Cache-Control": "private, max-age=31536000, immutable" }); }
       const r = await gh("/repos/" + repo + "/contents/" + path.split("/").map(encodeURIComponent).join("/"), { headers: { Accept: "application/vnd.github.raw+json" } });
@@ -136,16 +139,18 @@ export default {
     /* the GitHub API, for the data repository only, and only what reading and saving need */
     if (p.startsWith("/api/")){
       const gp = p.slice(4), base = "/repos/" + repo; if (gp !== base && !gp.startsWith(base + "/")) return json({ message: "Only the data repository" }, 403);
-      const rest = gp.slice(base.length), cpath = rest.startsWith("/contents/") ? decodeURIComponent(rest.slice(10)) : "";
+      const rest = gp.slice(base.length), cpath = rest.startsWith("/contents/") ? cleanPath(rest.slice(10)) : "";
       const ok = (m === "GET" && (rest === "" || (cpath && !HIDDEN.has(cpath)) || /^\/git\/(ref|refs|commits)\//.test(rest)))
         || (m === "POST" && /^\/git\/(blobs|trees|commits)$/.test(rest)) || (m === "PATCH" && /^\/git\/refs\/heads\/[\w.\-/]+$/.test(rest));
       if (!ok) return json({ message: "Not allowed" }, 403);
       let body = m === "GET" ? undefined : await req.text();
       if (m === "POST" && rest === "/git/trees" && body && HIDDEN_IN(body)) return json({ message: "Not allowed" }, 403);
+      if (m === "PATCH" && body){ try { const c = JSON.parse(body); c.force = false; body = JSON.stringify(c); } catch (e){ return json({ message: "Not allowed" }, 403); } }   /* (a save never rewrites history) */
       if (m === "POST" && rest === "/git/commits" && body){ try { const c = JSON.parse(body); c.message = String(c.message || "") + "\n\nBy " + [who.first, who.last].join(" ").trim() + " <" + who.email + ">"; body = JSON.stringify(c); } catch (e){} }
       const r = await gh(gp + url.search, { method: m, headers: { Accept: req.headers.get("Accept") || "application/vnd.github+json", "Content-Type": "application/json" }, body });
       let out = await r.text();
       /* the repository answer says this person can save, so the app turns on editing */
+      if (m === "GET" && cpath && r.ok && /json/.test(r.headers.get("Content-Type") || "")){ try { const strip = e => { if (e && typeof e === "object"){ delete e.download_url; delete e.git_url; delete e._links; } return e; }, j = JSON.parse(out); out = JSON.stringify(Array.isArray(j) ? j.map(strip) : strip(j)); } catch (e){} }   /* (no signed download links handed out) */
       if (m === "GET" && rest === "" && r.ok){ try { const j = JSON.parse(out); j.permissions = Object.assign({}, j.permissions, { push: true }); j.relay = { signedIn: true, email: who.email }; out = JSON.stringify(j); } catch (e){} }
       return new Response(out, { status: r.status, headers: { "Content-Type": r.headers.get("Content-Type") || "application/json", "Cache-Control": "no-store" } }); }
 
@@ -159,7 +164,10 @@ export default {
     return new Response(r.body, { headers: h });
   }
 };
-const HIDDEN_IN = body => { try { return (JSON.parse(body).tree || []).some(e => HIDDEN.has(e.path)); } catch (e){ return true; } };
+/* a path decoded and checked: no empty, "." or ".." parts (GitHub would fold them, and "data/./auth.json" is auth.json); null if bad */
+const cleanPath = s => { let d; try { d = decodeURIComponent(s); } catch (e){ return null; } const ps = d.split("/"); return d && ps.every(x => x && x !== "." && x !== "..") ? d : null; };
+/* a tree the app sends holds only files (blobs) by their full path, never a folder that could carry auth.json or keys.json inside it */
+const HIDDEN_IN = body => { try { const t = JSON.parse(body).tree; return !Array.isArray(t) || t.some(e => !e || e.type !== "blob" || String(e.mode) !== "100644" || !cleanPath(encodeURIComponent(String(e.path || ""))) || HIDDEN.has(e.path)); } catch (e){ return true; } };
 /* the colour site map's fixed view: the middle of the plant, Google zoom 17, four 640 px pictures 2 by 2 (the rows
    overlap 36 px so the top row's Google logo is hidden under the bottom row). js/sitemap.js uses the same numbers */
 const GMAP = { lat: -30.766534, lng: 121.509103, z: 17, step: [640, 604] };
@@ -196,7 +204,7 @@ function accounts(env, gh, repo){
 async function approveLink(env, url, email, kind){ return url.origin + "/auth/approve?t=" + await seal(env, { e: email, k: kind, x: Date.now() + 14 * DAY }); }
 /* the link only shows the buttons: mail scanners open links on their own, so approving needs the click */
 async function approvePage(env, A, url){ const t = url.searchParams.get("t") || "", o = await unseal(env, t);
-  if (!o) return html(page("Link expired", "<p>This approval link has expired or isn't valid. Ask them to request again.</p>"), 400);
+  if (!o || !APPROVE_K.includes(o.k)) return html(page("Link expired", "<p>This approval link has expired or isn't valid. Ask them to request again.</p>"), 400);
   const u = (await A.read()).d.users[o.e];
   if (!u) return html(page("Nothing to approve", "<p>There's no account for <b>" + esc(o.e) + "</b> any more.</p>"));
   if (o.k === "account" && u.status === "active") return html(page("Already approved", "<p><b>" + esc(u.first + " " + u.last) + "</b> can already sign in.</p>"));
@@ -206,7 +214,7 @@ async function approvePage(env, A, url){ const t = url.searchParams.get("t") || 
     + '<div class="row"><button class="go" data-ok="1">Approve</button><button class="no" data-ok="0">Deny</button></div><p class="msg"></p>'
     + "<script>document.querySelectorAll('[data-ok]').forEach(b=>b.onclick=async()=>{document.querySelectorAll('[data-ok]').forEach(x=>x.disabled=true);const r=await fetch('/auth/decide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:" + JSON.stringify(t) + ",ok:b.dataset.ok==='1'})});const j=await r.json().catch(()=>({}));document.querySelector('.msg').textContent=j.message||'Done';});</script>"));
 }
-async function decide(env, A, q, mail, url){ const o = await unseal(env, q.t); if (!o) return json({ message: "This approval link has expired." }, 400);
+async function decide(env, A, q, mail, url){ const o = await unseal(env, q.t); if (!o || !APPROVE_K.includes(o.k)) return json({ message: "This approval link has expired." }, 400);
   let msg = "";
   await A.write(x => { const u = x.users[o.e]; if (!u){ msg = "There's no account for " + o.e + " any more."; return; }
     if (o.k === "account"){ if (q.ok){ u.status = "active"; msg = "Approved. " + u.first + " can sign in now."; } else { delete x.users[o.e]; msg = "Denied. The request was removed."; } }
@@ -259,7 +267,7 @@ function loginPage(admin){ return page("Sign in to Action Database", '<p id="msg
   + "const b=$('bk');if(b)b.onclick=()=>{step='email';draw();};const g=$('fg');if(g)g.onclick=()=>{step='forgot';draw();};const f=body.querySelector('input:not([hidden])');f&&f.focus();};"
   + "const fail=t=>{err.textContent=t;err.hidden=false;go.disabled=false;};const v=k=>($(k)||{}).value||'';"
   + "const post=async(u,o)=>{const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)});const j=await r.json().catch(()=>({}));return Object.assign(j,{status:r.status,ok2:r.ok});};"
-  + "const into=()=>{const n=new URLSearchParams(location.search).get('next');location.replace(n&&n.startsWith('/')&&!n.startsWith('//')?n:'/');};"
+  + "const into=()=>{const n=new URLSearchParams(location.search).get('next');let u=null;try{u=n&&new URL(n,location.origin);}catch(e){}location.replace(u&&u.origin===location.origin&&n.startsWith('/')&&!/^\/[\/\\\\]/.test(n)?u.pathname+u.search+u.hash:'/');};"
   + "$('f').onsubmit=async e=>{e.preventDefault();go.disabled=true;try{"
   + "if(step==='email'){email=v('email').trim().toLowerCase();if(!/^\\S+@\\S+\\.\\S+$/.test(email))return fail('Enter a valid email');localStorage.setItem('adLastEmail',email);const j=await post('/auth/check',{email});"
   + "if(j.status===400)return fail(j.message);step=j.exists?(j.status==='pending'?'wait':'pass'):'new';if(step==='wait'){draw();msg.innerHTML='<b>'+email+'</b> is still waiting for the admin to approve it.';return;}return draw();}"

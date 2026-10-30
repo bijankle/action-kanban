@@ -75,8 +75,10 @@ const Valid = (() => {
       ol.innerHTML = opts.length ? opts.map(o => '<div class="opt" data-id="' + o.id + '"><span class="grip">⋮⋮</span><input type="color" value="' + esc(o.color || "#e5e7eb") + '" title="Colour"><input class="in" value="' + esc(o.label) + '"><span class="dim" title="Actions with this value">' + Store.all().filter(a => [].concat(a.f[f.id] || []).includes(o.label)).length + '</span><button type="button" class="ic-b sm" title="Remove">✕</button></div>').join("") : "";
       $$(".opt", ol).forEach(r => { const o = f.options.find(x => x.id === r.dataset.id);
         $("input[type=color]", r).onchange = e => up(f, () => o.color = e.target.value);
-        $("input.in", r).onchange = e => { const v = e.target.value.trim(); if (!v || v === o.label) return; const old = o.label; Store.mutate(["config"].concat(Store.projects().map(p => "a:" + p.id)), () => { o.label = v; Store.touch(f); Store.renameOption(f, old, v); }); };
-        $(".ic-b", r).onclick = () => up(f, () => o.del = true); });
+        $("input.in", r).onchange = e => { const v = e.target.value.trim(); if (!v || v === o.label) return; const old = o.label;
+          if (f.options.some(x => x !== o && !x.del && x.label.toLowerCase() === v.toLowerCase())){ e.target.value = old; return note("“" + v + "” is already a value. Pick another name"); }   /* (renaming onto another value would merge them for good) */ Store.mutate(["config"].concat(Store.projects().map(p => "a:" + p.id)), () => { o.label = v; Store.touch(f); Store.renameOption(f, old, v); }); };
+        $(".ic-b", r).onclick = async () => { const n = Store.all().filter(a => [].concat(a.f[f.id] || []).includes(o.label)).length;
+          if (await confirmBox("Remove “" + o.label + "” from the " + f.label + " list?" + (n ? " " + n + " action" + (n === 1 ? " keeps" : "s keep") + " it, but it can't be picked again." : ""), "Remove", true)) up(f, () => o.del = true); }; });
       sortable(ol, () => f.options, ".opt"); } }
 
   function stages(body){ const ss = pf("stages", Store.stages().filter(s => hit(s.name, Store.todo(s))));

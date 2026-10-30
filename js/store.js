@@ -207,7 +207,11 @@ const Store = (() => {
   function mergeById(loc, rem, key){ key = key || "id"; const out = [], seen = new Map(); (rem || []).forEach(x => seen.set(x[key], x));
     (loc || []).forEach(x => { const r = seen.get(x[key]); out.push(r && (r.mod || 0) > (x.mod || 0) ? r : x); seen.delete(x[key]); });
     seen.forEach(x => out.push(x)); return out; }
-  function mergeConfig(loc, rem){ if (!rem) return loc; const o = Object.assign({}, rem, loc);
+  /* the config's other settings (team rules, photo quality, cut rules...) as they were online when last read or saved:
+     a setting this computer hasn't changed since then takes the online one, so a stale copy never writes old rules back */
+  const LISTS = ["stages", "fields", "contacts", "mod"], cTop = c => { const o = {}; Object.keys(c || {}).forEach(k => { if (!LISTS.includes(k)) o[k] = JSON.stringify(c[k]); }); return o; };
+  function mergeConfig(loc, rem){ if (!rem) return loc; const o = Object.assign({}, rem, loc), cb = S.cbase;
+    if (cb) new Set(Object.keys(loc).concat(Object.keys(rem))).forEach(k => { if (LISTS.includes(k) || JSON.stringify(loc[k]) !== cb[k]) return; if (k in rem) o[k] = rem[k]; else delete o[k]; });
     ["stages", "fields", "contacts"].forEach(k => { o[k] = mergeById(loc[k], rem[k]); if ((rem.mod || 0) > (loc.mod || 0)) o[k] = orderLike(o[k], rem[k]); });
     o.mod = Math.max(loc.mod || 0, rem.mod || 0); return o; }
   const orderLike = (arr, ref) => { const ix = new Map(ref.map((x, i) => [x.id, i])); return arr.slice().sort((a, b) => (ix.has(a.id) ? ix.get(a.id) : 1e9) - (ix.has(b.id) ? ix.get(b.id) : 1e9)); };
@@ -253,12 +257,12 @@ const Store = (() => {
         for (const k of keys){
           if (k === "config"){ adoptConfig(mergeConfig(S.config, await GH.readJson(P_CONFIG, at))); wrote[k] = ser(k); entries.push({ path: P_CONFIG, content: wrote[k] }); }
           else if (k === "projects"){ const r = await GH.readJson(P_PROJECTS, at); S.projects.projects = adoptList(S.projects.projects, mergeById(S.projects.projects, r && r.projects), "id"); wrote[k] = ser(k); entries.push({ path: P_PROJECTS, content: wrote[k] }); }
-          else if (k === "vendors"){ wrote[k] = ser(k); entries.push({ path: P_VENDORS, content: wrote[k] }); }
+          else if (k === "vendors"){ const r = await GH.readJson(P_VENDORS, at); if (r && r.source === S.vendors.source && r.updated === S.vendors.updated){ S.vendors.vendors = mergeById(S.vendors.vendors, r.vendors, "name"); S.vendors.categories = mergeById(S.vendors.categories, r.categories, "name"); }   /* (others' edits kept; a fresh import replaces the list) */ wrote[k] = ser(k); entries.push({ path: P_VENDORS, content: wrote[k] }); }
           else if (k === "users"){ const r = await GH.readJson(P_USERS, at); S.users = { v: 1, users: oneEach(mergeById(S.users.users, r && r.users)) }; wrote[k] = ser(k); entries.push({ path: P_USERS, content: wrote[k] }); }
           else { const pid = k.slice(2), pr = project(pid); if (!pr || pr.del){ S.dirty.delete(k); continue; } adopt(pid, mergeActs(S.acts[pid], await GH.readJson(pActs(pid), at), pid)); wrote[k] = ser(k); entries.push({ path: pActs(pid), content: wrote[k] }); } }
         blobs.forEach(b => entries.push(b));
         try { await GH.commit(entries, commitMsg(), at);
-          keys.forEach(k => { if (ser(k) === wrote[k]) S.dirty.delete(k); if (k.startsWith("a:")) setBase(k.slice(2), JSON.parse(wrote[k])); }); S.blobs = S.blobs.filter(b => !blobs.includes(b)); break; }
+          keys.forEach(k => { if (ser(k) === wrote[k]) S.dirty.delete(k); if (k.startsWith("a:")) setBase(k.slice(2), JSON.parse(wrote[k])); if (k === "config") S.cbase = cTop(JSON.parse(wrote[k])); }); S.blobs = S.blobs.filter(b => !blobs.includes(b)); break; }
         catch (e){ S.conflicts.length = clashN; if (!e.conflict || tries > 3) throw e; } }
       lastMsgs = []; stash(); setStatus("saved"); Local.backup(S); App.renderIdle();   // (not while a dropdown or box is in use)
       if (S.conflicts.length){ const c = S.conflicts.splice(0); App.clashes && App.clashes(c); } }
@@ -269,14 +273,14 @@ const Store = (() => {
   let lastMsgs = []; const log = m => { if (lastMsgs[lastMsgs.length - 1] === m) return; lastMsgs.push(m); if (lastMsgs.length > 8) lastMsgs.shift(); };
   const commitMsg = () => (lastMsgs.length ? lastMsgs.join("; ") : "Update actions") + " (" + (Profile.name() || "Action Database") + ")";
   /* unsaved work is kept on this device until it's online, so closing the tab never loses it */
-  const stash = debounce(() => IDB.set("state", { c: S.config, p: S.projects, a: clean(S.acts), us: S.users, vd: S.vendors, base: S.base, dirty: [...S.dirty], blobs: S.blobs, at: now() }), 300);
+  const stash = debounce(() => IDB.set("state", { c: S.config, p: S.projects, a: clean(S.acts), us: S.users, vd: S.vendors, base: S.base, cbase: S.cbase, dirty: [...S.dirty], blobs: S.blobs, at: now() }), 300);
   async function addBlob(path, b64){ const sha = await GH.blob(b64); S.blobs.push({ path, sha }); stash(); saveSoon(); }
 
   /* ---------- loading ---------- */
   /* faster start: the copy kept on this computer shows straight away and GitHub is checked behind it (with Faster
      start off in Settings the app waits for GitHub; the copy is still kept so unsaved work is never lost) */
   async function load(){ const cached = await IDB.get("state");
-    if (cached && cached.c){ S.config = cached.c; S.projects = cached.p; S.acts = cached.a || {}; S.users = cached.us || S.users; S.vendors = cached.vd || S.vendors; S.base = cached.base || {}; (cached.dirty || []).forEach(k => S.dirty.add(k)); S.blobs = cached.blobs || []; S.fetched = lsGet("adFetched", 0) || cached.at || 0; S.loaded = true; S.fromCopy = lsGet("adFast", true); App.render(); }
+    if (cached && cached.c){ S.config = cached.c; S.projects = cached.p; S.acts = cached.a || {}; S.users = cached.us || S.users; S.vendors = cached.vd || S.vendors; S.base = cached.base || {}; S.cbase = cached.cbase || null; (cached.dirty || []).forEach(k => S.dirty.add(k)); S.blobs = cached.blobs || []; S.fetched = lsGet("adFetched", 0) || cached.at || 0; S.loaded = true; S.fromCopy = lsGet("adFast", true); App.render(); }
     const fin = async () => { try { await refresh(true); } catch (e){ console.error(e); if (!S.loaded) throw e; note("Couldn't reach GitHub, showing the copy saved on this device"); }
       if (!S.config){ S.config = defaultConfig(); S.dirty.add("config"); }
       S.loaded = true; S.fromCopy = false; App.render(); if (S.dirty.size || S.blobs.length) saveSoon(); };
@@ -296,7 +300,7 @@ const Store = (() => {
     else { if (c) adoptConfig(c); S.projects.projects = adoptList(S.projects.projects, allP, "id"); list.forEach(x => { setBase(x.id, acts[x.id]); adopt(x.id, acts[x.id]); }); Object.keys(S.acts).forEach(pid => { if (!acts[pid]) delete S.acts[pid]; }); }
     /* someone else changed actions while we looked: tell the app which (it warns if one is open) */
     if (!first){ const ch = []; list.forEach(x => (S.acts[x.id].actions || []).forEach(a => { const o = ((prev[x.id] || {}).actions || []).find(y => y.u === a.u); if (o && (o.mod || 0) < (a.mod || 0) && !mine(a)) ch.push(x.id + ":" + a.u); })); if (ch.length && App.othersChanged) App.othersChanged(ch); }
-    if (S.config) fixConfig(S.config); S.fetched = now(); lsSet("adFetched", S.fetched);
+    if (c) S.cbase = cTop(c); if (S.config) fixConfig(S.config); S.fetched = now(); lsSet("adFetched", S.fetched);
     if (snap() !== before){ stash(); return true; } return false; }
   /* unsaved edits to a list that's since been merged away (the actions moved into another project): carry each edited
      action's changes over to where it now lives, by its id, and stop saving the old list (it would come back) */

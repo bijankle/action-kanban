@@ -19,6 +19,8 @@ const Table = (() => {
   let cvF = null;
   function headW(label, font){ cv = cv || document.createElement("canvas").getContext("2d"); const f = font || "700 13px " + getComputedStyle(document.body).fontFamily; if (f !== cvF){ cv.font = f; cvF = f; }   /* (the font set only when it changes: setting it is the slow part) */
     return Math.ceil(Math.max(...String(label || "").split(/\s+/).map(w => cv.measureText(w).width), 0)) + 20 + 10; }
+  /* the width of a whole line of text in a font */
+  function textW(t, font){ headW("", font); return Math.ceil(cv.measureText(String(t)).width) + 30; }
   const W = { text: 200, longtext: 260, multi: 170, stage: 170, rank: 74, check: 90, choice: 120, date: 120, contact: 160, phone: 130, number: 90 };
   const widths = () => lsGet("adColW", {});
   /* (once: the headings now wrap a word at a time and the i sits underneath, so column widths saved before that are
@@ -56,8 +58,9 @@ const Table = (() => {
   function sorted(){ let list = Filters.apply(Store.visible().concat(Store.deleted()));   // (the search box and the Filters panel's pills)
     const so = App.sort, ord = new Map(Store.stages().map((s, i) => [s.id, i]));
     const base = (x, y) => (ord.get(x.stage) - ord.get(y.stage)) || (x.rank || 0) - (y.rank || 0) || x.no - y.no;
-    if (so && so.id){ const f = Store.field(so.id); const key = a => so.id === "_id" ? Store.actId(a) : so.id === "_proj" ? (Store.project(a._p) || {}).name : f ? (f.type === "rank" ? Fields.val(a, f) : f.type === "stage" ? ord.get(a.stage) : ["date", "meta", "number", "mto", "sparelist", "isollist"].includes(f.type) ? (v => v === "" || v == null || v === "TBC" || v === "N/A" || (typeof v === "number" && isNaN(v)) ? "\uffff" : typeof v === "number" ? String(v).padStart(16, "0") : String(v))(Fields.val(a, f)) : Fields.text(a, f).toLowerCase()) : "";
-      list.sort((x, y) => { const kx = key(x), ky = key(y); const r = kx < ky ? -1 : kx > ky ? 1 : 0; return (r * so.dir) || base(x, y); }); }
+    if (so && so.id){ const f = Store.field(so.id); const key = a => so.id === "_id" ? Store.actId(a) : so.id === "_proj" ? (Store.project(a._p) || {}).name : f ? (f.type === "rank" ? Fields.val(a, f) : f.type === "stage" ? ord.get(a.stage) : ["date", "meta", "number", "mto", "sparelist", "isollist"].includes(f.type) ? (v => v === "" || v == null || v === "TBC" || v === "N/A" || (typeof v === "number" && isNaN(v)) ? "\uffff" : typeof v === "number" ? v : String(v))(Fields.val(a, f)) : Fields.text(a, f).toLowerCase()) : "";
+      list.sort((x, y) => { const kx = key(x), ky = key(y), nx = typeof kx === "number", ny = typeof ky === "number";   /* (numbers as numbers: 9.5 before 10, negatives first; blanks last) */
+        const r = nx && ny ? Math.sign(kx - ky) : nx ? -1 : ny ? 1 : kx < ky ? -1 : kx > ky ? 1 : 0; return (r * so.dir) || base(x, y); }); }
     else list.sort(base);
     return list; }
   let ro = null, lastLv = -1, levelOf = () => -1;
@@ -95,7 +98,7 @@ const Table = (() => {
   /* a tags cell shows as many tags as fit its width, the rest as +N (widen the column to see more) */
   function tagFit(el){ const vs = $$("td.tgc .tgv", el), rooms = vs.map(v => v.clientWidth), fonts = new Map(); vs.forEach((v, n) => { const a = App.act(v.closest("tr").dataset.ref), tags = a ? [].concat(a.f.equipment || []).filter(Boolean) : []; if (tags.length < 2) return;
     const t1 = $(".tg1", v), mb = $(".tg-more", v), font = fonts.get(t1.className) || (fonts.set(t1.className, getComputedStyle(t1).font), fonts.get(t1.className)), room = rooms[n] - 20 - (mb ? 34 : 0);
-    let k = 1; while (k < tags.length && headW(tags.slice(0, k + 1).join(", "), font) <= (k + 1 === tags.length ? room + 34 : room)) k++;
+    let k = 1; while (k < tags.length && textW(tags.slice(0, k + 1).join(", "), font) <= (k + 1 === tags.length ? room + 34 : room)) k++;
     t1.textContent = tags.slice(0, k).join(", "); if (mb){ mb.hidden = k >= tags.length; mb.textContent = "+" + (tags.length - k); } }); }
   function cut(el){ moreFit(el); tagFit(el); const ids = $$(".idw .aid", el); el.style.removeProperty("--aid-w"); if (ids.length) el.style.setProperty("--aid-w", Math.ceil(Math.max(...ids.map(x => x.getBoundingClientRect().width))) + "px");
     /* (the ID column is as wide as the widest ID there can be, every category's letters and the most digits, not the widest
@@ -320,6 +323,7 @@ const Table = (() => {
       r.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); if (e.detail > 1) return; const x0 = e.clientX, w0 = th.offsetWidth; r.setPointerCapture(e.pointerId);
         let moved = false, raf = 0; r.onpointermove = ev => { if (Math.abs(ev.clientX - x0) > 2) moved = true; if (!moved) return; th.style.width = Math.max(50, w0 + ev.clientX - x0) + "px";
           if (!raf) raf = requestAnimationFrame(() => { raf = 0; tagFit(el); moreFit(el); }); };   // (the tags and more… follow the width as it's dragged)
+        r.onpointercancel = () => { r.onpointermove = null; };
         r.onpointerup = () => { r.onpointermove = null; if (!moved) return; dragged.add(id); remember(Store.field(id) || { id }, parseFloat(th.style.width) || th.offsetWidth); const ws = widths(); ws[id] = Math.round(parseFloat(th.style.width) || th.offsetWidth); lsSet("adColW", ws); App.render(); }; };   // (only the column dragged)
     }); dragHead(el, cs); }
   /* reorder by dragging a heading, live: once the pointer has moved a little, the whole column (heading and every cell) slides

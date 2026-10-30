@@ -92,6 +92,6 @@ const Filters = (() => {
   function emptyHtml(){ const tot = Store.visible().length; if (!tot) return ""; const f0 = D.from, t0 = D.to; D.from = D.to = ""; const noDates = apply(Store.visible()).length; D.from = f0; D.to = t0;
     const dates = dateOn() && noDates ? 'The dates (' + esc(D.by === "modified" ? "Date modified" : "Date created") + ', ' + esc([D.from && fmtDate(D.from), D.to && fmtDate(D.to)].filter(Boolean).join(" to ")) + ') leave out ' + noDates + ' action' + (noDates === 1 ? "" : "s") + '. <button type="button" class="link" data-fx="dates">Show all dates</button>' : "";
     return 'No actions match. ' + (dates || (active() ? '<button type="button" class="link" data-fx="all">Clear the filters</button>' : "")); }
-  document.addEventListener("click", e => { const b = e.target.closest("[data-fx]"); if (!b) return; if (b.dataset.fx === "dates"){ D.from = D.to = D.last = D.span = ""; lsSet("adDate", D); App.render(); } else clear(); });
+  document.addEventListener("click", e => { const b = e.target.closest("[data-fx]"); if (!b) return; if (b.dataset.fx === "dates"){ D.from = D.to = D.last = D.span = ""; lsSet("adDate", D); const g = $("#gdate"); if (g) dateBar(g); App.render(); }   /* (the date box shows it cleared too) */ else clear(); });
   return { emptyHtml, render, apply, match, active, count, chipsHtml, wireChips, clear, val, dateBar, dateOn };
 })();

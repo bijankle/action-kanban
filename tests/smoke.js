@@ -144,6 +144,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
       const A = { mto: [P({ id: "p1", qty: "2.4" }), P({ id: "p2", qty: "3.1" }), F({ id: "f1", qty: "2" }), F({ id: "f2", qty: "3" })] }; const took = Mto.combine(A.mto);
       return Mto.orderRows(A, true).map(r => r.no + ":" + r.qty + (r.grp ? "L" : "")).join(",") + " " + took.length; });
     check("pipe goes under its stock length with the cuts under it, and the same fitting twice is one row", /^1:\d+L,1\.1:1,1\.2:1,2:5 1$/.test(pg), pg);
+    /* a duplicated row stays its own row until it's edited (then the same fitting twice is one row again) */
+    const dq = await a.p.evaluate(() => { const T = Mto.TY, ft = Object.keys(T).find(k => T[k].g === "Pipe fittings"), F = x => Object.assign({ t: ft, s: T[ft].stds[0].id, z: "DN100", unit: "ea", qty: "2" }, x);
+      const L = [F({ id: "f1" }), F({ id: "f2", dup: 1 })]; Mto.combine(L); const n1 = L.length; delete L[1].dup; Mto.combine(L); return n1 + " " + L.length + " " + L[0].qty; });
+    check("a duplicated MTO row is kept apart until it's edited", dq === "2 1 4", dq);
     const tq = await a.p.evaluate(() => [{ desc: "GASKET DN150 CNAF 3MM" }, { desc: "NUT M20 GR 8 GALV" }, { desc: "PG02-300 insulated U-bolt guide" }, { desc: "GASKET DN150", ty: "Specials" }].map(x => Mto.typeOf(x)).join(","));
     check("a row typed in goes under its ISO heading, and a Type picked wins", tq === "Gaskets,Bolts,Supports,Specials", tq);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));

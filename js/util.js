@@ -66,8 +66,8 @@ async function sha1(buf){ const d = await crypto.subtle.digest("SHA-1", buf); re
 /* drag a divider to resize; calls set(px) while dragging (sign -1: the panel sits right of the divider, so dragging left widens it) */
 function dragResize(handle, get, set, sign){ sign = sign || -1; handle.addEventListener("pointerdown", e => { e.preventDefault(); const x0 = e.clientX, w0 = get(); handle.setPointerCapture(e.pointerId); handle.classList.add("on");
   const mv = ev => set(w0 + sign * (ev.clientX - x0));
-  const up = () => { handle.classList.remove("on"); handle.removeEventListener("pointermove", mv); handle.removeEventListener("pointerup", up); };
-  handle.addEventListener("pointermove", mv); handle.addEventListener("pointerup", up); }); }
+  const up = () => { handle.classList.remove("on"); handle.removeEventListener("pointermove", mv); handle.removeEventListener("pointerup", up); handle.removeEventListener("pointercancel", up); };
+  handle.addEventListener("pointermove", mv); handle.addEventListener("pointerup", up); handle.addEventListener("pointercancel", up); }); }
 
 /* an (i) button that shows a how-to note in a small callout, so guidance doesn't take up room on screen */
 /* (a span, not a button, so a label around it doesn't pass its clicks on to it) */
@@ -276,11 +276,12 @@ function tblKit(table, key, opts){ const hr = table.tHead && table.tHead.rows[0]
     const perm = want.map(x => ids.indexOf(x)); if (perm.some((p, i) => p !== i)) [hr].concat([...table.tBodies[0].rows].filter(plain)).forEach(r => { const cs = [...r.cells]; perm.forEach(p => r.appendChild(cs[p])); }); }
   const ths = [...hr.cells], S = tblKit.sort || (tblKit.sort = {});
   const val = td => { if (!td) return ""; const f = td.querySelector("input,select,textarea"); return f ? (f.type === "checkbox" ? (f.checked ? "1" : "0") : f.tagName === "SELECT" ? (f.options[f.selectedIndex] || {}).text || "" : f.value) : td.textContent.trim(); };
-  const num = v => { const t = String(v).replace(/[, ]/g, ""); return t !== "" && isFinite(t) ? +t : null; }, day = v => /\d{4}|\d{1,2} [A-Z][a-z]{2}/.test(v) ? Date.parse(v) : NaN;
+  const num = v => { const t = String(v).replace(/[, ]/g, ""); return t !== "" && isFinite(t) ? +t : null; }, day = v => { const m = /^(\d{1,2})[ -]([A-Z][a-z]{2})[a-z]?[ -](\d{2}|\d{4})(,? \d\d:\d\d)?$/.exec(v); if (m){ const y = m[3].length === 2 ? "20" + m[3] : m[3]; return Date.parse(m[1] + " " + m[2] + " " + y + (m[4] ? " " + m[4].replace(/^,? /, "") : "")); } return /^\d{4}-\d\d-\d\d([T ]\d\d:\d\d)?/.test(v) ? Date.parse(v) : NaN; };   /* (a date only when the whole cell is one: 29 Oct 2026, 29-Oct-26, 2026-10-29) */
   const cmp = (a, b) => { if (a === b) return 0; if (a === "") return 1; if (b === "") return -1; const x = num(a), y = num(b); if (x != null && y != null) return x - y;
     const dx = day(a), dy = day(b); if (!isNaN(dx) && !isNaN(dy)) return dx - dy; return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }); };
+  const tb0 = table.tBodies[0]; if (tb0 && !tb0._orig) tb0._orig = [...tb0.rows];   /* (the order the rows came in, for a third click) */
   const sortNow = () => { const st = S[key], tb = table.tBodies[0]; ths.forEach(th => { const m = th.querySelector(".tk-s"); if (m) m.remove(); });
-    if (!st) return; const i = ths.findIndex((th, k) => cid(th, k) === st.c); if (i < 0) return;
+    if (!st){ if (tb && tb._orig) tb._orig.forEach(r => { if (r.parentNode === tb) tb.appendChild(r); }); return; } const i = ths.findIndex((th, k) => cid(th, k) === st.c); if (i < 0) return;
     const lab = ths[i].querySelector(".th-l") || ths[i]; lab.insertAdjacentHTML("beforeend", '<span class="tk-s">' + (st.d > 0 ? " ▲" : " ▼") + '</span>');
     /* (a row that belongs under the one before it, such as an MTO row's pieces, moves with it) */
     const rows = [...tb.rows], att = r => r.matches(".mt-sub, .tk-att"), data = r => plain(r) && !r.matches(".pt-blank, .ct-new, .is-sep, .nosort"); let run = [];
@@ -347,7 +348,8 @@ function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts)
     h.onclick = e => e.stopPropagation();
     /* (every column is held at the width it shows first, so only the one dragged moves and it moves from the first pixel;
        the heading stops being draggable meanwhile, so the browser's own drag of it can't take the pointer) */
-    h.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const ws = ths.map(t => t.getBoundingClientRect().width), x0 = e.clientX, w0 = ws[i]; ths.forEach(t => t.draggable = false);
+    h.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const ws = ths.map(t => t.getBoundingClientRect().width), x0 = e.clientX, w0 = ws[i], cols = [...table.querySelector("colgroup").children]; ths.forEach(t => t.draggable = false);   /* (cols looked up now: a double click fit makes new ones) */
+     
       cols.forEach((c, k) => c.style.width = ws[k] + "px"); const others = ws.reduce((t, w, k) => t + (k === i ? 0 : w), 0); table.style.width = (others + w0) + "px"; h.setPointerCapture(e.pointerId);
       h.onpointermove = ev => { const w = Math.max(40, w0 + ev.clientX - x0); cols[i].style.width = w + "px"; W[id(th, i)] = Math.round(w); table.style.width = (others + w) + "px"; moreFit(table); };
       h.onpointerup = h.onpointercancel = () => { h.onpointermove = null; ths.forEach(t => t.draggable = true); save(); }; };
@@ -431,5 +433,5 @@ const CellEdit = (() => {
 
 /* the Modified by and Date modified cells of a Data validation row: who added or last changed it in the app and when
    (29-Oct-26); a row that came with the app or the plant lists says Native */
-const dmy = t => { if (!t) return ""; const d = new Date(t); return isNaN(d) ? "" : String(d.getDate()).padStart(2, "0") + "-" + d.toLocaleString("en-GB", { month: "short" }) + "-" + String(d.getFullYear()).slice(2); };
+const dmy = t => { if (!t) return ""; const d = new Date(t); return isNaN(d) ? "" : String(d.getDate()).padStart(2, "0") + "-" + "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ")[d.getMonth()] + "-" + String(d.getFullYear()).slice(2); };
 const whoBy = x => x && x.by ? properName(x.by) : "Native", whenBy = x => x && x.by ? dmy(x.at || x.mod) : "";

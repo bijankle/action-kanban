@@ -83,7 +83,9 @@ const Parts = (() => {
     $$(".pt-dup", el).forEach(b => b.onclick = () => { const id = b.closest("tr").dataset.id; Store.mutate(key, () => { const i = items.findIndex(x => x.id === id); if (i < 0) return; const c = JSON.parse(JSON.stringify(items[i])); c.id = uid(); delete c.secured; items.splice(i + 1, 0, c); Store.touch(a); });
       Store.log("Duplicated a row of the " + NAME[kind] + " of " + Store.actId(a)); });
     /* (the MTO's own ✕ are wired by Mto: a parent takes its cuts with it, and each asks first) */
-    $$(".pt-x:not(.mt-x)", el).forEach(b => b.onclick = () => { const id = b.closest("tr").dataset.id, i = items.findIndex(x => x.id === id); if (i < 0) return; Store.mutate(key, () => { items.splice(i, 1); Store.touch(a); }); });
+    $$(".pt-x:not(.mt-x)", el).forEach(b => b.onclick = async () => { const id = b.closest("tr").dataset.id, it = items.find(x => x.id === id); if (!it) return; const d = String(it.desc || it.part || "").trim();
+      if (!await confirmBox("Remove " + (d ? "“" + d + "”" : "this row") + " from the " + NAME[kind] + "?", "Remove", true)) return;
+      Store.mutate(key, () => { const i = items.indexOf(it); if (i >= 0) items.splice(i, 1); Store.touch(a); }); Store.log("Removed a row from the " + NAME[kind] + " of " + Store.actId(a)); });
     $$("[data-q]", el).forEach(b => b.onclick = () => Media.openFile(a, (a[b.dataset.qk] || []).find(f => f.h === b.dataset.q)));
     $$("[data-qx]", el).forEach(b => b.onclick = async e => { e.stopPropagation(); const k = b.dataset.qk, f = (a[k] || []).find(x => x.h === b.dataset.qx); if (!f || !await confirmBox("Delete " + f.name + "?" + ((a[k] || []).length > 1 ? " The revision before it shows instead." : ""), "Delete", true)) return;
       Store.mutate(key, () => { a[k] = (a[k] || []).filter(x => x.h !== f.h); Store.touch(a); }); Store.log("Deleted " + f.name + " from " + Store.actId(a)); });
@@ -105,11 +107,11 @@ const Parts = (() => {
     const t = added && pref(k === "pos" ? "poTick" : "quoteTick") && Store.field(DOC[k][1]); if (t && a.f[t.id] !== true){ Fields.set(a, t, true); note(t.label + " ticked: " + Store.actId(a)); } }
 
   /* ---------- exports ---------- */
-  const fname = (a, kind) => Store.actId(a) + " " + (kind === "mto" ? "RFQ" : "Spares") + " " + new Date().toISOString().slice(0, 10) + ".pdf";
+  const fname = (a, kind) => Store.actId(a) + " " + (kind === "mto" ? "RFQ" : "Spares") + " " + isoDay(new Date()) + ".pdf";
   function excel(a, kind){ const items = kind === "mto" ? Mto.orderRows(a, true) : list(a, kind);   // (the MTO as ordered: each steel parent, its cuts listed under it)
   if (!items.length) return alert("Nothing to export yet.");
     const sec = kind === "spares", head = ["#"].concat(COLS[kind].map(c => c[1]), sec ? ["Secured"] : []), rows = items.map((it, i) => [it.no || String(i + 1)].concat(COLS[kind].map(([k]) => (k === "qty" && kind === "mto" ? Mto.ord(it) : it[k]) || ""), sec ? [it.secured ? "Yes" : "No"] : []));
-    Excel.save(Excel.book(head, rows, Store.actId(a) + " " + NAME[kind]), Store.actId(a) + " " + NAME[kind] + " " + new Date().toISOString().slice(0, 10) + ".xlsx"); }
+    Excel.save(Excel.book(head, rows, Store.actId(a) + " " + NAME[kind]), Store.actId(a) + " " + NAME[kind] + " " + isoDay(new Date()) + ".xlsx"); }
   let pdfP = null;
   const loadPdf = () => pdfP || (pdfP = new Promise((res, rej) => { const add = (src, next) => { const s = document.createElement("script"); s.src = src; s.onload = next; s.onerror = () => { pdfP = null; rej(new Error("Couldn't load the PDF maker")); }; document.head.appendChild(s); };
     add("js/lib/jspdf.umd.min.js", () => add("js/lib/jspdf.plugin.autotable.min.js", () => res(window.jspdf.jsPDF))); }));

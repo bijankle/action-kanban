@@ -19,8 +19,8 @@ const Excel = (() => {
   function exportRows(list){ const fs = Store.fields(), base = GH.appUrl();
     const head = ["ID", "Project"].concat(fs.map(f => f.label), ["Photos", "Attachments", "Created"]);
     const rows = list.map(a => ["ID", "Project"].map((k, i) => i ? (Store.project(a._p) || {}).name : Store.actId(a))
-      .concat(fs.map(f => f.type === "date" && /^\d{4}-/.test(Fields.val(a, f) || "") ? { d: Fields.val(a, f) } : f.type === "meta" && Fields.val(a, f) ? { d: new Date(Fields.val(a, f)).toISOString().slice(0, 10) } : Fields.text(a, f)),
-        [a.photos.length ? { link: base + "?a=" + encodeURIComponent(a._p + ":" + a.no) + "&photo=1", text: "Photos (" + a.photos.length + ")" } : "", a.files.map(f => f.name).join("\n"), { d: new Date(a.created).toISOString().slice(0, 10) }]));
+      .concat(fs.map(f => f.type === "date" && /^\d{4}-/.test(Fields.val(a, f) || "") ? { d: Fields.val(a, f) } : f.type === "meta" && Fields.val(a, f) ? { d: isoDay(new Date(Fields.val(a, f))) } : Fields.text(a, f)),
+        [a.photos.length ? { link: base + "?a=" + encodeURIComponent(a._p + ":" + a.no) + "&photo=1", text: "Photos (" + a.photos.length + ")" } : "", a.files.map(f => f.name).join("\n"), { d: isoDay(new Date(a.created)) }]));
     return book(head, rows, "Actions"); }
   /* one sheet workbook: head is the header row, rows hold strings, {d: "YYYY-MM-DD"} dates or {link, text} links */
   function book(head, rows, name){ name = String(name || "Sheet1").replace(/[\\/?*\[\]:]/g, " ").slice(0, 31);
@@ -42,7 +42,7 @@ const Excel = (() => {
       ["xl/worksheets/sheet1.xml", sheet], ["xl/styles.xml", styles]]); }
   function save(blob, fname){ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fname; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
   function run(pick){ const list = Array.isArray(pick) ? pick : Table.rows(true); if (!list.length) return alert("No actions to export.");
-    const b = exportRows(list), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "Actions " + new Date().toISOString().slice(0, 10) + ".xlsx"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const b = exportRows(list), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "Actions " + isoDay(new Date()) + ".xlsx"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     note("Exported " + list.length + " action" + (list.length === 1 ? "" : "s")); }
   /* ---------- reading an .xlsx (for importing the approved vendor list): every sheet as rows of cell values ---------- */
   async function read(file){ const buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer), files = {};

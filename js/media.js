@@ -24,7 +24,7 @@ const Media = (() => {
     const done = u => { const i = list.indexOf(u); if (i >= 0) list.splice(i, 1); setTimeout(() => URL.revokeObjectURL(u.url), 4000); };
     for (const [n, f] of imgs.entries()){ const up = ups[n]; try { const buf = await f.arrayBuffer(); const hh = await sha1(buf);
         if (a.photos.some(p => p.h === hh)){ done(up); App.render(); continue; }
-        const name = uniq(a, f.name && !/^image\.\w+$/.test(f.name) ? f.name : "Pasted " + new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-") + ".png", hh);
+        const name = uniq(a, f.name && !/^image\.\w+$/.test(f.name) ? f.name : "Pasted " + isoDay(new Date()) + " " + new Date().toTimeString().slice(0, 8).replace(/:/g, "-") + " " + hh.slice(0, 6) + ".png", hh);
         let main, th; try { main = await compress(f, qual[0], qual[1]); th = await compress(f, 420, 0.7); } catch (e){ done(up); App.render(); docs.push(f); note(f.name + " can't be shown as a photo in this browser, so it's kept as an attachment", 5000); continue; }
         prog(up, 0.3);
         mem.set(hh, { main: URL.createObjectURL(main.blob), thumb: URL.createObjectURL(th.blob), orig: f });

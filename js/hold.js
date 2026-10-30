@@ -14,7 +14,7 @@ const Hold = (() => {
     const tip = m.length ? "On hold: add " + m.map(k => NAMES[k]).join(", ") : "On hold since " + fmtDate(h.since) + ", waiting on " + h.who + " (" + h.mobile + ")";
     return '<button type="button" class="hold-i' + (m.length ? " bad" : "") + '" data-hold="' + esc(ref) + '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '">' + INFO_I + '</button>'; }
   /* moving to On Hold (Store.enter): a new record, and the form opens once the screen has redrawn */
-  function entered(a){ a.hold = Object.assign({}, a.hold || {}, { since: new Date().toISOString().slice(0, 10) }); pending = a._p + ":" + a.u; }   // (back on hold: who it waits on, their mobile and the note are kept; only the date starts again)
+  function entered(a){ a.hold = Object.assign({}, a.hold || {}, { since: isoDay(new Date()) }); pending = a._p + ":" + a.u; }   // (back on hold: who it waits on, their mobile and the note are kept; only the date starts again)
   function after(){ if (!pending) return; const ref = pending; pending = null; setTimeout(() => { const r = $('.av-head[data-ref="' + CSS.escape(ref) + '"] [data-rb="hold"]') || $('tr[data-ref="' + CSS.escape(ref) + '"] [data-rb="hold"]') || $('[data-hold="' + CSS.escape(ref) + '"]'); if (r) open(ref, r); }, 60); }
   function open(ref, anchor){ const a = App.act(ref); if (!a) return; Fields.closePop(); const h = rec(a), ro = !Store.S.edit;
     /* the switch at the top: on, the details below; off, it comes off hold (to the step its ticks say) and they hide */
@@ -35,7 +35,7 @@ const Hold = (() => {
     /* picking a known person fills in their mobile and company */
     who.oninput = () => { const c = Store.contacts().find(x => x.name.toLowerCase() === who.value.trim().toLowerCase()); if (c){ const m = $('[data-k="mobile"]', p), co = $('[data-k="company"]', p); if (!m.value) m.value = c.mobile || ""; if (!co.value) co.value = c.company || ""; } };
     const ok = $('[data-k="ok"]', p); if (ok) ok.onclick = () => { save(a, { who: v("who"), mobile: v("mobile"), company: v("company"), since: v("since"), due: v("due"), why: v("why") }); Fields.closePop(); };
-    $$("input", p).forEach(i => i.onkeydown = e => { if (e.key === "Enter" && ok) ok.click(); if (e.key === "Escape") Fields.closePop(); });
+    $$("input", p).forEach(i => i.onkeydown = e => { if (e.defaultPrevented) return; if (e.key === "Enter" && ok) ok.click(); if (e.key === "Escape"){ e.stopPropagation(); Fields.closePop(); } });   /* (Enter that picked a name, or Esc, does only that) */
     /* (it opens to read: nothing is picked for typing until a box is clicked; the card itself takes the focus so Esc and Tab work) */
     p.tabIndex = -1; p.style.outline = "none"; setTimeout(() => p.focus({ preventScroll: true }), 0); }
   function save(a, h){ if (!Store.S.edit) return App.viewOnly();

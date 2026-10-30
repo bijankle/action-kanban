@@ -189,7 +189,7 @@ const PipeSpec = (() => {
   /* non-preferred sizes: the ones the spec's branch tables mark with a *, per class, and across the DN classes (DN32, DN65, DN90, DN125, DN550) */
   const starred = cl => { const B = (C(cl) || {}).branch; return new Set(B && B.g ? Object.keys(B.g).concat(...Object.values(B.g).map(Object.keys)).filter(k => /\*$/.test(k)).map(parseFloat) : []); };
   const nonPref = (cl, n) => starred(cl).has(n);
-  let NPDN = null; const nonPrefDN = () => NPDN || (NPDN = !D ? new Set() : new Set(classes().filter(cl => U(cl) === "DN").flatMap(cl => [...starred(cl)])));
+  let NPDN = null; const nonPrefDN = () => !D ? new Set() : NPDN || (NPDN = new Set(classes().filter(cl => U(cl) === "DN").flatMap(cl => [...starred(cl)])));
   const title = cl => C(cl) ? clean(C(cl).title) : "";
   /* a class in a few words, just to tell the classes apart in a list: material, how it's joined, flange table, pressure, service
      (MS1: CS, welded, Table D, LP, liquid or gas); the full title is still on the (i) and the spec */

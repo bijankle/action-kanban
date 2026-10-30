@@ -151,7 +151,7 @@ const Flow = (() => {
       + '<div class="yn-btns"><button class="yn-no" type="button">Not now</button><button class="yn-yes" type="button">Add them</button></div>', { cls: "fw-win", onClose: () => res(false) });
       $(".yn-no", m).onclick = () => m.close(); $(".yn-yes", m).onclick = () => { res(true); m.close(); }; });
     if (!go) return;
-    const day = n => { const d = new Date(Date.now() + n * 864e5); return d.toISOString().slice(0, 10); };
+    const day = n => isoDay(new Date(Date.now() + n * 864e5));
     const long = (s, n) => Array.from({ length: n }, (_, i) => s.replace("#", i + 1)).join(" ");
     const id = () => uid(), ck = Store.field;
     Store.mutate("a:" + pj.id, () => {

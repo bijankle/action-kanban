@@ -52,7 +52,8 @@ const Fields = (() => {
       a.f[f.id] = v; Store.touch(a); Store.log("Edited " + Store.actId(a));
       /* a stage's step (its tick, or the Category choice): the card goes where the ticks now say (see Flow) */
       /* ticking Defect emailed makes it a defect (the ID becomes DEF-), and moves it on from Categorize Issue */
-      if (f.id === "defect" && v === true && pref("defectCat")){ const c = Store.field("category"); if (c && a.f.category !== "Defect"){ Flow.mark(a, c, "Defect"); Flow.sync(a); note("Category set to Defect: " + Store.actId(a)); } }
+      if (f.id === "defect" && v === true && pref("defectCat")){ const c = Store.field("category"); if (c && a.f.category !== "Defect"){ Flow.mark(a, c, "Defect"); const ho = Store.field("handover"), au = a.auto = a.auto || {}; if (ho && au.handover && a.f.handover === Flow.NA){ Flow.mark(a, ho, ""); delete au.handover; }   /* (no longer Commissioning: Handover back to do) */
+        Flow.sync(a); note("Category set to Defect: " + Store.actId(a)); } }
       if (f.stage && (f.type === "check" || f.type === "choice")){ Flow.mark(a, f, v); Flow.sync(a); }
       /* the Handover tick closes it out: ticked, the steps still to do are marked not needed and the action closes (kept as a record
          under Done); unticked, they come back and it reopens. A Commissioning job isn't handed over: its Handover is marked not

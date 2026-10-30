@@ -34,7 +34,7 @@ const Contacts = (() => {
   const norm = c => (c.first == null && c.last == null) ? Object.assign(c, split(c.name)) : c;
   const list = () => Store.contacts().map(norm);
   const same = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => isoDay(new Date());
   /* what's outstanding on a person */
   function owed(c){ const n = full(c), open = a => Store.stage(a.stage).kind !== "done";
     const hold = Store.visible().filter(a => Hold.on(a) && a.hold && same(a.hold.who, n));

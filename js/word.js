@@ -21,13 +21,13 @@ const Word = (() => {
       children: String(t == null ? "" : t).split("\n").map(l => P(l, { run: head ? { bold: true, color: "FFFFFF" } : {} })) });
     const table = (cols, rows) => { const keep = cols.map((c, k) => k === 0 || rows.some(r => String(r[k] == null ? "" : r[k]).trim())), f = r => r.filter((c, k) => keep[k]);
       return new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [new TableRow({ tableHeader: true, children: f(cols).map(c => cell(c, true)) })].concat(rows.map(r => new TableRow({ children: f(r).map(c => cell(c)) }))) }); };
-    const projs = [...new Set(list.map(a => a._p))].map(p => (Store.project(p) || {}).name).join(", "), stamp = fmtDate(new Date().toISOString().slice(0, 10));
+    const projs = [...new Set(list.map(a => a._p))].map(p => (Store.project(p) || {}).name).join(", "), stamp = fmtDate(isoDay(new Date()));
     const body = [new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun({ text: "Action Database" })] }), P(projs + " · " + list.length + " action" + (list.length > 1 ? "s" : "") + " · Exported " + stamp + (Profile.name() ? " by " + Profile.name() : ""), { run: { color: "5D6875" } })];
     if (o.board){ Store.stages().filter(s => list.some(a => a.stage === s.id)).forEach(s => { body.push(H(Store.todo(s) + " (" + list.filter(a => a.stage === s.id).length + ")"));
       list.filter(a => a.stage === s.id).forEach(a => body.push(new Paragraph({ bullet: { level: 0 }, children: [new TextRun({ text: Store.actId(a) + "  ", bold: true }), new TextRun({ text: a.f.title || "" })].concat(Store.eta(a) ? [new TextRun({ text: "  ETA " + fmtDate(Store.eta(a)), color: "7A8591" })] : []) }))); }); }
     const skip = new Set(["title", "problem", "solution", "notes", "modified", "status"]), links = await Media.shareLinks(list);
     for (const [i, a] of list.entries()){ const s = Store.stage(a.stage);
-      if (o.newPage || i === 0 && o.board) body.push(new Paragraph({ children: [new PageBreak()] }));
+      if (o.newPage && i > 0 || i === 0 && o.board) body.push(new Paragraph({ children: [new PageBreak()] }));
       body.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 120, after: 60 }, children: [new TextRun({ text: Store.actId(a) + "  " }), new TextRun({ text: a.f.title || "" })] }), P(s.name, { run: { bold: true, color: hex(s.color) } }));
       if (Hold.lines(a).length) body.push(...Hold.lines(a).map(([k, v]) => new Paragraph({ shading: { type: ShadingType.CLEAR, fill: "FDF1D6" }, children: [new TextRun({ text: k + ": ", bold: true }), new TextRun({ text: String(v) })] })));
       const ticks = Store.fields().filter(f => f.type === "check" && a.f[f.id] === true).map(f => "✓ " + f.label);
@@ -37,7 +37,7 @@ const Word = (() => {
         rows: det.map(([k, v]) => new TableRow({ children: [new TableCell({ width: { size: 28, type: WidthType.PERCENTAGE }, children: [P(k, { run: { bold: true, color: "5D6875" } })] }), new TableCell({ width: { size: 72, type: WidthType.PERCENTAGE }, children: lines(v) })] })) }));
       [["Problem", a.f.problem], ["Solution", a.f.solution], ["Notes", a.f.notes]].filter(([, v]) => o.blanks || String(v || "").trim()).forEach(([k, v]) => body.push(H(k), ...lines(String(v || "").trim() ? v : "–")));
       const tb = (title, cols, rows) => { if (rows.length) body.push(H(title), table(cols, rows)); };
-      tb("Isolations", ["#", "Equipment number", "Equipment name", "Note"], (a.isol || []).map((it, k) => [k + 1, it.tag, it.name, it.note]));
+      tb("Isolations", ["#", "Equipment number", "Equipment name", "Note"], (a.isol || []).map((it, k) => [k + 1, it.tag, it.name, it.nu ? it.note : ""]));
       /* the sketches, each as wide as the page, its number and name above it, just before the MTO */
       if ((a.sketches || []).length){ body.push(H("Sketches")); for (const [k, sk] of a.sketches.entries()){ try { const im = await photo(Sketch.src(a, sk), 640);
           body.push(new Paragraph({ children: [new TextRun({ text: (k + 1) + "  " + (sk.name || ""), bold: true, color: "5D6875", size: 18 })], shading: { type: ShadingType.CLEAR, fill: "F1F3F6" } }), new Paragraph({ children: [new ImageRun(im)] })); } catch (e){ console.warn("sketch", e); } } }
@@ -50,7 +50,7 @@ const Word = (() => {
         if (rows.length) body.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows })); } }
     const doc = new Document({ creator: Profile.name() || "Action Database", title: "Action Database export", styles: { default: { document: { run: { font: "Calibri", size: 21 } } } },
       sections: [{ properties: { page: { margin: { top: 900, bottom: 900, left: 900, right: 900 } } }, children: body }] });
-    const blob = await Packer.toBlob(doc), name = (list.length === 1 ? Store.actId(list[0]) : "Actions") + " " + new Date().toISOString().slice(0, 10) + ".docx";
+    const blob = await Packer.toBlob(doc), name = (list.length === 1 ? Store.actId(list[0]) : "Actions") + " " + isoDay(new Date()) + ".docx";
     Excel.save(blob, name); note("Exported " + name); }
   return { run };
 })();

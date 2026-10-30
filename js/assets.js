@@ -97,9 +97,12 @@ const Assets = (() => {
   const fcount = () => path.filter(p => p.v != null || p.f !== "t").length + ((App.q || "").trim() ? 1 : 0);
 
   /* the Filters side bar: the picked steps as chips, then the pills of the next step */
+  /* the plant lists, asked for once: a load that fails says so rather than asking again on every redraw */
+  let noLists = false, asked = false;
+  const loadLists = () => { if (Equip.raw() || asked) return; asked = true; Equip.load().then(() => { noLists = !Equip.raw(); App.render(); }); };
   function filters(el){ let body = $(".fp-groups", el); if (!body){ body = document.createElement("div"); body.className = "fp-groups"; el.appendChild(body); }
     names(); const list = current();
-    if (!list){ body.innerHTML = '<p class="dim fshown">Loading the plant lists…</p>'; if (!Equip.raw()) Equip.load().then(() => App.render()); return; }
+    if (!list){ body.innerHTML = '<p class="dim fshown">' + (noLists ? "Couldn't load the plant lists" : "Loading the plant lists…") + '</p>'; loadLists(); return; }
     const crumbs = path.map((p, i) => { const nm = p.f === "t" || p.v == null || p.v === "?" ? "" : shortName(nameOf(p.f, ty(), p.v));
       const txt = p.f === "t" ? TN[p.v] : p.v == null ? "Any " + steps()[i - 1][1].toLowerCase() : label(p.f, p.v) + (nm ? " " + nm : "");
       return '<button type="button" class="pill fpill on as-cr" data-i="' + i + '" title="Take this step off, and the ones after it"><span class="fp-t">' + esc(txt) + '</span> <i aria-hidden="true">✕</i></button>'; }).join("");
@@ -141,7 +144,7 @@ const Assets = (() => {
   /* the matching assets, as a table like every other (sort, fit, resize, move a column) */
   function page(body){ names(); const list = current();
     if (list && sel){ const r = IX.get(kx(sel)); if (r) return detail(body, r); }
-    if (!list){ body.innerHTML = '<p class="dim">Loading the plant lists…</p>'; if (!Equip.raw()) Equip.load().then(() => App.render()); return; }
+    if (!list){ body.innerHTML = '<p class="dim">' + (noLists ? "Couldn't load the plant lists. Check the connection and reload." : "Loading the plant lists…") + '</p>'; loadLists(); return; }
     const t = ty(), cols = [["key", "Tag"], ["name", "Name"]].concat(t ? [] : [["t", "Type"]]).concat((t ? steps() : [["a", "Area"]]).map(([f, n]) => [f, n])).concat([["by", "Modified by"], ["at", "Date modified"]]);
     const cell = (r, f) => f === "by" ? whoBy(r) : f === "at" ? whenBy(r) : f === "t" ? TN[r.t] : f === "key" || f === "name" ? r[f] : (r[f] === "?" ? "" : r[f]) + (f === "a" || f === "k" || f === "sp" ? (s => s ? " " + s : "")(r[f] === "?" ? "" : shortName(nameOf(f, r.t, r[f]))) : "");
     /* (the whole list sorts by the heading picked, then the first rows show) */

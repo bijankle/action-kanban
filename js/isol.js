@@ -90,7 +90,8 @@ const Isol = (() => {
     return out; }
   function wireSug(el, a, ro, sug){ if (ro) return;
     $$("[data-pk]", el).forEach(b => b.onchange = async () => { const k = b.dataset.pk;
-      if (b.checked){ const x = sug.find(y => y.tag === k); if (!x) return; Store.mutate("a:" + a._p, () => { list(a).push({ id: uid(), tag: x.tag, name: x.name || "", note: "", sug: 1 }); Store.touch(a); }); Store.log("Added a suggested isolation to " + Store.actId(a)); return; }
+      if (b.checked){ const x = sug.find(y => y.tag === k); if (!x) return; const ts = (x.tags || [x.tag]).filter((t, i, A) => A.indexOf(t) === i && !list(a).some(y => y.tag === t));   /* (a group, such as 15 cyclone valves, adds every one of them) */
+        Store.mutate("a:" + a._p, () => { ts.forEach(t => { const e = x.tags ? Equip.get(t) || Equip.get(String(t).toUpperCase()) : null; list(a).push({ id: uid(), tag: t, name: (e ? e.n : x.name) || "", note: "", sug: 1 }); }); Store.touch(a); }); Store.log("Added " + (ts.length > 1 ? ts.length + " suggested isolations" : "a suggested isolation") + " to " + Store.actId(a)); return; }
       const it = list(a).find(y => y.id === k); if (!it) return;
       const back = it.sug || sug.some(y => y.tag === it.tag) || (Array.isArray(a.f.equipment) && a.f.equipment.includes(it.tag));
       if (it.note || !back){ b.checked = true; if (!await confirmBox("Take " + (it.tag || it.name || "this isolation") + " off the list" + (it.note ? " and lose its note?" : "?"), "Take it off", true)) return; }

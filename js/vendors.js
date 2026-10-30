@@ -73,7 +73,7 @@ const Vendors = (() => {
       + (ro ? "" : '<div class="yn-btns"><button type="button" class="yn-yes" data-k="ok">Save</button></div>') + '</div>');
     document.body.appendChild(p); Fields.place(p, anchor); const r = p.getBoundingClientRect(); if (r.bottom > innerHeight - 8) p.style.top = Math.max(8, innerHeight - r.height - 8) + "px"; if (r.right > innerWidth - 8) p.style.left = Math.max(8, innerWidth - r.width - 8) + "px";
     const ok = $("[data-k=ok]", p); if (ok) ok.onclick = () => { const o = {}; DET.forEach(([k]) => o[k] = $('[data-k="' + k + '"]', p).value.trim());
-      if (DET.some(([k]) => (v[k] || "") !== o[k])){ Store.mutate("vendors", () => { DET.forEach(([k]) => { if (o[k]) v[k] = o[k]; else delete v[k]; }); }); Store.log("Edited the contact details of " + v.name); }
+      if (DET.some(([k]) => (v[k] || "") !== o[k])){ Store.mutate("vendors", () => { DET.forEach(([k]) => { if (o[k]) v[k] = o[k]; else delete v[k]; }); Store.touch(v); }); Store.log("Edited the contact details of " + v.name); }
       Fields.closePop(); };
     $$("input", p).forEach(i => i.onkeydown = e => { if (e.key === "Enter" && ok) ok.click(); if (e.key === "Escape") Fields.closePop(); });
     setTimeout(() => $("input", p).focus(), 0); }
@@ -94,7 +94,7 @@ const Vendors = (() => {
       const qg = find(["CATEGORY", "LOOK HERE FOR"]), look = {}; if (qg) qg.rows.slice(qg.hi + 1).forEach(r => { if (r && r[qg.col("CATEGORY")]) look[String(r[qg.col("CATEGORY")]).trim()] = String(r[qg.col("LOOK HERE FOR")] || "").trim(); });
       const categories = [...new Set((qg ? Object.keys(look) : []).concat(vendors.map(v => v.cat)))].filter(c => vendors.some(v => v.cat === c)).map(name => ({ name, look: look[name] || "" }));
       if (!await confirmBox("Replace the approved vendor list with " + vendors.length + " vendors in " + categories.length + " categories from " + file.name + "?", "Replace")) return;
-      Store.mutate("vendors", () => { Store.S.vendors = { v: 1, source: file.name, updated: new Date().toISOString().slice(0, 10), categories, vendors }; }); Store.log("Imported the approved vendor list " + file.name);
+      Store.mutate("vendors", () => { Store.S.vendors = { v: 1, source: file.name, updated: isoDay(new Date()), categories, vendors }; }); Store.log("Imported the approved vendor list " + file.name);
       note("Imported " + vendors.length + " approved vendors"); }
     catch (e){ console.error(e); alert("Couldn't import the vendor list: " + e.message); } }
   const pickImport = () => { if (!Store.S.edit) return App.viewOnly(); pickFile(".xlsx", false, importFile); };
