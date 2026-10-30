@@ -1659,3 +1659,12 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .tgp .tgp-add .tgp-d.bad{outline:2px solid #c0392b;outline-offset:-2px}
 
 .sk-h .sk-by,.sk-h .sk-at{font-weight:400}.sk-h .sk-ti{height:var(--row,22px)!important;min-height:0!important;border:0!important;border-radius:0!important;padding:0 6px!important;font-size:var(--fb)!important;font-weight:600;box-shadow:none!important;outline:2px solid var(--th);outline-offset:-2px}
+/* the MTO's Qty and Unit: two columns, both centred */
+.mt-tbl td.mt-qu,.mt-tbl td.mt-unc,.mt-tbl td.mt-qu .mt-q,.mt-tbl td.mt-unc .in,.mt-tbl td.mt-unc .lk-sel{text-align:center!important;justify-content:center}
+.mt-tbl td.mt-unc{color:var(--muted);white-space:nowrap}.mt-tbl td.mt-unc .in,.mt-tbl td.mt-unc .mt-un{width:100%!important;margin:0!important}
+.mt-tbl td.mt-qu .mt-q{width:100%!important}.mt-tbl td.mt-dims .mt-dm{width:calc(50% - 8px)!important}
+/* the MTO row buttons (duplicate, ✕): square cells of the grid, flush to the right edge, the column just as wide as they are */
+.mt-tbl td.mt-ic{padding:0!important;text-align:right;white-space:nowrap}.mt-tbl td.mt-ic>*{vertical-align:top}
+.mt-tbl td.mt-ic .ic-b,.mt-tbl td.mt-ic .mt-x,.mt-tbl td.mt-ic .mt-dup{width:var(--row,22px)!important;height:var(--row,22px)!important;margin:0!important;padding:0!important;border:0!important;border-left:1px solid var(--line)!important;border-radius:0!important;display:inline-grid;place-items:center}
+.mt-tbl td.mt-ic .ic-b svg{width:13px;height:13px}
+.mt-tbl td.mt-ic .mt-done{height:var(--row,22px)!important;border-radius:0!important;margin:0!important}
