@@ -1677,3 +1677,6 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 /* steel cuts and plate pieces: the size boxes snug, the count narrow; a stock length typed over for this job is white (from the standard, blue) */
 .mt-tbl td.mt-dims .mt-n{width:3ch!important}.mt-tbl td.mt-csz{text-align:left}.mt-tbl td.mt-csz .dim{margin:0 3px}
 .mt-tbl tr.mt-par td.mt-pq .mt-gl{width:5.5ch!important;font-weight:400}.mt-tbl tr.mt-par td.mt-pq .mt-gl.mt-man{background:var(--panel)!important}.mt-tbl tr.mt-par td.mt-pq .dim{margin:0 3px}
+/* size × count cells: each number box as wide as its digits (fonts differ by computer), and the ×, count and boxes on one centre line */
+.mt-tbl td.mt-qu>*,.mt-tbl td.mt-dims>*{vertical-align:middle}.mt-tbl td.mt-qu>span,.mt-tbl td.mt-qu>b,.mt-tbl td.mt-dims>span{line-height:22px;display:inline-block}
+.mt-tbl td.mt-qu .mt-dm,.mt-tbl tr.mt-par td.mt-pq .mt-gl,.mt-tbl td.mt-dims .mt-dm{field-sizing:content;width:auto!important;min-width:3ch;padding:0 3px!important;text-align:center}
