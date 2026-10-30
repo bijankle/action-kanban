@@ -309,7 +309,8 @@ function numCols(table){ const ths = [...(table.tHead ? table.tHead.rows[0].cell
       if (!NUMV.test(v) || !/\d/.test(v)) return bad = true; n++; if (/^\d+\.\d+\.\d/.test(v)) sec = true; });
     const on = n > 0 && !bad && !sec; th.classList.toggle("tc-n", on); rows.forEach(r => r.cells[i] && r.cells[i].classList.toggle("tc-n", on)); }); }
 function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts); const ths = [...(table.tHead ? table.tHead.rows[0].cells : [])]; if (!ths.length) return;
-  const store = lsGet("adTW", {}) || {}, W = store[key] = store[key] || {}, fixed = opts.fixed || {};
+  /* (a width dragged by hand is kept until the app is reopened: held in memory, not saved) */
+  const store = gridCols.mem || (gridCols.mem = {}), W = store[key] = store[key] || {}, fixed = opts.fixed || {};
   const cv = gridCols.cv || (gridCols.cv = document.createElement("canvas").getContext("2d"));
   const textW = (t, font) => { cv.font = font; return cv.measureText(String(t || "")).width; };
   const rows = [...table.tBodies[0].rows].slice(0, 300);
@@ -341,12 +342,15 @@ function gridCols(table, key, opts){ opts = opts || {}; tblKit(table, key, opts)
     const th = ths[td.cellIndex]; td.innerHTML = moreCut(td.innerHTML, th ? th.textContent.trim() : ""); }));
   requestAnimationFrame(() => moreFit(table));
   numCols(table);
-  const save = () => lsSet("adTW", store);
+  const save = () => {};
   ths.forEach((th, i) => { if (th.querySelector(".tw-r")) return; const h = document.createElement("i"); h.className = "tw-r"; th.appendChild(h);
     h.onclick = e => e.stopPropagation();
-    h.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const x0 = e.clientX, w0 = cols[i].getBoundingClientRect().width || widths[i]; h.setPointerCapture(e.pointerId);
-      h.onpointermove = ev => { const w = Math.max(40, w0 + ev.clientX - x0); cols[i].style.width = w + "px"; W[id(th, i)] = Math.round(w); table.style.width = cols.reduce((t, c) => t + parseFloat(c.style.width), 0) + "px"; moreFit(table); };
-      h.onpointerup = () => { h.onpointermove = null; save(); }; };
+    /* (every column is held at the width it shows first, so only the one dragged moves and it moves from the first pixel;
+       the heading stops being draggable meanwhile, so the browser's own drag of it can't take the pointer) */
+    h.onpointerdown = e => { e.preventDefault(); e.stopPropagation(); const ws = ths.map(t => t.getBoundingClientRect().width), x0 = e.clientX, w0 = ws[i]; ths.forEach(t => t.draggable = false);
+      cols.forEach((c, k) => c.style.width = ws[k] + "px"); const others = ws.reduce((t, w, k) => t + (k === i ? 0 : w), 0); table.style.width = (others + w0) + "px"; h.setPointerCapture(e.pointerId);
+      h.onpointermove = ev => { const w = Math.max(40, w0 + ev.clientX - x0); cols[i].style.width = w + "px"; W[id(th, i)] = Math.round(w); table.style.width = (others + w) + "px"; moreFit(table); };
+      h.onpointerup = h.onpointercancel = () => { h.onpointermove = null; ths.forEach(t => t.draggable = true); save(); }; };
     h.ondblclick = e => { e.stopPropagation(); W[id(th, i)] = natural(i); save(); gridCols(table, key, opts); }; }); }
 
 /* filter pills for a list in the Filters side bar (the Data validation tabs): groups of pills, each pill a value with how many
