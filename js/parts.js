@@ -17,10 +17,12 @@ const Parts = (() => {
       requestAnimationFrame(() => tb.forEach(t => { const w = t.parentElement.clientWidth; if (!w) return; const cols = [...t.querySelectorAll("colgroup col")], ths = [...t.rows[0].cells];
         const flex = ths.map((th, k) => /^(Class|Item|Details|Notes|Material|Finish|Size|Qty)/.test(th.textContent.trim()) && !(/^Qty/.test(th.textContent.trim()) && t.querySelector("td.mt-dims")) ? k : -1).filter(k => k >= 0);   /* (Qty gives too, unless it holds plate sizes) */
         /* (Notes gives first, then Item, then Details, then the rest together, so the class and size stay readable) */
+        /* (the least a column gives down to: Item keeps room for + Item, a dropdown column for a few letters beside its arrow) */
+        const mn = k => /^Item/.test(nm(k)) ? 84 : [...t.tBodies].some(b => [...b.rows].some(r => r.cells.length === ths.length && r.cells[k] && r.cells[k].querySelector(".mt-dd"))) ? 64 : 40;
         const nm = k => ths[k].textContent.trim(), tiers = [/^Notes/, /^Item/, /^Details/, /./].map(re => flex.filter(k => re.test(nm(k))));
         tiers.forEach((ks, ti) => { ks = ks.filter(k => !tiers.slice(0, ti).some(x => x.includes(k)));
-          for (let pass = 0; pass < 5; pass++){ const over = t.offsetWidth - w; if (over <= 0) break; const tot = ks.reduce((s2, k) => s2 + Math.max(0, ths[k].offsetWidth - 40), 0); if (!tot) break;
-            ks.forEach(k => { const cw = ths[k].offsetWidth, give = Math.ceil(over * Math.max(0, cw - 40) / tot); if (cols[k]) cols[k].style.width = Math.max(40, cw - give) + "px"; });
+          for (let pass = 0; pass < 5; pass++){ const over = t.offsetWidth - w; if (over <= 0) break; const tot = ks.reduce((s2, k) => s2 + Math.max(0, ths[k].offsetWidth - mn(k)), 0); if (!tot) break;
+            ks.forEach(k => { const cw = ths[k].offsetWidth, give = Math.ceil(over * Math.max(0, cw - mn(k)) / tot); if (cols[k]) cols[k].style.width = Math.max(mn(k), cw - give) + "px"; });
             t.style.width = cols.reduce((s2, c, k) => s2 + (parseFloat(c.style.width) || ths[k].offsetWidth), 0) + "px"; } });
         if (typeof moreFit === "function") moreFit(t); }));
       /* the piping and the steel tables line up, column for column: each column as wide as the wider of the two */

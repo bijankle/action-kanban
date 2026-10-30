@@ -1188,8 +1188,8 @@ textarea.in.ta{resize:none;overflow:hidden;min-height:var(--ctl-h,28px)}
 .mt-tbl .mt-q{text-align:right;font-variant-numeric:tabular-nums}
 .mt-tbl tr.mt-grp td{background:var(--panel2);font:700 var(--fs) var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);height:22px;padding:2px 8px;cursor:default}
 .mt-tbl tr.mt-grp:hover td{background:var(--panel2)}
-.mt-tbl tr.mt-part td{background:color-mix(in srgb,#d4a017 9%,var(--panel))}
-.mt-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#d4a017;vertical-align:middle;margin:0 3px}
+/* (a row still being entered has no tint of its own: its cells keep the colour code, white typed or picked, blue worked out, orange still needed) */
+.mt-dot{color:var(--muted);cursor:default}   /* (a row still to finish: a plain – in its # cell, what is still to pick in its tooltip) */
 .mt-rq{color:#f2b03d;margin-left:2px}
 .mt-tbl .pt-act{white-space:nowrap}.mt-tbl .pt-act .ic-b{width:26px;height:26px}
 .mt-tbl td{vertical-align:middle}
@@ -1680,3 +1680,9 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 /* size × count cells: each number box as wide as its digits (fonts differ by computer), and the ×, count and boxes on one centre line */
 .mt-tbl td.mt-qu>*,.mt-tbl td.mt-dims>*{vertical-align:middle}.mt-tbl td.mt-qu>span,.mt-tbl td.mt-qu>b,.mt-tbl td.mt-dims>span{line-height:22px;display:inline-block}
 .mt-tbl td.mt-qu .mt-dm,.mt-tbl tr.mt-par td.mt-pq .mt-gl,.mt-tbl td.mt-dims .mt-dm{field-sizing:content;width:auto!important;min-width:3ch;padding:0 3px!important;text-align:center}
+/* MTO dropdown cells (picked from a list, as Excel's data validation): one click opens the list; the down arrow sits flush on the right, shown on the row pointed at or selected, as on the Actions rows */
+.mt-tbl td:has(>.mt-dd){position:relative}.mt-tbl td>.pt-in.mt-pk:not(.mt-fr):not([readonly]){padding-right:calc(var(--row) + 2px)!important;cursor:pointer}
+.mt-tbl td>.mt-dd{position:absolute;right:0;top:0;bottom:0;width:var(--row);display:flex;align-items:center;justify-content:center;border-left:1px solid var(--line2);background:var(--hdr);color:var(--muted);pointer-events:none;visibility:hidden}
+.mt-tbl tr:hover td>.mt-dd,.mt-tbl tr.row-sel td>.mt-dd,.mt-tbl td:has(>.mt-pk:focus)>.mt-dd{visibility:visible}.mt-tbl td:has(>.mt-pk:focus)>.mt-dd{color:var(--ink);background:var(--panel2)}
+.mt-tbl td>.mt-pk.mt-fr+.mt-dd{display:none}
+.mt-tbl td>.mt-dd:has(~.mt-dd){display:none}
