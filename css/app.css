@@ -1750,3 +1750,11 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
    Filters button and its top isn't jammed under the bar */
 #view[data-tab="actions"] .tbl-wrap{padding:10px;box-sizing:border-box}
 .tbl tr.nr td.nr-t,.tbl tbody tr.nr:hover td.nr-t{background:var(--need)!important}.tbl tr.nr td.nr-t .nr-in{background:transparent!important;border:0!important}
+/* a dropdown cell's arrow sits inside the cell's edges (1px in), so the cell's lines and the focus edge always show round it */
+.mt-tbl td>.mt-dd{top:1px!important;bottom:1px!important;right:1px!important;width:calc(var(--row) - 2px)!important}
+.mt-tbl td:has(>.mt-pk:focus)>.mt-dd{background:transparent!important;border-left-color:transparent!important}
+/* a pick from a list always shows its down arrow (faint until pointed at or in use), the + Type box too */
+.mt-tbl td>.mt-dd{visibility:visible!important;background:transparent!important;border-left-color:transparent!important;opacity:.55}
+.mt-tbl tr:hover td>.mt-dd,.mt-tbl td:has(>.mt-pk:focus)>.mt-dd{opacity:1}
+.mt-tbl tr.pt-blank td:has(>input[data-r="newt"]){position:relative}.mt-tbl tr.pt-blank input[data-r="newt"]{padding-right:calc(var(--row) + 2px)!important}
+.lk-card.lk-xl{box-sizing:border-box}   /* (so a list the width of its cell is exactly that wide, its edge included) */
