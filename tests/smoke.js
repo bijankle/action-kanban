@@ -138,6 +138,12 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     check("ticking Handover sets the date of handover to today", hd === new Date().toISOString().slice(0, 10) || /^\d{4}-\d\d-\d\d$/.test(hd || ""), hd);
     const cq = await a.p.evaluate(() => { const t = Object.keys(Mto.TY).find(k => Mto.TY[k].k === "len"); const r = Mto.pack({ t, L: 6000, cuts: [{ id: "c1", l: 2400, n: 2 }, { id: "c2", l: 3100, n: 1 }] }); return r ? r.pieces + " " + r.bars.length : "none"; });
     check("a cut with a count of 2 packs as two pieces onto the stock lengths", cq === "3 2", cq);
+    /* pipe goes under one stock length parent as steel does, and the same fitting twice is one row with the quantities added */
+    const pg = await a.p.evaluate(() => { const T = Mto.TY, pt = Object.keys(T).find(k => T[k].k === "len" && T[k].g === "Pipe and tube"), ft = Object.keys(T).find(k => T[k].g === "Pipe fittings");
+      const P = x => Object.assign({ t: pt, s: T[pt].stds[0].id, z: "DN100", L: T[pt].stds[0].defl, unit: "m" }, x), F = x => Object.assign({ t: ft, s: T[ft].stds[0].id, z: "DN100", unit: "ea" }, x);
+      const A = { mto: [P({ id: "p1", qty: "2.4" }), P({ id: "p2", qty: "3.1" }), F({ id: "f1", qty: "2" }), F({ id: "f2", qty: "3" })] }; const took = Mto.combine(A.mto);
+      return Mto.orderRows(A, true).map(r => r.no + ":" + r.qty + (r.grp ? "L" : "")).join(",") + " " + took.length; });
+    check("pipe goes under its stock length with the cuts under it, and the same fitting twice is one row", /^1:\d+L,1\.1:1,1\.2:1,2:5 1$/.test(pg), pg);
     const tq = await a.p.evaluate(() => [{ desc: "GASKET DN150 CNAF 3MM" }, { desc: "NUT M20 GR 8 GALV" }, { desc: "PG02-300 insulated U-bolt guide" }, { desc: "GASKET DN150", ty: "Specials" }].map(x => Mto.typeOf(x)).join(","));
     check("a row typed in goes under its ISO heading, and a Type picked wins", tq === "Gaskets,Bolts,Supports,Specials", tq);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
