@@ -1694,3 +1694,4 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .mt-tbl td.mt-qu>b,.mt-tbl tr.mt-par td.mt-pq>b{line-height:var(--row);height:var(--row);vertical-align:middle;font-size:var(--fb)}
 /* the Type cell worked out by the app (from the item, the AI's reply or the row's words): faint blue until a Type is picked */
 .mt-tbl td:has(>.mt-tya),.mt-tbl td .pt-in.mt-tya{background:var(--autof)!important}
+.lk-ol{min-height:0;flex:1 1 auto}

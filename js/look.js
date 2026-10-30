@@ -28,7 +28,10 @@ const Look = (() => {
       else if (/^[1-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey){ const x = items.find(y => y.hk === +e.key); if (x){ e.preventDefault(); close(); pick(x); } } };
     c.__key = key; c.classList.toggle("lk-two", items.some(x => x.sub)); c.classList.add("lkm1");   /* (every dropdown is a little table: one 22px row per choice with a line under it, a choice's few words in a cell beside it, the groups as shaded rows) */ document.body.appendChild(c); draw();   // (a list where some choices have a line under them: every choice in the same bold type)
     const r = anchor.getBoundingClientRect(); c.style.minWidth = Math.min(innerWidth - 16, Math.max(r.width, items.some(x => x.sub) ? 420 : 160)) + "px"; c.style.left = Math.max(8, Math.min(r.left, innerWidth - c.offsetWidth - 8)) + "px";
-    const below = innerHeight - r.bottom > Math.min(300, c.offsetHeight + 8); c.style.top = (below ? r.bottom + 3 : Math.max(8, r.top - c.offsetHeight - 3)) + "px";
+    /* below the box if it fits (or there's more room there), else above; never past the window's edge: a list taller than the room scrolls inside */
+    c.style.maxHeight = ""; const want = c.offsetHeight, rb = innerHeight - r.bottom - 11, ra = r.top - 11, below = want <= rb || rb >= ra, room = Math.max(120, below ? rb : ra);
+    if (want > room) c.style.maxHeight = room + "px"; c.style.top = (below ? r.bottom + 3 : Math.max(8, r.top - Math.min(want, room) - 3)) + "px";
+    const hiO = $(".lk-o.hi", c) || $(".lk-o.on", c); if (hiO) hiO.scrollIntoView({ block: "nearest" });
     const qi = $(".lk-q", c); if (qi) qi.focus();
     return key; }
   document.addEventListener("mousedown", e => { if (card && !card.contains(e.target) && e.target !== cardFor && !(cardFor && cardFor.contains(e.target))) close(); }, true);
