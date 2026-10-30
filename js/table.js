@@ -28,12 +28,12 @@ const Table = (() => {
   if (lsGet("adColWv", 0) < 2){ const w = widths(), keep = {}; if (w.title) keep.title = w.title; lsSet("adColW", keep); lsSet("adColWv", 2); }
   /* the ID and title always lead; On Hold and Delete go just right of Complete until dragged elsewhere (config.actAfter is
      the column they follow, shared like the field order) */
-  function cols(){ const t = Store.field("title"), rest = (Store.selected().length > 1 ? [{ id: "_proj", label: "Project", type: "proj" }] : []).concat(Store.fields().filter(f => f.table && f.id !== "title"));
+  function cols(){ const t = Store.field("title"), rest = (Store.selected().length > 1 ? [{ id: "_proj", label: "Project", type: "proj" }] : []).concat(Store.fields().filter(f => Store.shown(f) && f.id !== "title"));
     /* Complete: its own tick column, after the last step tick (Contractor); the Status cell keeps hold and delete */
     const cp = Store.fields().find(f => f.type === "complete"); if (cp && !rest.includes(cp)){ let k = -1; rest.forEach((f, n) => { if (f.type === "check" && f.stage) k = n; }); rest.splice(k < 0 ? rest.length : k + 1, 0, cp); }
     /* On Hold and Delete sit at the end, just left of + Add column (config.actAfter, when set, is the column they follow instead) */
     const at = Store.S.config.actAfter, ai = at && at !== "title" ? rest.findIndex(f => f.id === at) : rest.length - 1; rest.splice(ai + 1, 0, { id: "_hold", label: "On Hold", type: "act", k: "hold" }, { id: "_del", label: "Delete", type: "act", k: "del" });   // (two columns of their own, each dragged on its own)
-    const base = [{ id: "_id", label: "ID", type: "id" }].concat(t && t.table !== false ? [t] : [], rest);
+    const base = [{ id: "_id", label: "ID", type: "id" }].concat(t ? [t] : [], rest);
     /* once any column has been dragged, the whole order is kept (each person's own, on their computer: moving columns
        never changes anyone else's list); columns added since keep their place in the default order */
     let ord = lsGet("adColOrder", null); if (!Array.isArray(ord) || !ord.length) return base;
@@ -139,8 +139,8 @@ const Table = (() => {
     const lv = c => lp(c) === " lp1" ? 1 : lp(c) === " lp2" ? 2 : 3, need = n => all.filter(c => lv(c) > n).reduce((t, c) => t + least(c), 0);
     const w = el.clientWidth || 9999, level = need(0) <= w ? 0 : need(1) <= w ? 1 : 2, cs = all.filter(c => lv(c) > level); lastLv = level; levelOf = w2 => need(0) <= w2 ? 0 : need(1) <= w2 ? 1 : 2;
     if (!ro && window.ResizeObserver){ ro = new ResizeObserver(() => { if (App.view === "tiles" || !el.isConnected || !$(".tbl", el)) return; if (levelOf(el.clientWidth) !== lastLv) App.render(); else { cut(el); if (lastCs) autoFit(el, lastCs); } }); ro.observe(el); }   // (a side panel opening or closing re-fits the widths)
-    /* the spare width at the end goes to the + Add column strip, so every column stays as wide as it was set */
-    const ADD = App.isAdmin() ? (ws._add || 140) : 24, fixW = cs.filter(fix).reduce((t, c) => t + fw(c), 0) + ADD, flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
+    /* (no + Add column: the columns are picked in Data validation, Columns, In the table) */
+    const ADD = 0, fixW = cs.filter(fix).reduce((t, c) => t + fw(c), 0) + ADD, flex = cs.filter(c => !fix(c)), ftot = flex.reduce((t, c) => t + px(c), 0) || 1;
     /* (a text column never goes below a readable width: with many columns the list scrolls sideways instead of squeezing a title to one letter per line) */
     const tight = cs.reduce((t, c) => t + least(c), 0) + ADD >= w;   // (no room to share: each text column takes its least width, and the list scrolls sideways)
     /* (Notes, and any long text column, has no set width: it takes whatever room is left, so widening the list widens Notes, never + Add column) */
@@ -240,10 +240,10 @@ const Table = (() => {
   document.addEventListener("click", e => { const td = e.target.closest("td[data-eta]"); if (!td || e.target.closest(".ck,input,label")) return; e.stopPropagation(); clearTimeout(etaT); const open = $(".etapop.pin"); if (open && open.__td === td){ open.remove(); return; } etaCard(td, true); const p = $(".etapop.pin"); if (p) p.__td = td; }, true);
   document.addEventListener("mouseover", e => { const td = e.target.closest("td[data-eta]"); if (!td || td.__on || $(".etapop.pin")) return; td.__on = true; clearTimeout(etaT); etaT = setTimeout(() => etaCard(td), pref("etaHover"));
     td.addEventListener("mouseleave", () => { td.__on = false; clearTimeout(etaT); etaT = setTimeout(() => { const p = $(".etapop"); if (p && !p.matches(":hover") && !p.classList.contains("pin")) p.remove(); }, 250); }, { once: true }); });
-  /* a column heading's ▾: sort it either way, fit it to its contents, or take it out of the list (+ Add column brings it back) */
+  /* a column heading's ▾: sort it either way, or fit it to its contents */
   function colMenu(anchor, id, fit){ Fields.closePop(); const f = Store.field(id), keep = id[0] === "_" || id === "title";
     const p = h('<div class="pop colm"><button type="button" data-m="asc">Sort A to Z</button><button type="button" data-m="desc">Sort Z to A</button>' + (App.sort && App.sort.id === id ? '<button type="button" data-m="off">Clear the sort</button>' : "")
-      + '<button type="button" data-m="fit">Fit to its contents</button>' + (keep || !f || !App.isAdmin() ? "" : '<div class="msep"></div><button type="button" data-m="rm" class="bad">Remove this column</button>') + '</div>');
+      + '<button type="button" data-m="fit">Fit to its contents</button></div>');   /* (which columns show is picked in Data validation, Columns) */
     document.body.appendChild(p); const rc = anchor.getBoundingClientRect(); p.style.top = rc.bottom + 4 + "px"; p.style.left = Math.max(8, Math.min(rc.right - 200, innerWidth - 208)) + "px";
     $$("[data-m]", p).forEach(b => b.onclick = () => { const m = b.dataset.m; Fields.closePop();
       if (m === "asc" || m === "desc"){ App.sort = { id, dir: m === "asc" ? 1 : -1 }; App.render(); } else if (m === "off"){ App.sort = null; App.render(); } else if (m === "fit") fit();

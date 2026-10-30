@@ -45,12 +45,9 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     /* the PDF export dialog counts the actions in each stage (and so finds something to export) */
     const pc = await p.evaluate(async () => { Print.dialog("pdf"); await new Promise(r => setTimeout(r, 300)); const n = [...document.querySelectorAll(".pr-st .tp-o .dim")].reduce((t, x) => t + (+x.textContent || 0), 0); document.querySelectorAll(".yn-no").forEach(b => b.click()); return n; });
     check("the PDF export dialog counts the actions in each stage", pc > 0, pc);
-    /* On Hold and Delete sit just left of + Add column, and a column dropped past + Add column stays left of it */
-    const hk = await p.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 400)), o = () => [...document.querySelectorAll(".tbl thead th")].map(th => th.dataset.c || (th.classList.contains("addcol") ? "ADD" : "")).filter(Boolean);
-      const first = o().slice(-3).join(","); localStorage.setItem("adColOrder", JSON.stringify(o().filter(x => x !== "ADD").filter(x => x !== "_hold").concat(["ADD", "_hold"]))); App.render(); await w(); const after = o(); localStorage.removeItem("adColOrder"); App.render(); await w();
-      const add = document.querySelector(".tbl th.addcol").getBoundingClientRect(), under = [...document.querySelectorAll('.tbl th[data-c="_hold"], .tbl th[data-c="_del"]')].some(th => th.getBoundingClientRect().right > add.left + 1);
-      return first + " | " + after.slice(-2).join(",") + " | " + under; });
-    check("On Hold and Delete sit just left of + Add column and never behind it", hk === "_hold,_del,ADD | _hold,ADD | false", hk);
+    /* On Hold and Delete are the last columns, and there's no + Add column (columns are picked in Data validation) */
+    const hk = await p.evaluate(() => { const o = [...document.querySelectorAll(".tbl thead th")].map(th => th.dataset.c || (th.classList.contains("addcol") ? "ADD" : "")).filter(Boolean); return o.slice(-2).join(",") + " | " + o.includes("ADD"); });
+    check("On Hold and Delete are the last columns, with no + Add column", hk === "_hold,_del | false", hk);
     /* ticks lead: picking a category and ticking PCCR move the card on */
     const at = () => p.evaluate(() => { const a = Store.all().find(x => x.no === 1); return Store.actId(a) + " " + Store.todo(Store.stage(a.stage)); });
     await p.evaluate(() => { const a = Store.all().find(x => x.no === 1); Fields.set(a, Store.field("category"), "Maintenance"); }); const s1 = await at();
@@ -115,12 +112,12 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
       return same + " " + (s1 === f1.stage) + " " + (s2 !== f1.stage); });
     check("the steps follow the tick columns, and not needed skips one", wf === "true true true", wf);
     /* admin only */
-    check("someone else can't add columns", (await p.$$(".addc")).length === 0 && !(await p.evaluate(() => App.isAdmin())));
+    check("someone else isn't the admin, and there's no + Add column", (await p.$$(".addc")).length === 0 && !(await p.evaluate(() => App.isAdmin())));
     await p.click(".mb-btn >> text=ile"); await p.click(".mi >> text=Parameters"); await p.waitForTimeout(200);
     check("someone else can't change a team rule", await p.$eval('[data-p="poTick"]', x => x.disabled) && !(await p.$eval('[data-p="etaSoon"]', x => x.disabled)), "team rules locked, own settings open");
     await p.keyboard.press("Escape");
     check("no errors on the page", !errs.length, errs.join(" | "));
-    const a = await open(ADMIN); check("the admin can add columns", (await a.p.$$(".addc")).length === 1 && await a.p.evaluate(() => App.isAdmin()));
+    const a = await open(ADMIN); check("the admin is the admin, and there's no + Add column (columns are picked in Data validation)", (await a.p.$$(".addc")).length === 0 && await a.p.evaluate(() => App.isAdmin()));
     /* the Handover step: added once (the admin is asked), then ticking Handover marks the other steps not needed and closes the
        action, ticking it off brings them back; a Commissioning job gets Handover not needed */
     await a.p.evaluate(() => { Flow.handoverSetup(); }); await a.p.waitForSelector(".fw-win .yn-yes"); await a.p.click(".fw-win .yn-yes"); await a.p.waitForTimeout(500);

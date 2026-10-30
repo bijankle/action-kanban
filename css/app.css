@@ -1719,3 +1719,7 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .dw-tbl td.dw-ic a,.dw-tbl td.dw-ic button{display:inline-grid;place-items:center;height:var(--row);width:100%;padding:0;border:0;background:none;cursor:pointer}
 .dw-tbl td.dw-ic svg{height:18px;width:auto;max-width:26px}
 .dw-tbl tr.is-sr td:not(.is-pk){color:var(--dim)}
+/* every table has its outside edge too, not only the lines between the cells */
+.tbl{border:1px solid var(--line);box-sizing:border-box}
+/* room on the right of the Actions list and the MTO for the ✓ and ✕ of a row being made (they sit just outside the table) */
+.tbl-wrap{padding-right:54px;box-sizing:border-box}

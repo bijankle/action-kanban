@@ -2,22 +2,20 @@
    the Organizer stages, the equipment and vendor lists, and the contacts (people, their companies and what they have outstanding). */
 "use strict";
 const Valid = (() => {
-  const TABS = [["contacts", "Contacts"], ["vendors", "Suppliers"], ["equip", "Assets"], ["other", "Other"]], OTHER = ["fields", "stages"];
+  const TABS = [["contacts", "Contacts"], ["vendors", "Suppliers"], ["equip", "Assets"], ["fields", "Columns"], ["stages", "Status"]];
   let sec = lsGet("adTab", "") === "contacts" ? "contacts" : ["fields", "stages", "equip", "vendors", "contacts"].includes(lsGet("adDvSec", "")) ? lsGet("adDvSec", "") : "contacts", cur = "title";
   function render(el){ const ro = !Store.S.edit;
     const ae = document.activeElement, row = ae && el.contains(ae) && ae.closest("[data-id], .ct-new, .dv-ed"), keep = row ? { id: row.dataset.id || (row.classList.contains("ct-new") ? "_new" : "_ed"), i: $$("input,select", row).indexOf(ae), s: ae.selectionStart, v: ae.value } : null;
-    /* the sections are tabs in the strip over the page: Contacts, Suppliers, Assets, and Other (the Actions tab's columns and its status stages) */
-    const top = OTHER.includes(sec) ? "other" : sec, dt = $("#dvT");
+    /* the sections are tabs in the strip over the page: Contacts, Suppliers, Assets, Columns (the Actions list's columns) and Status (its stages) */
+    const top = sec, dt = $("#dvT");
     if (dt){ dt.innerHTML = TABS.map(([k, n]) => '<button type="button" class="tab' + (k === top ? " on" : "") + '" data-s="' + k + '" role="tab" aria-selected="' + (k === top) + '">' + n + '</button>').join("");
-      $$("button", dt).forEach(b => b.onclick = () => { const k = b.dataset.s; open(k === "other" ? (OTHER.includes(lsGet("adDvOther", "")) ? lsGet("adDvOther", "") : "fields") : k); App.render(); }); }
+      $$("button", dt).forEach(b => b.onclick = () => { open(b.dataset.s); App.render(); }); }
     el.innerHTML = '<div class="dv"><div class="dv-body' + (ro ? " ro" : "") + '"></div></div>';
     const body = $(".dv-body", el);     /* the fields and the stages are the admin's to change; anyone editing can keep the equipment and vendor lists */
     const lock = ro || ((sec === "fields" || sec === "stages") && !App.isAdmin());
-    if (top === "other"){ body.insertAdjacentHTML("beforebegin", '<div class="av-sub dv-sub" role="tablist">' + [["fields", "Columns"], ["stages", "Status"]].map(([k, n]) => '<button type="button" data-o="' + k + '"' + (k === sec ? ' class="on"' : "") + '>' + n + '</button>').join("") + '</div>');
-      $$(".dv-sub button", el).forEach(b => b.onclick = () => { open(b.dataset.o); App.render(); }); }
     if (sec === "contacts") return Contacts.render(body);   // (the contacts keep their own rules: anyone editing can change them)
     ({ fields, stages, equip: Assets.page, vendors: Vendors.page })[sec](body, lock);
-    if (lock){ $$("input,select,button:not(.dv-f)", body).forEach(x => x.disabled = true); if (!ro) body.insertAdjacentHTML("afterbegin", '<p class="dim dv-lock">Only the admin changes the fields and stages.</p>'); }
+    if (lock){ $$('input:not([data-k="table"]),select,button:not(.dv-f)', body).forEach(x => x.disabled = true); if (ro) $$('[data-k="table"]', body).forEach(x => x.disabled = true); }   /* (anyone can pick which columns they see: In the table is their own view; the rest is the admin's) */
     if (keep){ const r = keep.id === "_new" ? $(".ct-new", el) : keep.id === "_ed" ? $(".dv-ed", el) : $('[data-id="' + keep.id + '"]', el), t = r && $$("input,select", r)[keep.i];
       if (t){ if (t.tagName === "INPUT" && t.type !== "checkbox" && t.type !== "color" && t.value !== keep.v) t.value = keep.v; t.focus(); try { t.setSelectionRange(keep.s, keep.s); } catch (e) {} } } }
   const tname = x => x.type === "stage" ? "Stage" : x.type === "rank" ? "Organizer order" : x.type === "mto" ? "MTO count" : x.type === "sparelist" ? "Spares count" : x.type === "isollist" ? "Isolations count" : x.type === "meta" ? "Date, automatic" : x.type === "complete" ? "Tick box, moves the card" : TYPES[x.type] || x.type;
@@ -45,7 +43,7 @@ const Valid = (() => {
         Store.mutate("config", () => { const A = arr(); const i = A.findIndex(x => x.id === from), b0 = A.findIndex(x => x.id === r.dataset.id), m = A.splice(i, 1)[0]; A.splice(A.findIndex(x => x.id === r.dataset.id) + (i < b0 ? 1 : 0), 0, m); if (A === Store.S.config.stages) Store.alignFields(); Store.touch(m); Store.S.config.mod = now(); }); }; }); }
 
   function fields(body){ const all = Store.fields(), hits = pf("fields", all.filter(f => hit(...SRCH.fields(f)))), fs = hits.length ? hits : all; if (!Store.field(cur)) cur = fs[0].id; const f = Store.field(cur);
-    body.innerHTML = '<div class="dv-h">Fields</div><div class="dv-cols"><div class="dv-list">' + fs.map(x => '<button type="button" class="dv-f' + (x.id === cur ? " on" : "") + '" data-id="' + x.id + '"><span>' + esc(x.label) + '</span><small>' + esc(tname(x)) + '</small></button>').join("")
+    body.innerHTML = '<div class="dv-h">Columns' + tipI(App.isAdmin() ? "Renaming one renames it everywhere: the list's heading, the filters, the exports. In the table sets the columns everyone sees; each person can still tick their own." : "In the table picks which columns you see in the Actions list (only for you). The admin changes the rest.") + '</div><div class="dv-cols"><div class="dv-list">' + fs.map(x => '<button type="button" class="dv-f' + (x.id === cur ? " on" : "") + '" data-id="' + x.id + '"><span>' + esc(x.label) + '</span><small>' + esc(tname(x)) + '</small></button>').join("")
       + '<button type="button" class="btn ghost sm dv-addf">+ Add field</button></div><div class="dv-ed"></div></div>';
     $$(".dv-f", body).forEach(b => b.onclick = () => { cur = b.dataset.id; fields(body); });
     sortable($(".dv-list", body), () => Store.S.config.fields, ".dv-f");
@@ -56,7 +54,7 @@ const Valid = (() => {
       /* (a column the app fills in itself: its type, with what it does in the (i), so no row grows taller) */
       + (special ? '<div class="fl fl-v">Type of data<span class="fv">' + esc(tname(f)) + tipI((f.type === "meta" ? "Filled in automatically: " + ({ created: "when the action was made", modified: "every time it's changed", completed: "when it moves into a Completed stage (cleared if it moves out again)" })[f.id] + "." : f.type === "complete" ? "Ticking it moves the action to the Completed stage and records the date completed. Unticking moves it back to the stage it came from." : f.type === "mto" || f.type === "sparelist" || f.type === "isollist" ? "Shows how many " + (f.type === "isollist" ? "isolations" : "items") + " the action has on its " + ({ mto: "MTO", sparelist: "Spares", isollist: "Isolations" })[f.type] + " tab, as a link that opens it there." : f.type === "stage" ? "The status is the Organizer stage. Edit the stages on the Stages page or straight on the Organizer board." : "Priority is the order of the cards in each Organizer column. Drag a card up for higher priority, or pick a number in the table.")) + '</span></div>'
         : '<label class="fl">Type of data<select class="in" data-k="type"' + (f.core ? " disabled" : "") + '>' + Object.entries(TYPES).map(([k, n]) => '<option value="' + k + '"' + (k === f.type ? " selected" : "") + '>' + n + '</option>').join("") + '</select></label>')
-      + '<label class="fl fl-ck">In the table<input type="checkbox" data-k="table"' + (f.table ? " checked" : "") + (f.id === "title" ? " disabled" : "") + ' title="Show as a column in the Actions list"></label>'
+      + '<label class="fl fl-ck">In the table<input type="checkbox" data-k="table"' + (Store.shown(f) ? " checked" : "") + (f.id === "title" ? " disabled" : "") + ' title="Show as a column in the Actions list"></label>'
       + (["choice", "date", "contact", "text", "multi"].includes(f.type) && !f.core ? '<label class="fl fl-ck">Offer TBC<input type="checkbox" data-k="tbc"' + (f.tbc ? " checked" : "") + '></label><label class="fl fl-ck">Offer N/A<input type="checkbox" data-k="na"' + (f.na ? " checked" : "") + '></label>' : "")
       + (f.type === "text" && !f.core ? '<label class="fl fl-ck">Suggest<input type="checkbox" data-k="suggest"' + (f.suggest ? " checked" : "") + ' title="Suggest values used before"></label>' : "")
       + (f.type === "phone" ? '<label class="fl">Filled in from<select class="in" data-k="link"><option value="">Nothing</option>' + Store.fields().filter(x => x.type === "contact").map(x => '<option value="' + x.id + '"' + (x.id === f.link ? " selected" : "") + '>' + esc(x.label) + '</option>').join("") + '</select></label>' : "")
@@ -66,6 +64,9 @@ const Valid = (() => {
     $$("[data-k]", ed).forEach(i => { const k = i.dataset.k;
       if (k === "label") i.onchange = () => i.value.trim() && up(f, () => f.label = i.value.trim());
       else if (k === "type") i.onchange = () => up(f, () => { f.type = i.value; if ((f.type === "choice" || f.type === "multi") && !f.options) f.options = []; });
+      else if (k === "table") i.onchange = () => { const m = lsGet("adCols", {}) || {};
+        if (App.isAdmin()){ delete m[f.id]; lsSet("adCols", m); up(f, () => { f.table = i.checked; Store.S.config.mod = now(); }); }   /* (the admin: what everyone sees) */
+        else { m[f.id] = i.checked; lsSet("adCols", m); App.render(); } }   /* (anyone else: only their own view) */
       else if (k === "link") i.onchange = () => up(f, () => f.link = i.value);
       else if (k === "newopt") i.onkeydown = e => { if (e.key === "Enter" && i.value.trim()){ const v = i.value.trim(); if ((f.options || []).some(o => !o.del && o.label.toLowerCase() === v.toLowerCase())) return note("That value is already there");
         up(f, () => { f.options = f.options || []; f.options.push({ id: uid(), label: v, color: "" }); }); setTimeout(() => { const n = $("[data-k=newopt]"); n && n.focus(); }, 30); } };
@@ -98,6 +99,6 @@ const Valid = (() => {
 
   const hit = (...xs) => smartHit(xs.join(" "), App.q);
   const section = () => sec;
-  const open = k => { sec = k; lsSet("adDvSec", k); if (OTHER.includes(k)) lsSet("adDvOther", k); };
+  const open = k => { sec = k; lsSet("adDvSec", k); };
   return { section, open, render, filters, fcount, place, pf };
 })();

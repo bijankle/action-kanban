@@ -101,6 +101,8 @@ const Store = (() => {
     const pre = snap(); const r = fn(); pids.forEach(pid => logChanges(pid, was[pid])); S.undo.push({ pre, post: snap() }); if (S.undo.length > 150) S.undo.shift(); S.redo = [];
     [].concat(keys).forEach(k => S.dirty.add(k)); stash(); saveSoon(); App.render(); return r === undefined ? true : r; }
   const me = () => (Profile.get().email || "").toLowerCase();
+  /* which columns show on the Actions list: the admin's In the table tick for everyone, or this person's own tick (their view only) */
+  const shown = f => { const m = lsGet("adCols", {}) || {}; return f.id in m ? !!m[f.id] : !!f.table; };
   const touch = o => { o.mod = now(); o.by = Profile.name() || "Someone"; if (me()) o.byE = me(); else delete o.byE; return o; };
   const mine = o => o && (o.byE ? o.byE === me() : o.by === Profile.name());
   /* everyone who has signed in (data/users.json): name, role, mobile and email, so edits and warnings can name people */
@@ -319,5 +321,5 @@ const Store = (() => {
 
   return { S, copyInfo, clearCopy, enter, stages, alignFields, fields, field, stage, todo, contacts, projects, project, selected, setSelected, actsOf, all, visible, deleted, find, findRef, actId, ranked, priority,
     idLetters,
-    stashNow: () => stash.flush ? stash.flush() : stash(), vendors: () => S.vendors, owner, people, fullName, addPerson, procurement, sparesAvail, eta, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
+    stashNow: () => stash.flush ? stash.flush() : stash(), vendors: () => S.vendors, shown, owner, people, fullName, addPerson, procurement, sparesAvail, eta, matches, mutate, touch, mine, users, user, saveUser, undo, redo, newAction, place, renameOption, save, saveSoon, load, refresh, addBlob, log, live, mergeActs, mergeConfig };
 })();
