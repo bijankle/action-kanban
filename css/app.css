@@ -1745,3 +1745,6 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .pr-sec{display:grid;grid-template-columns:1fr 1fr;column-gap:14px}
 /* a sideways heading's sort arrow: a slot kept beside the word, so the word never moves when the arrow comes or turns */
 .tbl th .th-sa,.tbl th .tk-s{display:inline-block;width:1.1em;text-align:center;font-size:.8em;color:var(--muted)}
+/* the Actions list sits in the standard margin: the same 10px as the bar above it, so the table's left edge lines up with the
+   Filters button and its top isn't jammed under the bar */
+#view[data-tab="actions"] .tbl-wrap{padding:10px;box-sizing:border-box}
