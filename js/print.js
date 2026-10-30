@@ -9,10 +9,12 @@ const Print = (() => {
      on the date created, last modified or completed (blank is all time). The search and the other Filters panel pills
      still apply. Done and Deleted are unticked to start with; the choice is remembered per export. */
   const DATES = [["created", "Date created"], ["mod", "Last modified"], ["doneAt", "Date completed"]];
+  /* an action's line in the export's Include list: its Organizer stage, or Deleted (not the Status filter's Open / On Hold groups) */
+  const stOf = a => a.del ? "_del" : a.stage;
   function pickHtml(key){ const pick = lsGet(key, null), base = Store.visible().concat(Store.deleted()).filter(a => Filters.match(a, "st"));
     const sts = Store.stages().map(s => ({ id: s.id, name: s.name, c: s.color, def: s.kind !== "done" })).concat({ id: "_del", name: "Deleted", c: "#9aa3ad", def: false });
     const on = s => pick && pick.st && s.id in pick.st ? pick.st[s.id] : s.def, d = (pick && pick.d) || {};
-    return '<div class="lbl">Include</div><div class="pr-st">' + sts.map(s => '<label class="tp-o"><input type="checkbox" data-s="' + s.id + '"' + (on(s) ? " checked" : "") + '><span class="stg" style="--c:' + esc(s.c) + '">' + esc(s.name) + '</span><span class="dim">' + base.filter(a => Filters.val(a, "st") === s.id).length + '</span></label>').join("") + '</div>'
+    return '<div class="lbl">Include</div><div class="pr-st">' + sts.map(s => '<label class="tp-o"><input type="checkbox" data-s="' + s.id + '"' + (on(s) ? " checked" : "") + '><span class="stg" style="--c:' + esc(s.c) + '">' + esc(s.name) + '</span><span class="dim">' + base.filter(a => stOf(a) === s.id).length + '</span></label>').join("") + '</div>'
       + '<div class="msep"></div><div class="lbl">Dates <span class="dim">blank is all time</span></div><div class="pr-dt"><select class="in sm" data-d="by">' + DATES.map(([k, n]) => '<option value="' + k + '"' + (d.by === k ? " selected" : "") + '>' + n + '</option>').join("") + '</select>'
       + '<input type="hidden" data-d="from" value="' + esc(d.from || "") + '"><input type="hidden" data-d="to" value="' + esc(d.to || "") + '"><i class="pr-rg"></i></div>' + (setTimeout(() => $$(".pr-rg").forEach(x => rangeIn(x.closest(".yn-win"))), 0), ""); }
   /* the dialog's date range: one box (it fills the two hidden values the export reads) */
@@ -21,7 +23,7 @@ const Print = (() => {
     const from = d.from ? new Date(d.from + "T00:00:00").getTime() : -Infinity, to = d.to ? new Date(d.to + "T23:59:59").getTime() : Infinity;
     const inRange = a => { if (!d.from && !d.to) return true; const t = a[d.by] || (d.by === "created" ? a.mod : null); if (!t) return false; const x = typeof t === "number" ? t : new Date(t).getTime(); return x >= from && x <= to; };
     const ord = new Map(Store.stages().map((s, i) => [s.id, i]));
-    return Store.visible().concat(Store.deleted()).filter(a => st[Filters.val(a, "st")] && Filters.match(a, "st") && inRange(a))
+    return Store.visible().concat(Store.deleted()).filter(a => st[stOf(a)] && Filters.match(a, "st") && inRange(a))
       .sort((x, y) => (x.del - y.del) || (ord.get(x.stage) - ord.get(y.stage)) || (x.rank || 0) - (y.rank || 0) || x.no - y.no); }
   /* (kind "word": the same choices, made into a Word file instead of printed) */
   function dialog(kind){ const pf = prefs(), word = kind === "word";
