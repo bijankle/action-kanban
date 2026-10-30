@@ -1723,3 +1723,11 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .tbl{border:1px solid var(--line);box-sizing:border-box}
 /* room on the right of the Actions list and the MTO for the ✓ and ✕ of a row being made (they sit just outside the table) */
 .tbl-wrap{padding-right:54px;box-sizing:border-box}
+/* the MTO row being made: ✓ (put it under its heading) and ✕ (clear it) just outside the table, beside the row */
+.mt-wrap{padding-right:58px!important}
+.mt-tbl td.mt-icd{position:relative;overflow:visible!important}
+.mt-okx{position:absolute;left:calc(100% + 6px);top:50%;transform:translateY(-50%);display:flex;gap:4px}
+.mt-okx button{width:var(--row);height:var(--row);border:1px solid var(--line2);border-radius:0;background:var(--panel);cursor:pointer;font-weight:700;display:grid;place-items:center;padding:0;line-height:1}
+.mt-okx .mt-ok{color:#1f8a58;border-color:color-mix(in srgb,#1f8a58 55%,var(--panel));background:color-mix(in srgb,#1f8a58 12%,var(--panel))}.mt-okx .mt-ok:hover{background:color-mix(in srgb,#1f8a58 22%,var(--panel))}
+.mt-okx .mt-cx{color:var(--dim)}.mt-okx .mt-cx:hover{color:#c0392b}
+.mt-okx button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
