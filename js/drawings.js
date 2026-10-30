@@ -43,30 +43,36 @@ const Drawings = (() => {
     el.innerHTML = '<div class="dw"><div class="dw-p">' + pill("eq", "all", "All equipment", total.size, s.eq === "all") + tags.map(t => pill("eq", t, t, m.get(t).length, s.eq === t)).join("") + '</div>'
       + '<div class="dw-p dw-p2">' + pill("kind", "all", "All kinds", new Set(rows.map(([, d]) => d.n)).size, s.kind === "all") + kinds.map(k => pill("kind", k, k, new Set(rows.filter(([, d]) => d.kind === k).map(([, d]) => d.n)).size, s.kind === k)).join("") + '</div>'
       + (fails.get(ref) ? '<div class="dw-f"><div class="dw-fh"><b>' + fails.get(ref).length + ' of the ticked didn\'t download</b><button type="button" class="ic-b sm" data-k="fx" title="Dismiss">✕</button></div>' + fails.get(ref).map(f => '<div>' + (f.d.url ? '<a href="' + esc(f.d.url) + '" target="_blank" rel="noopener">' + esc(f.d.n) + '</a>' : esc(f.d.n)) + ': ' + esc(f.why) + '</div>').join("") + '</div>' : "")
-      + '<div class="dw-s">' + (list.length && Store.S.edit ? '<label class="dw-ck dw-all" title="' + (anyOn ? "Untick all" : "Tick all") + '"><input type="checkbox" data-k="all"' + (anyOn ? " checked" : "") + ' aria-label="' + (anyOn ? "Untick all" : "Tick all") + '"></label>' : "")
-        + ((a.dwgPick || []).length ? '<button type="button" class="btn sm" data-k="dl">Download ticked (' + a.dwgPick.filter(n => (all.get(n) || {}).pdf).length + ')</button>' : "") + '' + tipI("Ticked items go into the workpack PDF, after the action.") + '</div>'
-      + (list.length ? '<div class="dw-l">' + list.map(([t, d]) => bar(t, d, a)).join("") + '</div>' : '<p class="dim">No drawings or documents found' + (s.eq !== "all" ? " for " + esc(s.eq) : "") + '.</p>')
+      + ((a.dwgPick || []).length ? '<div class="dw-s"><button type="button" class="btn sm" data-k="dl">Download ticked (' + a.dwgPick.filter(n => (all.get(n) || {}).pdf).length + ')</button>' + tipI("Ticked documents go into the work pack's References table, each linked to its PDF copy.") + '</div>' : "")
+      + (list.length ? table(list, a, anyOn) : '<p class="dim">No drawings or documents found' + (s.eq !== "all" ? " for " + esc(s.eq) : "") + '.</p>')
       + '</div>';
     $$("[data-eq]", el).forEach(b => b.onclick = () => { s.eq = b.dataset.eq; draw(el, a); });
     $$("[data-kind]", el).forEach(b => b.onclick = () => { s.kind = b.dataset.kind; draw(el, a); });
     const pick = (n, on) => Store.mutate("a:" + a._p, () => { const set = new Set(a.dwgPick || []); on ? set.add(n) : set.delete(n); a.dwgPick = [...set]; Store.touch(a); });
-    $$(".dw-ck input", el).forEach(c => c.onchange = () => pick(c.dataset.n, c.checked));
+    $$(".dw-b .is-ck input", el).forEach(c => c.onchange = () => pick(c.dataset.n, c.checked));
     const dl = $("[data-k=dl]", el); if (dl) dl.onclick = () => download(el, a, all, dl);
     const fx = $("[data-k=fx]", el); if (fx) fx.onclick = () => { fails.delete(ref); draw(el, a); };
     /* the box above the ticks: clears the ones shown if any are ticked (ticks hidden by the filter stay), else ticks every one shown */
     const ta = $("[data-k=all]", el); if (ta) ta.onchange = () => Store.mutate("a:" + a._p, () => { a.dwgPick = anyOn ? (a.dwgPick || []).filter(n => !list.some(([, d]) => d.n === n)) : [...new Set((a.dwgPick || []).concat(list.map(([, d]) => d.n)))]; Store.touch(a); });
-    moreFit(el);
     $$(".dw-b", el).forEach(r => { const k = r.dataset.key, [t, d] = list.find(([t, d]) => key(t, d) === k) || [];
-      $(".dw-i", r).onclick = e => { e.stopPropagation(); info(e.currentTarget, t, d); }; }); }
+      $(".dw-i", r).onclick = e => { e.stopPropagation(); info(e.currentTarget, t, d); }; });
+    const tb = $(".dw-tbl", el); if (tb) gridCols(tb, "dwg", { fixed: { c0: 52, "No.": 30, "(i)": 24, "PDF": 30, "Share": 30 } }); }
+  /* one table, as Isolations: the ticked documents on top (numbered: they go into the work pack), then the rest as suggestions
+     from the plant lists (a bulb), ticking one moves it up. Columns: Doc number, Title, Asset, (i), the PDF copy to download, SharePoint */
+  const PAGE = '<svg class="is-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M9.5 12h6M9.5 15.5h6"/></svg>';
+  const BULB = '<svg class="is-ic is-bulb" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M8.5 14.5a6 6 0 117 0c-.8.6-1.5 1.5-1.5 2.5h-4c0-1-.7-1.9-1.5-2.5z"/></svg>';
+  function table(list, a, anyOn){ const ro = !Store.S.edit, pk = new Set(a.dwgPick || []), on = list.filter(([, d]) => pk.has(d.n)), off = list.filter(([, d]) => !pk.has(d.n));
+    const head = '<thead><tr><th class="is-pk" data-col="c0">' + (ro ? "" : '<label class="ck is-ck" title="' + (anyOn ? "Untick all shown" : "Tick all shown") + '"><input type="checkbox" data-k="all"' + (anyOn ? " checked" : "") + ' aria-label="' + (anyOn ? "Untick all shown" : "Tick all shown") + '"></label>') + '</th><th class="pt-no" data-col="No.">#</th><th>Doc number</th><th>Title</th><th>Asset</th><th data-col="(i)"></th><th data-col="PDF" title="Download the PDF copy"></th><th data-col="Share" title="Open the controlled copy in SharePoint"></th></tr></thead>';
+    return '<table class="tbl pt-tbl is-tbl dw-tbl">' + head + '<tbody>' + on.map(([t, d], i) => bar(t, d, a, i + 1)).join("")
+      + (off.length ? '<tr class="is-sep nosort"><td colspan="8">Suggested from the plant lists' + tipI("The drawings and documents of this action's Tags and their sub equipment. Tick one to put it in the work pack.") + '</td></tr>' + off.map(([t, d]) => bar(t, d, a, 0)).join("") : "") + '</tbody></table>'; }
   /* a document's line: the tick, its number and rev as one link to SharePoint, its title, ⓘ, the sub equipment it's
      for (when not the tag itself), and the download button for the PDF copy */
-  function bar(t, d, a){ const k = key(t, d), e = Equip.get(d.of) || {}, on = (a.dwgPick || []).includes(d.n), nr = esc(d.n + (d.rev ? "_" + d.rev : ""));
-    return '<div class="dw-b' + (on ? " pk" : "") + '" data-key="' + esc(k) + '"><div class="dw-h">'
-      + '<label class="dw-ck" title="Include in the work pack"><input type="checkbox" data-n="' + esc(d.n) + '"' + (on ? " checked" : "") + (Store.S.edit ? "" : " disabled") + ' aria-label="Include ' + esc(d.n) + ' in the work pack"></label>'
-      + (d.url ? '<a class="dw-a" href="' + esc(d.url) + '" target="_blank" rel="noopener" title="View it in SharePoint">' + nr + '</a>' : '<span class="dw-a dw-a0" title="Not in SharePoint">' + nr + '</span>')
-      + '<span class="dw-t">' + moreCut(esc(d.t || ""), d.n + (d.rev ? "_" + d.rev : "")) + '</span><button type="button" class="dw-i" title="Where it comes from: which equipment it\'s for and why it\'s listed" aria-label="Where ' + esc(d.n) + ' comes from">' + INFO_I + '</button>'
-      + (!d.own ? '<span class="dw-of" title="' + esc(e.n || "") + '">' + esc(d.of) + '</span>' : "")
-      + (d.pdf ? '<a class="dw-dl" href="' + esc(d.pdf.split("#")[0]) + '" target="_blank" rel="noopener" download title="Download the PDF copy' + (d.pdfRev ? ", rev " + esc(d.pdfRev) : "") + ' (no SharePoint needed)" aria-label="Download the PDF copy of ' + esc(d.n) + '">' + DLI + '</a>' : '<span class="dw-dl0"></span>') + '</div></div>'; }
+  function bar(t, d, a, no){ const k = key(t, d), e = Equip.get(d.of) || {}, on = !!no, nr = esc(d.n + (d.rev ? "_" + d.rev : ""));
+    return '<tr class="dw-b' + (on ? " pk" : " is-sr") + '" data-key="' + esc(k) + '"><td class="is-pk"><label class="ck is-ck" title="' + (on ? "In the work pack. Untick to take it out" : "Suggested. Tick to put it in the work pack") + '"><input type="checkbox" data-n="' + esc(d.n) + '"' + (on ? " checked" : "") + (Store.S.edit ? "" : " disabled") + ' aria-label="Include ' + esc(d.n) + ' in the work pack"></label>' + (on ? PAGE : BULB) + '</td>'
+      + '<td class="pt-no">' + (no || "") + '</td><td>' + nr + '</td><td>' + esc(d.t || "") + '</td><td title="' + esc(e.n || "") + '">' + esc(d.of || t) + '</td>'
+      + '<td class="dw-ic"><button type="button" class="dw-i" title="Where it comes from: which equipment it\'s for and why it\'s listed" aria-label="Where ' + esc(d.n) + ' comes from">' + INFO_I + '</button></td>'
+      + '<td class="dw-ic">' + (d.pdf ? '<a class="dw-dl" href="' + esc(d.pdf.split("#")[0]) + '" target="_blank" rel="noopener" download title="Download the PDF copy' + (d.pdfRev ? ", rev " + esc(d.pdfRev) : "") + ' (no SharePoint needed)" aria-label="Download the PDF copy of ' + esc(d.n) + '">' + fileIco("PDF") + '</a>' : "") + '</td>'
+      + '<td class="dw-ic">' + (d.url ? '<a class="dw-sp" href="' + esc(d.url) + '" target="_blank" rel="noopener" title="Open the controlled copy in SharePoint" aria-label="Open ' + esc(d.n) + ' in SharePoint">' + DLI + '</a>' : "") + '</td></tr>'; }
   /* the download button's symbol: a cloud with an arrow, SHARE in SharePoint teal underneath */
   const DLI = '<svg viewBox="0 0 24 26" aria-hidden="true"><path d="M7.2 14.5a3.6 3.6 0 01-.4-7.2 4.8 4.8 0 019.2-1.2 3.4 3.4 0 011.2 6.6 2.3 2.3 0 01-.8.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 9V15.8M9.6 13.4L12 15.8l2.4-2.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><text class="fsp" x="12" y="24.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="6.4" letter-spacing=".1">SHARE</text></svg>';
   /* Download ticked: the ticked documents' PDF copies (number and title as each file's name) in one zip file named

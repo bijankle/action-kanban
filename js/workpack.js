@@ -36,7 +36,7 @@ const Workpack = (() => {
     const all = new Map(); dm.forEach(l => l.forEach(d => { if (!all.has(d.n)) all.set(d.n, d); }));
     /* the parts, in reading order; each one present gets a line in the contents and starts a page */
     const parts = Mto.orderRows(a).map(it => Object.assign({ src: "New" }, it, { qty: Mto.ord(it) })).concat((a.spares || []).map(it => Object.assign({ src: "Site spares" }, it)));
-    const S = [["job", "Job and scope", true], ["isol", "Isolations", (a.isol || []).length], ["sk", "Sketches", (a.sketches || []).length], ["parts", "Parts", parts.length], ["cut", "Cutting list", Mto.hasCuts(a)], ["reg", "Drawings and documents", all.size], ["photos", "Photos (" + a.photos.length + ")", a.photos.length],
+    const S = [["job", "Job and scope", true], ["isol", "Isolations", (a.isol || []).length], ["sk", "Sketches", (a.sketches || []).length], ["parts", "Parts", parts.length], ["cut", "Cutting list", Mto.hasCuts(a)], ["reg", "References", all.size], ["photos", "Photos (" + a.photos.length + ")", a.photos.length],
       ["att", "Attachments", a.files.length]].filter(x => x[2]);
     /* cover: the job, who to contact, the contents */
     doc.setFillColor(...rgb); doc.rect(0, 0, W, 32, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.text("WORK PACK", M, 9);
@@ -121,22 +121,18 @@ const Workpack = (() => {
     for (let i = 1; i <= P; i++){ doc.setPage(i); const pw = doc.internal.pageSize.getWidth(), fy = doc.internal.pageSize.getHeight() - 6; doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(140); doc.text("Job " + Store.actId(a) + " work pack" + (who ? "   Queries: " + (ow.n ? [ow.n, ow.mobile, ow.e] : [Profile.name(), Profile.get().mobile, Profile.get().email]).filter(Boolean).join(", ") : "") + "   Page " + i + " of " + N, pw / 2, fy, { align: "center" });
       if (i > 1){ doc.setTextColor(31, 95, 191); doc.textWithLink("Contents", pw - M, fy, { align: "right", pageNumber: 1 }); } }
     return doc.output("blob"); }
-  /* the register: the ticked drawings, one line per document, under a heading per equipment tag: kind, number (opens SharePoint), title, and
-     a PDF badge linked to the copy */
-  function register(doc, P, tags, dm){ const body = [], meta = new Map();
-    tags.forEach(t => { const ds = dm.get(t) || []; if (!ds.length) return; const e = Equip.get(t) || {}, nm = e.n ? "  " + e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "";
-      body.push([{ content: t + nm + "   (" + ds.length + ")", colSpan: 5, styles: { fontStyle: "bold", fillColor: [234, 237, 241], textColor: 30 } }]);
-      ds.forEach(d => { const r = [d.kind, d.n, (d.t || "") + (d.of !== t ? "  [" + d.of + "]" : ""), d.rev || "", ""]; meta.set(r, d); body.push(r); }); });
-    P.head("Drawings and documents");
-    doc.autoTable({ startY: P.y, head: [["Kind", "Number", "Title", "Rev", "Copy"]], body, margin: { top: 16, left: P.M, right: P.M, bottom: 16 },
+  /* References: the documents ticked on the References tab, one row each: #, doc number, title, asset. The number and the title
+     download the PDF copy (no SharePoint needed); one with no copy opens it in SharePoint */
+  function register(doc, P, tags, dm){ const body = [], meta = new Map(), seen = new Set(); let n = 0;
+    tags.forEach(t => (dm.get(t) || []).forEach(d => { if (seen.has(d.n)) return; seen.add(d.n); const r = [++n, d.n + (d.rev ? "_" + d.rev : ""), d.t || "", d.of || t]; meta.set(r, d); body.push(r); }));
+    P.head("References");
+    doc.autoTable({ startY: P.y, head: [["#", "Doc number", "Title", "Asset"]], body, margin: { top: 16, left: P.M, right: P.M, bottom: 16 },
       styles: { font: "helvetica", fontSize: 7.6, cellPadding: 1.4, lineColor: [217, 222, 229], lineWidth: 0.2, valign: "middle", overflow: "linebreak" },
-      headStyles: { fillColor: P.rgb, textColor: 255, fontStyle: "bold", fontSize: 8.2 }, columnStyles: { 0: { cellWidth: 20, textColor: [90, 100, 112] }, 1: { cellWidth: 42, textColor: [31, 95, 191] }, 3: { cellWidth: 14 }, 4: { cellWidth: 17 } },
-      didDrawCell: c => { if (c.section !== "body") return; const d = meta.get(c.row.raw); if (!d) return; const C = c.cell;
-        if (c.column.index === 1 && d.url) doc.link(C.x, C.y, C.width, C.height, { url: d.url });
-        if (c.column.index === 4 && d.pdf){ const bw = 7, bh = 3.4, bx = C.x + (C.width - bw) / 2, by = C.y + (C.height - bh) / 2; doc.setFillColor(200, 40, 30); doc.roundedRect(bx, by, bw, bh, 0.8, 0.8, "F");
-          doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(5.8); doc.text("PDF", bx + bw / 2, by + bh / 2 + 0.75, { align: "center" }); doc.setFont("helvetica", "normal"); doc.link(C.x, C.y, C.width, C.height, { url: d.pdf }); } } });
+      headStyles: { fillColor: P.rgb, textColor: 255, fontStyle: "bold", fontSize: 8.2 }, columnStyles: { 0: { cellWidth: 8, halign: "center" }, 1: { cellWidth: 48, textColor: [31, 95, 191] }, 2: { textColor: [31, 95, 191] }, 3: { cellWidth: 30 } },
+      didDrawCell: c => { if (c.section !== "body" || (c.column.index !== 1 && c.column.index !== 2)) return; const d = meta.get(c.row.raw), u = d && (d.pdf ? d.pdf.split("#")[0] : d.url); if (!u) return; const C = c.cell;
+        doc.link(C.x, C.y, C.width, C.height, { url: u }); } });
     P.y = doc.lastAutoTable.finalY + 2.5; doc.setFontSize(7.8); doc.setTextColor(110); doc.setFont("helvetica", "italic");
-    doc.splitTextToSize("Numbers open the controlled copy in SharePoint (needs a SharePoint login). The red PDF badge downloads a copy for anyone without SharePoint access. Check each revision against SharePoint before use. Sub equipment's documents are listed with their main equipment, its tag in brackets.", P.CW).forEach(l => { P.need(4); doc.text(l, P.M, P.y + 2); P.y += 3.6; });
+    doc.splitTextToSize("Click a number or title to download its PDF copy (no SharePoint login needed). Check each revision against SharePoint before use.", P.CW).forEach(l => { P.need(4); doc.text(l, P.M, P.y + 2); P.y += 3.6; });
     doc.setFont("helvetica", "normal"); P.y += 4; }
   return { run, build };
 })();
