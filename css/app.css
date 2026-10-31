@@ -1787,3 +1787,22 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .ppv>div{background:var(--panel)}.ppv-h{display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);position:absolute;left:24px;right:24px;top:24px;border-radius:8px 8px 0 0}
 .ppv-b{position:absolute;left:24px;right:24px;top:68px;bottom:24px;overflow:auto;padding:12px;display:flex;flex-direction:column;align-items:center;gap:12px;border-radius:0 0 8px 8px}
 .ppv-b canvas{box-shadow:0 1px 4px rgba(0,0,0,.2);max-width:100%;height:auto}
+/* Piping: the isometric sketch beside the list (piping.js) */
+.pp-sl{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;max-width:100%}
+.iso-w{display:flex;flex-direction:column;gap:6px;min-width:0;max-width:100%}
+.iso-tb{display:flex;gap:2px;flex-wrap:wrap}
+.iso-tl{height:28px;min-width:28px;padding:0 6px;border:1px solid var(--line2);background:var(--panel);border-radius:0;font:600 var(--fb) var(--font);color:var(--ink);cursor:pointer}.iso-tl.on{background:var(--th);color:#fff;border-color:var(--th)}.iso-af{margin-left:6px}
+.iso-sc{border:1px solid var(--line);background:#fff;overflow:auto;max-width:min(760px,100%);max-height:70vh}
+svg.iso{display:block;font:11px var(--font)}
+.iso-dot{fill:#c9d0d8}
+.iso-p{stroke:#1d2430;stroke-width:2.4;stroke-linecap:round}.iso-seg.on .iso-p{stroke:#2a6fdb;stroke-width:3.4}
+.iso-hit{stroke:transparent;stroke-width:14;cursor:pointer}
+.iso-d{stroke:#555;stroke-width:.8}.iso-dt{fill:#222;cursor:text}.iso-dt.need{fill:#c25e00;font-weight:700}
+.iso-s{stroke:#1d2430;stroke-width:1.6;fill:none}.iso-fill{fill:#fff}.iso-dotf{fill:#1d2430}.iso-bar{stroke-width:2.2}
+.iso-n.on .iso-s{stroke:#2a6fdb}.iso-hitn{fill:transparent;cursor:pointer}
+.iso-tg rect{fill:#fff;stroke:#222;stroke-width:.9}.iso-tg text{fill:#222}.iso-tg.on rect{stroke:#2a6fdb;stroke-width:1.6}
+.iso-end{fill:#fff6ea;stroke:#c9820a;stroke-width:1.6;cursor:crosshair}.iso-end.on{fill:#c9820a}
+.iso-ghost{stroke:#2a6fdb;stroke-width:2;stroke-dasharray:5 4}.iso-gt{fill:#2a6fdb;font-weight:700}
+.iso-hint{fill:var(--muted)}
+.pp-tbl tr.sel td{background:#cce4f7!important}
+.pp-lw{min-width:0;max-width:100%;overflow-x:auto}

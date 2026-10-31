@@ -78,7 +78,7 @@ const Piping = (() => {
   /* ---------- drawing the Piping page ---------- */
   function pipingHtml(a, ro){ const p = P(a), B = bom(a), sn = supNo(a), byItem = view.by === "item";
     const bar = '<div class="pp-bar"><span class="pp-spec' + (p.spec ? "" : " need") + '"><span class="dim">Spec</span><button type="button" class="pp-dd" data-pk="spec"' + (ro ? " disabled" : "") + '>' + esc(p.spec || "Pick a spec") + '</button><button type="button" class="pp-si" data-si="1"' + (p.spec ? "" : " disabled") + ' title="' + (p.spec ? "Show " + esc(p.spec) + " in the pipe spec" : "Pick a spec to see its pages") + '" aria-label="Show the spec pages">' + INFO_I + '</button></span>'
-      + '<div class="seg pp-seg"><button type="button" data-v="list"' + (view.pv === "list" ? ' class="on"' : "") + '>List</button><button type="button" data-v="bom"' + (view.pv === "bom" ? ' class="on"' : "") + '>BoM</button></div>'
+      + '<div class="seg pp-seg"><button type="button" data-v="list"' + (view.pv === "list" ? ' class="on"' : "") + '>Sketch and list</button><button type="button" data-v="bom"' + (view.pv === "bom" ? ' class="on"' : "") + '>BoM</button></div>'
       + (view.pv === "list" ? '<div class="seg pp-seg"><button type="button" data-by="line"' + (byItem ? "" : ' class="on"') + '>Line order</button><button type="button" data-by="item"' + (byItem ? ' class="on"' : "") + '>Item numbers</button></div>' : "")
       + (ro || view.pv !== "list" ? "" : '<button type="button" class="btn sm pp-line" title="Start another line, such as a branch off a tee">+ Line</button>') + '</div>';
     if (view.pv === "bom") return bar + '<table class="tbl pt-tbl pp-tbl pp-bom"><thead><tr><th class="pt-no" data-col="No.">#</th><th>Description</th><th>Size</th><th>Qty</th></tr></thead><tbody>'
@@ -99,10 +99,10 @@ const Piping = (() => {
           ks.forEach((k, i) => { const ed = k.rol === "fa" || k.rol === "fb";
             body += '<tr class="pp-k" data-u="' + esc(k.u) + '"><td class="pt-no">' + esc(byItem ? numOf(B, k.u) : id + "." + (i + 1)) + '</td><td>' + esc(k.nm) + '</td><td>' + (k.rol === "fb" ? dd(k.u, "cl", k.cl, k.auto ? " autof" : "") : esc(k.cl || "")) + '</td><td>' + esc(k.cl ? PipeSpec.lab(k.cl, k.dn) : "") + '</td><td></td><td' + (k.auto && !ed ? ' class="autof"' : "") + '>' + (ed ? "1" : (k.rol === "st" || k.rol === "nu") ? box(k.u, "q", k.qty) : esc(String(k.qty))) + '</td>'
               + (ed ? '<td class="pp-ds' + (k.it ? (k.auto ? " autof" : "") : " need") + '">' + dd(k.u, "it", k.it ? lineTxt(k) || k.it : "", " pp-wide") + '</td>' : desc(k)) + '<td></td></tr>'; }); return; }
-        body += '<tr data-u="' + esc(r.u) + '"><td class="pt-no">' + esc(byItem ? numOf(B, r.u) : id) + '</td><td' + (r.it ? "" : ' class="need"') + '>' + dd(r.u, "it", r.it ? (/^[VGB]:/.test(r.it) ? (PipeSpec.items(r.cl, r.dn).find(x => x.v === r.it) || { t: r.it }).t : r.it) : "") + '</td><td>' + dd(r.u, "cl", r.cl) + '</td><td' + (r.dn ? "" : ' class="need"') + '>' + dd(r.u, "dn", r.cl && r.dn ? PipeSpec.lab(r.cl, r.dn) : "") + '</td>'
+        body += '<tr data-u="' + esc(r.u) + '"' + (r.u === sk.sel ? ' class="sel"' : "") + '><td class="pt-no">' + esc(byItem ? numOf(B, r.u) : id) + '</td><td' + (r.it ? "" : ' class="need"') + '>' + dd(r.u, "it", r.it ? (/^[VGB]:/.test(r.it) ? (PipeSpec.items(r.cl, r.dn).find(x => x.v === r.it) || { t: r.it }).t : r.it) : "") + '</td><td>' + dd(r.u, "cl", r.cl) + '</td><td' + (r.dn ? "" : ' class="need"') + '>' + dd(r.u, "dn", r.cl && r.dn ? PipeSpec.lab(r.cl, r.dn) : "") + '</td>'
           + '<td' + (pipe && !r.len ? ' class="need"' : "") + '>' + (pipe ? box(r.u, "len", r.len, "Length, mm") : "") + '</td><td>' + (pipe ? "" : box(r.u, "qty", r.qty, "Qty")) + '</td>' + desc(r) + X(r.u) + '</tr>'; });
       if (!ro) body += '<tr class="pt-blank pp-add"><td class="pt-no"></td><td class="need">' + dd("+" + L.id, "add", "+ Add to line " + L.id) + '</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'; });
-    return bar + '<table class="tbl pt-tbl pp-tbl"><thead><tr><th class="pt-no" data-col="No.">#</th><th>Item</th><th>Spec</th><th>Size</th><th>Length</th><th>Qty</th><th>Description</th><th data-col="x"></th></tr></thead><tbody>' + body + '</tbody></table>'; }
+    return bar + '<div class="pp-sl">' + sketchHtml(a, ro) + '<div class="pp-lw"><table class="tbl pt-tbl pp-tbl"><thead><tr><th class="pt-no" data-col="No.">#</th><th>Item</th><th>Spec</th><th>Size</th><th>Length</th><th>Qty</th><th>Description</th><th data-col="x"></th></tr></thead><tbody>' + body + '</tbody></table></div></div>'; }
   function supSum(a, sid){ const S = SUP(a).find(x => x.sid === sid); if (!S) return ""; const n = partsOf(a, S).length; return (S.from === "same" ? "same as " + S.same : S.std ? "standard " + S.std : n ? "" : "no parts yet") + (n ? (S.from === "same" || S.std ? ", " : "") + n + " part" + (n === 1 ? "" : "s") : ""); }
   /* ---------- drawing the Supports page ---------- */
   function supportsHtml(a, ro){ const S = SUP(a), sn = supNo(a);
@@ -119,6 +119,130 @@ const Piping = (() => {
       (s.parts || []).forEach((p, j) => body += '<tr class="pp-k"><td class="pt-no">' + esc(s.sid + "." + (++i)) + '</td><td></td><td>' + tin(s.sid, "p" + j + ":d", p.d) + '</td><td>' + tin(s.sid, "p" + j + ":size", p.size) + '</td><td>' + tin(s.sid, "p" + j + ":qty", p.qty, " pp-n") + '</td>' + (ro ? '<td></td>' : '<td class="pp-x"><button type="button" class="ic-b sm" data-xp="' + esc(s.sid + "|" + j) + '" title="Remove this part">✕</button></td>') + '</tr>');
       if (!ro && s.from && s.from !== "same") body += '<tr class="pt-blank pp-k"><td class="pt-no"></td><td></td><td>' + tin(s.sid, "new:d", "", "") + '</td><td></td><td></td><td></td></tr>'; });
     return bar + '<div class="pp-sk"></div>' + (S.length ? '<table class="tbl pt-tbl pp-tbl pp-sups"><thead><tr><th class="pt-no" data-col="No.">#</th><th>Start from</th><th>Part</th><th>Size</th><th>Qty</th><th data-col="x"></th></tr></thead><tbody>' + body + '</tbody></table>' : '<p class="dim">Supports placed on the piping list show here, S1, S2 and on.</p>'); }
+  /* ---------- the sketch: an isometric of the lines, drawn from the list ----------
+     Each pipe row holds its direction (E, W, N, S, U, D, or a 45° run between two of them, such as EN) and its drawn length in
+     grid steps (gl; not to scale: Autofit evens them out). Walking a line's rows in order lays it out: a pipe runs from where
+     the last one ended, a fitting, valve or joint sits at that point, a support sits on the pipe before it (at), a tee starts
+     the line that comes off it. The real lengths are the dimensions; the item numbers are the BoM's, boxed as on an ISO */
+  const G = 46, CX = G * Math.cos(Math.PI / 6), CY = G / 2;
+  const AX = { E: [1, 0, 0], W: [-1, 0, 0], N: [0, 1, 0], S: [0, -1, 0], U: [0, 0, 1], D: [0, 0, -1] };
+  const DIRS = Object.assign({}, AX); [["E", "W"], ["N", "S"], ["U", "D"]].forEach((p, i, A) => A.slice(i + 1).forEach(q => p.forEach(x => q.forEach(y => { DIRS[x + y] = AX[x].map((v, k) => v + AX[y][k]); }))));
+  const add3 = (a, b, n) => a.map((v, k) => v + b[k] * (n == null ? 1 : n));
+  const prj = p => [(p[0] + p[1]) * CX, (p[0] - p[1]) * CY - p[2] * G];
+  const cos3 = (a, b) => { const d = a.reduce((t, v, k) => t + v * b[k], 0), m = Math.hypot(...a) * Math.hypot(...b); return m ? d / m : 0; };
+  const PERP = d => /^[EW]/.test(d) && d.length === 1 ? "N" : /^[NS]$/.test(d) ? "E" : "E";
+  const sk = { tool: "sel", dl: null, sel: null };
+  const isElbow = r => /^elbow/i.test(String(r.it || "")), isTee = r => /^tee/i.test(String(r.it || ""));
+  function layout(a){ const p = P(a), out = { segs: [], nodes: [], sups: [], ends: [], at: {} }; const placed = new Set(); let guard = 0, nextX = 0;
+    while (placed.size < p.lines.length && guard++ < 20) p.lines.forEach(L => { if (placed.has(L.id)) return; let start;
+      if (L.off){ if (!out.at[L.off]) return; start = out.at[L.off].p3; } else start = L.id === p.lines[0].id ? [0, 0, 0] : [nextX, -2, 0];
+      placed.add(L.id); let cur = start, pd = L.dir0 || null, last = null, prev = null;
+      L.rows.forEach(r => {
+        if (r.k === "sup"){ if (last){ const f = r.at != null ? r.at : 0.5; out.sups.push({ r, L, p3: add3(last.a3, DIRS[last.d], last.n * f), d: last.d }); } return; }
+        if (r.k === "it" && isPipe(r)){ const d = r.dir || (prev && isElbow(prev) && pd ? PERP(pd) : pd) || "E", n = Math.max(1, +r.gl || 3), s = { r, L, a3: cur, b3: add3(cur, DIRS[d], n), d, n };
+          out.segs.push(s); cur = s.b3; pd = d; last = s; prev = r; return; }
+        const nd = { r, L, p3: cur, d: pd || "E" }; out.nodes.push(nd); out.at[r.u] = nd; prev = r; });
+      out.ends.push({ L, p3: cur, d: pd }); nextX = Math.max(nextX, ...out.segs.map(s => Math.max(s.a3[0], s.b3[0]) + 4)); });
+    return out; }
+  /* the symbols, ISO style: a joint two short bars across the pipe, a valve a bow tie, a reducer a taper, a tee a dot, a cap an arc,
+     a support a stem off the pipe with a bar across its end (the same mark on every plane); tags boxed */
+  function sketchSvg(a, ro){ const Lo = layout(a), B = bom(a), sn = supNo(a), pts = [];
+    Lo.segs.forEach(s => pts.push(prj(s.a3), prj(s.b3))); Lo.nodes.forEach(n => pts.push(prj(n.p3))); Lo.ends.forEach(e => pts.push(prj(e.p3)));
+    if (!pts.length) pts.push([0, 0]);
+    const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]), M = 90; let x0 = Math.min(...xs) - M, y0 = Math.min(...ys) - M, w = Math.max(...xs) - x0 + M, hgt = Math.max(...ys) - y0 + M;
+    /* (room to draw into: at least 700 by 460, the drawing in the middle) */
+    if (w < 700){ x0 -= (700 - w) / 2; w = 700; } if (hgt < 460){ y0 -= (460 - hgt) / 2; hgt = 460; }
+    const unit = d => { const q = prj(DIRS[d]), m = Math.hypot(q[0], q[1]); return [q[0] / m, q[1] / m]; }, nrm = d => { const u = unit(d); return [u[1], -u[0]]; };
+    const f1 = v => Math.round(v * 10) / 10, L2 = (p, q, c, extra) => '<line class="' + c + '" x1="' + f1(p[0]) + '" y1="' + f1(p[1]) + '" x2="' + f1(q[0]) + '" y2="' + f1(q[1]) + '"' + (extra || "") + '/>';
+    const tag = (q, t, u) => { if (!t) return ""; const tw = 8 + t.length * 6.4; return '<g class="iso-tg' + (u === sk.sel ? " on" : "") + '"' + (u ? ' data-u="' + esc(u) + '"' : "") + '><rect x="' + f1(q[0]) + '" y="' + f1(q[1] - 8) + '" width="' + f1(tw) + '" height="15"/><text x="' + f1(q[0] + 4) + '" y="' + f1(q[1] + 3.5) + '">' + esc(t) + '</text></g>'; };
+    let g = "";
+    /* the dot grid: every point of the iso lattice over the drawing */
+    const k0 = Math.floor(x0 / CX), k1 = Math.ceil((x0 + w) / CX), m0 = Math.floor(y0 / CY), m1 = Math.ceil((y0 + hgt) / CY);
+    for (let k = k0; k <= k1; k++) for (let m = m0; m <= m1; m++) if (((k + m) % 2 + 2) % 2 === 0) g += '<circle class="iso-dot" cx="' + f1(k * CX) + '" cy="' + f1(m * CY) + '" r="1"/>';
+    Lo.segs.forEach(s => { const A = prj(s.a3), Bp = prj(s.b3), on = s.r.u === sk.sel, nm = nrm(s.d), lab = numOf(B, s.r.u);
+      g += '<g data-u="' + esc(s.r.u) + '" class="iso-seg' + (on ? " on" : "") + '">' + L2(A, Bp, "iso-p") + L2(A, Bp, "iso-hit") + '</g>';
+      /* the dimension: end to end, beside the run, its value the real length (? while still to fill in) */
+      const o = 26, A2 = [A[0] + nm[0] * o, A[1] + nm[1] * o], B2 = [Bp[0] + nm[0] * o, Bp[1] + nm[1] * o], mid = [(A2[0] + B2[0]) / 2, (A2[1] + B2[1]) / 2];
+      let ang = Math.atan2(B2[1] - A2[1], B2[0] - A2[0]) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
+      g += L2([A[0] + nm[0] * 6, A[1] + nm[1] * 6], [A2[0] + nm[0] * 4, A2[1] + nm[1] * 4], "iso-d") + L2([Bp[0] + nm[0] * 6, Bp[1] + nm[1] * 6], [B2[0] + nm[0] * 4, B2[1] + nm[1] * 4], "iso-d") + L2(A2, B2, "iso-d")
+        + [A2, B2].map(q => L2([q[0] - 3, q[1] + 3], [q[0] + 3, q[1] - 3], "iso-d")).join("")
+        + '<text class="iso-dt' + (s.r.len ? "" : " need") + '" data-dim="' + esc(s.r.u) + '" transform="translate(' + f1(mid[0]) + ',' + f1(mid[1]) + ') rotate(' + f1(ang) + ')" text-anchor="middle" dy="-4">' + esc(s.r.len ? String(s.r.len) : "?") + '</text>';
+      const mp = [(A[0] + Bp[0]) / 2 - nm[0] * 14, (A[1] + Bp[1]) / 2 - nm[1] * 14]; g += tag(mp, lab, s.r.u); });
+    Lo.nodes.forEach(n => { const q = prj(n.p3), u = unit(n.d), nm = nrm(n.d), r = n.r, on = r.u === sk.sel; let s = "";
+      if (r.k === "joint"){ const ks = jointKids(r), t = [...new Set(ks.map(k => numOf(B, k.u)).filter(Boolean))].join(" ");
+        [-3, 3].forEach(dd => { const c = [q[0] + u[0] * dd, q[1] + u[1] * dd]; s += L2([c[0] - nm[0] * 9, c[1] - nm[1] * 9], [c[0] + nm[0] * 9, c[1] + nm[1] * 9], "iso-s"); }); s += tag([q[0] - nm[0] * 18 + 6, q[1] - nm[1] * 18], t || "J", r.u); }
+      else if (/^V:/.test(r.it || "") || r.sym === "valve"){ const a1 = [q[0] - u[0] * 9 + nm[0] * 7, q[1] - u[1] * 9 + nm[1] * 7], a2 = [q[0] - u[0] * 9 - nm[0] * 7, q[1] - u[1] * 9 - nm[1] * 7], b1 = [q[0] + u[0] * 9 + nm[0] * 7, q[1] + u[1] * 9 + nm[1] * 7], b2 = [q[0] + u[0] * 9 - nm[0] * 7, q[1] + u[1] * 9 - nm[1] * 7];
+        s += '<path class="iso-s iso-fill" d="M' + [a1, b2, b1, a2].map(p2 => f1(p2[0]) + " " + f1(p2[1])).join(" L") + ' Z"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
+      else if (/^reducer/i.test(r.it || "") || r.sym === "red"){ s += '<path class="iso-s iso-fill" d="M' + [[-7, 8], [7, 4], [7, -4], [-7, -8]].map(([a1, b1]) => f1(q[0] + u[0] * a1 + nm[0] * b1) + " " + f1(q[1] + u[1] * a1 + nm[1] * b1)).join(" L") + ' Z"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
+      else if (isTee(r)){ s += '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="3.2"/>' + tag([q[0] + 8, q[1] + 14], numOf(B, r.u), r.u); }
+      else if (/^cap/i.test(r.it || "")){ s += '<circle class="iso-s" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="5"/>' + tag([q[0] + 8, q[1] + 14], numOf(B, r.u), r.u); }
+      else s += '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="2"/>' + tag([q[0] + 6, q[1] + 16], numOf(B, r.u), r.u);
+      g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(r.u) + '">' + s + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>'; });
+    Lo.sups.forEach(n => { const q = prj(n.p3), nm = nrm(n.d), e = [q[0] + nm[0] * 12, q[1] + nm[1] * 12], on = n.r.u === sk.sel;
+      g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(n.r.u) + '">' + L2(q, e, "iso-s") + L2([e[0] - nm[1] * 6, e[1] + nm[0] * 6], [e[0] + nm[1] * 6, e[1] - nm[0] * 6], "iso-s iso-bar") + tag([e[0] + nm[0] * 6 + 2, e[1] + nm[1] * 6 + 6], sn[n.r.sid] || n.r.sid, n.r.u) + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>'; });
+    if (!ro) Lo.ends.forEach(e => { const q = prj(e.p3); g += '<circle class="iso-end' + (sk.dl === e.L.id ? " on" : "") + '" data-end="' + esc(e.L.id) + '" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="6"><title>Draw line ' + esc(e.L.id) + ' on from here</title></circle>'; });
+    if (!Lo.segs.length && !ro) g += '<text class="iso-hint" x="' + f1(prj([0, 0, 0])[0] + 12) + '" y="' + f1(prj([0, 0, 0])[1] - 12) + '">Click the dot, then click where the pipe runs to</text>';
+    return '<svg class="iso" viewBox="' + f1(x0) + ' ' + f1(y0) + ' ' + f1(w) + ' ' + f1(hgt) + '" width="' + f1(w) + '" height="' + f1(hgt) + '" data-x0="' + f1(x0) + '" data-y0="' + f1(y0) + '">' + g + '<line class="iso-ghost" x1="0" y1="0" x2="0" y2="0" hidden/><text class="iso-gt" hidden></text></svg>'; }
+  const TOOLS = [["sel", "Select", "↖"], ["pipe", "Pipe: click a line's end, then where it runs to", "╱"], ["joint", "Flange joint: click a pipe", "‖"], ["valve", "Valve: click a pipe", "⋈"], ["sup", "Support: click a pipe", "⊥"], ["tee", "Tee: click a pipe; a new line runs off it", "┬"], ["red", "Reducer: click a pipe", "▷"], ["cap", "Cap: click a line's end", "◖"], ["del", "Remove: click a part", "✕"]];
+  const sketchHtml = (a, ro) => '<div class="iso-w">' + (ro ? "" : '<div class="iso-tb">' + TOOLS.map(([k, t, s]) => '<button type="button" class="iso-tl' + (sk.tool === k ? " on" : "") + '" data-tool="' + k + '" title="' + esc(t) + '" aria-label="' + esc(t) + '">' + s + '</button>').join("") + '<button type="button" class="iso-tl iso-af" data-af="1" title="Autofit: even, readable spacing (lengths aren\'t to scale)">Autofit</button></div>') + '<div class="iso-sc">' + sketchSvg(a, ro) + '</div></div>';
+  /* ---------- the sketch's changes ---------- */
+  const lineOf = (a, id) => P(a).lines.find(L => L.id === id);
+  const lastOf = (L, f) => [...L.rows].reverse().find(f);
+  const specItem = (cl, dn, re) => { const x = cl ? PipeSpec.items(cl, dn || null).find(i => re.test(i.v)) : null; return x ? x.v : ""; };
+  function drawPipe(a, L, d, n){ const p = P(a), lp = lastOf(L, r => r.k === "it" && isPipe(r)), base = lastOf(L, r => r.cl) || (L.off && rowOf(a, L.off).r) || {}, cl = base.cl || p.spec, dn = base.dn || null;
+    const pd = lp ? (lp.dir || "E") : null, c = pd ? cos3(DIRS[pd], DIRS[d]) : 1, rows = [];
+    if (pd && c < -0.01) return note("A pipe can't double back on itself");
+    if (pd && c < 0.99){ const e45 = c > 0.5; rows.push({ u: uid(), k: "it", cl, dn, it: specItem(cl, dn, e45 ? /^elbow, 45/i : /^elbow, 90/i) || (e45 ? "Elbow, 45°" : "Elbow, 90°"), qty: 1 }); }
+    rows.push({ u: uid(), k: "it", cl, dn, it: specItem(cl, dn, /^pipe$/i) || "Pipe", dir: d, gl: n, len: "" });
+    save(a, () => { L.rows.push(...rows); }, "Drew pipe on"); sk.sel = rows[rows.length - 1].u; }
+  /* a part placed on a pipe: the pipe splits there (a support sits on it without splitting it); a tee starts a new line */
+  function placeOn(a, u, t){ const { L, r } = rowOf(a, u); if (!L || !r || !isPipe(r)) return; const n = Math.max(1, +r.gl || 3), k = Math.max(1, Math.min(n - 1, Math.round(t * n))) || 1;
+    if (sk.tool === "sup"){ const sid = "S" + (SUP(a).reduce((m, s) => Math.max(m, +s.sid.slice(1) || 0), 0) + 1); let i = L.rows.indexOf(r) + 1; while (L.rows[i] && L.rows[i].k === "sup") i++;
+      return save(a, () => { L.rows.splice(i, 0, { u: uid(), k: "sup", sid, at: Math.round(t * 100) / 100 }); SUP(a).push({ sid, from: "", parts: [] }); }, "Placed a pipe support on"); }
+    const nn = Math.max(2, n), kk = n < 2 ? 1 : k, len = +r.len || 0, r2 = Object.assign({}, r, { u: uid(), gl: nn - kk, len: len ? Math.round(len * (nn - kk) / nn) : "" });
+    const node = sk.tool === "joint" ? { u: uid(), k: "joint", cl: r.cl, dn: r.dn } : { u: uid(), k: "it", cl: r.cl, dn: r.dn, qty: 1, sym: sk.tool, it: sk.tool === "valve" ? "" : sk.tool === "red" ? specItem(r.cl, r.dn, /^reducer/i) : specItem(r.cl, r.dn, /^tee, equal/i) || "Tee, equal" };
+    let nl = null; if (sk.tool === "tee"){ const p = P(a); nl = { id: String.fromCharCode(65 + p.lines.length), off: node.u, rows: [] }; }
+    save(a, () => { const i = L.rows.indexOf(r); let j = i + 1; while (L.rows[j] && L.rows[j].k === "sup") j++; const ss = L.rows.splice(i + 1, j - i - 1);   /* (the pipe's supports stay where they are: each goes with the half it's on) */
+      const pos = x => (x.at != null ? x.at : 0.5) * nn, s1 = ss.filter(x => pos(x) <= kk), s2 = ss.filter(x => pos(x) > kk); s1.forEach(x => { x.at = Math.round(pos(x) / kk * 100) / 100; }); s2.forEach(x => { x.at = Math.round((pos(x) - kk) / (nn - kk) * 100) / 100; });
+      r.gl = kk; if (len) r.len = Math.round(len * kk / nn); L.rows.splice(i + 1, 0, ...s1, node, r2, ...s2); if (nl) P(a).lines.push(nl); }, "Placed a part on the piping of");
+    sk.sel = node.u; if (nl){ sk.tool = "pipe"; sk.dl = nl.id; } }
+  function removeAt(a, u){ const { L, r } = rowOf(a, u); if (!L || !r) return; const i = L.rows.indexOf(r); let pi = i - 1; while (L.rows[pi] && L.rows[pi].k === "sup") pi--; const pv = L.rows[pi], nx = L.rows[i + 1];
+    if (r.k === "sup") return save(a, () => { L.rows.splice(i, 1); const S = SUP(a), j = S.findIndex(s => s.sid === r.sid); if (j >= 0) S.splice(j, 1); }, "Removed a pipe support from");
+    if (isPipe(r)){ if (L.rows.slice(i + 1).some(x => x.k !== "sup")) return note("Only the last pipe of a line can be taken off; remove the parts after it first"); return save(a, () => { L.rows.splice(i); const e = L.rows[L.rows.length - 1]; if (e && isElbow(e)) L.rows.pop(); }, "Removed a pipe from"); }
+    if (isElbow(r) && pv && nx) return note("An elbow is where the line turns: draw the line on in another direction instead");
+    save(a, () => { L.rows.splice(i, 1); if (pv && nx && isPipe(pv) && isPipe(nx) && (pv.dir || "E") === (nx.dir || "E")){   /* (the two pipes join up again, their supports kept where they were) */
+        const g1 = +pv.gl || 3, g2 = +nx.gl || 3, t = g1 + g2; L.rows.slice(pi + 1, i).forEach(x => { x.at = Math.round((x.at != null ? x.at : 0.5) * g1 / t * 100) / 100; });
+        let j = L.rows.indexOf(nx) + 1; while (L.rows[j] && L.rows[j].k === "sup"){ const x = L.rows[j]; x.at = Math.round((g1 + (x.at != null ? x.at : 0.5) * g2) / t * 100) / 100; j++; }
+        pv.gl = t; pv.len = (+pv.len && +nx.len) ? +pv.len + +nx.len : pv.len || ""; L.rows.splice(L.rows.indexOf(nx), 1); }
+      P(a).lines = P(a).lines.filter(x => x.off !== r.u || x.rows.length); }, "Removed a part from"); }
+  /* Esc while drawing or placing stops that (back to Select) and leaves the action open */
+  document.addEventListener("keydown", e => { if (e.key !== "Escape" || sk.tool === "sel" || !document.querySelector("svg.iso") || document.querySelector(".pop, .ynmodal, .ppv")) return; e.stopPropagation(); e.preventDefault(); sk.tool = "sel"; sk.dl = null; App.render(); }, true);
+  function autofit(a){ save(a, () => P(a).lines.forEach(L => L.rows.forEach((r, i) => { if (!isPipe(r) || r.k !== "it") return; let ns = 0; for (let j = i + 1; L.rows[j] && L.rows[j].k === "sup"; j++) ns++; r.gl = Math.max(3, 2 * (ns + 1) + 1); })), "Autofitted the sketch of"); }
+  function wireSketch(el, a){ const svg = $("svg.iso", el); if (!svg) return; const pt = e => { const m = svg.getScreenCTM().inverse(), q = new DOMPoint(e.clientX, e.clientY).matrixTransform(m); return [q.x, q.y]; };
+    $$("[data-tool]", el).forEach(b => b.onclick = () => { sk.tool = b.dataset.tool; if (sk.tool !== "pipe") sk.dl = null; App.render(); });
+    const af = $("[data-af]", el); if (af) af.onclick = () => autofit(a);
+    const ghost = $(".iso-ghost", svg), gt = $(".iso-gt", svg);
+    const aim = e => { if (sk.tool !== "pipe" || !sk.dl) return null; const Lo = layout(a), en = Lo.ends.find(x => x.L.id === sk.dl); if (!en) return null; const s0 = prj(en.p3), q = pt(e), v = [q[0] - s0[0], q[1] - s0[1]], m = Math.hypot(...v); if (m < 8) return null;
+      let best = null; Object.keys(DIRS).forEach(d => { const w = prj(DIRS[d]), wm = Math.hypot(...w), c = (v[0] * w[0] + v[1] * w[1]) / (m * wm); if (!best || c > best.c) best = { d, c, wm }; });
+      const n = Math.max(1, Math.round(m / best.wm)), end = prj(add3(en.p3, DIRS[best.d], n)); return { L: lineOf(a, sk.dl), d: best.d, n, s0, end }; };
+    svg.onpointermove = e => { const g0 = aim(e); if (!g0){ ghost.setAttribute("hidden", ""); gt.setAttribute("hidden", ""); return; } ghost.removeAttribute("hidden"); gt.removeAttribute("hidden");
+      ghost.setAttribute("x1", g0.s0[0]); ghost.setAttribute("y1", g0.s0[1]); ghost.setAttribute("x2", g0.end[0]); ghost.setAttribute("y2", g0.end[1]); gt.setAttribute("x", g0.end[0] + 8); gt.setAttribute("y", g0.end[1] - 8); gt.textContent = g0.d; };
+    svg.onclick = e => { const end = e.target.closest("[data-end]"); if (end){ sk.tool = "pipe"; sk.dl = end.dataset.end; App.render(); return; }
+      const dim = e.target.closest("[data-dim]"); if (dim && sk.tool === "sel") return editDim(a, dim);
+      if (sk.tool === "pipe"){ const g0 = aim(e); if (g0 && g0.L) drawPipe(a, g0.L, g0.d, g0.n); return; }
+      const hit = e.target.closest("[data-u]"); if (!hit) return; const u = hit.dataset.u;
+      if (sk.tool === "sel"){ sk.sel = sk.sel === u ? null : u; App.render(); return; }
+      if (sk.tool === "del") return removeAt(a, u);
+      if (sk.tool === "cap"){ const { L, r } = rowOf(a, u); if (L && r && L.rows[L.rows.length - 1] === r && isPipe(r)) save(a, () => { L.rows.push({ u: uid(), k: "it", cl: r.cl, dn: r.dn, it: specItem(r.cl, r.dn, /^cap/i) || "Cap", qty: 1 }); }, "Capped a line on"); else note("A cap goes on the end of a line: click its last pipe"); return; }
+      const { r } = rowOf(a, u); if (!r || !isPipe(r)) return note("Click on a pipe to put it there");
+      const Lo = layout(a), s = Lo.segs.find(x => x.r.u === u), A = prj(s.a3), Bq = prj(s.b3), q = pt(e), dx = Bq[0] - A[0], dy = Bq[1] - A[1], t = Math.max(0, Math.min(1, ((q[0] - A[0]) * dx + (q[1] - A[1]) * dy) / (dx * dx + dy * dy || 1)));
+      placeOn(a, u, t); };
+    svg.ondblclick = e => { const dim = e.target.closest("[data-dim]"); if (dim) editDim(a, dim); }; }
+  /* a dimension clicked: its length typed in place (mm), the list's Length the same */
+  function editDim(a, t){ const u = t.dataset.dim, { r } = rowOf(a, u); if (!r) return; const b = t.getBoundingClientRect(), i = h('<input class="in iso-din" inputmode="numeric" value="' + esc(r.len || "") + '">');
+    Object.assign(i.style, { position: "fixed", left: (b.left + b.width / 2 - 40) + "px", top: (b.top - 4) + "px", width: "80px", zIndex: 9000 }); document.body.appendChild(i); i.focus(); i.select();
+    let gone = false; const done = ok => { if (gone) return; gone = true; const v = Math.round(+i.value) || ""; i.remove(); if (ok && String(v) !== String(r.len || "")) save(a, () => { r.len = v; }, "Set a pipe length on"); };
+    i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); done(true); } if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); done(false); } }; i.onblur = () => done(true); }
   /* ---------- changes ---------- */
   const rowOf = (a, u) => { for (const L of P(a).lines){ const r = L.rows.find(x => x.u === u); if (r) return { L, r }; } return {}; };
   const save = (a, fn, msg) => { Store.mutate(K(a), () => { fn(); Store.touch(a); }); Store.log((msg || "Edited the piping of") + " " + Store.actId(a)); };
@@ -179,7 +303,7 @@ const Piping = (() => {
   function renderFor(el, a, which, ro){ if (!PipeSpec.ready()) PipeSpec.load();
     el.innerHTML = '<div class="pp">' + (which === "supports" ? supportsHtml(a, ro) : pipingHtml(a, ro)) + '</div>';
     const sk = $(".pp-sk", el); if (sk) Sketch.renderFor(sk, a, ro, "supSk");
-    wire(el, a, ro, which);
+    wire(el, a, ro, which); if (which !== "supports" && view.pv === "list"){ wireSketch(el, a); $$(".pp-tbl tr[data-u] td.pt-no", el).forEach(td => td.onclick = () => { const u = td.parentElement.dataset.u; sk.sel = sk.sel === u ? null : u; App.render(); }); }
     $$(".pp-tbl", el).forEach(t => gridCols(t, "pp" + (t.classList.contains("pp-bom") ? "B" : t.classList.contains("pp-sups") ? "S" : "L"), { sort: false, fixed: { x: 24 }, cap: { Description: 520 } })); }
-  return { renderFor, bom, order, supNo, has, stdsFor, rowsFor, qtyOf, jointKids, viewKey: () => view.by + view.pv + view.sv };
+  return { renderFor, bom, order, supNo, has, stdsFor, rowsFor, qtyOf, jointKids, viewKey: () => [view.by, view.pv, view.sv, sk.tool, sk.dl, sk.sel].join("|"), layout, autofit };
 })();

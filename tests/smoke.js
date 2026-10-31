@@ -153,6 +153,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     const sq = await a.p.evaluate(() => { const st = Piping.stdsFor({ cl: "MS1", dn: 25 }).map(t => t.id), pe = Piping.stdsFor({ cl: "PE10", dn: 110 });
       return [st.includes("PG01"), st.includes("PC01"), !st.includes("PG08"), pe.every(t => t.pipe.includes("hdpe") && !t.weldedToPipe), Piping.qtyOf("2 if DN <= 550, else 4", { DN: 600 }), Piping.qtyOf("2*{rows}", { rows: 3 })].join(" "); });
     check("standard supports suit the pipe (PG01 and PC01 on DN25 steel, none welded on HDPE) and quantities follow the size", sq === "true true true true 4 6", sq);
+    /* the piping sketch is laid out from the list: pipe east 3, an elbow, pipe north 2, and a branch off a tee */
+    const iq = await a.p.evaluate(() => { const x = { _p: "t", pip: { spec: "", lines: [{ id: "A", rows: [{ u: "p1", k: "it", it: "Pipe", dir: "E", gl: 3 }, { u: "e1", k: "it", it: "Elbow, 90°" }, { u: "p2", k: "it", it: "Pipe", dir: "N", gl: 2 }, { u: "t1", k: "it", it: "Tee, equal" }] }, { id: "B", off: "t1", rows: [{ u: "p3", k: "it", it: "Pipe", dir: "U", gl: 2 }] }] }, sups: [] };
+      const L = Piping.layout(x); return L.segs.length + " " + L.ends.map(e => e.p3.join(",")).join(" | "); });
+    check("the piping sketch lays a line out from the list, a branch starting at its tee", iq === "3 3,2,0 | 3,2,2", iq);
     const tq = await a.p.evaluate(() => [{ desc: "GASKET DN150 CNAF 3MM" }, { desc: "NUT M20 GR 8 GALV" }, { desc: "PG02-300 insulated U-bolt guide" }, { desc: "GASKET DN150", ty: "Specials" }].map(x => Mto.typeOf(x)).join(","));
     check("a row typed in goes under its ISO heading, and a Type picked wins", tq === "Gaskets,Bolts,Supports,Specials", tq);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
