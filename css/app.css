@@ -1758,3 +1758,26 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .mt-tbl tr:hover td>.mt-dd,.mt-tbl td:has(>.mt-pk:focus)>.mt-dd{opacity:1}
 .mt-tbl tr.pt-blank td:has(>input[data-r="newt"]){position:relative}.mt-tbl tr.pt-blank input[data-r="newt"]{padding-right:calc(var(--row) + 2px)!important}
 .lk-card.lk-xl{box-sizing:border-box}   /* (so a list the width of its cell is exactly that wide, its edge included) */
+/* Materials, Piping and Supports (piping.js): a bar (Spec, List or BoM, Line order or Item numbers, + Line) over one table, the line
+   headings as the MTO's sub headings, a joint's and a support's parts indented under them */
+.pp{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.pp-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pp-spec{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 4px 0 10px;border:1px solid var(--line2);border-radius:7px;background:var(--panel)}.pp-spec.need{background:var(--need)}
+.pp-spec .pp-dd{height:24px;border:0;background:none;font-weight:700;min-width:80px}
+.pp-seg{display:inline-flex;border:1px solid var(--line2);border-radius:7px;overflow:hidden;background:var(--panel2)}.pp-seg button{border:0;background:none;height:26px;padding:0 12px;font:600 var(--fb) var(--font);color:var(--dim);cursor:pointer;border-right:1px solid var(--line2)}.pp-seg button:last-child{border-right:0}.pp-seg button.on{background:var(--panel);color:var(--ink)}
+.pp-tbl{width:max-content!important}
+.pp-tbl td{padding:0 6px;height:var(--row)}
+.pp-dd{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-width:60px;height:var(--row);border:0;background:transparent;font:inherit;color:inherit;text-align:left;padding:0;cursor:pointer;white-space:nowrap;overflow:hidden}
+.pp-dd::after{content:"⌄";color:var(--muted);opacity:.6;flex:none}.pp-dd:disabled{cursor:default}.pp-dd:disabled::after{content:none}
+.pp-dd:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}
+.pp-tbl td.need{background:var(--need)}.pp-tbl td.autof{background:var(--autof)}
+.pp-tbl .pp-in{width:100%;min-width:56px;height:var(--row);border:0;background:transparent;padding:0;text-align:right}
+.pp-tbl tr.pp-k td:not(.pt-no):first-of-type,.pp-tbl tr.pp-k td:nth-child(2){padding-left:16px}
+.pp-tbl tr.pp-k td.pt-no,.pp-tbl tr.pp-sup td.pt-no{color:var(--muted)}
+.pp-tbl tr.pp-j td,.pp-tbl tr.pp-sp td{font-weight:600}
+.pp-tbl .pp-ds{max-width:520px;overflow:hidden;text-overflow:ellipsis}
+.pp-tbl .pp-n{text-align:right;font-variant-numeric:tabular-nums}
+.pp-tbl td.pp-x{padding:0;width:24px;text-align:center}
+.pp-tbl tr.pp-add .pp-dd{color:#8a5a22;font-style:italic}
+.pp .sk{max-width:900px}
+.pp-seg button{white-space:nowrap}.pp-tbl td.pp-x{min-width:24px}.pp-tbl tr.pp-k td:nth-child(6),.pp-tbl tr[data-u] td:nth-child(6){text-align:right}

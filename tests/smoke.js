@@ -149,6 +149,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     const dq = await a.p.evaluate(() => { const T = Mto.TY, ft = Object.keys(T).find(k => T[k].g === "Pipe fittings"), F = x => Object.assign({ t: ft, s: T[ft].stds[0].id, z: "DN100", unit: "ea", qty: "2" }, x);
       const L = [F({ id: "f1" }), F({ id: "f2", dup: 1 })]; Mto.combine(L); const n1 = L.length; delete L[1].dup; Mto.combine(L); return n1 + " " + L.length + " " + L[0].qty; });
     check("a duplicated MTO row is kept apart until it's edited", dq === "2 1 4", dq);
+    /* standard supports: offered only where they suit the pipe's size and material; a quantity can depend on the size */
+    const sq = await a.p.evaluate(() => { const st = Piping.stdsFor({ cl: "MS1", dn: 25 }).map(t => t.id), pe = Piping.stdsFor({ cl: "PE10", dn: 110 });
+      return [st.includes("PG01"), st.includes("PC01"), !st.includes("PG08"), pe.every(t => t.pipe.includes("hdpe") && !t.weldedToPipe), Piping.qtyOf("2 if DN <= 550, else 4", { DN: 600 }), Piping.qtyOf("2*{rows}", { rows: 3 })].join(" "); });
+    check("standard supports suit the pipe (PG01 and PC01 on DN25 steel, none welded on HDPE) and quantities follow the size", sq === "true true true true 4 6", sq);
     const tq = await a.p.evaluate(() => [{ desc: "GASKET DN150 CNAF 3MM" }, { desc: "NUT M20 GR 8 GALV" }, { desc: "PG02-300 insulated U-bolt guide" }, { desc: "GASKET DN150", ty: "Specials" }].map(x => Mto.typeOf(x)).join(","));
     check("a row typed in goes under its ISO heading, and a Type picked wins", tq === "Gaskets,Bolts,Supports,Specials", tq);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));

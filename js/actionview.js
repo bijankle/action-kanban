@@ -6,6 +6,7 @@
 const ActionView = (() => {
   const CORE = new Set(["title", "status", "priority", "problem", "solution", "notes", "equipment"]);
   const OFF = new Set(["category", "location"]);   // (in the Actions list, not in Details)
+  const MATS = ["piping", "supports", "mto", "spares"];   /* (the Materials tab's own tabs) */
   const TABS = [["overview", "Overview"], ["sketches", "Sketches"], ["materials", "Materials"], ["isol", "Isolations"], ["drawings", "References"]];   // (Materials holds the MTO and Spares; References is the drawings and documents)
   /* simple yes or no fields (tick boxes, Yes / No choices) are kept to the Actions table, not the action's details */
   const yesNo = f => f.type === "check" || (f.type === "choice" && (f.options || []).filter(o => !o.del).length && (f.options || []).filter(o => !o.del).every(o => /^(yes|no)$/i.test(o.label)));
@@ -23,13 +24,13 @@ const ActionView = (() => {
     const list = Table.rows(), i = list.indexOf(a), n = k => (a[k] || []).length;
     /* nothing about this action, its tab or the settings has changed (a save finishing, a redraw for something else):
        leave the panel as it is, so its photos and map don't flash */
-    const sig = JSON.stringify([stable(a), Media.pendingOf(a).length, sub, ro, i, list.length, Store.S.config.mod, (Store.S.config.contacts || []).length, Store.S.vendors && Store.S.vendors.mod, Equip.count, Isol.ready(), PipeSpec.ready(), Store.projects().length, Mto.shownKey()]);
+    const sig = JSON.stringify([stable(a), Media.pendingOf(a).length, sub, ro, i, list.length, Store.S.config.mod, (Store.S.config.contacts || []).length, Store.S.vendors && Store.S.vendors.mod, Equip.count, Isol.ready(), PipeSpec.ready(), Store.projects().length, Mto.shownKey(), Piping.viewKey()]);   /* (and the Piping page's own view: List or BoM, Line order or Item numbers) */
     if (el.__sig === sig && el.isConnected && $(".av", el)) return; el.__sig = sig;
     /* the header: the ID with its PDF button on the far left, the title right beside it (hold, complete and delete are in the list's row); the arrows and close sit at the right */
     el.innerHTML = '<div class="av"><div class="av-head" data-ref="' + esc(a._p + ":" + a.u) + '">' + Table.idBox(a, true) + '<div class="av-title" data-f="title"></div>' + (Store.projects().length > 1 ? '<span class="ptag" style="--c:' + esc(p.color || "#64748b") + '">' + esc(p.name || "") + '</span>' : "")
       + '<span class="av-nav"><button type="button" class="ic-b" data-k="prev" title="Previous action"' + (i > 0 ? "" : " disabled") + '>‹</button><span class="dim">' + (i >= 0 ? (i + 1) + " of " + list.length : "") + '</span><button type="button" class="ic-b" data-k="next" title="Next action"' + (i >= 0 && i < list.length - 1 ? "" : " disabled") + '>›</button></span>'
       + '<button type="button" class="ic-b av-close" data-k="x" title="Close (Esc)" aria-label="Close">✕</button></div>'
-      + '<div class="av-tabs">' + TABS.map(([k, t]) => { const mat = sub === "mto" || sub === "spares", on = k === sub || (k === "materials" && mat), c = k === "sketches" ? n("sketches") : k === "materials" ? n("mto") + n("spares") : k === "isol" ? n("isol") : k === "drawings" ? Drawings.count(a) : 0; return '<button type="button" class="av-tab' + (on ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'
+      + '<div class="av-tabs">' + TABS.map(([k, t]) => { const mat = MATS.includes(sub), on = k === sub || (k === "materials" && mat), c = k === "sketches" ? n("sketches") : k === "materials" ? n("mto") + n("spares") : k === "isol" ? n("isol") : k === "drawings" ? Drawings.count(a) : 0; return '<button type="button" class="av-tab' + (on ? " on" : "") + '" data-sub="' + k + '">' + t + (c ? ' <b>' + c + '</b>' : "") + '</button>'; }).join("") + '</div>'
       + '<div class="av-body' + (sub === "overview" ? " ov" : "") + '"></div></div>';
     $$(".av-head [data-f], .av-title[data-f]", el).forEach(d => { const f = Store.field(d.dataset.f); if (f) d.appendChild(Fields.editor(a, f, ro)); });
     const ti = $(".av-title .in", el); if (ti) ti.placeholder = "Title";
@@ -38,7 +39,7 @@ const ActionView = (() => {
       const fit = () => { if (!avt.isConnected){ ob.disconnect(); return; } const t = $(".in, .fv", avt); avt.classList.toggle("cut", !!t && document.activeElement !== t && t.scrollWidth > t.clientWidth + 1); };
       const ob = new ResizeObserver(fit); ob.observe(avt); const t = $(".in", avt); if (t){ t.addEventListener("focus", fit); t.addEventListener("blur", () => setTimeout(fit, 0)); } }
     const body = $(".av-body", el);
-    if (sub === "overview") overview(body, a, ro); else if (sub === "isol") Isol.renderFor(body, a, keepP); else if (sub === "drawings") Drawings.renderFor(body, a); else if (sub === "sketches") Sketch.renderFor(body, a, ro); else { Parts.renderFor(body, a, sub, keepP); body.insertAdjacentHTML("afterbegin", '<div class="av-sub" role="tablist">' + [["mto", "MTO"], ["spares", "Spares"]].map(([k, t]) => '<button type="button" data-m="' + k + '"' + (k === sub ? ' class="on"' : "") + '>' + t + (n(k) ? ' <b>' + n(k) + '</b>' : "") + '</button>').join("") + '</div>'); $$(".av-sub button", body).forEach(b => b.onclick = () => { App.sub = b.dataset.m; lsSet("adMat", b.dataset.m); App.render(); });
+    if (sub === "overview") overview(body, a, ro); else if (sub === "isol") Isol.renderFor(body, a, keepP); else if (sub === "drawings") Drawings.renderFor(body, a); else if (sub === "sketches") Sketch.renderFor(body, a, ro); else { if (sub === "piping" || sub === "supports") Piping.renderFor(body, a, sub, ro); else Parts.renderFor(body, a, sub, keepP); body.insertAdjacentHTML("afterbegin", '<div class="av-sub" role="tablist">' + [["piping", "Piping"], ["supports", "Supports"], ["mto", "MTO"], ["spares", "Spares"]].map(([k, t]) => '<button type="button" data-m="' + k + '"' + (k === sub ? ' class="on"' : "") + '>' + t + (n(k) ? ' <b>' + n(k) + '</b>' : "") + '</button>').join("") + '</div>'); $$(".av-sub button", body).forEach(b => b.onclick = () => { App.sub = b.dataset.m; lsSet("adMat", b.dataset.m); App.render(); });
       /* the AI, XLS and RFQ buttons sit on the same line as the MTO and Spares tabs */
       const hd = $(".pt-head", body), sb = $(".av-sub", body); if (hd && sb){ const tl = h('<span class="av-subt"></span>'); [...hd.children].filter(x => !x.classList.contains("pt-h") && !x.classList.contains("grow")).forEach(x => tl.appendChild(x)); sb.after(tl); const row = h('<div class="av-subr"></div>'); sb.before(row); row.append(sb, tl); hd.remove();
         /* the supplier, ETA, quote and PO box stays put under that bar too, the list scrolling beneath both */
@@ -46,7 +47,7 @@ const ActionView = (() => {
     body.scrollTop = sc;
     if (keep){ const t = $('[data-f="' + keep.f + '"] input, [data-f="' + keep.f + '"] textarea, [data-f="' + keep.f + '"] select', el); if (t){ if (t.tagName === keep.tag && t.tagName !== "SELECT" && t.value !== keep.v) { t.value = keep.v; t.addEventListener("blur", () => t.dispatchEvent(new Event("change")), { once: true }); } t.focus(); try { if (keep.s != null) t.setSelectionRange(keep.s, keep.e); } catch (e) {} } }
     $$(".av-head [data-k]", el).forEach(b => b.onclick = () => act(b.dataset.k, a, list, i));
-    $$(".av-tab", el).forEach(b => b.onclick = () => { const k = b.dataset.sub; App.sub = k === "materials" ? (App.sub === "spares" ? "spares" : lsGet("adMat", "mto")) : k; App.render(); });
+    $$(".av-tab", el).forEach(b => b.onclick = () => { const k = b.dataset.sub; App.sub = k === "materials" ? (MATS.includes(App.sub) ? App.sub : MATS.includes(lsGet("adMat", "mto")) ? lsGet("adMat", "mto") : "mto") : k; App.render(); });
     const av = $(".av", el); av.ondragover = e => { if (Media.hasDrop(e) && sub === "overview"){ e.preventDefault(); av.classList.add("drop"); } };
     av.ondragleave = e => { if (!av.contains(e.relatedTarget)) av.classList.remove("drop"); };
     av.ondrop = e => { av.classList.remove("drop"); if (sub === "overview" && Media.hasDrop(e)){ e.preventDefault(); e.stopPropagation(); Media.dropOn(a, e); } }; }

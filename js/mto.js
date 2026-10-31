@@ -302,6 +302,8 @@ const Mto = (() => {
       out.push({ id: "g:" + G.key, no, desc: desc(G.first) + (isSpec(G.first) ? ", " + lenTxt(G.v.L).replace(" m", "m") + " LG" : ""), part: G.first.part || "", qty: String(n), unit: isPlate(G.first) ? "sheets" : "lengths", notes: "", grp: G });
       if (withCuts) G.rows.flatMap(piecesOf).forEach((c, i) => { const g = +c.g || 0;
         out.push({ id: "c:" + G.key + i, no: no + "." + (i + 1), kid: true, desc: "    " + (isPlate(G.first) ? "Piece " + c.l + " x " + c.w + " mm" : "Cut " + c.l + " mm" + (g ? " (+" + g + " green)" : "")), part: "", qty: String(Math.max(1, Math.round(+c.n || 1))), unit: "ea", notes: c.mk || "" }); }); });
+    /* then the Piping BoM and the supports' parts (Materials, Piping and Supports), so the RFQ and the work pack carry them too */
+    if (typeof Piping !== "undefined" && Piping.has(a)) Piping.order(a).forEach(r => out.push(Object.assign({ id: "pp:" + k, no: String(++k) }, r)));
     return out; }
   function table(a, ro){ const items = a.mto || (a.mto = []); shorten(items); if (!PipeSpec.ready()) PipeSpec.load();
     /* (shown and exported in the MTO's order: piping by heading, then the steel and the rest; in memory, it saves that way at the next change) */
