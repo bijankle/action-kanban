@@ -6,6 +6,7 @@
 "use strict";
 const PipeSpec = (() => {
   let D = null, loadP = null;
+  const pdfUrl = () => D && D.meta && D.meta.file ? src().replace(/spec\/index\.json$/, "") + D.meta.file : "";   /* (the spec itself, as a PDF, beside its index) */
   const src = () => (lsGet("adEquipSrc", "") || "https://raw.githubusercontent.com/bijankle/ProjectLibrary/HEAD/search-data.json").replace(/search-data\.json(\?.*)?$/, "spec/index.json");
   function load(force){ if (loadP && !force) return loadP;
     loadP = IDB.get("pspec").then(c => { if (c && c.d){ D = c.d; App.render(); if (!force && now() - c.at < 864e5) return D; }   // (drawn again as soon as the copy on this computer is in)
@@ -202,5 +203,5 @@ const PipeSpec = (() => {
     const pr = [[/low pressure/, "LP"], [/medium pressure/, "MP"], [/high pressure/, "HP"]].filter(([r]) => r.test(t)).map(x => x[1]); if (pr.length) out.push(pr.join("/"));
     const sv = [[/slurry/, "slurry"], [/reagent/, "reagent"], [/fire/, "fire"], [/potable/, "potable"], [/air/, "air"], [/water/, "water"], [/liquid or gas/, "liquid or gas"], [/acid/, "acid"], [/steam/, "steam"], [/high temperature/, "hot"]].filter(([r]) => r.test(t)).map(x => x[1]);
     if (sv.length) out.push(sv.slice(0, 2).join(", ")); return out.join(", "); };
-  return { short, SAE, nonPref, nonPrefDN, lab, U, dnOf, joint, branchPlan, branchy, BOLTS, FLG, family, FAMS, reducing, branches, load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
+  return { pdfUrl,  short, SAE, nonPref, nonPrefDN, lab, U, dnOf, joint, branchPlan, branchy, BOLTS, FLG, family, FAMS, reducing, branches, load, ready, classes, title, spec: cl => C(cl), sizes, items, lines, variants, resolve, clean, DNS, meta: () => D && D.meta };
 })();

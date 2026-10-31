@@ -1781,3 +1781,9 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .pp-tbl tr.pp-add .pp-dd{color:#8a5a22;font-style:italic}
 .pp .sk{max-width:900px}
 .pp-seg button{white-space:nowrap}.pp-tbl td.pp-x{min-width:24px}.pp-tbl tr.pp-k td:nth-child(6),.pp-tbl tr[data-u] td:nth-child(6){text-align:right}
+/* the Spec's (i): the class's own pages of the pipe spec, big, over the app */
+.pp-si{border:0;background:none;padding:0 4px;cursor:pointer;color:var(--muted);display:inline-grid;place-items:center}.pp-si:disabled{opacity:.4;cursor:default}.pp-si svg{width:16px;height:16px}
+.ppv{position:fixed;inset:0;z-index:9700;background:rgba(15,20,28,.55);display:flex;align-items:stretch;justify-content:center;padding:24px}
+.ppv>div{background:var(--panel)}.ppv-h{display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);position:absolute;left:24px;right:24px;top:24px;border-radius:8px 8px 0 0}
+.ppv-b{position:absolute;left:24px;right:24px;top:68px;bottom:24px;overflow:auto;padding:12px;display:flex;flex-direction:column;align-items:center;gap:12px;border-radius:0 0 8px 8px}
+.ppv-b canvas{box-shadow:0 1px 4px rgba(0,0,0,.2);max-width:100%;height:auto}

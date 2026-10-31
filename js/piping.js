@@ -77,7 +77,7 @@ const Piping = (() => {
   const FLGRE = /^(flange|stub flange|flange adaptor|plate, blind)/i;
   /* ---------- drawing the Piping page ---------- */
   function pipingHtml(a, ro){ const p = P(a), B = bom(a), sn = supNo(a), byItem = view.by === "item";
-    const bar = '<div class="pp-bar"><span class="pp-spec' + (p.spec ? "" : " need") + '"><span class="dim">Spec</span><button type="button" class="pp-dd" data-pk="spec"' + (ro ? " disabled" : "") + '>' + esc(p.spec || "Pick a spec") + '</button>' + tipI("The pipe class new rows start in, and the only one the lists offer. A row can still be changed to another class, or a joint's mating flange to another class at a spec break.") + '</span>'
+    const bar = '<div class="pp-bar"><span class="pp-spec' + (p.spec ? "" : " need") + '"><span class="dim">Spec</span><button type="button" class="pp-dd" data-pk="spec"' + (ro ? " disabled" : "") + '>' + esc(p.spec || "Pick a spec") + '</button><button type="button" class="pp-si" data-si="1"' + (p.spec ? "" : " disabled") + ' title="' + (p.spec ? "Show " + esc(p.spec) + " in the pipe spec" : "Pick a spec to see its pages") + '" aria-label="Show the spec pages">' + INFO_I + '</button></span>'
       + '<div class="seg pp-seg"><button type="button" data-v="list"' + (view.pv === "list" ? ' class="on"' : "") + '>List</button><button type="button" data-v="bom"' + (view.pv === "bom" ? ' class="on"' : "") + '>BoM</button></div>'
       + (view.pv === "list" ? '<div class="seg pp-seg"><button type="button" data-by="line"' + (byItem ? "" : ' class="on"') + '>Line order</button><button type="button" data-by="item"' + (byItem ? ' class="on"' : "") + '>Item numbers</button></div>' : "")
       + (ro || view.pv !== "list" ? "" : '<button type="button" class="btn sm pp-line" title="Start another line, such as a branch off a tee">+ Line</button>') + '</div>';
@@ -143,7 +143,18 @@ const Piping = (() => {
     const key = Look.open(el, list, s.from === "same" ? "same:" + s.same : s.std ? "std:" + s.std : s.from, x => { if (!x.v || x.dis) return;
       save(a, () => { delete s.same; delete s.std; delete s.vals; if (x.v === "scratch") s.from = "scratch"; else if (/^same:/.test(x.v)){ s.from = "same"; s.same = x.v.slice(5); } else { s.from = "std"; s.std = x.v.slice(4); s.vals = {}; } }, "Set a pipe support on"); });
     el.onkeydown = e => key && key(e); }
+  /* the spec's own pages for a class, big, over the app: the PDF's pages drawn one under another; Esc or ✕ closes */
+  let pdfP = null;
+  async function specPages(cl){ const C0 = PipeSpec.spec(cl), M = PipeSpec.meta() || {}, url = PipeSpec.pdfUrl(); if (!C0 || !url) return note("The spec pages aren't available yet");
+    const v = h('<div class="ppv" role="dialog" aria-label="Pipe spec ' + esc(cl) + '"><div class="ppv-h"><b>' + esc(cl) + '</b><span class="dim">' + esc((M.doc || "") + " Rev " + (M.rev || "") + ", page" + (C0.pages > 1 ? "s " + C0.page + " to " + (C0.page + C0.pages - 1) : " " + C0.page)) + '</span><span class="grow"></span><button type="button" class="ic-b" aria-label="Close">✕</button></div><div class="ppv-b"><p class="dim">Loading the spec…</p></div></div>');
+    document.body.appendChild(v); const close = () => { v.remove(); removeEventListener("keydown", esc0, true); }, esc0 = e => { if (e.key === "Escape"){ e.stopPropagation(); e.preventDefault(); close(); } };
+    addEventListener("keydown", esc0, true); $(".ic-b", v).onclick = close; v.onclick = e => { if (e.target === v) close(); };
+    try { const L = await Sketch.loadPdfjs(); pdfP = pdfP || L.getDocument({ url }).promise; const doc = await pdfP, body = $(".ppv-b", v); body.innerHTML = "";
+      for (let n = C0.page; n < C0.page + (C0.pages || 1) && n <= doc.numPages; n++){ if (!v.isConnected) return; const pg = await doc.getPage(n), w = Math.min(1600, body.clientWidth - 24), v0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: w / v0.width * (devicePixelRatio || 1) });
+        const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height; c.style.width = w + "px"; body.appendChild(c); await pg.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise; } }
+    catch (e){ console.error(e); $(".ppv-b", v).innerHTML = '<p class="dim">Couldn\'t load the spec: ' + esc(e.message) + '</p>'; } }
   function wire(el, a, ro, which){
+    const si = $("[data-si]", el); if (si) si.onclick = e => { e.stopPropagation(); specPages(P(a).spec); };
     $$("[data-v]", el).forEach(b => b.onclick = () => { view.pv = b.dataset.v; App.render(); });
     $$("[data-by]", el).forEach(b => b.onclick = () => { view.by = b.dataset.by; lsSet("adPipBy", view.by); App.render(); });
     $$("[data-sv]", el).forEach(b => b.onclick = () => { view.sv = b.dataset.sv; App.render(); });

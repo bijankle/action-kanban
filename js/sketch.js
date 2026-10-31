@@ -94,5 +94,5 @@ const Sketch = (() => {
   async function dataUrls(a){ const out = []; for (const s of list(a)){ try { let b = await (await fetch(src(a, s))).blob();
       if (!/png|jpe?g/.test(s.ext || "png")){ const bm = await createImageBitmap(b), c = document.createElement("canvas"); c.width = bm.width; c.height = bm.height; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bm, 0, 0); b = await new Promise(r => c.toBlob(r, "image/png")); }   /* (the PDF and Word makers take PNG or JPEG) */
       out.push({ url: await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); }), w: s.w, h: s.ht, name: s.name, ext: s.ext }); } catch (e){} } return out; }
-  return { renderFor, add, view, src, dataUrls, count: a => (a.sketches || []).length };
+  return { renderFor, add, view, src, dataUrls, loadPdfjs, count: a => (a.sketches || []).length };
 })();
