@@ -33,8 +33,15 @@ const Piping = (() => {
   const CAT = [["P", /^pipe\b/i], ["E", /^elbow/i], ["T", /^tee/i], ["R", /^reducer/i], ["C", /^cap/i], ["F", /^(flange|plate, blind)/i], ["V", /^V:/], ["G", /^G:/], ["B", /^B:(stud|bolt)/], ["N", /^B:nut/]];
   const catOf = it => (CAT.find(([, re]) => re.test(String(it || ""))) || ["X"])[0], ORD = "PERTCFVGBNX";
   function leaves(a){ const out = []; P(a).lines.forEach(L => L.rows.forEach(r => { if (r.k === "joint") jointKids(r).forEach(k => out.push(Object.assign({ par: r }, k))); else if (r.k !== "sup") out.push(Object.assign({ par: r }, r)); })); return out; }
-  function bom(a){ const m = new Map();
-    leaves(a).forEach(x => { if (!x.cl || !x.dn || !x.it) return; const t = lineTxt(x); if (!t) return; const pipe = isPipe(x), q = pipe ? (+x.len || 0) / 1000 : +x.qty || 0;
+  /* what each pipe meets at its two ends, and how much of its dimension the fittings there take (their centre to pipe stop; a face takes none) */
+  const CENTRED = r => r && r.k === "it" && (isElbow(r) || isTee(r) || /^(coupling|union)/i.test(String(r.it || "")));
+  function pipeEnds(a){ const out = []; P(a).lines.forEach(L => { const rs = L.rows.filter(x => x.k !== "sup");
+      rs.forEach((r, i) => { if (r.k !== "it" || !isPipe(r)) return; let A = rs[i - 1] ? { p: rs[i - 1], role: "run" } : null; if (!A && L.off){ const t = rowOf(a, L.off).r; if (t) A = { p: t, role: "branch" }; } const B = rs[i + 1] ? { p: rs[i + 1], role: "run" } : null; out.push({ r, L, A, B }); }); }); return out; }
+  const tk = (end, fn) => end && CENTRED(end.p) && typeof FitDims !== "undefined" ? FitDims[fn](end.p, end.role) : 0;
+  /* a pipe's cut length: its dimension less what the fittings at its ends take (the dimension where they aren't on file) */
+  function cuts(a){ const m = {}; pipeEnds(a).forEach(x => { const len = +x.r.len || 0; if (!len) return; const c = len - (tk(x.A, "takeout") || 0) - (tk(x.B, "takeout") || 0); m[x.r.u] = Math.max(0, Math.round(c)); }); return m; }
+  function bom(a){ const m = new Map(), CU = cuts(a);
+    leaves(a).forEach(x => { if (!x.cl || !x.dn || !x.it) return; const t = lineTxt(x); if (!t) return; const pipe = isPipe(x), q = pipe ? (CU[x.u] != null ? CU[x.u] : +x.len || 0) / 1000 : +x.qty || 0;   /* (pipe by its cut length) */
       const k = t; if (!m.has(k)) m.set(k, { desc: t, cat: catOf(x.it), dn: PipeSpec.lab(x.cl, x.dn), qty: 0, unit: pipe ? "m" : "ea", us: [] }); const e = m.get(k); e.qty += q; e.us.push(x.u); });
     const list = [...m.values()].sort((p, q) => ORD.indexOf(p.cat) - ORD.indexOf(q.cat)); list.forEach((e, i) => { e.no = e.cat + (i + 1); e.n = i + 1; }); return list; }
   const numOf = (B, u) => { const e = B.find(x => x.us.includes(u)); return e ? e.no : ""; };
@@ -77,7 +84,7 @@ const Piping = (() => {
   const itemList = (cl, dn, only) => PipeSpec.items(cl, dn).filter(x => x.v !== "BR:" && (!only || only.test(x.v))).map(x => ({ v: x.v, t: x.t || x.v, sub: x.sub || "", g: x.g }));
   const FLGRE = /^(flange|stub flange|flange adaptor|plate, blind)/i;
   /* ---------- drawing the Piping page ---------- */
-  function pipingHtml(a, ro){ const p = P(a), B = bom(a), sn = supNo(a), byItem = view.by === "item";
+  function pipingHtml(a, ro){ const CUT = cuts(a), p = P(a), B = bom(a), sn = supNo(a), byItem = view.by === "item";
     const bar = '<div class="pp-bar"><span class="pp-spec' + (p.spec ? "" : " need") + '"><span class="dim">Spec</span><button type="button" class="pp-dd" data-pk="spec"' + (ro ? " disabled" : "") + '>' + esc(p.spec || "Pick a spec") + '</button><button type="button" class="pp-si" data-si="1"' + (p.spec ? "" : " disabled") + ' title="' + (p.spec ? "Show " + esc(p.spec) + " in the pipe spec" : "Pick a spec to see its pages") + '" aria-label="Show the spec pages">' + INFO_I + '</button></span>'
       + ('<div class="seg pp-seg"><button type="button" data-by="line" title="Every part in line order, A1, A2, A3…, as it\x27s built: the list to edit"' + (byItem ? "" : ' class="on"') + '>Sequential</button><button type="button" data-by="item" title="The same parts grouped by specification and numbered P1, E2, F4…: the bill of materials"' + (byItem ? ' class="on"' : "") + '>Grouped</button></div>')
       + (ro ? "" : '<button type="button" class="btn sm pp-line" title="Start another line, such as a branch off a tee">+ Line</button>') + '</div>';
@@ -85,7 +92,7 @@ const Piping = (() => {
       + B.map(e => '<tr><td class="pt-no">' + e.no + '</td><td class="pp-ds">' + fi(e.us[0]) + esc(e.desc) + '</td><td>' + esc(e.dn) + '</td><td class="pp-n">' + esc(e.unit === "m" ? (+e.qty.toFixed(2)) + " m" : String(e.qty)) + '</td></tr>').join("")
       + Object.values(sn).filter((v, i, A) => A.indexOf(v) === i && /^S\d/.test(v)).map(s => '<tr><td class="pt-no">' + s + '</td><td>Pipe support ' + s + ' (see Supports)</td><td></td><td class="pp-n">' + Object.values(sn).filter(x => x === s).length + '</td></tr>').join("") + '</tbody></table></div>';
     const dd = (r, c, txt, cls, dis) => '<button type="button" class="pp-dd' + (cls || "") + '" data-r="' + esc(r) + '" data-c="' + c + '"' + (ro || dis ? " disabled" : "") + '>' + esc(txt || "") + '</button>';
-    const box = (r, c, v, ph) => '<input class="in pt-in pp-in" data-r="' + esc(r) + '" data-c="' + c + '" inputmode="decimal" value="' + esc(v == null ? "" : v) + '"' + (ro ? " readonly" : "") + (ph ? ' aria-label="' + esc(ph) + '"' : "") + '>';
+    const box = (r, c, v, ph) => '<input class="in pt-in pp-in" data-r="' + esc(r) + '" data-c="' + c + '" inputmode="decimal" value="' + esc(v == null ? "" : v) + '"' + (ro ? " readonly" : "") + (ph ? ' aria-label="' + esc(ph) + '" title="' + esc(ph) + '"' : "") + '>';
     const fi = u => '<button type="button" class="pp-i" data-fi="' + esc(u) + '" title="About this part: its dimensions, ends and where they come from" aria-label="About this part">' + INFO_I + '</button>';
     const desc0 = x => { const z = R(x); if (!ro && (z.need === "small end size" || z.need === "branch size")) return '<td class="pp-ds need">' + dd(x.u, "dn2", "Pick the " + z.need) + '</td>'; if (!ro && z.need === "ends or type" && (z.vs || []).length) return '<td class="pp-ds need">' + dd(x.u, "vt", "Pick the ends or type", " pp-wide") + '</td>'; return z.line ? '<td class="pp-ds autof" title="' + esc(z.line) + '">' + esc(z.line) + '</td>' : '<td class="pp-ds dim">' + (x.cl ? "still to pick: " + esc(z.need || "") : "") + '</td>'; };
     const desc = x => desc0(x).replace(/^(<td[^>]*>)/, "$1" + fi(x.u));   /* (the (i) on every description) */
@@ -102,7 +109,7 @@ const Piping = (() => {
             body += '<tr class="pp-k" data-u="' + esc(k.u) + '"><td class="pt-no">' + esc(byItem ? numOf(B, k.u) : id + "." + (i + 1)) + '</td><td>' + esc(k.nm) + '</td><td>' + (k.rol === "fb" ? dd(k.u, "cl", k.cl, k.auto ? " autof" : "") : esc(k.cl || "")) + '</td><td>' + esc(k.cl ? PipeSpec.lab(k.cl, k.dn) : "") + '</td><td></td><td' + (k.auto && !ed ? ' class="autof"' : "") + '>' + (ed ? "1" : (k.rol === "st" || k.rol === "nu") ? box(k.u, "q", k.qty) : esc(String(k.qty))) + '</td>'
               + (ed ? '<td class="pp-ds' + (k.it ? (k.auto ? " autof" : "") : " need") + '">' + fi(k.u) + dd(k.u, "it", k.it ? lineTxt(k) || k.it : "", " pp-wide") + '</td>' : desc(k)) + '<td></td></tr>'; }); return; }
         body += '<tr data-u="' + esc(r.u) + '"' + (r.u === sk.sel ? ' class="sel"' : "") + '><td class="pt-no">' + esc(byItem ? numOf(B, r.u) : id) + '</td><td' + (r.it ? "" : ' class="need"') + '>' + dd(r.u, "it", r.it ? (/^[VGB]:/.test(r.it) ? (PipeSpec.items(r.cl, r.dn).find(x => x.v === r.it) || { t: r.it }).t : r.it) : "") + '</td><td>' + dd(r.u, "cl", r.cl) + '</td><td' + (r.dn ? "" : ' class="need"') + '>' + (r.dn && PipeSpec.reducing(r.it) ? '<span class="pp-sz">' + dd(r.u, "dn", PipeSpec.lab(r.cl, r.dn)) + dd(r.u, "dn2", r.dn2 ? (r.dn2 === r.dn ? "× equal" : "× " + PipeSpec.lab(r.cl, r.dn2)) : "× ?", " pp-dn2" + (r.dn2 ? "" : " need")) + '</span>' : dd(r.u, "dn", r.cl && r.dn ? PipeSpec.lab(r.cl, r.dn) : "")) + '</td>'
-          + '<td' + (pipe && !r.len ? ' class="need"' : "") + '>' + (pipe ? box(r.u, "len", r.len, "Length, mm") : "") + '</td><td>' + (pipe ? "" : box(r.u, "qty", r.qty, "Qty")) + '</td>' + desc(r) + X(r.u) + '</tr>'; });
+          + '<td' + (pipe && !r.len ? ' class="need"' : "") + '>' + (pipe ? box(r.u, "len", r.len, CUT[r.u] != null && CUT[r.u] !== +r.len ? "Length, mm (cut length " + CUT[r.u] + " mm, less the fittings at its ends)" : "Length, mm") : "") + '</td><td>' + (pipe ? "" : box(r.u, "qty", r.qty, "Qty")) + '</td>' + desc(r) + X(r.u) + '</tr>'; });
       if (!ro) body += '<tr class="pt-blank pp-add"><td class="pt-no"></td><td class="need">' + dd("+" + L.id, "add", "+ Add to line " + L.id) + '</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'; });
     return bar + '<div class="pp-sl">' + sketchHtml(a, ro) + '<div class="pp-lw"><table class="tbl pt-tbl pp-tbl"><thead><tr><th class="pt-no" data-col="No.">#</th><th>Item</th><th>Spec</th><th>Size</th><th>Length</th><th>Qty</th><th>Description</th><th data-col="x"></th></tr></thead><tbody>' + body + '</tbody></table></div></div>'; }
   function supSum(a, sid){ const S = SUP(a).find(x => x.sid === sid); if (!S) return ""; const n = partsOf(a, S).length; return (S.from === "same" ? "same as " + S.same : S.std ? "standard " + S.std : n ? "" : "no parts yet") + (n ? (S.from === "same" || S.std ? ", " : "") + n + " part" + (n === 1 ? "" : "s") : ""); }
@@ -177,6 +184,10 @@ const Piping = (() => {
       if (e1 && e2 && !e1.cs.some(x => e2.cs.some(y => endsFit(x, y, hd)))) m.push({ t: "Ends that don't join", d: name(L1, r1) + " has " + e1.t.toLowerCase() + ", " + name(L2, r2) + " has " + e2.t.toLowerCase() + ". " + (e1.cs.concat(e2.cs).includes("FL") ? "Put a flange joint between them, or pick" : "Pick") + " items whose ends join (for example a plain end into a socket weld or press fitting)." });
       if (m.length) out.push({ k: r1.u + ">" + r2.u, p3, m }); };
     const posEnd = r => { const s = Lo.segs.find(x => x.r === r); if (s) return s.b3; const n = Lo.nodes.find(x => x.r === r); return n && n.p3; };
+    /* a pipe shorter than the fittings at its ends reach */
+    pipeEnds(a).forEach(x => { const len = +x.r.len || 0; if (!len) return; const ra = tk(x.A, "reach"), rb = tk(x.B, "reach"); if (!ra && !rb) return; const need = Math.round((ra || 0) + (rb || 0)); if (len >= need) return;
+      const s0 = Lo.segs.find(q => q.r === x.r); if (!s0) return; const mid = s0.a3.map((v, k) => (v + s0.b3[k]) / 2);
+      out.push({ k: "short>" + x.r.u, p3: mid, m: [{ t: "Too short for its fittings", d: name(x.L, x.r) + " is " + len + " mm, but the fittings at its ends reach " + [ra, rb].filter(Boolean).map(v => Math.round(v)).join(" + ") + " mm from their centres. The shortest it can be is " + need + " mm (more where the maker sets a least pipe between joints)." }] }); });
     p.lines.forEach(L => { const rs = L.rows.filter(r => r.k !== "sup");
       if (L.off){ const T = rowOf(a, L.off), r0 = rs[0]; if (T.r && r0){ const pt = posEnd(T.r); if (pt) meet(T.L, T.r, L, r0, pt, true); } }
       rs.forEach((r, i) => { if (!i) return; const pt = posEnd(rs[i - 1]); if (pt) meet(L, rs[i - 1], L, r, pt, false); }); });
@@ -470,5 +481,5 @@ const Piping = (() => {
     const skEl = $(".pp-sk", el); if (skEl) Sketch.renderFor(skEl, a, ro, "supSk");
     wire(el, a, ro, which); if (which !== "supports" && view.pv === "list"){ wireSketch(el, a); $$(".pp-tbl tr[data-u] td.pt-no", el).forEach(td => td.onclick = () => { const u = td.parentElement.dataset.u; sk.sel = sk.sel === u ? null : u; App.render(); }); }
     $$(".pp-tbl", el).forEach(t => gridCols(t, "pp" + (t.classList.contains("pp-bom") ? "B" : t.classList.contains("pp-sups") ? "S" : "L"), { sort: false, fixed: { x: 24 }, cap: { Description: 520 } })); }
-  return { renderFor, bom, order, supNo, has, stdsFor, rowsFor, qtyOf, jointKids, checks: a => checks(a, layout(a)), viewKey: () => [view.by, view.pv, view.sv, sk.tool, sk.dl, sk.sel, sk.pt ? sk.pt.u + sk.pt.t : "", sk.fs ? 1 : 0].join("|"), layout, autofit };
+  return { renderFor, bom, order, supNo, has, stdsFor, rowsFor, qtyOf, jointKids, checks: a => checks(a, layout(a)), cuts, viewKey: () => [view.by, view.pv, view.sv, sk.tool, sk.dl, sk.sel, sk.pt ? sk.pt.u + sk.pt.t : "", sk.fs ? 1 : 0].join("|"), layout, autofit };
 })();

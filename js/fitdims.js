@@ -78,5 +78,9 @@ const FitDims = (() => {
   /* the length from a part's dimension point to where its pipe starts, at one of its ends (run, branch, small), for the length checks */
   function takeout(r, role){ const { e, f } = figures(r); if (!e || !f) return null; const k = (e.takeout || {})[role || "run"]; if (!k) return null; if (f[k] != null && isFinite(+f[k])) return +f[k];
     try { const v = String(k).replace(/[A-Za-z][A-Za-z0-9]*/g, m => f[m] != null && isFinite(+f[m]) ? "(" + (+f[m]) + ")" : "NaN"); const x = /^[\d+\-*/(). ]+$/.test(v) ? Function("return " + v)() : NaN; return isFinite(x) ? x : null; } catch (er){ return null; } }
-  return { entryFor, figures, card, takeout, sketch };
+  /* centre to the fitting's end face at that end (how far the fitting itself reaches), for the too short check */
+  function reach(r, role){ const { e, f } = figures(r); if (!e || !f) return null; const t = takeout(r, role); const ks = Object.keys(e.keys || {}), want = role === "branch" ? /branch|outlet/i : /run|^(?!.*branch)/i;
+    const k = ks.find(x => /end face|press end|centre to end|center to end/i.test(e.keys[x]) && want.test(e.keys[x]) && f[x] != null && isFinite(+f[x])) || ks.find(x => /end face|press end/i.test(e.keys[x]) && f[x] != null && isFinite(+f[x]));
+    return k ? Math.max(+f[k], t || 0) : t; }
+  return { entryFor, figures, card, takeout, reach, sketch };
 })();

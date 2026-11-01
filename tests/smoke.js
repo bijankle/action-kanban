@@ -161,6 +161,9 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     check("the sketch flags a size change with no reducer, where it happens", wq === "w1>w2:Size change with no reducer", wq);
     const fq = await a.p.evaluate(() => { const e = (FITDIMS || []).find(x => x.shape === "elbow90" && x.table && x.table["100"]); return e ? typeof FitDims.sketch(e, e.table["100"], { cl: "MS1", dn: 100, it: "Elbow" }) + ":" + /<svg/.test(FitDims.sketch(e, e.table["100"], { cl: "MS1", dn: 100, it: "Elbow" })) : "no data"; });
     check("a part's card draws its sketch from the dimension tables", fq === "string:true", fq);
+    const cuq = await a.p.evaluate(() => { const r = (L, n) => ({ u: "c" + n, k: "it", cl: "MS1", dn: 100, it: L, qty: 1 }), a0 = { pip: { spec: "MS1", lines: [{ id: "A", rows: [{ u: "q1", k: "it", cl: "MS1", dn: 100, it: "Pipe", dir: "E", gl: 3, len: 1000 }, r("Elbow, 90°", 1), { u: "q2", k: "it", cl: "MS1", dn: 100, it: "Pipe", dir: "N", gl: 3, len: 200 }, r("Elbow, 90°", 2), { u: "q3", k: "it", cl: "MS1", dn: 100, it: "Pipe", dir: "U", gl: 3, len: 2000 }] }] } };
+      return Piping.checks(a0).filter(c => /^short>/.test(c.k)).map(c => c.k).join() + " " + Object.values(Piping.cuts(a0)).join(); });
+    check("a pipe shorter than its fittings reach is flagged, and the BoM orders cut lengths", cuq === "short>q2 848,0,1848", cuq);
     const tq = await a.p.evaluate(() => [{ desc: "GASKET DN150 CNAF 3MM" }, { desc: "NUT M20 GR 8 GALV" }, { desc: "PG02-300 insulated U-bolt guide" }, { desc: "GASKET DN150", ty: "Specials" }].map(x => Mto.typeOf(x)).join(","));
     check("a row typed in goes under its ISO heading, and a Type picked wins", tq === "Gaskets,Bolts,Supports,Specials", tq);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
