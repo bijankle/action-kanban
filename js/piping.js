@@ -86,7 +86,7 @@ const Piping = (() => {
       + Object.values(sn).filter((v, i, A) => A.indexOf(v) === i && /^S\d/.test(v)).map(s => '<tr><td class="pt-no">' + s + '</td><td>Pipe support ' + s + ' (see Supports)</td><td></td><td class="pp-n">' + Object.values(sn).filter(x => x === s).length + '</td></tr>').join("") + '</tbody></table>';
     const dd = (r, c, txt, cls, dis) => '<button type="button" class="pp-dd' + (cls || "") + '" data-r="' + esc(r) + '" data-c="' + c + '"' + (ro || dis ? " disabled" : "") + '>' + esc(txt || "") + '</button>';
     const box = (r, c, v, ph) => '<input class="in pt-in pp-in" data-r="' + esc(r) + '" data-c="' + c + '" inputmode="decimal" value="' + esc(v == null ? "" : v) + '"' + (ro ? " readonly" : "") + (ph ? ' aria-label="' + esc(ph) + '"' : "") + '>';
-    const desc = x => { const z = R(x); return z.line ? '<td class="pp-ds autof" title="' + esc(z.line) + '">' + esc(z.line) + '</td>' : '<td class="pp-ds dim">' + (x.cl ? "still to pick: " + esc(z.need || "") : "") + '</td>'; };
+    const desc = x => { const z = R(x); if (!ro && z.need === "ends or type" && (z.vs || []).length) return '<td class="pp-ds need">' + dd(x.u, "vt", "Pick the ends or type", " pp-wide") + '</td>'; return z.line ? '<td class="pp-ds autof" title="' + esc(z.line) + '">' + esc(z.line) + '</td>' : '<td class="pp-ds dim">' + (x.cl ? "still to pick: " + esc(z.need || "") : "") + '</td>'; };
     const X = u => ro ? '<td></td>' : '<td class="pp-x"><button type="button" class="ic-b sm" data-x="' + esc(u) + '" title="Remove">✕</button></td>';
     let body = "";
     p.lines.forEach(L => { let n = 0;
@@ -146,19 +146,46 @@ const Piping = (() => {
     return out; }
   /* the symbols, ISO style: a joint two short bars across the pipe, a valve a bow tie, a reducer a taper, a tee a dot, a cap an arc,
      a support a stem off the pipe with a bar across its end (the same mark on every plane); tags boxed */
+  /* ---------- what doesn't fit together: where two neighbours meet ----------
+     Sizes: a size change needs a reducer (or a reducing tee for a branch). Ends: each item's ends from its spec line ("Plain end",
+     "Press Connector x Threaded, BSP Female"…), and what can be joined straight to what: plain end into a socket weld, press,
+     electrofusion or tube fitting; bevel to bevel; thread to thread (not male to male or female to female); flange to flange;
+     plain end to plain end only on PE pipe (butt fusion). A flange joint joins anything; an end the spec doesn't say isn't checked */
+  const itemTxt = r => !r.it ? (r.sym === "valve" ? "Valve" : r.sym === "red" ? "Reducer" : "Item") : /^[VGB]:/.test(r.it) ? (PipeSpec.items(r.cl, r.dn).find(x => x.v === r.it) || { t: r.it }).t : r.it;
+  const endCode = t => { t = String(t || "").toLowerCase(); return /press/.test(t) ? "PR" : /electrofusion/.test(t) ? "EF" : /tube fitting/.test(t) ? "TF" : /socket weld/.test(t) ? "SW"
+    : /thread|bsp|npt/.test(t) ? "TH" + (/female|tapping/.test(t) ? "F" : /\bmale/.test(t) ? "M" : "") : /bevel/.test(t) ? "BW" : /plain|spigot/.test(t) ? "PE" : /flange|raised face/.test(t) ? "FL" : ""; };
+  const END_W = { PE: "a plain end", BW: "a bevelled end", SW: "a socket weld end", PR: "a press connector", EF: "an electrofusion socket", TF: "a tube fitting end", FL: "a flanged end", TH: "a threaded end", THM: "a male thread", THF: "a female thread" };
+  const endsOf = r => { if (r.k !== "it" || !r.it) return null; const z = R(r), e = ((z.rows || []).find(x => x[0] === "Ends") || [])[1]; if (!e) return null; const cs = String(e).split(/\s+x\s+/i).map(endCode).filter(Boolean); return cs.length ? { t: e, cs } : null; };
+  function endsFit(x, y, hd){ const k = [x, y].sort().join("|"), th = c => /^TH/.test(c);
+    if (th(x) && th(y)) return !(x.length === 3 && x === y);
+    if (x === y) return x === "BW" || x === "FL" || (x === "PE" && hd);
+    return ["PE|SW", "PE|PR", "EF|PE", "PE|TF"].includes(k); }
+  const sizesIn = r => r.k === "joint" || r.k === "it" ? (r.dn ? (PipeSpec.reducing(r.it) && r.dn2 && !isTee(r) ? [r.dn, r.dn2] : [r.dn]) : []) : [];
+  function checks(a, Lo){ const p = P(a), out = [], name = (L, r) => { let n = 0; for (const x of L.rows){ if (x.k !== "sup") n++; if (x === r) break; } return L.id + n + " " + (r.k === "joint" ? "Flange joint" : itemTxt(r)); };
+    const lab = r => r.cl && r.dn ? PipeSpec.lab(r.cl, r.dn) : "";
+    const meet = (L1, r1, L2, r2, p3, branch) => { const m = [];
+      const s1 = branch ? [r1.dn2 || r1.dn].filter(Boolean) : sizesIn(r1), s2 = sizesIn(r2);
+      if (s1.length && s2.length && !s1.some(v => s2.includes(v))) m.push({ t: "Size change with no reducer", d: name(L1, r1) + " is " + (branch && r1.dn2 ? PipeSpec.lab(r1.cl, r1.dn2) + " on its branch" : lab(r1)) + ", " + name(L2, r2) + " is " + lab(r2) + ". Put a reducer between them, or change one of the sizes." });
+      const e1 = r1.k === "joint" ? null : endsOf(r1), e2 = r2.k === "joint" ? null : endsOf(r2), hd = famOf(r1.cl) === "hdpe" && famOf(r2.cl) === "hdpe";
+      if (e1 && e2 && !e1.cs.some(x => e2.cs.some(y => endsFit(x, y, hd)))) m.push({ t: "Ends that don't join", d: name(L1, r1) + " has " + e1.t.toLowerCase() + ", " + name(L2, r2) + " has " + e2.t.toLowerCase() + ". " + (e1.cs.concat(e2.cs).includes("FL") ? "Put a flange joint between them, or pick" : "Pick") + " items whose ends join (for example a plain end into a socket weld or press fitting)." });
+      if (m.length) out.push({ k: r1.u + ">" + r2.u, p3, m }); };
+    const posEnd = r => { const s = Lo.segs.find(x => x.r === r); if (s) return s.b3; const n = Lo.nodes.find(x => x.r === r); return n && n.p3; };
+    p.lines.forEach(L => { const rs = L.rows.filter(r => r.k !== "sup");
+      if (L.off){ const T = rowOf(a, L.off), r0 = rs[0]; if (T.r && r0){ const pt = posEnd(T.r); if (pt) meet(T.L, T.r, L, r0, pt, true); } }
+      rs.forEach((r, i) => { if (!i) return; const pt = posEnd(rs[i - 1]); if (pt) meet(L, rs[i - 1], L, r, pt, false); }); });
+    return out; }
   function sketchSvg(a, ro){ const Lo = layout(a), B = bom(a), sn = supNo(a), pts = [];
     Lo.segs.forEach(s => pts.push(prj(s.a3), prj(s.b3))); Lo.nodes.forEach(n => pts.push(prj(n.p3))); Lo.ends.forEach(e => pts.push(prj(e.p3)));
     if (!pts.length) pts.push([0, 0]);
     const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]), M = 90; let x0 = Math.min(...xs) - M, y0 = Math.min(...ys) - M, w = Math.max(...xs) - x0 + M, hgt = Math.max(...ys) - y0 + M;
     /* (room to draw into: at least 700 by 460, the drawing in the middle) */
-    if (w < 700){ x0 -= (700 - w) / 2; w = 700; } if (hgt < 460){ y0 -= (460 - hgt) / 2; hgt = 460; }
+    if (w < 520){ x0 -= (520 - w) / 2; w = 520; } if (hgt < 300){ y0 -= (300 - hgt) / 2; hgt = 300; }
     const unit = d => { const q = prj(DIRS[d]), m = Math.hypot(q[0], q[1]); return [q[0] / m, q[1] / m]; }, nrm = d => { const u = unit(d); return [u[1], -u[0]]; };
     const f1 = v => Math.round(v * 10) / 10, L2 = (p, q, c, extra) => '<line class="' + c + '" x1="' + f1(p[0]) + '" y1="' + f1(p[1]) + '" x2="' + f1(q[0]) + '" y2="' + f1(q[1]) + '"' + (extra || "") + '/>';
     const tag = (q, t, u) => { if (!t) return ""; const tw = 8 + t.length * 6.4; return '<g class="iso-tg' + (u === sk.sel ? " on" : "") + '"' + (u ? ' data-u="' + esc(u) + '"' : "") + '><rect x="' + f1(q[0]) + '" y="' + f1(q[1] - 8) + '" width="' + f1(tw) + '" height="15"/><text x="' + f1(q[0] + 4) + '" y="' + f1(q[1] + 3.5) + '">' + esc(t) + '</text></g>'; };
     let g = "";
     /* the dot grid: every point of the iso lattice over the drawing */
-    const k0 = Math.floor(x0 / CX), k1 = Math.ceil((x0 + w) / CX), m0 = Math.floor(y0 / CY), m1 = Math.ceil((y0 + hgt) / CY);
-    for (let k = k0; k <= k1; k++) for (let m = m0; m <= m1; m++) if (((k + m) % 2 + 2) % 2 === 0) g += '<circle class="iso-dot" cx="' + f1(k * CX) + '" cy="' + f1(m * CY) + '" r="1"/>';
+    g += '<defs><pattern id="iso-dots" patternUnits="userSpaceOnUse" width="' + f1(2 * CX) + '" height="' + f1(2 * CY) + '"><circle class="iso-dot" cx="0" cy="0" r="1"/><circle class="iso-dot" cx="' + f1(CX) + '" cy="' + f1(CY) + '" r="1"/><circle class="iso-dot" cx="' + f1(2 * CX) + '" cy="0" r="1"/><circle class="iso-dot" cx="0" cy="' + f1(2 * CY) + '" r="1"/><circle class="iso-dot" cx="' + f1(2 * CX) + '" cy="' + f1(2 * CY) + '" r="1"/></pattern></defs><rect class="iso-bg" x="-100000" y="-100000" width="200000" height="200000" fill="url(#iso-dots)"/>';
     Lo.segs.forEach(s => { const A = prj(s.a3), Bp = prj(s.b3), on = s.r.u === sk.sel, nm = nrm(s.d), lab = numOf(B, s.r.u);
       g += '<g data-u="' + esc(s.r.u) + '" class="iso-seg' + (on ? " on" : "") + '">' + L2(A, Bp, "iso-p") + L2(A, Bp, "iso-hit") + '</g>';
       /* the dimension: end to end, beside the run, its value the real length (? while still to fill in) */
@@ -180,11 +207,15 @@ const Piping = (() => {
       g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(r.u) + '">' + s + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>'; });
     Lo.sups.forEach(n => { const q = prj(n.p3), nm = nrm(n.d), e = [q[0] + nm[0] * 12, q[1] + nm[1] * 12], on = n.r.u === sk.sel;
       g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(n.r.u) + '">' + L2(q, e, "iso-s") + L2([e[0] - nm[1] * 6, e[1] + nm[0] * 6], [e[0] + nm[1] * 6, e[1] - nm[0] * 6], "iso-s iso-bar") + tag([e[0] + nm[0] * 6 + 2, e[1] + nm[1] * 6 + 6], sn[n.r.sid] || n.r.sid, n.r.u) + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>'; });
+    checks(a, Lo).forEach(c => { const q = prj(c.p3), x = q[0] + 10, y = q[1] - 26;
+      g += '<g class="iso-warn" data-warn="' + esc(c.k) + '"><title>' + esc(c.m.map(m => m.t).join("; ") + " (click for more)") + '</title><path d="M' + f1(x) + ' ' + f1(y - 9) + ' L' + f1(x + 10) + ' ' + f1(y + 8) + ' L' + f1(x - 10) + ' ' + f1(y + 8) + ' Z"/><text x="' + f1(x) + '" y="' + f1(y + 6) + '">!</text></g>'; });
     if (!ro) Lo.ends.forEach(e => { const q = prj(e.p3); g += '<circle class="iso-end' + (sk.dl === e.L.id ? " on" : "") + '" data-end="' + esc(e.L.id) + '" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="6"><title>Draw line ' + esc(e.L.id) + ' on from here</title></circle>'; });
     if (!Lo.segs.length && !ro) g += '<text class="iso-hint" x="' + f1(prj([0, 0, 0])[0] + 12) + '" y="' + f1(prj([0, 0, 0])[1] - 12) + '">Click the dot, then click where the pipe runs to</text>';
-    return '<svg class="iso" viewBox="' + f1(x0) + ' ' + f1(y0) + ' ' + f1(w) + ' ' + f1(hgt) + '" width="' + f1(w) + '" height="' + f1(hgt) + '" data-x0="' + f1(x0) + '" data-y0="' + f1(y0) + '">' + g + '<line class="iso-ghost" x1="0" y1="0" x2="0" y2="0" hidden/><text class="iso-gt" hidden></text></svg>'; }
+    const fit = [x0, y0, w, hgt].map(f1).join(" "), vb = sk.vb && sk.vbA === a.id ? sk.vb.map(f1).join(" ") : fit;
+    return '<svg class="iso" viewBox="' + vb + '" data-fit="' + fit + '" preserveAspectRatio="xMidYMid meet">' + g + '<line class="iso-ghost" x1="0" y1="0" x2="0" y2="0" hidden/><text class="iso-gt" hidden></text></svg>'; }
   const TOOLS = [["sel", "Select", "↖"], ["pipe", "Pipe: click a line's end, then where it runs to", "╱"], ["joint", "Flange joint: click a pipe", "‖"], ["valve", "Valve: click a pipe", "⋈"], ["sup", "Support: click a pipe", "⊥"], ["tee", "Tee: click a pipe; a new line runs off it", "┬"], ["red", "Reducer: click a pipe", "▷"], ["cap", "Cap: click a line's end", "◖"], ["del", "Remove: click a part", "✕"]];
-  const sketchHtml = (a, ro) => '<div class="iso-w">' + (ro ? "" : '<div class="iso-tb">' + TOOLS.map(([k, t, s]) => '<button type="button" class="iso-tl' + (sk.tool === k ? " on" : "") + '" data-tool="' + k + '" title="' + esc(t) + '" aria-label="' + esc(t) + '">' + s + '</button>').join("") + '<button type="button" class="iso-tl iso-af" data-af="1" title="Autofit: even, readable spacing (lengths aren\'t to scale)">Autofit</button></div>') + '<div class="iso-sc">' + sketchSvg(a, ro) + '</div></div>';
+  const sketchHtml = (a, ro) => '<div class="iso-w' + (sk.fs ? " iso-full" : "") + '">' + (ro ? "" : '<div class="iso-tb">' + TOOLS.map(([k, t, s]) => '<button type="button" class="iso-tl' + (sk.tool === k ? " on" : "") + '" data-tool="' + k + '" title="' + esc(t) + '" aria-label="' + esc(t) + '">' + s + '</button>').join("") + '<button type="button" class="iso-tl iso-af" data-isofit="1" title="Autofit: even, readable spacing (lengths aren\'t to scale)">Autofit</button></div>') + '<div class="iso-sc">' + sketchSvg(a, ro) + '<button type="button" class="iso-fs" data-fs="1" title="' + (sk.fs ? "Leave full screen (Esc)" : "Full screen") + '" aria-label="' + (sk.fs ? "Leave full screen" : "Full screen") + '">' + (sk.fs ? FS_OUT : FS_IN) + '</button></div></div>';
+  const FS_IN = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>', FS_OUT = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4"/></svg>';
   /* ---------- the sketch's changes ---------- */
   const lineOf = (a, id) => P(a).lines.find(L => L.id === id);
   const lastOf = (L, f) => [...L.rows].reverse().find(f);
@@ -217,17 +248,30 @@ const Piping = (() => {
       P(a).lines = P(a).lines.filter(x => x.off !== r.u || x.rows.length); }, "Removed a part from"); }
   /* Esc while drawing or placing stops that (back to Select) and leaves the action open */
   document.addEventListener("keydown", e => { if (e.key !== "Escape" || sk.tool === "sel" || !document.querySelector("svg.iso") || document.querySelector(".pop, .ynmodal, .ppv")) return; e.stopPropagation(); e.preventDefault(); sk.tool = "sel"; sk.dl = null; App.render(); }, true);
-  function autofit(a){ save(a, () => P(a).lines.forEach(L => L.rows.forEach((r, i) => { if (!isPipe(r) || r.k !== "it") return; let ns = 0; for (let j = i + 1; L.rows[j] && L.rows[j].k === "sup"; j++) ns++; r.gl = Math.max(3, 2 * (ns + 1) + 1); })), "Autofitted the sketch of"); }
+  function autofit(a){ sk.vb = null; save(a, () => P(a).lines.forEach(L => L.rows.forEach((r, i) => { if (!isPipe(r) || r.k !== "it") return; let ns = 0; for (let j = i + 1; L.rows[j] && L.rows[j].k === "sup"; j++) ns++; r.gl = Math.max(3, 2 * (ns + 1) + 1); })), "Autofitted the sketch of"); }
   function wireSketch(el, a){ const svg = $("svg.iso", el); if (!svg) return; const pt = e => { const m = svg.getScreenCTM().inverse(), q = new DOMPoint(e.clientX, e.clientY).matrixTransform(m); return [q.x, q.y]; };
     $$("[data-tool]", el).forEach(b => b.onclick = () => { sk.tool = b.dataset.tool; if (sk.tool !== "pipe") sk.dl = null; App.render(); });
-    const af = $("[data-af]", el); if (af) af.onclick = () => autofit(a);
+    const af = $("[data-isofit]", el); if (af) af.onclick = () => autofit(a);
+    const fsb = $("[data-fs]", el); if (fsb) fsb.onclick = () => fullScreen(!sk.fs);
+    /* zoom and pan: the wheel zooms on the point under the pointer, a drag on the paper pans, a double click on the paper fits it all in */
+    const seen = () => { const r = svg.getBoundingClientRect(), m = svg.getScreenCTM().inverse(), p0 = new DOMPoint(r.left, r.top).matrixTransform(m), p1 = new DOMPoint(r.right, r.bottom).matrixTransform(m); return [p0.x, p0.y, p1.x - p0.x, p1.y - p0.y]; };
+    const setVb = v => { sk.vb = v; sk.vbA = a.id; svg.setAttribute("viewBox", v.join(" ")); };
+    svg.onwheel = e => { e.preventDefault(); const q = pt(e), v = seen(), f = Math.exp((e.deltaY > 0 ? 1 : -1) * Math.min(Math.abs(e.deltaY), 120) * 0.0018), nw = Math.min(Math.max(v[2] * f, 80), 40000), k = nw / v[2];
+      setVb([q[0] - (q[0] - v[0]) * k, q[1] - (q[1] - v[1]) * k, v[2] * k, v[3] * k]); };
+    let pan = null, panned = false;
+    const paper = t => !t.closest("[data-u],[data-end],[data-dim],[data-warn],.iso-fs");
+    svg.onpointerdown = e => { panned = false; if (e.button !== 0 && e.button !== 1) return; if (e.button === 0 && !paper(e.target)) return; pan = { x: e.clientX, y: e.clientY, v: seen(), s: svg.getScreenCTM().a, id: e.pointerId }; };
+    svg.addEventListener("pointermove", e => { if (!pan) return; const dx = e.clientX - pan.x, dy = e.clientY - pan.y; if (!panned && Math.hypot(dx, dy) < 4) return;
+      if (!panned){ panned = true; try { svg.setPointerCapture(pan.id); } catch (_){} svg.classList.add("panning"); }
+      setVb([pan.v[0] - dx / pan.s, pan.v[1] - dy / pan.s, pan.v[2], pan.v[3]]); });
+    const endPan = () => { pan = null; svg.classList.remove("panning"); }; svg.addEventListener("pointerup", endPan); svg.addEventListener("pointercancel", endPan);
     const ghost = $(".iso-ghost", svg), gt = $(".iso-gt", svg);
     const aim = e => { if (sk.tool !== "pipe" || !sk.dl) return null; const Lo = layout(a), en = Lo.ends.find(x => x.L.id === sk.dl); if (!en) return null; const s0 = prj(en.p3), q = pt(e), v = [q[0] - s0[0], q[1] - s0[1]], m = Math.hypot(...v); if (m < 8) return null;
       let best = null; Object.keys(DIRS).forEach(d => { const w = prj(DIRS[d]), wm = Math.hypot(...w), c = (v[0] * w[0] + v[1] * w[1]) / (m * wm); if (!best || c > best.c) best = { d, c, wm }; });
       const n = Math.max(1, Math.round(m / best.wm)), end = prj(add3(en.p3, DIRS[best.d], n)); return { L: lineOf(a, sk.dl), d: best.d, n, s0, end }; };
     svg.onpointermove = e => { const g0 = aim(e); if (!g0){ ghost.setAttribute("hidden", ""); gt.setAttribute("hidden", ""); return; } ghost.removeAttribute("hidden"); gt.removeAttribute("hidden");
       ghost.setAttribute("x1", g0.s0[0]); ghost.setAttribute("y1", g0.s0[1]); ghost.setAttribute("x2", g0.end[0]); ghost.setAttribute("y2", g0.end[1]); gt.setAttribute("x", g0.end[0] + 8); gt.setAttribute("y", g0.end[1] - 8); gt.textContent = g0.d; };
-    svg.onclick = e => { const end = e.target.closest("[data-end]"); if (end){ sk.tool = "pipe"; sk.dl = end.dataset.end; App.render(); return; }
+    svg.onclick = e => { if (panned){ panned = false; return; } const wn = e.target.closest("[data-warn]"); if (wn) return callout(a, wn); const end = e.target.closest("[data-end]"); if (end){ sk.tool = "pipe"; sk.dl = end.dataset.end; App.render(); return; }
       const dim = e.target.closest("[data-dim]"); if (dim && sk.tool === "sel") return editDim(a, dim);
       if (sk.tool === "pipe"){ const g0 = aim(e); if (g0 && g0.L) drawPipe(a, g0.L, g0.d, g0.n); return; }
       const hit = e.target.closest("[data-u]"); if (!hit) return; const u = hit.dataset.u;
@@ -237,7 +281,18 @@ const Piping = (() => {
       const { r } = rowOf(a, u); if (!r || !isPipe(r)) return note("Click on a pipe to put it there");
       const Lo = layout(a), s = Lo.segs.find(x => x.r.u === u), A = prj(s.a3), Bq = prj(s.b3), q = pt(e), dx = Bq[0] - A[0], dy = Bq[1] - A[1], t = Math.max(0, Math.min(1, ((q[0] - A[0]) * dx + (q[1] - A[1]) * dy) / (dx * dx + dy * dy || 1)));
       placeOn(a, u, t); };
-    svg.ondblclick = e => { const dim = e.target.closest("[data-dim]"); if (dim) editDim(a, dim); }; }
+    svg.ondblclick = e => { const dim = e.target.closest("[data-dim]"); if (dim) return editDim(a, dim); if (sk.tool === "sel" && paper(e.target)){ sk.vb = null; svg.setAttribute("viewBox", svg.dataset.fit); } }; }
+  /* an alert's callout: what doesn't fit and how to put it right; ✕, Esc or a click elsewhere closes it */
+  function callout(a, el){ const c = checks(a, layout(a)).find(x => x.k === el.dataset.warn); if (!c) return; $$(".iso-co").forEach(x => x.remove());
+    const b = el.getBoundingClientRect(), d = h('<div class="iso-co" role="dialog"><button type="button" class="ic-b sm" aria-label="Close">✕</button>' + c.m.map(m => '<p><b>' + esc(m.t) + '</b><br>' + esc(m.d) + '</p>').join("") + '</div>');
+    document.body.appendChild(d); const w = d.offsetWidth; Object.assign(d.style, { left: Math.max(8, Math.min(innerWidth - w - 8, b.left + b.width / 2 - w / 2)) + "px", top: (b.bottom + 6) + "px" });
+    const close = () => { d.remove(); removeEventListener("keydown", k, true); removeEventListener("pointerdown", o, true); }, k = e => { if (e.key === "Escape"){ e.stopPropagation(); e.preventDefault(); close(); } }, o = e => { if (!d.contains(e.target) && !el.contains(e.target)) close(); };
+    $(".ic-b", d).onclick = close; addEventListener("keydown", k, true); setTimeout(() => addEventListener("pointerdown", o, true)); }
+  /* full screen: the real one (the browser's), the sketch filling it; Esc leaves it and you're back where you were */
+  function fullScreen(on){ sk.fs = on; App.render();
+    if (on){ const d = document.documentElement; if (!document.fullscreenElement && d.requestFullscreen) d.requestFullscreen().catch(() => {}); }
+    else if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); }
+  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && sk.fs){ sk.fs = false; App.render(); } });
   /* a dimension clicked: its length typed in place (mm), the list's Length the same */
   function editDim(a, t){ const u = t.dataset.dim, { r } = rowOf(a, u); if (!r) return; const b = t.getBoundingClientRect(), i = h('<input class="in iso-din" inputmode="numeric" value="' + esc(r.len || "") + '">');
     Object.assign(i.style, { position: "fixed", left: (b.left + b.width / 2 - 40) + "px", top: (b.top - 4) + "px", width: "80px", zIndex: 9000 }); document.body.appendChild(i); i.focus(); i.select();
@@ -257,8 +312,9 @@ const Piping = (() => {
         save(a, () => { L.rows.push(nr); }, "Added to the piping of"); }; list = grouped(list); }
     else { const k = rowOf(a, u).r; if (!k) return; const tgt = sub ? (k[sub] = k[sub] || {}) : k, cl = sub ? tgt.cl || k.cl : k.cl;
       if (c === "cl"){ list = grouped(classList()); cur = cl; done = v => save(a, () => { tgt.cl = v; if (!sub && k.dn && !PipeSpec.sizes(v).includes(k.dn)) delete k.dn; if (sub) delete tgt.it; }); }
-      else if (c === "dn"){ list = sizeList(k.cl); cur = k.dn; done = v => save(a, () => { k.dn = +v; if (k.it && !/^[VGB]:/.test(k.it) && !PipeSpec.items(k.cl, k.dn).some(x => x.v === k.it)) delete k.it; }); }
-      else if (c === "it"){ list = grouped(itemList(cl, k.dn, sub ? FLGRE : null)); cur = tgt.it; done = v => save(a, () => { tgt.it = v; if (sub === "fa" && !(k.fb && k.fb.it)) {} }); } }
+      else if (c === "dn"){ list = sizeList(k.cl); cur = k.dn; done = v => save(a, () => { k.dn = +v; delete k.vt; if (k.it && !/^[VGB]:/.test(k.it) && !PipeSpec.items(k.cl, k.dn).some(x => x.v === k.it)) delete k.it; }); }
+      else if (c === "vt"){ list = (R(sub ? Object.assign({}, tgt, { cl, dn: k.dn }) : k).vs || []).map(x => ({ v: x.v, t: x.t })); cur = tgt.vt; done = v => save(a, () => { tgt.vt = v; }, "Picked the ends or type on"); }
+      else if (c === "it"){ list = grouped(itemList(cl, k.dn, sub ? FLGRE : null)); cur = tgt.it; done = v => save(a, () => { tgt.it = v; delete tgt.vt; if (sub === "fa" && !(k.fb && k.fb.it)) {} }); } }
     if (!done) return; const key = Look.open(el, list.length ? list : [{ v: "", t: "Nothing to pick: check the spec and size", dis: true }], cur, x => { if (x.v === "" || x.dis) return; done(x.v); }, { num: list.length <= 12 }); el.onkeydown = e => key && key(e); }
   function pickSup(a, el, sid){ const s = SUP(a).find(x => x.sid === sid); if (!s) return; const pipe = pipeFor(a, sid);
     const sames = SUP(a).filter(x => x.sid !== sid && x.from !== "same" && partsOf(a, x).length).map(x => ({ v: "same:" + x.sid, t: "Same as " + x.sid, sub: supSum(a, x.sid), g: "Copy a support" }));
@@ -305,5 +361,5 @@ const Piping = (() => {
     const sk = $(".pp-sk", el); if (sk) Sketch.renderFor(sk, a, ro, "supSk");
     wire(el, a, ro, which); if (which !== "supports" && view.pv === "list"){ wireSketch(el, a); $$(".pp-tbl tr[data-u] td.pt-no", el).forEach(td => td.onclick = () => { const u = td.parentElement.dataset.u; sk.sel = sk.sel === u ? null : u; App.render(); }); }
     $$(".pp-tbl", el).forEach(t => gridCols(t, "pp" + (t.classList.contains("pp-bom") ? "B" : t.classList.contains("pp-sups") ? "S" : "L"), { sort: false, fixed: { x: 24 }, cap: { Description: 520 } })); }
-  return { renderFor, bom, order, supNo, has, stdsFor, rowsFor, qtyOf, jointKids, viewKey: () => [view.by, view.pv, view.sv, sk.tool, sk.dl, sk.sel].join("|"), layout, autofit };
+  return { renderFor, bom, order, supNo, has, stdsFor, rowsFor, qtyOf, jointKids, checks: a => checks(a, layout(a)), viewKey: () => [view.by, view.pv, view.sv, sk.tool, sk.dl, sk.sel, sk.fs ? 1 : 0].join("|"), layout, autofit };
 })();

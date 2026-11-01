@@ -157,6 +157,8 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     const iq = await a.p.evaluate(() => { const x = { _p: "t", pip: { spec: "", lines: [{ id: "A", rows: [{ u: "p1", k: "it", it: "Pipe", dir: "E", gl: 3 }, { u: "e1", k: "it", it: "Elbow, 90°" }, { u: "p2", k: "it", it: "Pipe", dir: "N", gl: 2 }, { u: "t1", k: "it", it: "Tee, equal" }] }, { id: "B", off: "t1", rows: [{ u: "p3", k: "it", it: "Pipe", dir: "U", gl: 2 }] }] }, sups: [] };
       const L = Piping.layout(x); return L.segs.length + " " + L.ends.map(e => e.p3.join(",")).join(" | "); });
     check("the piping sketch lays a line out from the list, a branch starting at its tee", iq === "3 3,2,0 | 3,2,2", iq);
+    const wq = await a.p.evaluate(() => Piping.checks({ pip: { spec: "", lines: [{ id: "A", rows: [{ u: "w1", k: "it", cl: "Z", dn: 25, it: "Pipe", dir: "E", gl: 3 }, { u: "w2", k: "it", cl: "Z", dn: 32, it: "Elbow, 90°" }, { u: "w3", k: "it", cl: "Z", dn: 32, it: "Pipe", dir: "N", gl: 3 }] }] } }).map(c => c.k + ":" + c.m.map(m => m.t).join()).join(" | "));
+    check("the sketch flags a size change with no reducer, where it happens", wq === "w1>w2:Size change with no reducer", wq);
     const tq = await a.p.evaluate(() => [{ desc: "GASKET DN150 CNAF 3MM" }, { desc: "NUT M20 GR 8 GALV" }, { desc: "PG02-300 insulated U-bolt guide" }, { desc: "GASKET DN150", ty: "Specials" }].map(x => Mto.typeOf(x)).join(","));
     check("a row typed in goes under its ISO heading, and a Type picked wins", tq === "Gaskets,Bolts,Supports,Specials", tq);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
