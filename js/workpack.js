@@ -15,9 +15,9 @@ const Workpack = (() => {
     i.onerror = () => alt && alt !== src ? thumb(alt).then(res, rej) : rej(new Error("photo")); i.src = src; });
   const size = src => new Promise(res => { const i = new Image(); i.onload = () => res([i.naturalWidth, i.naturalHeight]); i.onerror = () => res([4, 3]); i.src = src; });
   /* the work pack's window: a tick for each of its headings (only the ones this action has), the site map too; remembered */
-  const WP = [["job", "Job and scope"], ["map", "Site map"], ["isol", "Isolations"], ["sk", "Sketches"], ["parts", "Parts"], ["cut", "Cutting list"], ["reg", "References"], ["photos", "Photos"], ["att", "Attachments"]];
-  function dialog(a){ if (!a) return; const pk = lsGet("adWpSec", {}) || {}, has = { job: 1, map: 1, isol: (a.isol || []).length, sk: (a.sketches || []).length, parts: (a.mto || []).length + (a.spares || []).length, cut: Mto.hasCuts(a), reg: (a.dwgPick || []).length, photos: a.photos.length, att: a.files.length };
-    const m = modal('<h3>Export the work pack' + tipI("One PDF for the trades: the job, where it is, the isolations, sketches, parts, cutting list, references (the documents ticked on References, each linked to its PDF copy), photos and attachments.") + '</h3><div class="lbl">What\'s in it</div><div class="pr-sec">'
+  const WP = [["job", "Job and scope"], ["map", "Site map"], ["isol", "Isolations"], ["parts", "Parts"], ["cut", "Cutting list"], ["reg", "References"], ["photos", "Photos"], ["att", "Attachments"]];
+  function dialog(a){ if (!a) return; const pk = lsGet("adWpSec", {}) || {}, has = { job: 1, map: 1, isol: (a.isol || []).length, parts: (a.mto || []).length + (a.spares || []).length, cut: Mto.hasCuts(a), reg: (a.dwgPick || []).length, photos: a.photos.length, att: a.files.length };
+    const m = modal('<h3>Export the work pack' + tipI("One PDF for the trades: the job, where it is, the isolations, parts, cutting list, references (the documents ticked on References, each linked to its PDF copy), photos and attachments.") + '</h3><div class="lbl">What\'s in it</div><div class="pr-sec">'
       + WP.filter(([k]) => has[k]).map(([k, n]) => '<label class="tp-o"><input type="checkbox" data-sec="' + k + '"' + (pk[k] !== false ? " checked" : "") + '><span>' + n + '</span></label>').join("") + '</div>'
       + '<div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Export</button></div>', { cls: "pr-win" });
     $(".yn-no", m).onclick = () => m.close();
@@ -44,7 +44,7 @@ const Workpack = (() => {
     const all = new Map(); dm.forEach(l => l.forEach(d => { if (!all.has(d.n)) all.set(d.n, d); }));
     /* the parts, in reading order; each one present gets a line in the contents and starts a page */
     const parts = Mto.orderRows(a).map(it => Object.assign({ src: "New" }, it, { qty: Mto.ord(it) })).concat((a.spares || []).map(it => Object.assign({ src: "Site spares" }, it)));
-    const S = [["job", "Job and scope", true], ["isol", "Isolations", (a.isol || []).length], ["sk", "Sketches", (a.sketches || []).length], ["parts", "Parts", parts.length], ["cut", "Cutting list", Mto.hasCuts(a)], ["reg", "References", all.size], ["photos", "Photos (" + a.photos.length + ")", a.photos.length],
+    const S = [["job", "Job and scope", true], ["isol", "Isolations", (a.isol || []).length], ["parts", "Parts", parts.length], ["cut", "Cutting list", Mto.hasCuts(a)], ["reg", "References", all.size], ["photos", "Photos (" + a.photos.length + ")", a.photos.length],
       ["att", "Attachments", a.files.length]].filter(x => x[2] && sec[x[0]] !== false);   /* (and ticked in the window) */
     /* cover: the job, who to contact, the contents */
     doc.setFillColor(...rgb); doc.rect(0, 0, W, 32, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.text("WORK PACK", M, 9);
@@ -90,13 +90,6 @@ const Workpack = (() => {
           if (sm){ doc.setFontSize(8); doc.setTextColor(110); doc.setFont("helvetica", "italic"); doc.splitTextToSize(sm.note, CW).forEach(l => { doc.text(l, M, y + 2.5); y += 3.6; }); doc.setFont("helvetica", "normal"); }
           y += 5; }
         [["Problem", a.f.problem], ["Work required", a.f.solution], ["Notes", a.f.notes]].forEach(([k, v]) => { if (String(v || "").trim()){ head(k); para(v); } }); }   // (anything blank is left out)
-      /* the sketches, each as wide as the page (or as tall as a page allows), its number and name above it, just before the parts */
-      if (id === "sk"){ head("Sketches"); const ims = await Sketch.dataUrls(a);
-        for (const [k, im] of ims.entries()){ const r = (im.h || 1) / (im.w || 1), maxH = BOT - 18 - 10, ih = Math.min(maxH, CW * r), iw = ih / r; need(ih + 9);
-          doc.setFillColor(241, 243, 246); doc.rect(M, y, CW, 5.5, "F"); doc.setDrawColor(201, 206, 214); doc.setLineWidth(0.2); doc.rect(M, y, CW, 5.5 + ih);
-          doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); doc.setTextColor(85); doc.text((k + 1) + "  " + (im.name || ""), M + 2, y + 3.9); y += 5.5;
-          try { doc.addImage(im.url, /^data:image\/png/.test(im.url) ? "PNG" : "JPEG", M + (CW - iw) / 2, y, iw, ih, undefined, "FAST"); } catch (e){ console.warn("sketch", e); }
-          y += ih + 6; } }
       if (id === "isol"){ head("Isolations"); table(["#", "Equipment number", "Equipment name", "Note"], a.isol.map((it, i) => [i + 1, it.tag || "", it.name || "", it.nu ? it.note || "" : ""]), { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 40 }, 2: { cellWidth: 62 } }); }
       /* a steel or plate parent says where its cutting diagram is: "See cutting list p." and the page, put in once that page exists, and clicks through to it */
       if (id === "parts"){ head("Parts"); partsPage = doc.getNumberOfPages(); const SEE = "See cutting list p.";

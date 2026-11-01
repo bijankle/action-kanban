@@ -9,7 +9,7 @@ const Print = (() => {
      on the date created, last modified or completed (blank is all time). The search and the other Filters panel pills
      still apply. Done and Deleted are unticked to start with; the choice is remembered per export. */
   /* the headings of the PDF and Word exports, each with its own tick in the window (board, photos and blanks keep their own settings) */
-  const SECS = [["board", "Organizer overview"], ["sum", "Summary"], ["problem", "Problem"], ["solution", "Solution"], ["notes", "Notes"], ["photos", "Photos"], ["att", "Attachments"], ["sk", "Sketches"], ["isol", "Isolations"], ["mto", "MTO"], ["spares", "Spares"], ["blanks", "Blank fields"]];
+  const SECS = [["board", "Organizer overview"], ["sum", "Summary"], ["problem", "Problem"], ["solution", "Solution"], ["notes", "Notes"], ["photos", "Photos"], ["att", "Attachments"], ["isol", "Isolations"], ["mto", "MTO"], ["spares", "Spares"], ["blanks", "Blank fields"]];
   const secOn = (o, k) => !o.sec || o.sec[k] !== false;
   const DATES = [["created", "Date created"], ["mod", "Last modified"], ["doneAt", "Date completed"]];
   /* an action's line in the export's Include list: its Organizer stage, or Deleted (not the Status filter's Open / On Hold groups) */
@@ -78,8 +78,7 @@ const Print = (() => {
         + (secOn(o, "isol") ? tbl("Isolations", ["#", "Equipment number", "Equipment name", "Note"], (a.isol || []).map((it, k) => [k + 1, it.tag, it.name, it.nu ? it.note : ""])) : "")
         + (secOn(o, "att") && a.files.length ? '<div class="pa-b"><h5>Attachments</h5>' + a.files.map(f => '<div class="pa-file">📎 <a href="' + esc(links.get(f) || Media.fileUrlOnline(a, f)) + '">' + esc(f.name) + '</a> <span class="dim">' + fmtSize(f.size || 0) + '</span></div>').join("") + '</div>' : "") + '</div>'
         + (o.photos && a.photos.length ? '<div class="pa-r"><h5>Photos</h5><div class="pa-ph" style="--per:' + Math.max(1, o.per - 1) + '">' + a.photos.map(ph => '<figure><img src="' + esc(Media.src(a, ph)) + '" alt="' + esc(ph.name || "") + '"></figure>').join("") + '</div></div>' : "") + '</div>'
-        /* the full width of the page under the two columns: the sketches (each as wide as the page, one after another), then the MTO and the spares */
-        + (secOn(o, "sk") && (a.sketches || []).length ? '<div class="pa-b pa-sks"><h5>Sketches</h5>' + a.sketches.map((sk, k) => '<figure class="pa-sk"><figcaption>' + (k + 1) + '  ' + esc(sk.name || "") + '</figcaption><img src="' + esc(Sketch.src(a, sk)) + '" alt="' + esc(sk.name || "") + '"></figure>').join("") + '</div>' : "")
+        /* the full width of the page under the two columns: the MTO and the spares */
         + (secOn(o, "mto") ? tbl("MTO", ["#", "Description", "Part / tag no.", "Qty", "Unit", "Notes"], Mto.orderRows(a).map((it, k) => [k + 1, it.desc, it.part, Mto.ord(it), it.unit, it.notes])) : "")
         + (!secOn(o, "spares") ? "" : tbl("From spares", ["#", "Description", "Part / tag no.", "Qty", "Unit", "Store location / notes", "Secured"], (a.spares || []).map((it, k) => [k + 1, it.desc, it.part, it.qty, it.unit, it.notes, it.secured ? "Yes" : ""]))) + '</section>')); });
     document.body.appendChild(root); note("Getting the photos ready to print…", 8000);

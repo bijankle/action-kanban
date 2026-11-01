@@ -143,7 +143,7 @@ const Store = (() => {
     const of = o.f || {}, nf = n.f || {};
     new Set(Object.keys(of).concat(Object.keys(nf))).forEach(k => { if (eq(of[k], nf[k])) return; const fd = field(k); out.push([fd ? fd.label : k, short(fd && fd.type === "stage" ? stage(of[k]).name : of[k]), short(fd && fd.type === "stage" ? stage(nf[k]).name : nf[k])]); });
     new Set(Object.keys(o).concat(Object.keys(n))).forEach(k => { if (HSKIP.has(k) || k === "f" || k === "stage" || k === "del" || eq(o[k], n[k])) return;
-      const L = LIST[k]; if (!L){ out.push([k === "owner" ? "Action owner" : k, short(o[k]), short(n[k])]); return; }
+      const L = LIST[k]; if (!L){ const nm = { owner: "Action owner", pip: "Piping", supSk: "Supports sketch" }[k] || k; if ([o[k], n[k]].some(x => x && typeof x === "object")){ out.push([nm, "", ""]); return; } out.push([nm, short(o[k]), short(n[k])]); return; }   /* (a whole block such as the piping is named, never written out) */
       const id = x => typeof x === "object" && x ? (x.id || x.h || L[1](x)) : x, om = new Map((o[k] || []).map(x => [id(x), x])), nm = new Map((n[k] || []).map(x => [id(x), x]));
       const add = [...nm.keys()].filter(x => !om.has(x)).map(x => L[1](nm.get(x)) || "a row"), rem = [...om.keys()].filter(x => !nm.has(x)).map(x => L[1](om.get(x)) || "a row"), chg = [...nm.keys()].filter(x => om.has(x) && !eq(om.get(x), nm.get(x))).map(x => L[1](nm.get(x)) || "a row");
       if (add.length) out.push([L[0], "", "added " + short(add)]); if (rem.length) out.push([L[0], "removed " + short(rem), ""]); if (chg.length) out.push([L[0], "", "changed " + short(chg)]);

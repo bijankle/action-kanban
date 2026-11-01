@@ -38,10 +38,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
       pk.querySelectorAll("input[type=checkbox]:checked").forEach(c => c.click()); await new Promise(r => setTimeout(r, 100)); const d = pk.querySelector('input[data-v="–"]'); if (!d) return "no dash row"; d.click();
       const now = JSON.stringify(a.f.equipment); Fields.closePop(); return now; });
     check("a Tags cell opens the Tags picker and a tick saves", tp === '["–"]', tp);
-    /* an image added on the Sketches tab becomes a sketch */
+    /* an image added to the supports sketch becomes a sketch */
     const skc = await p.evaluate(async () => { const a = Store.all().find(x => !x.del); const c = document.createElement("canvas"); c.width = 40; c.height = 30; c.getContext("2d").fillRect(5, 5, 10, 10);
-      const f = await new Promise(r => c.toBlob(b => r(new File([b], "Test sketch.png", { type: "image/png" })), "image/png")); const n0 = (a.sketches || []).length; await Sketch.add(a, [f]); return (a.sketches.length - n0) + " " + a.sketches[a.sketches.length - 1].name; });
-    check("an image added on the Sketches tab becomes a sketch", skc === "1 Test Sketch", skc);
+      const f = await new Promise(r => c.toBlob(b => r(new File([b], "Test sketch.png", { type: "image/png" })), "image/png")); const n0 = (a.supSk || []).length; await Sketch.add(a, [f], "supSk"); return (a.supSk.length - n0) + " " + a.supSk[a.supSk.length - 1].name; });
+    check("an image added to the supports sketch becomes a sketch", skc === "1 Test Sketch", skc);
     /* the PDF export dialog counts the actions in each stage (and so finds something to export) */
     const pc = await p.evaluate(async () => { Print.dialog("pdf"); await new Promise(r => setTimeout(r, 300)); const n = [...document.querySelectorAll(".pr-st .tp-o .dim")].reduce((t, x) => t + (+x.textContent || 0), 0); document.querySelectorAll(".yn-no").forEach(b => b.click()); return n; });
     check("the PDF export dialog counts the actions in each stage", pc > 0, pc);
@@ -166,6 +166,14 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     check("a pipe shorter than its fittings reach is flagged, and the BoM orders cut lengths", cuq === "short>q2 848,0,1848", cuq);
     const tq = await a.p.evaluate(() => [{ desc: "GASKET DN150 CNAF 3MM" }, { desc: "NUT M20 GR 8 GALV" }, { desc: "PG02-300 insulated U-bolt guide" }, { desc: "GASKET DN150", ty: "Specials" }].map(x => Mto.typeOf(x)).join(","));
     check("a row typed in goes under its ISO heading, and a Type picked wins", tq === "Gaskets,Bolts,Supports,Specials", tq);
+    /* the drawing: removing a tee whose branch is drawn asks first, takes the branch and its support with it, and one Ctrl+Z brings it all back */
+    const rq = await a.p.evaluate(async () => { const pid = Store.selected()[0]; let x; Store.mutate("a:" + pid, () => { x = Store.newAction(pid, { title: "Tee test" }); x.pip = { spec: "", lines: [{ id: "A", at: [0, 0, 0], rows: [{ u: "rp1", k: "it", it: "Pipe", dir: "E", gl: 2 }, { u: "rt1", k: "it", it: "Tee, equal" }, { u: "rp2", k: "it", it: "Pipe", dir: "E", gl: 2 }] }, { id: "B", off: "rt1", rows: [{ u: "rp3", k: "it", it: "Pipe", dir: "N", gl: 2 }, { u: "rs1", k: "sup", sid: "S1", at: 0.5 }] }] }; x.sups = [{ sid: "S1", from: "", parts: [] }]; });
+      App.select(pid + ":" + x.u, "piping"); await new Promise(r => setTimeout(r, 600)); const tt = () => document.querySelector('.pp-seg [data-ptab="iso"]'); if (tt() && !tt().classList.contains("on")){ tt().click(); await new Promise(r => setTimeout(r, 400)); }
+      document.querySelector('.iso-tr[data-tool="del"]').click(); await new Promise(r => setTimeout(r, 300)); const h = document.querySelector('svg.iso [data-u="rt1"] .iso-hitn'); if (!h) return "no tee drawn";
+      const b = h.getBoundingClientRect(); h.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: b.x + b.width / 2, clientY: b.y + b.height / 2 })); await new Promise(r => setTimeout(r, 300));
+      const ys = [...document.querySelectorAll(".yn-yes")], y = ys[ys.length - 1]; if (!y) return "didn't ask"; window.__q = (y.closest(".ynmodal, .modal, dialog, .fw-win") || y.parentElement).innerText; y.click(); await new Promise(r => setTimeout(r, 400)); const a1 = App.act(App.selRef), gone = a1.pip.lines.length + "/" + a1.sups.length;
+      Store.undo(); await new Promise(r => setTimeout(r, 400)); const a2 = App.act(App.selRef); return gone + " " + a2.pip.lines.length + "/" + a2.sups.length + (gone === "1/0" ? "" : " [" + window.__q + "]"); });
+    check("removing a tee asks, takes its drawn branch and support, and one Ctrl+Z brings them back", rq === "1/0 2/1", rq);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
   } catch (e) { console.log("  FAIL  the checks stopped: " + e.message); code = 1; }
   await browser.close(); srv.kill(); fs.rmSync(dir, { recursive: true, force: true });

@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.293";
+const APP_VERSION = "1.10.294";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -8,7 +8,7 @@ const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI
 const THEMES = [["slate", "Slate", "#475569"], ["graphite", "Graphite", "#52525b"], ["navy", "Navy", "#1E3A5F"], ["petrol", "Petrol", "#1F4F5A"], ["olive", "Olive", "#5A5A2E"], ["stone", "Stone", "#7A6A5D"], ["rust", "Rust", "#9A3412"], ["ink", "Ink", "#111827"]];
 
 const App = (() => {
-  const A = { q: "", pills: new Set(lsGet("adPills", [])), sort: null, selRef: null, tab: ["actions", "kanban", "valid"].includes(lsGet("adTab", "actions")) ? lsGet("adTab", "actions") : lsGet("adTab", "") === "contacts" ? "valid" : "actions", sub: lsGet("adSub", "") || "overview", view: lsGet("adViewType", "list"), mobile: false };
+  const A = { q: "", pills: new Set(lsGet("adPills", [])), sort: null, selRef: null, tab: ["actions", "kanban", "valid"].includes(lsGet("adTab", "actions")) ? lsGet("adTab", "actions") : lsGet("adTab", "") === "contacts" ? "valid" : "actions", sub: (lsGet("adSub", "") !== "sketches" && lsGet("adSub", "")) || "overview", view: lsGet("adViewType", "list"), mobile: false };
   /* (a deleted action is found too: it can be opened from the Deleted pill, and brought back) */
   const act = ref => { if (!ref) return null; const [pid, u] = ref.split(":"); const a = Store.find(pid, u); if (!a) return null; a._p = pid; return a; };
   let raf = 0; const render = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; draw(); }); };
