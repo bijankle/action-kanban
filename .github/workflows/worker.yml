@@ -1,0 +1,24 @@
+# Puts cloudflare/worker.js live on the Cloudflare site whenever it changes, so it never needs pasting by hand.
+# Needs two repository secrets (Settings, Secrets and variables, Actions): CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
+# Without them it skips quietly.
+name: Deploy worker
+on:
+  push:
+    paths: ["cloudflare/worker.js", "cloudflare/wrangler.toml"]
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check the Cloudflare key is set
+        id: key
+        run: if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then echo "ok=1" >> "$GITHUB_OUTPUT"; else echo "No Cloudflare key yet, skipping"; fi
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.ok == '1'
+      - name: Deploy
+        if: steps.key.outputs.ok == '1'
+        working-directory: cloudflare
+        run: npx --yes wrangler@3 deploy

@@ -1,0 +1,7 @@
+# Settings for the automatic worker deploy (.github/workflows/worker.yml).
+# keep_vars keeps the Text settings typed into the Cloudflare dashboard (ADMIN_EMAIL and the rest); secrets are always kept.
+name = "action-database"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+workers_dev = true
+keep_vars = true

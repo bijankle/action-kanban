@@ -28,7 +28,7 @@ Passwords are kept only as salted hashes in `data/auth.json` in the data reposit
 
 ## Notes
 
-Attachments in a PDF export or work pack are links anyone can open without signing in, so a PDF sent to a contractor still opens its files. Each link names one file, is signed by the worker so it can't be changed into another, and stops working after a year. Word, Excel and other files download as themselves. After changing worker.js, paste it into the worker again (step 3) and Deploy.
+Attachments in a PDF export or work pack are links anyone can open without signing in, so a PDF sent to a contractor still opens its files. Each link names one file, is signed by the worker so it can't be changed into another, and stops working after a year. Word, Excel and other files download as themselves. After changing worker.js, paste it into the worker again (step 3) and Deploy, or set up the automatic deploy below once and it happens on every push.
 
 The worker fetches the app's own files from GitHub Pages, so app updates show up on the site within a minute with no change here.
 
@@ -39,3 +39,12 @@ Cloudflare's free plan allows 100 000 requests a day, far more than this needs. 
 When the GitHub key is about to expire, make a new one (step 1) and replace `GH_TOKEN` (step 4). Everyone then signs in again once, and any approval emails not yet answered stop working.
 
 To test the worker away from Cloudflare, `env.API`, `env.APP_ORIGIN` and `env.MAIL_API` can point it at stand ins.
+
+## Automatic deploy (no more pasting)
+
+Set up once, and every push that changes worker.js puts it live by itself (the job is `.github/workflows/worker.yml`, its settings `cloudflare/wrangler.toml`). Your keys and settings in the Cloudflare dashboard are kept.
+
+1. On dash.cloudflare.com click your profile (top right), My Profile, API Tokens, Create Token, and use the **Edit Cloudflare Workers** template. Under Account Resources pick your account, under Zone Resources pick All zones. Continue to summary, Create Token, and copy it.
+2. Back on the dashboard home, Workers & Pages: the **Account ID** is shown on the right. Copy it.
+3. On github.com open this code repository, Settings, Secrets and variables, Actions, New repository secret. Add `CLOUDFLARE_API_TOKEN` (the token) and `CLOUDFLARE_ACCOUNT_ID` (the account ID).
+4. To deploy straight away: Actions tab, Deploy worker, Run workflow.
