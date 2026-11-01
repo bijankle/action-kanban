@@ -419,7 +419,7 @@ const Piping = (() => {
         save(a, () => { if (c === "len") row.len = Math.round(+v) || ""; else row.qty = +v || ""; }); }; }); }
   function renderFor(el, a, which, ro){ if (!PipeSpec.ready()) PipeSpec.load();
     el.innerHTML = '<div class="pp">' + (which === "supports" ? supportsHtml(a, ro) : pipingHtml(a, ro)) + '</div>';
-    const sk = $(".pp-sk", el); if (sk) Sketch.renderFor(sk, a, ro, "supSk");
+    const skEl = $(".pp-sk", el); if (skEl) Sketch.renderFor(skEl, a, ro, "supSk");
     wire(el, a, ro, which); if (which !== "supports" && view.pv === "list"){ wireSketch(el, a); $$(".pp-tbl tr[data-u] td.pt-no", el).forEach(td => td.onclick = () => { const u = td.parentElement.dataset.u; sk.sel = sk.sel === u ? null : u; App.render(); }); }
     $$(".pp-tbl", el).forEach(t => gridCols(t, "pp" + (t.classList.contains("pp-bom") ? "B" : t.classList.contains("pp-sups") ? "S" : "L"), { sort: false, fixed: { x: 24 }, cap: { Description: 520 } })); }
   return { renderFor, bom, order, supNo, has, stdsFor, rowsFor, qtyOf, jointKids, checks: a => checks(a, layout(a)), viewKey: () => [view.by, view.pv, view.sv, sk.tool, sk.dl, sk.sel, sk.fs ? 1 : 0].join("|"), layout, autofit };
