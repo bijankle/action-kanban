@@ -79,12 +79,11 @@ const Piping = (() => {
   /* ---------- drawing the Piping page ---------- */
   function pipingHtml(a, ro){ const p = P(a), B = bom(a), sn = supNo(a), byItem = view.by === "item";
     const bar = '<div class="pp-bar"><span class="pp-spec' + (p.spec ? "" : " need") + '"><span class="dim">Spec</span><button type="button" class="pp-dd" data-pk="spec"' + (ro ? " disabled" : "") + '>' + esc(p.spec || "Pick a spec") + '</button><button type="button" class="pp-si" data-si="1"' + (p.spec ? "" : " disabled") + ' title="' + (p.spec ? "Show " + esc(p.spec) + " in the pipe spec" : "Pick a spec to see its pages") + '" aria-label="Show the spec pages">' + INFO_I + '</button></span>'
-      + '<div class="seg pp-seg"><button type="button" data-v="list"' + (view.pv === "list" ? ' class="on"' : "") + '>Sketch and list</button><button type="button" data-v="bom"' + (view.pv === "bom" ? ' class="on"' : "") + '>BoM</button></div>'
-      + (view.pv === "list" ? '<div class="seg pp-seg"><button type="button" data-by="line"' + (byItem ? "" : ' class="on"') + '>Line order</button><button type="button" data-by="item"' + (byItem ? ' class="on"' : "") + '>Item numbers</button></div>' : "")
-      + (ro || view.pv !== "list" ? "" : '<button type="button" class="btn sm pp-line" title="Start another line, such as a branch off a tee">+ Line</button>') + '</div>';
-    if (view.pv === "bom") return bar + '<table class="tbl pt-tbl pp-tbl pp-bom"><thead><tr><th class="pt-no" data-col="No.">#</th><th>Description</th><th>Size</th><th>Qty</th></tr></thead><tbody>'
+      + ('<div class="seg pp-seg"><button type="button" data-by="line" title="Every part in line order, A1, A2, A3…, as it\x27s built: the list to edit"' + (byItem ? "" : ' class="on"') + '>Sequential</button><button type="button" data-by="item" title="The same parts grouped by specification and numbered P1, E2, F4…: the bill of materials"' + (byItem ? ' class="on"' : "") + '>Grouped</button></div>')
+      + (ro ? "" : '<button type="button" class="btn sm pp-line" title="Start another line, such as a branch off a tee">+ Line</button>') + '</div>';
+    if (byItem) return bar + '<div class="pp-sl">' + sketchHtml(a, ro) + '<table class="tbl pt-tbl pp-tbl pp-bom"><thead><tr><th class="pt-no" data-col="No.">#</th><th>Description</th><th>Size</th><th>Qty</th></tr></thead><tbody>'
       + B.map(e => '<tr><td class="pt-no">' + e.no + '</td><td>' + esc(e.desc) + '</td><td>' + esc(e.dn) + '</td><td class="pp-n">' + esc(e.unit === "m" ? (+e.qty.toFixed(2)) + " m" : String(e.qty)) + '</td></tr>').join("")
-      + Object.values(sn).filter((v, i, A) => A.indexOf(v) === i && /^S\d/.test(v)).map(s => '<tr><td class="pt-no">' + s + '</td><td>Pipe support ' + s + ' (see Supports)</td><td></td><td class="pp-n">' + Object.values(sn).filter(x => x === s).length + '</td></tr>').join("") + '</tbody></table>';
+      + Object.values(sn).filter((v, i, A) => A.indexOf(v) === i && /^S\d/.test(v)).map(s => '<tr><td class="pt-no">' + s + '</td><td>Pipe support ' + s + ' (see Supports)</td><td></td><td class="pp-n">' + Object.values(sn).filter(x => x === s).length + '</td></tr>').join("") + '</tbody></table></div>';
     const dd = (r, c, txt, cls, dis) => '<button type="button" class="pp-dd' + (cls || "") + '" data-r="' + esc(r) + '" data-c="' + c + '"' + (ro || dis ? " disabled" : "") + '>' + esc(txt || "") + '</button>';
     const box = (r, c, v, ph) => '<input class="in pt-in pp-in" data-r="' + esc(r) + '" data-c="' + c + '" inputmode="decimal" value="' + esc(v == null ? "" : v) + '"' + (ro ? " readonly" : "") + (ph ? ' aria-label="' + esc(ph) + '"' : "") + '>';
     const desc = x => { const z = R(x); if (!ro && z.need === "ends or type" && (z.vs || []).length) return '<td class="pp-ds need">' + dd(x.u, "vt", "Pick the ends or type", " pp-wide") + '</td>'; return z.line ? '<td class="pp-ds autof" title="' + esc(z.line) + '">' + esc(z.line) + '</td>' : '<td class="pp-ds dim">' + (x.cl ? "still to pick: " + esc(z.need || "") : "") + '</td>'; };
@@ -181,7 +180,8 @@ const Piping = (() => {
       rs.forEach((r, i) => { if (!i) return; const pt = posEnd(rs[i - 1]); if (pt) meet(L, rs[i - 1], L, r, pt, false); }); });
     return out; }
   const WELD_T = { FW: "Field weld", FFW: "Field fit weld (150 mm pipe green)", FFG: "Field fit groove (150 mm pipe green)" };
-  function sketchSvg(a, ro){ const noteTxt = (q, t, k) => '<text class="iso-note" data-note="' + esc(k) + '" x="' + Math.round(q[0]) + '" y="' + Math.round(q[1]) + '">' + String(t).split(/\n/).map((x, i) => '<tspan x="' + Math.round(q[0]) + '" dy="' + (i ? "1.2em" : 0) + '">' + esc(x) + '</tspan>').join("") + '</text>'; const Lo = layout(a), B = bom(a), sn = supNo(a), pts = [];
+  function sketchSvg(a, ro){ const byI = view.by === "item", seq = {}; P(a).lines.forEach(L => { let n = 0; L.rows.forEach(r => { if (r.k !== "sup") seq[r.u] = L.id + (++n); }); });   /* (the tags follow the list: A1, A2… in Sequential, P1, E2… in Grouped) */
+    const TL = u => byI ? numOf(B, u) : seq[u] || ""; const noteTxt = (q, t, k) => '<text class="iso-note" data-note="' + esc(k) + '" x="' + Math.round(q[0]) + '" y="' + Math.round(q[1]) + '">' + String(t).split(/\n/).map((x, i) => '<tspan x="' + Math.round(q[0]) + '" dy="' + (i ? "1.2em" : 0) + '">' + esc(x) + '</tspan>').join("") + '</text>'; const Lo = layout(a), B = bom(a), sn = supNo(a), pts = [];
     Lo.segs.forEach(s => pts.push(prj(s.a3), prj(s.b3))); Lo.nodes.forEach(n => pts.push(prj(n.p3))); Lo.ends.forEach(e => pts.push(prj(e.p3)));
     if (!pts.length) pts.push([0, 0]);
     const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]), M = 90; let x0 = Math.min(...xs) - M, y0 = Math.min(...ys) - M, w = Math.max(...xs) - x0 + M, hgt = Math.max(...ys) - y0 + M;
@@ -202,7 +202,7 @@ const Piping = (() => {
       return L2([A[0] + nm[0] * 6 * sg, A[1] + nm[1] * 6 * sg], [A2[0] + nm[0] * 4 * sg, A2[1] + nm[1] * 4 * sg], "iso-d") + L2([Bp[0] + nm[0] * 6 * sg, Bp[1] + nm[1] * 6 * sg], [B2[0] + nm[0] * 4 * sg, B2[1] + nm[1] * 4 * sg], "iso-d") + L2(A2, B2, "iso-d")
         + [A2, B2].map(q => L2([q[0] - 3, q[1] + 3], [q[0] + 3, q[1] - 3], "iso-d")).join("")
         + '<text class="iso-dt' + (need ? " need" : "") + '" ' + attr + ' transform="translate(' + f1(mid[0]) + ',' + f1(mid[1]) + ') rotate(' + f1(ang) + ')" text-anchor="middle" dy="' + (o < 0 ? 12 : -4) + '">' + esc(txt) + '</text>'; };
-    Lo.segs.forEach(s => { const A = prj(s.a3), Bp = prj(s.b3), on = s.r.u === sk.sel, nm = nrm(s.d), lab = numOf(B, s.r.u);
+    Lo.segs.forEach(s => { const A = prj(s.a3), Bp = prj(s.b3), on = s.r.u === sk.sel, nm = nrm(s.d), lab = TL(s.r.u);
       g += '<g data-u="' + esc(s.r.u) + '" class="iso-seg' + (on ? " on" : "") + '">' + L2(A, Bp, "iso-p") + L2(A, Bp, "iso-hit") + '</g>';
       /* the dimension: end to end, beside the run, its value the real length (? while still to fill in) */
       g += dimLine(face(s, "a"), face(s, "b"), nm, 26, s.r.len ? String(s.r.len) : "?", !s.r.len, 'data-dim="' + esc(s.r.u) + '"');
@@ -213,23 +213,23 @@ const Piping = (() => {
       (s.r.welds || []).forEach(w => { const c = at(w.at); g += '<g class="iso-fw" data-weld="' + esc(s.r.u + "|" + w.u) + '"><title>' + esc(WELD_T[w.t] || w.t) + ' (click to change)</title><circle cx="' + f1(c[0]) + '" cy="' + f1(c[1]) + '" r="3.2"/>' + tag([c[0] + nm[0] * 14 - 10, c[1] + nm[1] * 14], w.t) + '</g>'; });
       if (s.r.note) g += noteTxt([mp[0] - nm[0] * 18, mp[1] - nm[1] * 18], s.r.note, s.r.u); });
     Lo.nodes.forEach(n => { const q = prj(n.p3), u = unit(n.d), nm = nrm(n.d), r = n.r, on = r.u === sk.sel; let s = "";
-      if (r.k === "joint"){ const ks = jointKids(r), t = [...new Set(ks.map(k => numOf(B, k.u)).filter(Boolean))].join(" ");
+      if (r.k === "joint"){ const ks = jointKids(r), t = byI ? [...new Set(ks.map(k => TL(k.u)).filter(Boolean))].join(" ") : seq[r.u];
         [-3, 3].forEach(dd => { const c = [q[0] + u[0] * dd, q[1] + u[1] * dd]; s += L2([c[0] - nm[0] * 9, c[1] - nm[1] * 9], [c[0] + nm[0] * 9, c[1] + nm[1] * 9], "iso-s"); }); s += tag([q[0] - nm[0] * 18 + 6, q[1] - nm[1] * 18], t || "J", r.u); }
       else if (/^V:/.test(r.it || "") || r.sym === "valve"){ const vt = valveType(r), P2 = (x, y) => [q[0] + u[0] * x + nm[0] * y, q[1] + u[1] * x + nm[1] * y], pth = (ps, c) => '<path class="iso-s ' + (c || "iso-fill") + '" d="M' + ps.map(p2 => f1(p2[0]) + " " + f1(p2[1])).join(" L") + ' Z"/>';
-        if (/butterfly/i.test(vt)){ s += L2(P2(-3, -9), P2(-3, 9), "iso-s") + L2(P2(3, -9), P2(3, 9), "iso-s") + '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="2.6"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
-        else if (/check|non.?return/i.test(vt)){ s += pth([P2(-9, 7), P2(9, -7), P2(9, 7), P2(-9, -7)]) + pth([P2(-9, 7), P2(0, 0), P2(-9, -7)], "iso-dotf") + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
-        else s += pth([P2(-9, 7), P2(9, -7), P2(9, 7), P2(-9, -7)]) + (/ball/i.test(vt) ? '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="3"/>' : "") + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
-      else if (/^reducer/i.test(r.it || "") || r.sym === "red"){ s += '<path class="iso-s iso-fill" d="M' + [[-7, 8], [7, 4], [7, -4], [-7, -8]].map(([a1, b1]) => f1(q[0] + u[0] * a1 + nm[0] * b1) + " " + f1(q[1] + u[1] * a1 + nm[1] * b1)).join(" L") + ' Z"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
-      else if (/^(coupling|union|induction e-coupler)/i.test(r.it || "") || r.sym === "cpl"){ s += '<path class="iso-s iso-fill" d="M' + [[-4, 6], [4, 6], [4, -6], [-4, -6]].map(([a1, b1]) => f1(q[0] + u[0] * a1 + nm[0] * b1) + " " + f1(q[1] + u[1] * a1 + nm[1] * b1)).join(" L") + ' Z"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
-      else if (isTee(r)){ s += '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="3.2"/>' + tag([q[0] + 8, q[1] + 14], numOf(B, r.u), r.u); }
-      else if (/blind/i.test(r.it || "")){ s += L2([q[0] - nm[0] * 9, q[1] - nm[1] * 9], [q[0] + nm[0] * 9, q[1] + nm[1] * 9], "iso-s") + L2([q[0] + u[0] * 3 - nm[0] * 9, q[1] + u[1] * 3 - nm[1] * 9], [q[0] + u[0] * 3 + nm[0] * 9, q[1] + u[1] * 3 + nm[1] * 9], "iso-s iso-bar") + tag([q[0] - nm[0] * 18 + 6, q[1] - nm[1] * 18], numOf(B, r.u), r.u); }
-      else if (/^plug/i.test(r.it || "")){ s += '<rect class="iso-s iso-dotf" x="' + f1(q[0] - 3.5) + '" y="' + f1(q[1] - 3.5) + '" width="7" height="7"/>' + tag([q[0] + 8, q[1] + 14], numOf(B, r.u), r.u); }
-      else if (isEnd(r)){ s += '<circle class="iso-s" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="5"/>' + tag([q[0] + 8, q[1] + 14], numOf(B, r.u), r.u); }
-      else s += '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="2"/>' + tag([q[0] + 6, q[1] + 16], numOf(B, r.u), r.u);
+        if (/butterfly/i.test(vt)){ s += L2(P2(-3, -9), P2(-3, 9), "iso-s") + L2(P2(3, -9), P2(3, 9), "iso-s") + '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="2.6"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], TL(r.u), r.u); }
+        else if (/check|non.?return/i.test(vt)){ s += pth([P2(-9, 7), P2(9, -7), P2(9, 7), P2(-9, -7)]) + pth([P2(-9, 7), P2(0, 0), P2(-9, -7)], "iso-dotf") + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], TL(r.u), r.u); }
+        else s += pth([P2(-9, 7), P2(9, -7), P2(9, 7), P2(-9, -7)]) + (/ball/i.test(vt) ? '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="3"/>' : "") + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], TL(r.u), r.u); }
+      else if (/^reducer/i.test(r.it || "") || r.sym === "red"){ s += '<path class="iso-s iso-fill" d="M' + [[-7, 8], [7, 4], [7, -4], [-7, -8]].map(([a1, b1]) => f1(q[0] + u[0] * a1 + nm[0] * b1) + " " + f1(q[1] + u[1] * a1 + nm[1] * b1)).join(" L") + ' Z"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], TL(r.u), r.u); }
+      else if (/^(coupling|union|induction e-coupler)/i.test(r.it || "") || r.sym === "cpl"){ s += '<path class="iso-s iso-fill" d="M' + [[-4, 6], [4, 6], [4, -6], [-4, -6]].map(([a1, b1]) => f1(q[0] + u[0] * a1 + nm[0] * b1) + " " + f1(q[1] + u[1] * a1 + nm[1] * b1)).join(" L") + ' Z"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], TL(r.u), r.u); }
+      else if (isTee(r)){ s += '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="3.2"/>' + tag([q[0] + 8, q[1] + 14], TL(r.u), r.u); }
+      else if (/blind/i.test(r.it || "")){ s += L2([q[0] - nm[0] * 9, q[1] - nm[1] * 9], [q[0] + nm[0] * 9, q[1] + nm[1] * 9], "iso-s") + L2([q[0] + u[0] * 3 - nm[0] * 9, q[1] + u[1] * 3 - nm[1] * 9], [q[0] + u[0] * 3 + nm[0] * 9, q[1] + u[1] * 3 + nm[1] * 9], "iso-s iso-bar") + tag([q[0] - nm[0] * 18 + 6, q[1] - nm[1] * 18], TL(r.u), r.u); }
+      else if (/^plug/i.test(r.it || "")){ s += '<rect class="iso-s iso-dotf" x="' + f1(q[0] - 3.5) + '" y="' + f1(q[1] - 3.5) + '" width="7" height="7"/>' + tag([q[0] + 8, q[1] + 14], TL(r.u), r.u); }
+      else if (isEnd(r)){ s += '<circle class="iso-s" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="5"/>' + tag([q[0] + 8, q[1] + 14], TL(r.u), r.u); }
+      else s += '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="2"/>' + tag([q[0] + 6, q[1] + 16], TL(r.u), r.u);
       if (r.note) s += noteTxt([q[0] + nm[0] * 30, q[1] + nm[1] * 30], r.note, r.u);
       g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(r.u) + '">' + s + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>'; });
     Lo.sups.forEach(n => { const q = prj(n.p3), lvl = !/[UD]/.test(n.d), sd = lvl ? [0, 1] : nrm(n.d), e = [q[0] + sd[0] * 12, q[1] + sd[1] * 12], on = n.r.u === sk.sel;
-      g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(n.r.u) + '">' + L2(q, e, "iso-s") + L2([e[0] - sd[1] * 6, e[1] + sd[0] * 6], [e[0] + sd[1] * 6, e[1] - sd[0] * 6], "iso-s iso-bar") + tag(lvl ? [e[0] + 8, e[1] + 4] : [e[0] + sd[0] * 6 + 2, e[1] + sd[1] * 6 + 6], sn[n.r.sid] || n.r.sid, n.r.u) + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>';
+      g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(n.r.u) + '">' + L2(q, e, "iso-s") + L2([e[0] - sd[1] * 6, e[1] + sd[0] * 6], [e[0] + sd[1] * 6, e[1] - sd[0] * 6], "iso-s iso-bar") + tag(lvl ? [e[0] + 8, e[1] + 4] : [e[0] + sd[0] * 6 + 2, e[1] + sd[1] * 6 + 6], (byI && sn[n.r.sid]) || n.r.sid, n.r.u) + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>';
       const s = Lo.segs.find(x => x.L === n.L && x.r === n.pipe); if (!s) return; const ha = !!nbr(s, -1) || !!s.L.off && s.L.rows.find(x => x.k !== "sup") === s.r, hb = !!nbr(s, 1), end = n.r.from || (ha && !hb ? "a" : hb && !ha ? "b" : n.f <= 0.5 ? "a" : "b"), fp = face(s, end);
       g += dimLine(end === "a" ? fp : q, end === "a" ? q : fp, nrm(s.d), -34, n.r.dd ? String(n.r.dd) : "?", !n.r.dd, 'data-sdim="' + esc(n.r.u) + '" data-se="' + end + '"'); });
     checks(a, Lo).forEach(c => { const q = prj(c.p3), x = q[0] + 10, y = q[1] - 26;
@@ -397,7 +397,6 @@ const Piping = (() => {
     catch (e){ console.error(e); $(".ppv-b", v).innerHTML = '<p class="dim">Couldn\'t load the spec: ' + esc(e.message) + '</p>'; } }
   function wire(el, a, ro, which){
     const si = $("[data-si]", el); if (si) si.onclick = e => { e.stopPropagation(); specPages(P(a).spec); };
-    $$("[data-v]", el).forEach(b => b.onclick = () => { view.pv = b.dataset.v; App.render(); });
     $$("[data-by]", el).forEach(b => b.onclick = () => { view.by = b.dataset.by; lsSet("adPipBy", view.by); App.render(); });
     $$("[data-sv]", el).forEach(b => b.onclick = () => { view.sv = b.dataset.sv; App.render(); });
     if (ro) return;
