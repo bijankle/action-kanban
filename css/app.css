@@ -1825,3 +1825,4 @@ svg.iso{display:block;width:100%;height:100%;font:calc(11px * var(--k, 1)) var(-
 .fd-t{border-collapse:collapse;width:100%}.fd-t th,.fd-t td{border:1px solid var(--line);height:22px;padding:0 6px}.fd-t th{background:var(--hdr);color:var(--muted);font-weight:600;text-align:left;white-space:nowrap}.fd-t .fd-n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .fd-s{color:var(--muted);font-size:var(--fs);overflow-wrap:anywhere}.fd-m{border:0;background:none;padding:0;color:var(--th);font:inherit;cursor:pointer;text-decoration:underline}.fd-mt{display:block;margin-top:4px}
 .fd-sk{display:block;max-width:100%}.fd-l{font:700 11px var(--font);fill:var(--ink)}
+.iso-45{pointer-events:none}.iso-h45{stroke:#1d2430;stroke-width:.8}.iso-h45s{stroke:#1d2430;stroke-width:1}

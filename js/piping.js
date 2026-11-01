@@ -233,6 +233,10 @@ const Piping = (() => {
       let v = 0; if (ls[i - 1]) v -= dot(unit(ls[i - 1].d)); if (ls[i + 1]) v += dot(unit(ls[i + 1].d));   /* (the way the pipes either side turn: the bend's inside) */
       if (Math.abs(v) < 0.05){ v = 0; Lo.segs.forEach(x => { if (x === s) return; const a2 = prj(x.a3), b2 = prj(x.b3); [a2, b2, [(a2[0] + b2[0]) / 2, (a2[1] + b2[1]) / 2]].forEach(q => { const d = Math.hypot(q[0] - m[0], q[1] - m[1]); if (d > 1 && d < 3 * G) v += dot([q[0] - m[0], q[1] - m[1]]) / d; }); }); }   /* (a Z turns both ways: then the side with less drawn near it) */
       return (s._nm = v > 0.05 ? [-n0[0], -n0[1]] : n0); };
+    /* a 45° run gets the hatched triangle of a site ISO (its square sides along the drawing's own directions, hatched parallel to the second), so it never reads as a straight run */
+    Lo.segs.forEach(s => { if (!s.d || s.d.length !== 2 || !AX[s.d[0]]) return; const n = Math.round(Math.hypot(...s.b3.map((v, k) => v - s.a3[k])) / Math.SQRT2) || 1, A = prj(s.a3), B = prj(s.b3), C = prj(add3(s.a3, AX[s.d[0]], n)); let hh = "";
+      for (let k = 1; k < 7; k++){ const f = k / 7; hh += L2([A[0] + (C[0] - A[0]) * f, A[1] + (C[1] - A[1]) * f], [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f], "iso-h45"); }
+      g += '<g class="iso-45">' + hh + L2(A, C, "iso-h45s") + L2(C, B, "iso-h45s") + '</g>'; });
     Lo.segs.forEach(s => { const A = prj(s.a3), Bp = prj(s.b3), on = s.r.u === sk.sel, nm = sideNrm(s), lab = TL(s.r.u);
       g += '<g data-u="' + esc(s.r.u) + '" class="iso-seg' + (on ? " on" : "") + '">' + L2(A, Bp, "iso-p") + L2(A, Bp, "iso-hit") + '</g>';
       /* the dimension: end to end, beside the run, its value the real length (? while still to fill in) */
