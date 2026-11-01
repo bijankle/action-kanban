@@ -181,7 +181,7 @@ const Piping = (() => {
       rs.forEach((r, i) => { if (!i) return; const pt = posEnd(rs[i - 1]); if (pt) meet(L, rs[i - 1], L, r, pt, false); }); });
     return out; }
   const WELD_T = { FW: "Field weld", FFW: "Field fit weld (150 mm pipe green)", FFG: "Field fit groove (150 mm pipe green)" };
-  function sketchSvg(a, ro){ const noteTxt = (q, t, k) => '<text class="iso-note" data-note="' + esc(k) + '" x="' + Math.round(q[0]) + '" y="' + Math.round(q[1]) + '">' + String(t).split(/\n/).map((x, i) => '<tspan x="' + Math.round(q[0]) + '" dy="' + (i ? 13 : 0) + '">' + esc(x) + '</tspan>').join("") + '</text>'; const Lo = layout(a), B = bom(a), sn = supNo(a), pts = [];
+  function sketchSvg(a, ro){ const noteTxt = (q, t, k) => '<text class="iso-note" data-note="' + esc(k) + '" x="' + Math.round(q[0]) + '" y="' + Math.round(q[1]) + '">' + String(t).split(/\n/).map((x, i) => '<tspan x="' + Math.round(q[0]) + '" dy="' + (i ? "1.2em" : 0) + '">' + esc(x) + '</tspan>').join("") + '</text>'; const Lo = layout(a), B = bom(a), sn = supNo(a), pts = [];
     Lo.segs.forEach(s => pts.push(prj(s.a3), prj(s.b3))); Lo.nodes.forEach(n => pts.push(prj(n.p3))); Lo.ends.forEach(e => pts.push(prj(e.p3)));
     if (!pts.length) pts.push([0, 0]);
     const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]), M = 90; let x0 = Math.min(...xs) - M, y0 = Math.min(...ys) - M, w = Math.max(...xs) - x0 + M, hgt = Math.max(...ys) - y0 + M;
@@ -189,7 +189,7 @@ const Piping = (() => {
     if (w < 520){ x0 -= (520 - w) / 2; w = 520; } if (hgt < 300){ y0 -= (300 - hgt) / 2; hgt = 300; }
     const unit = d => { const q = prj(DIRS[d]), m = Math.hypot(q[0], q[1]); return [q[0] / m, q[1] / m]; }, nrm = d => { const u = unit(d); return [u[1], -u[0]]; };
     const f1 = v => Math.round(v * 10) / 10, L2 = (p, q, c, extra) => '<line class="' + c + '" x1="' + f1(p[0]) + '" y1="' + f1(p[1]) + '" x2="' + f1(q[0]) + '" y2="' + f1(q[1]) + '"' + (extra || "") + '/>';
-    const tag = (q, t, u) => { if (!t) return ""; const tw = 8 + t.length * 6.4; return '<g class="iso-tg' + (u === sk.sel ? " on" : "") + '"' + (u ? ' data-u="' + esc(u) + '"' : "") + '><rect x="' + f1(q[0]) + '" y="' + f1(q[1] - 8) + '" width="' + f1(tw) + '" height="15"/><text x="' + f1(q[0] + 4) + '" y="' + f1(q[1] + 3.5) + '">' + esc(t) + '</text></g>'; };
+    const tag = (q, t, u) => { if (!t) return ""; const tw = 8 + t.length * 6.4; return '<g class="iso-tg' + (u === sk.sel ? " on" : "") + '"' + (u ? ' data-u="' + esc(u) + '"' : "") + ' transform="translate(' + f1(q[0]) + ',' + f1(q[1]) + ')"><g class="iso-k"><rect x="0" y="-8" width="' + f1(tw) + '" height="15"/><text x="4" y="3.5">' + esc(t) + '</text></g></g>'; };
     let g = "";
     /* the dot grid: every point of the iso lattice over the drawing */
     g += '<defs><pattern id="iso-dots" patternUnits="userSpaceOnUse" width="' + f1(2 * CX) + '" height="' + f1(2 * CY) + '"><circle class="iso-dot" cx="0" cy="0" r="1"/><circle class="iso-dot" cx="' + f1(CX) + '" cy="' + f1(CY) + '" r="1"/><circle class="iso-dot" cx="' + f1(2 * CX) + '" cy="0" r="1"/><circle class="iso-dot" cx="0" cy="' + f1(2 * CY) + '" r="1"/><circle class="iso-dot" cx="' + f1(2 * CX) + '" cy="' + f1(2 * CY) + '" r="1"/></pattern></defs><rect class="iso-bg" x="-100000" y="-100000" width="200000" height="200000" fill="url(#iso-dots)"/>';
@@ -264,7 +264,7 @@ const Piping = (() => {
     save(a, () => { const i = L.rows.indexOf(r); let j = i + 1; while (L.rows[j] && L.rows[j].k === "sup") j++; const ss = L.rows.splice(i + 1, j - i - 1);   /* (the pipe's supports stay where they are: each goes with the half it's on) */
       const pos = x => (x.at != null ? x.at : 0.5) * nn, s1 = ss.filter(x => pos(x) <= kk), s2 = ss.filter(x => pos(x) > kk); s1.forEach(x => { x.at = Math.round(pos(x) / kk * 100) / 100; if (x.from === "b"){ delete x.dd; delete x.from; } }); s2.forEach(x => { x.at = Math.round((pos(x) - kk) / (nn - kk) * 100) / 100; if (x.from !== "b"){ delete x.dd; delete x.from; } });   /* (a distance from an end that's now the new part's face is asked for again: ?) */
       const ws = r.welds || []; r.welds = ws.filter(w => w.at * nn <= kk).map(w => Object.assign(w, { at: Math.round(w.at * nn / kk * 100) / 100 })); r2.welds = ws.filter(w => w.at * nn > kk).map(w => Object.assign({}, w, { at: Math.round((w.at * nn - kk) / (nn - kk) * 100) / 100 })); delete r2.flow; delete r2.note;
-      r.gl = kk; if (len) r.len = Math.round(len * kk / nn); L.rows.splice(i + 1, 0, ...s1, node, r2, ...s2); if (nl) P(a).lines.push(nl); }, "Placed a part on the piping of");
+      r.gl = Math.max(2, kk); r2.gl = Math.max(2, nn - kk); if (len) r.len = Math.round(len * kk / nn); L.rows.splice(i + 1, 0, ...s1, node, r2, ...s2); if (nl) P(a).lines.push(nl); }, "Placed a part on the piping of");
     sk.sel = node.u; if (nl){ sk.tool = "pipe"; sk.dl = nl.id; } }
   function removeAt(a, u){ const { L, r } = rowOf(a, u); if (!L || !r) return; const i = L.rows.indexOf(r); let pi = i - 1; while (L.rows[pi] && L.rows[pi].k === "sup") pi--; const pv = L.rows[pi], nx = L.rows[i + 1];
     if (r.k === "sup") return save(a, () => { L.rows.splice(i, 1); const S = SUP(a), j = S.findIndex(s => s.sid === r.sid); if (j >= 0) S.splice(j, 1); }, "Removed a pipe support from");
@@ -281,14 +281,18 @@ const Piping = (() => {
   addEventListener("keydown", e => { if (e.key !== "Escape" || !document.querySelector("svg.iso") || document.querySelector(".pop, .ynmodal, .ppv, .iso-co, .iso-din")) return;
     if (sk.tool !== "sel"){ e.stopPropagation(); e.preventDefault(); sk.tool = "sel"; sk.dl = null; App.render(); return; }
     if (sk.fs){ e.stopPropagation(); e.preventDefault(); fullScreen(false); } }, true);
-  function autofit(a){ sk.vb = null; save(a, () => P(a).lines.forEach(L => L.rows.forEach((r, i) => { if (!isPipe(r) || r.k !== "it") return; let ns = 0; for (let j = i + 1; L.rows[j] && L.rows[j].k === "sup"; j++) ns++; r.gl = Math.max(3, 2 * (ns + 1) + 1); })), "Autofitted the sketch of"); }
+  function autofit(a){ sk.vb = null; save(a, () => P(a).lines.forEach(L => L.rows.forEach((r, i) => { if (!isPipe(r) || r.k !== "it") return; const ss = []; for (let j = i + 1; L.rows[j] && L.rows[j].k === "sup"; j++) ss.push(L.rows[j]);
+    const marks = ss.map(x => ({ x, at: x.at != null ? x.at : 0.5 })).concat((r.welds || []).map(w => ({ w, at: w.at }))).sort((p, q) => p.at - q.at), n = marks.length;
+    r.gl = 2 * (n + 1); marks.forEach((m, k) => { const at = (2 * (k + 1)) / r.gl; if (m.x) m.x.at = at; else m.w.at = at; }); })), "Autofitted the sketch of"); }
   function wireSketch(el, a){ const svg = $("svg.iso", el); if (!svg) return; const pt = e => { const m = svg.getScreenCTM().inverse(), q = new DOMPoint(e.clientX, e.clientY).matrixTransform(m); return [q.x, q.y]; };
     $$("[data-tool]", el).forEach(b => b.onclick = () => { sk.tool = b.dataset.tool; if (sk.tool !== "pipe") sk.dl = null; App.render(); });
     const af = $("[data-isofit]", el); if (af) af.onclick = () => autofit(a);
     const fsb = $("[data-fs]", el); if (fsb) fsb.onclick = () => fullScreen(!sk.fs);
     /* zoom and pan: the wheel zooms on the point under the pointer, a drag on the paper pans, a double click on the paper fits it all in */
     const seen = () => { const r = svg.getBoundingClientRect(), m = svg.getScreenCTM().inverse(), p0 = new DOMPoint(r.left, r.top).matrixTransform(m), p1 = new DOMPoint(r.right, r.bottom).matrixTransform(m); return [p0.x, p0.y, p1.x - p0.x, p1.y - p0.y]; };
-    const setVb = v => { sk.vb = v; sk.vbA = a.id; svg.setAttribute("viewBox", v.join(" ")); };
+    const fitText = () => { const m = svg.getScreenCTM(); if (m && m.a) svg.style.setProperty("--k", Math.max(1, Math.min(6, 1 / m.a)).toFixed(3)); }; fitText(); requestAnimationFrame(fitText);
+    if (!svg._ro && window.ResizeObserver){ svg._ro = new ResizeObserver(fitText); svg._ro.observe(svg); }
+    const setVb = v => { sk.vb = v; sk.vbA = a.id; svg.setAttribute("viewBox", v.join(" ")); fitText(); };
     svg.onwheel = e => { e.preventDefault(); const q = pt(e), v = seen(), f = Math.exp((e.deltaY > 0 ? 1 : -1) * Math.min(Math.abs(e.deltaY), 120) * 0.0018), nw = Math.min(Math.max(v[2] * f, 80), 40000), k = nw / v[2];
       setVb([q[0] - (q[0] - v[0]) * k, q[1] - (q[1] - v[1]) * k, v[2] * k, v[3] * k]); };
     let pan = null, panned = false;
@@ -301,7 +305,7 @@ const Piping = (() => {
     const ghost = $(".iso-ghost", svg), gt = $(".iso-gt", svg);
     const aim = e => { if (sk.tool !== "pipe" || !sk.dl) return null; const Lo = layout(a), en = Lo.ends.find(x => x.L.id === sk.dl); if (!en) return null; const s0 = prj(en.p3), q = pt(e), v = [q[0] - s0[0], q[1] - s0[1]], m = Math.hypot(...v); if (m < 8) return null;
       let best = null; Object.keys(DIRS).forEach(d => { const w = prj(DIRS[d]), wm = Math.hypot(...w), c = (v[0] * w[0] + v[1] * w[1]) / (m * wm); if (!best || c > best.c) best = { d, c, wm }; });
-      const n = Math.max(1, Math.round(m / best.wm)), end = prj(add3(en.p3, DIRS[best.d], n)); return { L: lineOf(a, sk.dl), d: best.d, n, s0, end }; };
+      const n = Math.max(2, Math.round(m / best.wm)), end = prj(add3(en.p3, DIRS[best.d], n)); return { L: lineOf(a, sk.dl), d: best.d, n, s0, end }; };
     svg.onpointermove = e => { const g0 = aim(e); if (!g0){ ghost.setAttribute("hidden", ""); gt.setAttribute("hidden", ""); return; } ghost.removeAttribute("hidden"); gt.removeAttribute("hidden");
       ghost.setAttribute("x1", g0.s0[0]); ghost.setAttribute("y1", g0.s0[1]); ghost.setAttribute("x2", g0.end[0]); ghost.setAttribute("y2", g0.end[1]); gt.setAttribute("x", g0.end[0] + 8); gt.setAttribute("y", g0.end[1] - 8); gt.textContent = g0.d; };
     svg.onclick = e => { if (panned){ panned = false; return; } const wn = e.target.closest("[data-warn]"); if (wn) return callout(a, wn);
@@ -322,7 +326,7 @@ const Piping = (() => {
       const Lo = layout(a), s = Lo.segs.find(x => x.r.u === u), A = prj(s.a3), Bq = prj(s.b3), q = pt(e), dx = Bq[0] - A[0], dy = Bq[1] - A[1], t = Math.max(0, Math.min(1, ((q[0] - A[0]) * dx + (q[1] - A[1]) * dy) / (dx * dx + dy * dy || 1)));
       if (sk.tool === "weld") return save(a, () => { (r.welds = r.welds || []).push({ u: uid(), at: Math.round(t * 100) / 100, t: "FW" }); }, "Marked a field weld on");
       placeOn(a, u, t); };
-    svg.ondblclick = e => { const dim = e.target.closest("[data-dim],[data-sdim]"); if (dim) return editDim(a, dim); if (sk.tool === "sel" && paper(e.target)){ sk.vb = null; svg.setAttribute("viewBox", svg.dataset.fit); } }; }
+    svg.ondblclick = e => { const dim = e.target.closest("[data-dim],[data-sdim]"); if (dim) return editDim(a, dim); if (sk.tool === "sel" && paper(e.target)){ sk.vb = null; svg.setAttribute("viewBox", svg.dataset.fit); fitText(); } }; }
   /* a field weld: FW, then FFW, then FFG on each click (Remove takes it off) */
   function weldAt(a, key, del){ const [u, wu] = key.split("|"), { r } = rowOf(a, u); if (!r || !r.welds) return; const w = r.welds.find(x => x.u === wu); if (!w) return;
     save(a, () => { if (del) r.welds = r.welds.filter(x => x !== w); else w.t = w.t === "FW" ? "FFW" : w.t === "FFW" ? "FFG" : "FW"; }, del ? "Removed a field weld from" : "Changed a field weld on"); }
