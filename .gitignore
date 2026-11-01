@@ -1,0 +1,5 @@
+
+# test screenshots never go in (the app icons do)
+/*.png
+!/apple-touch-icon.png
+!/icon-*.png

@@ -159,6 +159,8 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     check("the piping sketch lays a line out from the list, a branch starting at its tee", iq === "3 3,2,0 | 3,2,2", iq);
     const wq = await a.p.evaluate(() => Piping.checks({ pip: { spec: "", lines: [{ id: "A", rows: [{ u: "w1", k: "it", cl: "Z", dn: 25, it: "Pipe", dir: "E", gl: 3 }, { u: "w2", k: "it", cl: "Z", dn: 32, it: "Elbow, 90°" }, { u: "w3", k: "it", cl: "Z", dn: 32, it: "Pipe", dir: "N", gl: 3 }] }] } }).map(c => c.k + ":" + c.m.map(m => m.t).join()).join(" | "));
     check("the sketch flags a size change with no reducer, where it happens", wq === "w1>w2:Size change with no reducer", wq);
+    const fq = await a.p.evaluate(() => { const e = (FITDIMS || []).find(x => x.shape === "elbow90" && x.table && x.table["100"]); return e ? typeof FitDims.sketch(e, e.table["100"], { cl: "MS1", dn: 100, it: "Elbow" }) + ":" + /<svg/.test(FitDims.sketch(e, e.table["100"], { cl: "MS1", dn: 100, it: "Elbow" })) : "no data"; });
+    check("a part's card draws its sketch from the dimension tables", fq === "string:true", fq);
     const tq = await a.p.evaluate(() => [{ desc: "GASKET DN150 CNAF 3MM" }, { desc: "NUT M20 GR 8 GALV" }, { desc: "PG02-300 insulated U-bolt guide" }, { desc: "GASKET DN150", ty: "Specials" }].map(x => Mto.typeOf(x)).join(","));
     check("a row typed in goes under its ISO heading, and a Type picked wins", tq === "Gaskets,Bolts,Supports,Specials", tq);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));

@@ -1813,3 +1813,14 @@ svg.iso{display:block;width:100%;height:100%;font:calc(11px * var(--k, 1)) var(-
 .iso-hint{fill:var(--muted)}
 .pp-tbl tr.sel td{background:#cce4f7!important}
 .pp-lw{min-width:0;max-width:100%;overflow-x:auto}
+/* the (i) on a Piping description, and the part card it opens (sketch to scale left, figures and the spec's extras right) */
+.pp-i{display:inline-grid;place-items:center;width:16px;height:16px;border:0;background:none;padding:0;margin-right:5px;vertical-align:-3px;cursor:pointer;color:var(--th)}.pp-i svg{width:15px;height:15px}.pp-i:hover{filter:brightness(1.3)}
+.pp-ds .pp-dd{display:inline-flex;width:calc(100% - 22px)}
+.fd-card{position:fixed;z-index:9001;display:grid;grid-template-columns:200px minmax(0,1fr);gap:12px;width:min(580px,calc(100vw - 16px));background:var(--panel);border:1px solid var(--line2);box-shadow:0 6px 18px rgba(20,30,45,.16);padding:10px 30px 10px 12px;font:var(--fb) var(--font);color:var(--ink)}
+.fd-card.fd-1{grid-template-columns:minmax(0,1fr);width:min(420px,calc(100vw - 16px))}
+.fd-x{position:absolute;top:4px;right:4px}
+.fd-r{display:grid;gap:8px;min-width:0;align-content:start}
+.fd-d{line-height:1.4}
+.fd-t{border-collapse:collapse;width:100%}.fd-t th,.fd-t td{border:1px solid var(--line);height:22px;padding:0 6px}.fd-t th{background:var(--hdr);color:var(--muted);font-weight:600;text-align:left;white-space:nowrap}.fd-t .fd-n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.fd-s{color:var(--muted);font-size:var(--fs);overflow-wrap:anywhere}.fd-m{border:0;background:none;padding:0;color:var(--th);font:inherit;cursor:pointer;text-decoration:underline}.fd-mt{display:block;margin-top:4px}
+.fd-sk{display:block;max-width:100%}.fd-l{font:700 11px var(--font);fill:var(--ink)}
