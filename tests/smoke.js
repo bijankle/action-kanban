@@ -174,6 +174,11 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
       const ys = [...document.querySelectorAll(".yn-yes")], y = ys[ys.length - 1]; if (!y) return "didn't ask"; window.__q = (y.closest(".ynmodal, .modal, dialog, .fw-win") || y.parentElement).innerText; y.click(); await new Promise(r => setTimeout(r, 400)); const a1 = App.act(App.selRef), gone = a1.pip.lines.length + "/" + a1.sups.length;
       Store.undo(); await new Promise(r => setTimeout(r, 400)); const a2 = App.act(App.selRef); return gone + " " + a2.pip.lines.length + "/" + a2.sups.length + (gone === "1/0" ? "" : " [" + window.__q + "]"); });
     check("removing a tee asks, takes its drawn branch and support, and one Ctrl+Z brings them back", rq === "1/0 2/1", rq);
+    /* an elbow set to 45°: the run after it swings halfway and the next bend becomes a 45° the other way (an offset); the spacing stays even */
+    const eq45 = await a.p.evaluate(async () => { const pid = Store.selected()[0]; let x; const P = (u, d) => ({ u, k: "it", it: "Pipe", dir: d, gl: 5 }), E = u => ({ u, k: "it", it: "Elbow, 90°" });
+      Store.mutate("a:" + pid, () => { x = Store.newAction(pid, { title: "Elbow test" }); x.pip = { spec: "", lines: [{ id: "A", at: [0, 0, 0], rows: [P("q1", "E"), E("e1"), P("q2", "N"), E("e2"), P("q3", "E")] }] }; });
+      Piping.setElbow(x, "e1", 45); await new Promise(r => setTimeout(r, 300)); return x.pip.lines[0].rows.map(r => r.dir ? r.dir + r.gl : r.it).join(","); });
+    check("an elbow set to 45° makes an offset: the run swings halfway, the next bend turns 45° back, the spacing even", eq45 === "E2,Elbow, 45°,EN2,Elbow, 45°,E2", eq45);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
   } catch (e) { console.log("  FAIL  the checks stopped: " + e.message); code = 1; }
   await browser.close(); srv.kill(); fs.rmSync(dir, { recursive: true, force: true });

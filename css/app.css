@@ -1812,7 +1812,7 @@ svg.iso{display:block;width:100%;height:100%;font:calc(11px * var(--k, 1)) var(-
 .iso-box{fill:rgba(194,65,12,.08);stroke:#c2410c;stroke-width:1;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
 .iso-pd{fill:#b9c1cb;stroke:transparent;stroke-width:9;cursor:pointer}.iso-pd:hover{fill:#c9820a;r:3.5px}.iso-pd.on{fill:#fff6ea;stroke:#c9820a;stroke-width:2}
 .iso-hint{fill:var(--muted)}
-.pp-tbl tr.sel td{background:#cce4f7!important}
+.pp-tbl tr.on>td{background:none}
 .pp-lw{min-width:0;max-width:100%;overflow-x:auto}
 /* the (i) on a Piping description, and the part card it opens (sketch to scale left, figures and the spec's extras right) */
 .pp-i{display:inline-grid;place-items:center;width:16px;height:16px;border:0;background:none;padding:0;margin-right:5px;vertical-align:-3px;cursor:pointer;color:var(--th)}.pp-i svg{width:15px;height:15px}.pp-i:hover{filter:brightness(1.3)}
