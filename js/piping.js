@@ -350,7 +350,7 @@ const Piping = (() => {
         if (sk.tool === "sel"){ sk.pt = sk.pt && sk.pt.u === u && Math.abs(sk.pt.t - t) < 1e-6 ? null : { u, t }; sk.sel = null; App.render(); return; }
         if (PLACE.includes(sk.tool)) return placeTool(a, sk.tool, u, t); if (sk.tool === "del") return removeAt(a, u); if (sk.tool === "note") return editNote(a, u, pd); }
       const nt = e.target.closest("[data-note]"); if (nt && (sk.tool === "note" || sk.tool === "sel")) return editNote(a, nt.dataset.note, nt);
-      const end = e.target.closest("[data-end]"); if (end && sk.tool === "note") return editNote(a, "end:" + end.dataset.end, end); if (end && sk.tool === "cap") return capAt(a, lineOf(a, end.dataset.end), "end"); if (end){ if (sk.tool !== "pipe") return; sk.dl = end.dataset.end; App.render(); return; }
+      const end = e.target.closest("[data-end]"); if (end && sk.tool === "note") return editNote(a, "end:" + end.dataset.end, end); if (end && sk.tool === "cap") return capAt(a, lineOf(a, end.dataset.end), "end"); if (end && sk.tool === "del") return dropLine(a, end.dataset.end); if (end){ if (sk.tool !== "pipe") return; sk.dl = end.dataset.end; App.render(); return; }
       const dim = e.target.closest("[data-dim],[data-sdim]"); if (dim && sk.tool === "sel") return editDim(a, dim);
       if (sk.tool === "pipe"){ const hn = e.target.closest(".iso-n[data-u]"), hr = hn && rowOf(a, hn.dataset.u); if (hr && hr.r && isElbow(hr.r)) return elbowToTee(a, hr.L, hr.r);
         const g0 = aim(e); if (g0 && g0.L) drawPipe(a, g0.L, g0.d, g0.n); return; }
@@ -374,11 +374,15 @@ const Piping = (() => {
     if (tool === "weld") return save(a, () => { (r.welds = r.welds || []).push({ u: uid(), at: Math.round(t * 100) / 100, t: "FW" }); }, "Marked a field weld on");
     if (tool === "flow") return flowOn(a, u);
     const was = sk.tool; sk.tool = tool; placeOn(a, u, t); if (sk.tool === tool) sk.tool = was; App.render(); }
+  /* the Remove tool on a line's end dot: a line with nothing drawn on it yet goes (Ctrl+Z brings it back) */
+  function dropLine(a, id){ const L = lineOf(a, id); if (!L) return; if (L.rows.some(x => x.k !== "sup")) return note("Line " + id + " has parts on it: remove them first, then its dot");
+    if (sk.dl === id) sk.dl = null; save(a, () => { P(a).lines = P(a).lines.filter(x => x !== L); }, "Removed an empty line from"); }
   function removeIn(a, r){ const Lo = layout(a), inn = p3 => { const q = prj(p3); return q[0] >= r[0] && q[0] <= r[0] + r[2] && q[1] >= r[1] && q[1] <= r[1] + r[3]; };
     const sups = Lo.sups.filter(n => inn(n.p3)).map(n => n.r.u), nodes = Lo.nodes.filter(n => inn(n.p3) && !isElbow(n.r)).map(n => n.r.u), pipes = Lo.segs.filter(x => inn(x.a3) && inn(x.b3));
     const marks = Lo.segs.map(x => ({ x, ws: (x.r.welds || []).filter(w => inn(x.a3.map((v, k) => v + (x.b3[k] - v) * w.at))).map(w => w.u), fl: x.r.flow && inn(x.a3.map((v, k) => v + (x.b3[k] - v) * 0.3)) })).filter(m => m.ws.length || m.fl);
-    const n0 = sups.length + nodes.length + pipes.length + marks.length; if (!n0) return note("Nothing inside the box");
-    let left = 0; save(a, () => { marks.forEach(m => { m.x.r.welds = (m.x.r.welds || []).filter(w => !m.ws.includes(w.u)); if (m.fl) delete m.x.r.flow; });
+    const empt = Lo.ends.filter(e => !e.L.rows.some(x => x.k !== "sup") && inn(e.p3)).map(e => e.L.id);
+    const n0 = sups.length + nodes.length + pipes.length + marks.length + empt.length; if (!n0) return note("Nothing inside the box");
+    let left = 0; if (sups.length || marks.length || empt.length) save(a, () => { P(a).lines = P(a).lines.filter(L => !empt.includes(L.id)); if (empt.includes(sk.dl)) sk.dl = null; marks.forEach(m => { m.x.r.welds = (m.x.r.welds || []).filter(w => !m.ws.includes(w.u)); if (m.fl) delete m.x.r.flow; });
       P(a).lines.forEach(L => { L.rows = L.rows.filter(x => !(x.k === "sup" && sups.includes(x.u))); }); SUP(a).splice(0, SUP(a).length, ...SUP(a).filter(s => P(a).lines.some(L => L.rows.some(x => x.k === "sup" && x.sid === s.sid)))); }, "Removed parts from");
     nodes.forEach(u => { if (rowOf(a, u).r) removeAt(a, u); });
     P(a).lines.forEach(L => { for (let i = L.rows.length - 1; i >= 0; i--){ const x = L.rows[i]; if (!x || !pipes.some(s => s.r.u === x.u)) continue; if (L.rows.slice(i + 1).some(y => y.k !== "sup" && !isElbow(y))){ left++; continue; } removeAt(a, x.u); } });
