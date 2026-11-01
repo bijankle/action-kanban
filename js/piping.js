@@ -138,7 +138,7 @@ const Piping = (() => {
       if (L.off){ if (!out.at[L.off]) return; start = out.at[L.off].p3; } else start = L.id === p.lines[0].id ? [0, 0, 0] : [nextX, -2, 0];
       placed.add(L.id); let cur = start, pd = L.dir0 || null, last = null, prev = null;
       L.rows.forEach(r => {
-        if (r.k === "sup"){ if (last){ const f = r.at != null ? r.at : 0.5; out.sups.push({ r, L, p3: add3(last.a3, DIRS[last.d], last.n * f), d: last.d }); } return; }
+        if (r.k === "sup"){ if (last){ const ln = +last.r.len || 0, f = r.dd && ln ? Math.min(0.96, Math.max(0.04, r.from === "b" ? 1 - r.dd / ln : r.dd / ln)) : r.at != null ? r.at : 0.5; out.sups.push({ r, L, pipe: last.r, f, p3: add3(last.a3, DIRS[last.d], last.n * f), d: last.d }); } return; }
         if (r.k === "it" && isPipe(r)){ const d = r.dir || (prev && isElbow(prev) && pd ? PERP(pd) : pd) || "E", n = Math.max(1, +r.gl || 3), s = { r, L, a3: cur, b3: add3(cur, DIRS[d], n), d, n };
           out.segs.push(s); cur = s.b3; pd = d; last = s; prev = r; return; }
         const nd = { r, L, p3: cur, d: pd || "E" }; out.nodes.push(nd); out.at[r.u] = nd; prev = r; });
@@ -186,14 +186,19 @@ const Piping = (() => {
     let g = "";
     /* the dot grid: every point of the iso lattice over the drawing */
     g += '<defs><pattern id="iso-dots" patternUnits="userSpaceOnUse" width="' + f1(2 * CX) + '" height="' + f1(2 * CY) + '"><circle class="iso-dot" cx="0" cy="0" r="1"/><circle class="iso-dot" cx="' + f1(CX) + '" cy="' + f1(CY) + '" r="1"/><circle class="iso-dot" cx="' + f1(2 * CX) + '" cy="0" r="1"/><circle class="iso-dot" cx="0" cy="' + f1(2 * CY) + '" r="1"/><circle class="iso-dot" cx="' + f1(2 * CX) + '" cy="' + f1(2 * CY) + '" r="1"/></pattern></defs><rect class="iso-bg" x="-100000" y="-100000" width="200000" height="200000" fill="url(#iso-dots)"/>';
+    /* dimensions run to the face of a valve, reducer, flange joint or cap, to the centre of an elbow or tee (as on the ISOs) */
+    const halfOf = r => !r ? 0 : r.k === "joint" ? 3 : /^V:/.test(r.it || "") || r.sym === "valve" ? 9 : /^reducer/i.test(r.it || "") || r.sym === "red" ? 7 : /^cap/i.test(r.it || "") ? 5 : 0;
+    const nbr = (s, dir) => { const rs = s.L.rows.filter(x => x.k !== "sup"), i = rs.indexOf(s.r); return rs[i + dir] || null; };
+    const face = (s, end) => { const A = prj(s.a3), Bp = prj(s.b3), u = unit(s.d), hf = halfOf(nbr(s, end === "a" ? -1 : 1)); return end === "a" ? [A[0] + u[0] * hf, A[1] + u[1] * hf] : [Bp[0] - u[0] * hf, Bp[1] - u[1] * hf]; };
+    const dimLine = (A, Bp, nm, o, txt, need, attr) => { const A2 = [A[0] + nm[0] * o, A[1] + nm[1] * o], B2 = [Bp[0] + nm[0] * o, Bp[1] + nm[1] * o], mid = [(A2[0] + B2[0]) / 2, (A2[1] + B2[1]) / 2], sg = Math.sign(o) || 1;
+      let ang = Math.atan2(B2[1] - A2[1], B2[0] - A2[0]) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
+      return L2([A[0] + nm[0] * 6 * sg, A[1] + nm[1] * 6 * sg], [A2[0] + nm[0] * 4 * sg, A2[1] + nm[1] * 4 * sg], "iso-d") + L2([Bp[0] + nm[0] * 6 * sg, Bp[1] + nm[1] * 6 * sg], [B2[0] + nm[0] * 4 * sg, B2[1] + nm[1] * 4 * sg], "iso-d") + L2(A2, B2, "iso-d")
+        + [A2, B2].map(q => L2([q[0] - 3, q[1] + 3], [q[0] + 3, q[1] - 3], "iso-d")).join("")
+        + '<text class="iso-dt' + (need ? " need" : "") + '" ' + attr + ' transform="translate(' + f1(mid[0]) + ',' + f1(mid[1]) + ') rotate(' + f1(ang) + ')" text-anchor="middle" dy="' + (o < 0 ? 12 : -4) + '">' + esc(txt) + '</text>'; };
     Lo.segs.forEach(s => { const A = prj(s.a3), Bp = prj(s.b3), on = s.r.u === sk.sel, nm = nrm(s.d), lab = numOf(B, s.r.u);
       g += '<g data-u="' + esc(s.r.u) + '" class="iso-seg' + (on ? " on" : "") + '">' + L2(A, Bp, "iso-p") + L2(A, Bp, "iso-hit") + '</g>';
       /* the dimension: end to end, beside the run, its value the real length (? while still to fill in) */
-      const o = 26, A2 = [A[0] + nm[0] * o, A[1] + nm[1] * o], B2 = [Bp[0] + nm[0] * o, Bp[1] + nm[1] * o], mid = [(A2[0] + B2[0]) / 2, (A2[1] + B2[1]) / 2];
-      let ang = Math.atan2(B2[1] - A2[1], B2[0] - A2[0]) * 180 / Math.PI; if (ang > 90) ang -= 180; if (ang < -90) ang += 180;
-      g += L2([A[0] + nm[0] * 6, A[1] + nm[1] * 6], [A2[0] + nm[0] * 4, A2[1] + nm[1] * 4], "iso-d") + L2([Bp[0] + nm[0] * 6, Bp[1] + nm[1] * 6], [B2[0] + nm[0] * 4, B2[1] + nm[1] * 4], "iso-d") + L2(A2, B2, "iso-d")
-        + [A2, B2].map(q => L2([q[0] - 3, q[1] + 3], [q[0] + 3, q[1] - 3], "iso-d")).join("")
-        + '<text class="iso-dt' + (s.r.len ? "" : " need") + '" data-dim="' + esc(s.r.u) + '" transform="translate(' + f1(mid[0]) + ',' + f1(mid[1]) + ') rotate(' + f1(ang) + ')" text-anchor="middle" dy="-4">' + esc(s.r.len ? String(s.r.len) : "?") + '</text>';
+      g += dimLine(face(s, "a"), face(s, "b"), nm, 26, s.r.len ? String(s.r.len) : "?", !s.r.len, 'data-dim="' + esc(s.r.u) + '"');
       const mp = [(A[0] + Bp[0]) / 2 - nm[0] * 14, (A[1] + Bp[1]) / 2 - nm[1] * 14]; g += tag(mp, lab, s.r.u); });
     Lo.nodes.forEach(n => { const q = prj(n.p3), u = unit(n.d), nm = nrm(n.d), r = n.r, on = r.u === sk.sel; let s = "";
       if (r.k === "joint"){ const ks = jointKids(r), t = [...new Set(ks.map(k => numOf(B, k.u)).filter(Boolean))].join(" ");
@@ -205,15 +210,22 @@ const Piping = (() => {
       else if (/^cap/i.test(r.it || "")){ s += '<circle class="iso-s" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="5"/>' + tag([q[0] + 8, q[1] + 14], numOf(B, r.u), r.u); }
       else s += '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="2"/>' + tag([q[0] + 6, q[1] + 16], numOf(B, r.u), r.u);
       g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(r.u) + '">' + s + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>'; });
-    Lo.sups.forEach(n => { const q = prj(n.p3), nm = nrm(n.d), e = [q[0] + nm[0] * 12, q[1] + nm[1] * 12], on = n.r.u === sk.sel;
-      g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(n.r.u) + '">' + L2(q, e, "iso-s") + L2([e[0] - nm[1] * 6, e[1] + nm[0] * 6], [e[0] + nm[1] * 6, e[1] - nm[0] * 6], "iso-s iso-bar") + tag([e[0] + nm[0] * 6 + 2, e[1] + nm[1] * 6 + 6], sn[n.r.sid] || n.r.sid, n.r.u) + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>'; });
+    Lo.sups.forEach(n => { const q = prj(n.p3), lvl = !/[UD]/.test(n.d), sd = lvl ? [0, 1] : nrm(n.d), e = [q[0] + sd[0] * 12, q[1] + sd[1] * 12], on = n.r.u === sk.sel;
+      g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(n.r.u) + '">' + L2(q, e, "iso-s") + L2([e[0] - sd[1] * 6, e[1] + sd[0] * 6], [e[0] + sd[1] * 6, e[1] - sd[0] * 6], "iso-s iso-bar") + tag(lvl ? [e[0] + 8, e[1] + 4] : [e[0] + sd[0] * 6 + 2, e[1] + sd[1] * 6 + 6], sn[n.r.sid] || n.r.sid, n.r.u) + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>';
+      const s = Lo.segs.find(x => x.L === n.L && x.r === n.pipe); if (!s) return; const ha = !!nbr(s, -1) || !!s.L.off && s.L.rows.find(x => x.k !== "sup") === s.r, hb = !!nbr(s, 1), end = n.r.from || (ha && !hb ? "a" : hb && !ha ? "b" : n.f <= 0.5 ? "a" : "b"), fp = face(s, end);
+      g += dimLine(end === "a" ? fp : q, end === "a" ? q : fp, nrm(s.d), -34, n.r.dd ? String(n.r.dd) : "?", !n.r.dd, 'data-sdim="' + esc(n.r.u) + '" data-se="' + end + '"'); });
     checks(a, Lo).forEach(c => { const q = prj(c.p3), x = q[0] + 10, y = q[1] - 26;
       g += '<g class="iso-warn" data-warn="' + esc(c.k) + '"><title>' + esc(c.m.map(m => m.t).join("; ") + " (click for more)") + '</title><path d="M' + f1(x) + ' ' + f1(y - 9) + ' L' + f1(x + 10) + ' ' + f1(y + 8) + ' L' + f1(x - 10) + ' ' + f1(y + 8) + ' Z"/><text x="' + f1(x) + '" y="' + f1(y + 6) + '">!</text></g>'; });
     if (!ro) Lo.ends.forEach(e => { const q = prj(e.p3); g += '<circle class="iso-end' + (sk.dl === e.L.id ? " on" : "") + '" data-end="' + esc(e.L.id) + '" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="6"><title>Draw line ' + esc(e.L.id) + ' on from here</title></circle>'; });
     if (!Lo.segs.length && !ro) g += '<text class="iso-hint" x="' + f1(prj([0, 0, 0])[0] + 12) + '" y="' + f1(prj([0, 0, 0])[1] - 12) + '">Click the dot, then click where the pipe runs to</text>';
     const fit = [x0, y0, w, hgt].map(f1).join(" "), vb = sk.vb && sk.vbA === a.id ? sk.vb.map(f1).join(" ") : fit;
     return '<svg class="iso" viewBox="' + vb + '" data-fit="' + fit + '" preserveAspectRatio="xMidYMid meet">' + g + '<line class="iso-ghost" x1="0" y1="0" x2="0" y2="0" hidden/><text class="iso-gt" hidden></text></svg>'; }
-  const TOOLS = [["sel", "Select", "↖"], ["pipe", "Pipe: click a line's end, then where it runs to", "╱"], ["joint", "Flange joint: click a pipe", "‖"], ["valve", "Valve: click a pipe", "⋈"], ["sup", "Support: click a pipe", "⊥"], ["tee", "Tee: click a pipe; a new line runs off it", "┬"], ["red", "Reducer: click a pipe", "▷"], ["cap", "Cap: click a line's end", "◖"], ["del", "Remove: click a part", "✕"]];
+  /* the tool buttons show the very symbol each places (drawn the same way as on the sketch, along a level pipe) */
+  const IC = d => '<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">' + d + '</svg>', PL = '<path d="M1 10H19" stroke-width="2"/>';
+  const TOOLS = [["sel", "Select", IC('<path d="M5 3v13l3.5-3.5 2.5 5 2-1-2.5-5H15z" fill="currentColor" stroke="none"/>')], ["pipe", "Pipe: click a line's end, then where it runs to", IC('<path d="M3 15L17 5" stroke-width="2.2"/><circle cx="3" cy="15" r="1.8" fill="currentColor" stroke="none"/>')],
+    ["joint", "Flange joint: click a pipe", IC(PL + '<path d="M8.5 3.5v13M11.5 3.5v13"/>')], ["valve", "Valve: click a pipe", IC(PL + '<path d="M5 5v10l10-10v10z" fill="var(--panel)"/>')],
+    ["sup", "Support: click a pipe", IC('<path d="M1 7H19" stroke-width="2"/><path d="M10 7v7M6 14h8" stroke-width="2"/>')], ["tee", "Tee: click a pipe; a new line runs off it", IC('<path d="M1 7H19M10 7v12" stroke-width="2"/><circle cx="10" cy="7" r="2.2" fill="currentColor" stroke="none"/>')],
+    ["red", "Reducer: click a pipe", IC('<path d="M1 10h5M14 10h5" stroke-width="2"/><path d="M6 4l8 3v6l-8 3z" fill="var(--panel)"/>')], ["cap", "Cap: click a line's end", IC('<path d="M1 10h11" stroke-width="2"/><circle cx="14" cy="10" r="3.5"/>')], ["del", "Remove: click a part", IC('<path d="M5 5l10 10M15 5L5 15" stroke-width="2"/>')]];
   const sketchHtml = (a, ro) => '<div class="iso-w' + (sk.fs ? " iso-full" : "") + '">' + (ro ? "" : '<div class="iso-tb">' + TOOLS.map(([k, t, s]) => '<button type="button" class="iso-tl' + (sk.tool === k ? " on" : "") + '" data-tool="' + k + '" title="' + esc(t) + '" aria-label="' + esc(t) + '">' + s + '</button>').join("") + '<button type="button" class="iso-tl iso-af" data-isofit="1" title="Autofit: even, readable spacing (lengths aren\'t to scale)">Autofit</button></div>') + '<div class="iso-sc">' + sketchSvg(a, ro) + '<button type="button" class="iso-fs" data-fs="1" title="' + (sk.fs ? "Leave full screen (Esc)" : "Full screen") + '" aria-label="' + (sk.fs ? "Leave full screen" : "Full screen") + '">' + (sk.fs ? FS_OUT : FS_IN) + '</button></div></div>';
   const FS_IN = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>', FS_OUT = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4"/></svg>';
   /* ---------- the sketch's changes ---------- */
@@ -234,7 +246,7 @@ const Piping = (() => {
     const node = sk.tool === "joint" ? { u: uid(), k: "joint", cl: r.cl, dn: r.dn } : { u: uid(), k: "it", cl: r.cl, dn: r.dn, qty: 1, sym: sk.tool, it: sk.tool === "valve" ? "" : sk.tool === "red" ? specItem(r.cl, r.dn, /^reducer/i) : specItem(r.cl, r.dn, /^tee, equal/i) || "Tee, equal" };
     let nl = null; if (sk.tool === "tee"){ const p = P(a); nl = { id: String.fromCharCode(65 + p.lines.length), off: node.u, rows: [] }; }
     save(a, () => { const i = L.rows.indexOf(r); let j = i + 1; while (L.rows[j] && L.rows[j].k === "sup") j++; const ss = L.rows.splice(i + 1, j - i - 1);   /* (the pipe's supports stay where they are: each goes with the half it's on) */
-      const pos = x => (x.at != null ? x.at : 0.5) * nn, s1 = ss.filter(x => pos(x) <= kk), s2 = ss.filter(x => pos(x) > kk); s1.forEach(x => { x.at = Math.round(pos(x) / kk * 100) / 100; }); s2.forEach(x => { x.at = Math.round((pos(x) - kk) / (nn - kk) * 100) / 100; });
+      const pos = x => (x.at != null ? x.at : 0.5) * nn, s1 = ss.filter(x => pos(x) <= kk), s2 = ss.filter(x => pos(x) > kk); s1.forEach(x => { x.at = Math.round(pos(x) / kk * 100) / 100; if (x.from === "b"){ delete x.dd; delete x.from; } }); s2.forEach(x => { x.at = Math.round((pos(x) - kk) / (nn - kk) * 100) / 100; if (x.from !== "b"){ delete x.dd; delete x.from; } });   /* (a distance from an end that's now the new part's face is asked for again: ?) */
       r.gl = kk; if (len) r.len = Math.round(len * kk / nn); L.rows.splice(i + 1, 0, ...s1, node, r2, ...s2); if (nl) P(a).lines.push(nl); }, "Placed a part on the piping of");
     sk.sel = node.u; if (nl){ sk.tool = "pipe"; sk.dl = nl.id; } }
   function removeAt(a, u){ const { L, r } = rowOf(a, u); if (!L || !r) return; const i = L.rows.indexOf(r); let pi = i - 1; while (L.rows[pi] && L.rows[pi].k === "sup") pi--; const pv = L.rows[pi], nx = L.rows[i + 1];
@@ -259,7 +271,7 @@ const Piping = (() => {
     svg.onwheel = e => { e.preventDefault(); const q = pt(e), v = seen(), f = Math.exp((e.deltaY > 0 ? 1 : -1) * Math.min(Math.abs(e.deltaY), 120) * 0.0018), nw = Math.min(Math.max(v[2] * f, 80), 40000), k = nw / v[2];
       setVb([q[0] - (q[0] - v[0]) * k, q[1] - (q[1] - v[1]) * k, v[2] * k, v[3] * k]); };
     let pan = null, panned = false;
-    const paper = t => !t.closest("[data-u],[data-end],[data-dim],[data-warn],.iso-fs");
+    const paper = t => !t.closest("[data-u],[data-end],[data-dim],[data-sdim],[data-warn],.iso-fs");
     svg.onpointerdown = e => { panned = false; if (e.button !== 0 && e.button !== 1) return; if (e.button === 0 && !paper(e.target)) return; pan = { x: e.clientX, y: e.clientY, v: seen(), s: svg.getScreenCTM().a, id: e.pointerId }; };
     svg.addEventListener("pointermove", e => { if (!pan) return; const dx = e.clientX - pan.x, dy = e.clientY - pan.y; if (!panned && Math.hypot(dx, dy) < 4) return;
       if (!panned){ panned = true; try { svg.setPointerCapture(pan.id); } catch (_){} svg.classList.add("panning"); }
@@ -272,7 +284,7 @@ const Piping = (() => {
     svg.onpointermove = e => { const g0 = aim(e); if (!g0){ ghost.setAttribute("hidden", ""); gt.setAttribute("hidden", ""); return; } ghost.removeAttribute("hidden"); gt.removeAttribute("hidden");
       ghost.setAttribute("x1", g0.s0[0]); ghost.setAttribute("y1", g0.s0[1]); ghost.setAttribute("x2", g0.end[0]); ghost.setAttribute("y2", g0.end[1]); gt.setAttribute("x", g0.end[0] + 8); gt.setAttribute("y", g0.end[1] - 8); gt.textContent = g0.d; };
     svg.onclick = e => { if (panned){ panned = false; return; } const wn = e.target.closest("[data-warn]"); if (wn) return callout(a, wn); const end = e.target.closest("[data-end]"); if (end){ sk.tool = "pipe"; sk.dl = end.dataset.end; App.render(); return; }
-      const dim = e.target.closest("[data-dim]"); if (dim && sk.tool === "sel") return editDim(a, dim);
+      const dim = e.target.closest("[data-dim],[data-sdim]"); if (dim && sk.tool === "sel") return editDim(a, dim);
       if (sk.tool === "pipe"){ const g0 = aim(e); if (g0 && g0.L) drawPipe(a, g0.L, g0.d, g0.n); return; }
       const hit = e.target.closest("[data-u]"); if (!hit) return; const u = hit.dataset.u;
       if (sk.tool === "sel"){ sk.sel = sk.sel === u ? null : u; App.render(); return; }
@@ -281,7 +293,7 @@ const Piping = (() => {
       const { r } = rowOf(a, u); if (!r || !isPipe(r)) return note("Click on a pipe to put it there");
       const Lo = layout(a), s = Lo.segs.find(x => x.r.u === u), A = prj(s.a3), Bq = prj(s.b3), q = pt(e), dx = Bq[0] - A[0], dy = Bq[1] - A[1], t = Math.max(0, Math.min(1, ((q[0] - A[0]) * dx + (q[1] - A[1]) * dy) / (dx * dx + dy * dy || 1)));
       placeOn(a, u, t); };
-    svg.ondblclick = e => { const dim = e.target.closest("[data-dim]"); if (dim) return editDim(a, dim); if (sk.tool === "sel" && paper(e.target)){ sk.vb = null; svg.setAttribute("viewBox", svg.dataset.fit); } }; }
+    svg.ondblclick = e => { const dim = e.target.closest("[data-dim],[data-sdim]"); if (dim) return editDim(a, dim); if (sk.tool === "sel" && paper(e.target)){ sk.vb = null; svg.setAttribute("viewBox", svg.dataset.fit); } }; }
   /* an alert's callout: what doesn't fit and how to put it right; ✕, Esc or a click elsewhere closes it */
   function callout(a, el){ const c = checks(a, layout(a)).find(x => x.k === el.dataset.warn); if (!c) return; $$(".iso-co").forEach(x => x.remove());
     const b = el.getBoundingClientRect(), d = h('<div class="iso-co" role="dialog"><button type="button" class="ic-b sm" aria-label="Close">✕</button>' + c.m.map(m => '<p><b>' + esc(m.t) + '</b><br>' + esc(m.d) + '</p>').join("") + '</div>');
@@ -294,9 +306,9 @@ const Piping = (() => {
     else if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); }
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && sk.fs){ sk.fs = false; App.render(); } });
   /* a dimension clicked: its length typed in place (mm), the list's Length the same */
-  function editDim(a, t){ const u = t.dataset.dim, { r } = rowOf(a, u); if (!r) return; const b = t.getBoundingClientRect(), i = h('<input class="in iso-din" inputmode="numeric" value="' + esc(r.len || "") + '">');
+  function editDim(a, t){ const sup = !!t.dataset.sdim, u = t.dataset.dim || t.dataset.sdim, { r } = rowOf(a, u); if (!r) return; const fk = sup ? "dd" : "len", b = t.getBoundingClientRect(), i = h('<input class="in iso-din" inputmode="numeric" value="' + esc(r[fk] || "") + '">');
     Object.assign(i.style, { position: "fixed", left: (b.left + b.width / 2 - 40) + "px", top: (b.top - 4) + "px", width: "80px", zIndex: 9000 }); document.body.appendChild(i); i.focus(); i.select();
-    let gone = false; const done = ok => { if (gone) return; gone = true; const v = Math.round(+i.value) || ""; i.remove(); if (ok && String(v) !== String(r.len || "")) save(a, () => { r.len = v; }, "Set a pipe length on"); };
+    let gone = false; const done = ok => { if (gone) return; gone = true; const v = Math.round(+i.value) || ""; i.remove(); if (ok && String(v) !== String(r[fk] || "")) save(a, () => { r[fk] = v; if (sup){ if (v) r.from = t.dataset.se; else delete r.from; } }, sup ? "Set a support's distance on" : "Set a pipe length on"); };
     i.onkeydown = e => { if (e.key === "Enter"){ e.preventDefault(); done(true); } if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); done(false); } }; i.onblur = () => done(true); }
   /* ---------- changes ---------- */
   const rowOf = (a, u) => { for (const L of P(a).lines){ const r = L.rows.find(x => x.u === u); if (r) return { L, r }; } return {}; };
