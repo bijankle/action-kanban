@@ -211,7 +211,12 @@ const Piping = (() => {
       /* each figure in turn: the middle if it's clear, else the quarter mark away from what it would sit on, else the other quarter mark (clear of tags and the figures already placed) */
       const done = []; dls.forEach(d => { const bad = () => onTag(d) || done.find(e => hit(d, e)); d.t = 0.5; const b0 = bad(); if (b0){ const f = far(d, b0.c || at(b0, b0.t)), tries = [f, f === 0.25 ? 0.75 : 0.25]; const ok = tries.find(t => { d.t = t; return !bad(); }); d.t = ok != null ? ok : f; } done.push(d); });
       return dls.map(d => { const m = at(d, d.t); return '<text class="iso-dt' + (d.need ? " need" : "") + '" ' + d.attr + ' transform="translate(' + f1(m[0]) + ',' + f1(m[1]) + ') rotate(' + f1(d.ang) + ')" text-anchor="middle" dy="' + (d.o < 0 ? 12 : -4) + '">' + esc(d.txt) + '</text>'; }).join(""); };
-    Lo.segs.forEach(s => { const A = prj(s.a3), Bp = prj(s.b3), on = s.r.u === sk.sel, nm = nrm(s.d), lab = TL(s.r.u);
+    /* a dimension goes on the outside: the side of its pipe away from the pipes either side of it (the tag goes on the other side) */
+    const sideNrm = s => { if (s._nm) return s._nm; const n0 = nrm(s.d), ls = Lo.segs.filter(x => x.L === s.L), i = ls.indexOf(s), A = prj(s.a3), Bp = prj(s.b3), m = [(A[0] + Bp[0]) / 2, (A[1] + Bp[1]) / 2], dot = q => q[0] * n0[0] + q[1] * n0[1];
+      let v = 0; if (ls[i - 1]) v -= dot(unit(ls[i - 1].d)); if (ls[i + 1]) v += dot(unit(ls[i + 1].d));   /* (the way the pipes either side turn: the bend's inside) */
+      if (Math.abs(v) < 0.05){ v = 0; Lo.segs.forEach(x => { if (x === s) return; const a2 = prj(x.a3), b2 = prj(x.b3); [a2, b2, [(a2[0] + b2[0]) / 2, (a2[1] + b2[1]) / 2]].forEach(q => { const d = Math.hypot(q[0] - m[0], q[1] - m[1]); if (d > 1 && d < 3 * G) v += dot([q[0] - m[0], q[1] - m[1]]) / d; }); }); }   /* (a Z turns both ways: then the side with less drawn near it) */
+      return (s._nm = v > 0.05 ? [-n0[0], -n0[1]] : n0); };
+    Lo.segs.forEach(s => { const A = prj(s.a3), Bp = prj(s.b3), on = s.r.u === sk.sel, nm = sideNrm(s), lab = TL(s.r.u);
       g += '<g data-u="' + esc(s.r.u) + '" class="iso-seg' + (on ? " on" : "") + '">' + L2(A, Bp, "iso-p") + L2(A, Bp, "iso-hit") + '</g>';
       /* the dimension: end to end, beside the run, its value the real length (? while still to fill in) */
       g += dimLine(face(s, "a"), face(s, "b"), nm, 26, s.r.len ? String(s.r.len) : "?", !s.r.len, 'data-dim="' + esc(s.r.u) + '"');
@@ -241,7 +246,7 @@ const Piping = (() => {
     Lo.sups.forEach(n => { const q = prj(n.p3), lvl = !/[UD]/.test(n.d), sd = lvl ? [0, 1] : nrm(n.d), e = [q[0] + sd[0] * 12, q[1] + sd[1] * 12], on = n.r.u === sk.sel;
       g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(n.r.u) + '">' + L2(q, e, "iso-s") + L2([e[0] - sd[1] * 6, e[1] + sd[0] * 6], [e[0] + sd[1] * 6, e[1] - sd[0] * 6], "iso-s iso-bar") + tag(lvl ? [e[0] + 8, e[1] + 4] : [e[0] + sd[0] * 6 + 2, e[1] + sd[1] * 6 + 6], (byI && sn[n.r.sid]) || n.r.sid, n.r.u) + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>';
       const s = Lo.segs.find(x => x.L === n.L && x.r === n.pipe); if (!s) return; const ha = !!nbr(s, -1) || !!s.L.off && s.L.rows.find(x => x.k !== "sup") === s.r, hb = !!nbr(s, 1), end = n.r.from || (ha && !hb ? "a" : hb && !ha ? "b" : n.f <= 0.5 ? "a" : "b"), fp = face(s, end);
-      g += dimLine(end === "a" ? fp : q, end === "a" ? q : fp, nrm(s.d), -34, n.r.dd ? String(n.r.dd) : "?", !n.r.dd, 'data-sdim="' + esc(n.r.u) + '" data-se="' + end + '"'); });
+      g += dimLine(end === "a" ? fp : q, end === "a" ? q : fp, sideNrm(s), -34, n.r.dd ? String(n.r.dd) : "?", !n.r.dd, 'data-sdim="' + esc(n.r.u) + '" data-se="' + end + '"'); });
     g += dimTexts();
     checks(a, Lo).forEach(c => { const q = prj(c.p3), x = q[0] + 10, y = q[1] - 26;
       g += '<g class="iso-warn" data-warn="' + esc(c.k) + '"><title>' + esc(c.m.map(m => m.t).join("; ") + " (click for more)") + '</title><path d="M' + f1(x) + ' ' + f1(y - 9) + ' L' + f1(x + 10) + ' ' + f1(y + 8) + ' L' + f1(x - 10) + ' ' + f1(y + 8) + ' Z"/><text x="' + f1(x) + '" y="' + f1(y + 6) + '">!</text></g>'; });
