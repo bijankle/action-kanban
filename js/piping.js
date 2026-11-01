@@ -142,7 +142,7 @@ const Piping = (() => {
         if (r.k === "it" && isPipe(r)){ const d = r.dir || (prev && isElbow(prev) && pd ? PERP(pd) : pd) || "E", n = Math.max(1, +r.gl || 3), s = { r, L, a3: cur, b3: add3(cur, DIRS[d], n), d, n };
           out.segs.push(s); cur = s.b3; pd = d; last = s; prev = r; return; }
         const nd = { r, L, p3: cur, d: pd || "E" }; out.nodes.push(nd); out.at[r.u] = nd; prev = r; });
-      out.ends.push({ L, p3: cur, d: pd }); nextX = Math.max(nextX, ...out.segs.map(s => Math.max(s.a3[0], s.b3[0]) + 4)); });
+      { const lr = [...L.rows].reverse().find(x => x.k !== "sup"); if (!(lr && /^cap/i.test(lr.it || ""))) out.ends.push({ L, p3: cur, d: pd }); } nextX = Math.max(nextX, ...out.segs.map(s => Math.max(s.a3[0], s.b3[0]) + 4)); });
     return out; }
   /* the symbols, ISO style: a joint two short bars across the pipe, a valve a bow tie, a reducer a taper, a tee a dot, a cap an arc,
      a support a stem off the pipe with a bar across its end (the same mark on every plane); tags boxed */
@@ -283,13 +283,14 @@ const Piping = (() => {
       const n = Math.max(1, Math.round(m / best.wm)), end = prj(add3(en.p3, DIRS[best.d], n)); return { L: lineOf(a, sk.dl), d: best.d, n, s0, end }; };
     svg.onpointermove = e => { const g0 = aim(e); if (!g0){ ghost.setAttribute("hidden", ""); gt.setAttribute("hidden", ""); return; } ghost.removeAttribute("hidden"); gt.removeAttribute("hidden");
       ghost.setAttribute("x1", g0.s0[0]); ghost.setAttribute("y1", g0.s0[1]); ghost.setAttribute("x2", g0.end[0]); ghost.setAttribute("y2", g0.end[1]); gt.setAttribute("x", g0.end[0] + 8); gt.setAttribute("y", g0.end[1] - 8); gt.textContent = g0.d; };
-    svg.onclick = e => { if (panned){ panned = false; return; } const wn = e.target.closest("[data-warn]"); if (wn) return callout(a, wn); const end = e.target.closest("[data-end]"); if (end){ sk.tool = "pipe"; sk.dl = end.dataset.end; App.render(); return; }
+    svg.onclick = e => { if (panned){ panned = false; return; } const wn = e.target.closest("[data-warn]"); if (wn) return callout(a, wn); const end = e.target.closest("[data-end]"); if (end && sk.tool === "cap") return capAt(a, lineOf(a, end.dataset.end), "end"); if (end){ sk.tool = "pipe"; sk.dl = end.dataset.end; App.render(); return; }
       const dim = e.target.closest("[data-dim],[data-sdim]"); if (dim && sk.tool === "sel") return editDim(a, dim);
       if (sk.tool === "pipe"){ const g0 = aim(e); if (g0 && g0.L) drawPipe(a, g0.L, g0.d, g0.n); return; }
       const hit = e.target.closest("[data-u]"); if (!hit) return; const u = hit.dataset.u;
       if (sk.tool === "sel"){ sk.sel = sk.sel === u ? null : u; App.render(); return; }
       if (sk.tool === "del") return removeAt(a, u);
-      if (sk.tool === "cap"){ const { L, r } = rowOf(a, u); if (L && r && L.rows[L.rows.length - 1] === r && isPipe(r)) save(a, () => { L.rows.push({ u: uid(), k: "it", cl: r.cl, dn: r.dn, it: specItem(r.cl, r.dn, /^cap/i) || "Cap", qty: 1 }); }, "Capped a line on"); else note("A cap goes on the end of a line: click its last pipe"); return; }
+      if (sk.tool === "cap"){ const { L, r } = rowOf(a, u); if (!L || !r || !isPipe(r)) return note("Click a line's end, or the pipe at either end of it"); const rs = L.rows.filter(x => x.k !== "sup"), Lo0 = layout(a), s0 = Lo0.segs.find(x => x.r === r), A0 = prj(s0.a3), B0 = prj(s0.b3), q0 = pt(e), nearB = Math.hypot(q0[0] - B0[0], q0[1] - B0[1]) < Math.hypot(q0[0] - A0[0], q0[1] - A0[1]);
+        const first = rs[0] === r && !L.off, last = rs[rs.length - 1] === r; if (last && (nearB || !first)) return capAt(a, L, "end"); if (first) return capAt(a, L, "start"); return note("A cap goes on an open end: this pipe has parts at both ends"); }
       const { r } = rowOf(a, u); if (!r || !isPipe(r)) return note("Click on a pipe to put it there");
       const Lo = layout(a), s = Lo.segs.find(x => x.r.u === u), A = prj(s.a3), Bq = prj(s.b3), q = pt(e), dx = Bq[0] - A[0], dy = Bq[1] - A[1], t = Math.max(0, Math.min(1, ((q[0] - A[0]) * dx + (q[1] - A[1]) * dy) / (dx * dx + dy * dy || 1)));
       placeOn(a, u, t); };
@@ -305,6 +306,12 @@ const Piping = (() => {
     if (on){ const d = document.documentElement; if (!document.fullscreenElement && d.requestFullscreen) d.requestFullscreen().catch(() => {}); }
     else if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); }
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && sk.fs){ sk.fs = false; App.render(); } });
+  /* a cap on a line's open end, the start or the end (the start of a branch is its tee, so no cap there) */
+  function capAt(a, L, at){ if (!L) return; const rs = L.rows.filter(x => x.k !== "sup"), r = at === "end" ? rs[rs.length - 1] : rs[0], src = r || { cl: P(a).spec, dn: null };
+    if (r && /^cap/i.test(r.it || "")) return note("That end is capped already");
+    if (at === "start" && L.off) return note("A branch starts at its tee: cap its other end");
+    const c = { u: uid(), k: "it", cl: src.cl, dn: src.dn, it: specItem(src.cl, src.dn, /^cap/i) || "Cap", qty: 1 };
+    save(a, () => { if (at === "end") L.rows.push(c); else L.rows.unshift(c); }, "Capped a line on"); sk.sel = c.u; }
   /* a dimension clicked: its length typed in place (mm), the list's Length the same */
   function editDim(a, t){ const sup = !!t.dataset.sdim, u = t.dataset.dim || t.dataset.sdim, { r } = rowOf(a, u); if (!r) return; const fk = sup ? "dd" : "len", b = t.getBoundingClientRect(), i = h('<input class="in iso-din" inputmode="numeric" value="' + esc(r[fk] || "") + '">');
     Object.assign(i.style, { position: "fixed", left: (b.left + b.width / 2 - 40) + "px", top: (b.top - 4) + "px", width: "80px", zIndex: 9000 }); document.body.appendChild(i); i.focus(); i.select();
