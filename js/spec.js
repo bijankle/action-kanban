@@ -25,7 +25,7 @@ const PipeSpec = (() => {
   const vrow = (v, k) => { const V = D && D.valve[v]; if (!V) return ""; const r = V.rows.find(x => x[0] === k); return r ? clean(r[1]) : ""; };
   const unit = c => /[A-Z]{2}/.test(c.u || "") ? c.u : "DN";
   /* a class is sized by DN (steel pipe) or by outside diameter (PE and other plastic pipe, OD in mm; instrument tube, OD in mm) */
-  const OD_PE = [16, 20, 25, 32, 40, 50, 63, 75, 90, 110, 125, 140, 160, 180, 200, 225, 250, 280, 315, 355, 400, 450, 500, 560, 630, 710, 800, 900, 1000, 1200], OD_TUBE = [6, 8, 10, 12, 14, 15, 16, 18, 20, 22, 25];
+  const OD_PE = [16, 20, 25, 32, 40, 50, 63, 75, 90, 110, 125, 140, 160, 180, 200, 225, 250, 280, 315, 355, 400, 450, 500, 560, 630, 710, 800, 900, 1000, 1200], OD_TUBE = [6, 8, 10, 12, 14, 15, 16, 18, 20, 22, 25, 28, 30, 32, 38, 50];
   const U = cl => { const cs = (C(cl) || { comps: [] }).comps; return cs.filter(c => unit(c) === "OD").length > cs.length / 2 ? "OD" : "DN"; };
   const tube = cl => U(cl) === "OD" && /\btube\b/i.test((C(cl) || {}).title || "");
   const lab = (cl, n) => n == null || n === "" ? "" : (U(cl) === "OD" ? "OD" : "DN") + n;
