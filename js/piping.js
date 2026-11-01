@@ -243,7 +243,7 @@ const Piping = (() => {
       if (s.r.flow){ const c = at(0.3), w = s.r.flow > 0 ? 1 : -1, tp = [c[0] + uu[0] * 9 * w, c[1] + uu[1] * 9 * w], bk = [c[0] - uu[0] * 9 * w, c[1] - uu[1] * 9 * w];
         g += '<path class="iso-flow" data-flow="' + esc(s.r.u) + '" d="M' + f1(tp[0]) + ' ' + f1(tp[1]) + ' L' + f1(bk[0] + nm[0] * 5) + ' ' + f1(bk[1] + nm[1] * 5) + ' L' + f1(bk[0] - nm[0] * 5) + ' ' + f1(bk[1] - nm[1] * 5) + ' Z"><title>Flow</title></path>'; }
       (s.r.welds || []).forEach(w => { const c = at(w.at); g += '<g class="iso-fw" data-weld="' + esc(s.r.u + "|" + w.u) + '"><title>' + esc(WELD_T[w.t] || w.t) + ' (click to change)</title><circle cx="' + f1(c[0]) + '" cy="' + f1(c[1]) + '" r="3.2"/>' + tag([c[0] + nm[0] * 14 - 10, c[1] + nm[1] * 14], w.t) + '</g>'; });
-      if (s.r.note) g += noteTxt([mp[0] - nm[0] * 18, mp[1] - nm[1] * 18], s.r.note, s.r.u); });
+      if (s.r.note){ const mp = at(0.5); g += noteTxt([mp[0] - nm[0] * (lab ? 30 : 16), mp[1] - nm[1] * (lab ? 30 : 16)], s.r.note, s.r.u); } });
     Lo.nodes.forEach(n => { const q = prj(n.p3), u = unit(n.d), nm = nrm(n.d), r = n.r, on = r.u === sk.sel; let s = "";
       if (r.k === "joint"){ const ks = jointKids(r), t = byI ? [...new Set(ks.map(k => TL(k.u)).filter(Boolean))].join(" ") : seq[r.u];
         [-3, 3].forEach(dd => { const c = [q[0] + u[0] * dd, q[1] + u[1] * dd]; s += L2([c[0] - nm[0] * 9, c[1] - nm[1] * 9], [c[0] + nm[0] * 9, c[1] + nm[1] * 9], "iso-s"); }); s += tagOut(q, [-nm[0], -nm[1]], 14, t || "J", r.u); }
