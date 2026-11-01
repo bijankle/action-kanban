@@ -1768,7 +1768,7 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .pp-tbl{width:max-content!important}
 .pp-tbl td{padding:0 6px;height:var(--row)}
 .pp-dd{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-width:60px;height:var(--row);border:0;background:transparent;font:inherit;color:inherit;text-align:left;padding:0;cursor:pointer;white-space:nowrap;overflow:hidden}
-.pp-dd::after{content:"⌄";color:var(--muted);opacity:.6;flex:none}.pp-dd:disabled{cursor:default}.pp-dd:disabled::after{content:none}
+.pp-dd::after{content:"⌄";color:var(--muted);opacity:.6;flex:none}.pp-dd:disabled{cursor:default}.pp-sz{display:flex;gap:6px}.pp-sz .pp-dd{min-width:0;width:auto;flex:1}.pp-dn2.need{background:var(--need)}.pp-dd:disabled::after{content:none}
 .pp-dd:focus-visible{outline:1px solid var(--focus);outline-offset:-1px}
 .pp-tbl td.need{background:var(--need)}.pp-tbl td.autof{background:var(--autof)}
 .pp-tbl .pp-in{width:100%;min-width:56px;height:var(--row);border:0;background:transparent;padding:0;text-align:right}

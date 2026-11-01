@@ -58,7 +58,7 @@ How the owner (Bijan) likes this app built. These come from many rounds of build
 - Data validation rows say who added or last changed them and when (Modified by, Date modified as 29-Oct-26); anything that came with the app or the plant lists says Native. A new tag needs a description before it can be added; a changed description keeps the old one in an (i) history on the row.
 - Pointing shows, clicking pins: hover cards can also be clicked to stay open, with a ✕.
 - Uploads look the same everywhere: a slim dashed bar, one box high, that you can click or drop onto. Photos as even 4:3 tiles you can drag to reorder, with a bin on each; in Details they sit at the top of the right column, about 150px wide, with Record under them.
-- Avoid accidental triggers: no single key shortcuts that create things; deletes ask first (except rows of the Piping list and parts on its sketch: they go at once, Ctrl+Z brings them back).
+- Avoid accidental triggers: no single key shortcuts that create things; Esc never closes the open action (only its ✕ does); deletes ask first (except rows of the Piping list and parts on its sketch: they go at once, Ctrl+Z brings them back).
 - The action PDF: an outlined header block; a Summary table like the app's (shaded name cells, plain values, links blue and underlined); Problem, Solution and Notes as text; a line down the middle between text and photos.
 - Exports read well on paper: A4 portrait, blanks and unticked boxes left out, links that work without signing in, no browser header or footer.
 - The app remembers where you were: the last action viewed, the tab inside it (next and previous keep the tab), panel widths and filters.
