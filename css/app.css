@@ -1792,7 +1792,7 @@ html.dark{--edf:var(--panel);--edh:color-mix(in srgb,var(--th) 14%,var(--panel))
 .iso-w{display:flex;flex-direction:column;gap:6px;min-width:0;width:100%}
 .iso-w.iso-full{position:fixed;inset:0;z-index:8000;background:var(--panel);padding:10px}.iso-w.iso-full .iso-sc{flex:1;height:auto;max-height:none}
 .iso-tb{display:flex;gap:2px;flex-wrap:wrap}
-.iso-tl{height:28px;min-width:28px;padding:0 6px;border:1px solid var(--line2);background:var(--panel);border-radius:0;font:600 var(--fb) var(--font);color:var(--ink);cursor:pointer}.iso-tl.on{background:var(--th);color:#fff;border-color:var(--th)}.iso-af{margin-left:6px}
+.iso-tl{height:28px;min-width:28px;padding:0 6px;border:1px solid var(--line2);background:var(--panel);border-radius:0;font:600 var(--fb) var(--font);color:var(--ink);cursor:pointer}.iso-gap{width:28px;flex:none}.iso-tl.on{background:var(--th);color:#fff;border-color:var(--th)}.iso-af{margin-left:6px}
 .iso-sc{position:relative;border:1px solid var(--line);background:#fff;overflow:hidden;width:100%;height:clamp(320px,58vh,720px)}
 svg.iso{display:block;width:100%;height:100%;font:11px var(--font);touch-action:none;user-select:none}svg.iso.panning{cursor:grabbing}
 .iso-fs{position:absolute;top:6px;right:6px;width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--line2);background:var(--panel);color:var(--ink);cursor:pointer;padding:0}.iso-fs:hover{background:var(--hdr)}
