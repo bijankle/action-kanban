@@ -68,7 +68,7 @@ const PipeSpec = (() => {
     let ns = sizes(cl).filter(n => n < dn && n >= Math.min(lo, 15)).reverse();
     /* where the class has a branch table, a reducing tee or an olet is offered only at the branch sizes the table gives it */
     const code = Object.keys(FIT).find(k => FIT[k].test(it)); if (t && code) ns = ns.filter(n => t[n] === code);
-    const out = ns.map(n => ({ v: n, t: "x " + lab(cl, n), sub: t && t[n] ? bname(cl, t[n]) : "" }));
+    const out = ns.map(n => ({ v: n, t: "x " + lab(cl, n), sub: t && t[n] && branchy(it) ? bname(cl, t[n]) : "" }));   /* (the branch table's words are for tees and olets, not a plain reducer) */
     return EQOK.test(it) ? [{ v: dn, t: "Equal, " + lab(cl, dn), sub: "branch the same size as the run" }].concat(out) : out; }
   /* a branch from the table, as the fittings that make it: the tee or olet, and the reducer when the table says +RED */
   function branchPlan(cl, dn, n){ const code = bcode(cl, dn, n), cs = (C(cl) || { comps: [] }).comps, find = (re, z) => { const c = cs.find(c => re.test(clean(c.d)) && (z || dn) >= c.lo && (z || dn) <= c.hi) || cs.find(c => re.test(clean(c.d))); return c ? clean(c.d) : null; };   // (an olet's size range is its branch size)

@@ -217,6 +217,7 @@ const Piping = (() => {
       g += dimLine(face(s, "a"), face(s, "b"), nm, 26, s.r.len ? String(s.r.len) : "?", !s.r.len, 'data-dim="' + esc(s.r.u) + '"');
       const mp = [(A[0] + Bp[0]) / 2 - nm[0] * 14, (A[1] + Bp[1]) / 2 - nm[1] * 14]; g += tag(mp, lab, s.r.u);
       const at = f => [A[0] + (Bp[0] - A[0]) * f, A[1] + (Bp[1] - A[1]) * f], uu = unit(s.d);
+      if (!ro) for (let i = 1; i < s.n; i++){ const c = at(i / s.n), on = sk.pt && sk.pt.u === s.r.u && Math.abs(sk.pt.t - i / s.n) < 1e-6; g += '<circle class="iso-pd' + (on ? " on" : "") + '" data-pd="' + esc(s.r.u) + '|' + i + '|' + s.n + '" cx="' + f1(c[0]) + '" cy="' + f1(c[1]) + '" r="' + (on ? 4 : 1.8) + '"><title>A point on the pipe: click it, then a part to put there</title></circle>'; }
       if (s.r.flow){ const c = at(0.3), w = s.r.flow > 0 ? 1 : -1, tp = [c[0] + uu[0] * 9 * w, c[1] + uu[1] * 9 * w], bk = [c[0] - uu[0] * 9 * w, c[1] - uu[1] * 9 * w];
         g += '<path class="iso-flow" data-flow="' + esc(s.r.u) + '" d="M' + f1(tp[0]) + ' ' + f1(tp[1]) + ' L' + f1(bk[0] + nm[0] * 5) + ' ' + f1(bk[1] + nm[1] * 5) + ' L' + f1(bk[0] - nm[0] * 5) + ' ' + f1(bk[1] - nm[1] * 5) + ' Z"><title>Flow</title></path>'; }
       (s.r.welds || []).forEach(w => { const c = at(w.at); g += '<g class="iso-fw" data-weld="' + esc(s.r.u + "|" + w.u) + '"><title>' + esc(WELD_T[w.t] || w.t) + ' (click to change)</title><circle cx="' + f1(c[0]) + '" cy="' + f1(c[1]) + '" r="3.2"/>' + tag([c[0] + nm[0] * 14 - 10, c[1] + nm[1] * 14], w.t) + '</g>'; });
@@ -296,7 +297,7 @@ const Piping = (() => {
     const marks = ss.map(x => ({ x, at: x.at != null ? x.at : 0.5 })).concat((r.welds || []).map(w => ({ w, at: w.at }))).sort((p, q) => p.at - q.at), n = marks.length;
     const st = isoGap() + 1; r.gl = st * (n + 1); marks.forEach((m, k) => { const at = (st * (k + 1)) / r.gl; if (m.x) m.x.at = at; else m.w.at = at; }); })), "Autofitted the sketch of"); }
   function wireSketch(el, a){ const svg = $("svg.iso", el); if (!svg) return; const pt = e => { const m = svg.getScreenCTM().inverse(), q = new DOMPoint(e.clientX, e.clientY).matrixTransform(m); return [q.x, q.y]; };
-    $$("[data-tool]", el).forEach(b => b.onclick = () => { const t = b.dataset.tool; sk.tool = sk.tool === t ? "sel" : t; if (sk.tool !== "pipe") sk.dl = null; App.render(); });
+    $$("[data-tool]", el).forEach(b => b.onclick = () => { const t = b.dataset.tool; if (sk.pt && sk.tool === "sel" && PLACE.includes(t)){ const q = sk.pt; sk.pt = null; return placeTool(a, t, q.u, q.t); } sk.pt = null; sk.tool = sk.tool === t ? "sel" : t; if (sk.tool !== "pipe") sk.dl = null; App.render(); });
     const af = $("[data-isofit]", el); if (af) af.onclick = () => autofit(a);
     const gp = $("[data-isogap]", el); if (gp) gp.onclick = () => { const key = Look.open(gp, [1, 2, 3, 4, 5, 6].map(n => ({ v: String(n), t: n + (n === 1 ? " dot" : " dots"), sub: "between any two points" })), String(isoGap()), x => { lsSet("adIsoGap", +x.v); autofit(a); }, { num: true }); gp.onkeydown = e => key && key(e); };
     const fsb = $("[data-fs]", el); if (fsb) fsb.onclick = () => fullScreen(!sk.fs);
@@ -308,7 +309,7 @@ const Piping = (() => {
     svg.onwheel = e => { e.preventDefault(); const q = pt(e), v = seen(), f = Math.exp((e.deltaY > 0 ? 1 : -1) * Math.min(Math.abs(e.deltaY), 120) * 0.0018), nw = Math.min(Math.max(v[2] * f, 80), 40000), k = nw / v[2];
       setVb([q[0] - (q[0] - v[0]) * k, q[1] - (q[1] - v[1]) * k, v[2] * k, v[3] * k]); };
     let pan = null, panned = false;
-    const paper = t => !t.closest("[data-u],[data-end],[data-dim],[data-sdim],[data-warn],[data-weld],[data-flow],[data-note],.iso-fs");
+    const paper = t => !t.closest("[data-pd],[data-u],[data-end],[data-dim],[data-sdim],[data-warn],[data-weld],[data-flow],[data-note],.iso-fs");
     svg.onpointerdown = e => { panned = false; if (e.button !== 0 && e.button !== 1) return; if (e.button === 0 && !paper(e.target)) return;
       if (e.button === 0 && sk.tool === "del"){ const q = pt(e); box = { q, x: e.clientX, y: e.clientY, id: e.pointerId, el: null }; return; } pan = { x: e.clientX, y: e.clientY, v: seen(), s: svg.getScreenCTM().a, id: e.pointerId }; };
     svg.addEventListener("pointermove", e => { if (box){ if (!box.el && Math.hypot(e.clientX - box.x, e.clientY - box.y) < 4) return;
@@ -327,8 +328,11 @@ const Piping = (() => {
     svg.onclick = e => { if (panned){ panned = false; return; } const wn = e.target.closest("[data-warn]"); if (wn) return callout(a, wn);
       const wd = e.target.closest("[data-weld]"); if (wd && (sk.tool === "sel" || sk.tool === "weld" || sk.tool === "del")) return weldAt(a, wd.dataset.weld, sk.tool === "del");
       const fl = e.target.closest("[data-flow]"); if (fl && (sk.tool === "flow" || sk.tool === "del")) return flowOn(a, fl.dataset.flow, sk.tool === "del");
+      const pd = e.target.closest("[data-pd]"); if (pd){ const [u, i, n] = pd.dataset.pd.split("|"), t = +i / +n;
+        if (sk.tool === "sel"){ sk.pt = sk.pt && sk.pt.u === u && Math.abs(sk.pt.t - t) < 1e-6 ? null : { u, t }; sk.sel = null; App.render(); return; }
+        if (PLACE.includes(sk.tool)) return placeTool(a, sk.tool, u, t); if (sk.tool === "del") return removeAt(a, u); if (sk.tool === "note") return editNote(a, u, pd); }
       const nt = e.target.closest("[data-note]"); if (nt && (sk.tool === "note" || sk.tool === "sel")) return editNote(a, nt.dataset.note, nt);
-      const end = e.target.closest("[data-end]"); if (end && sk.tool === "note") return editNote(a, "end:" + end.dataset.end, end); if (end && sk.tool === "cap") return capAt(a, lineOf(a, end.dataset.end), "end"); if (end){ sk.tool = "pipe"; sk.dl = end.dataset.end; App.render(); return; }
+      const end = e.target.closest("[data-end]"); if (end && sk.tool === "note") return editNote(a, "end:" + end.dataset.end, end); if (end && sk.tool === "cap") return capAt(a, lineOf(a, end.dataset.end), "end"); if (end){ if (sk.tool !== "pipe") return; sk.dl = end.dataset.end; App.render(); return; }
       const dim = e.target.closest("[data-dim],[data-sdim]"); if (dim && sk.tool === "sel") return editDim(a, dim);
       if (sk.tool === "pipe"){ const hn = e.target.closest(".iso-n[data-u]"), hr = hn && rowOf(a, hn.dataset.u); if (hr && hr.r && isElbow(hr.r)) return elbowToTee(a, hr.L, hr.r);
         const g0 = aim(e); if (g0 && g0.L) drawPipe(a, g0.L, g0.d, g0.n); return; }
@@ -347,6 +351,11 @@ const Piping = (() => {
   /* the Pipe tool on an elbow: it becomes a tee, and a new line starts off it to draw on (the run still turns there) */
   function elbowToTee(a, L, r){ const p = P(a), id = String.fromCharCode(65 + p.lines.length), nl = { id, off: r.u, rows: [] };
     save(a, () => { r.it = specItem(r.cl, r.dn, /^tee, equal$/i) || specItem(r.cl, r.dn, /^tee/i) || "Tee, equal"; delete r.vt; delete r.dn2; p.lines.push(nl); }, "Made an elbow a tee on"); sk.dl = id; sk.sel = r.u; }
+  const PLACE = ["joint", "cpl", "valve", "red", "tee", "sup", "weld", "flow"];
+  function placeTool(a, tool, u, t){ const { r } = rowOf(a, u); if (!r || !isPipe(r)) return;
+    if (tool === "weld") return save(a, () => { (r.welds = r.welds || []).push({ u: uid(), at: Math.round(t * 100) / 100, t: "FW" }); }, "Marked a field weld on");
+    if (tool === "flow") return flowOn(a, u);
+    const was = sk.tool; sk.tool = tool; placeOn(a, u, t); if (sk.tool === tool) sk.tool = was; App.render(); }
   function removeIn(a, r){ const Lo = layout(a), inn = p3 => { const q = prj(p3); return q[0] >= r[0] && q[0] <= r[0] + r[2] && q[1] >= r[1] && q[1] <= r[1] + r[3]; };
     const sups = Lo.sups.filter(n => inn(n.p3)).map(n => n.r.u), nodes = Lo.nodes.filter(n => inn(n.p3) && !isElbow(n.r)).map(n => n.r.u), pipes = Lo.segs.filter(x => inn(x.a3) && inn(x.b3));
     const marks = Lo.segs.map(x => ({ x, ws: (x.r.welds || []).filter(w => inn(x.a3.map((v, k) => v + (x.b3[k] - v) * w.at))).map(w => w.u), fl: x.r.flow && inn(x.a3.map((v, k) => v + (x.b3[k] - v) * 0.3)) })).filter(m => m.ws.length || m.fl);
@@ -451,5 +460,5 @@ const Piping = (() => {
     const skEl = $(".pp-sk", el); if (skEl) Sketch.renderFor(skEl, a, ro, "supSk");
     wire(el, a, ro, which); if (which !== "supports" && view.pv === "list"){ wireSketch(el, a); $$(".pp-tbl tr[data-u] td.pt-no", el).forEach(td => td.onclick = () => { const u = td.parentElement.dataset.u; sk.sel = sk.sel === u ? null : u; App.render(); }); }
     $$(".pp-tbl", el).forEach(t => gridCols(t, "pp" + (t.classList.contains("pp-bom") ? "B" : t.classList.contains("pp-sups") ? "S" : "L"), { sort: false, fixed: { x: 24 }, cap: { Description: 520 } })); }
-  return { renderFor, bom, order, supNo, has, stdsFor, rowsFor, qtyOf, jointKids, checks: a => checks(a, layout(a)), viewKey: () => [view.by, view.pv, view.sv, sk.tool, sk.dl, sk.sel, sk.fs ? 1 : 0].join("|"), layout, autofit };
+  return { renderFor, bom, order, supNo, has, stdsFor, rowsFor, qtyOf, jointKids, checks: a => checks(a, layout(a)), viewKey: () => [view.by, view.pv, view.sv, sk.tool, sk.dl, sk.sel, sk.pt ? sk.pt.u + sk.pt.t : "", sk.fs ? 1 : 0].join("|"), layout, autofit };
 })();
