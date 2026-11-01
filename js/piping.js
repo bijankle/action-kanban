@@ -22,9 +22,10 @@ const Piping = (() => {
   /* ---------- a joint's parts: the two flanges as picked, the gasket, studs and nuts from the first flange's class ---------- */
   function jointKids(r){ const fa = r.fa || {}, fb = r.fb || {}, cl = fa.cl || r.cl, dn = r.dn, J = cl && dn ? PipeSpec.joint(cl, dn) : {};
     const g = cl && dn ? (PipeSpec.items(cl, dn).find(x => /^G:/.test(x.v)) || {}).v : "";
+    const fl = cl && dn ? PipeSpec.items(cl, dn).filter(x => /^(flange|stub flange|flange adaptor)/i.test(x.v) && !/blind/i.test(x.v)) : [], one = fl.length === 1 ? fl[0].v : "";   /* (the class's only flange at that size goes in by itself: on PE the stub flange with its backing ring) */
     return [
-      { u: r.u + ".fa", rol: "fa", nm: "Flange", cl, dn, it: fa.it || "", qty: 1 },
-      { u: r.u + ".fb", rol: "fb", nm: "Mating flange", cl: fb.cl || cl, dn, it: fb.it || fa.it || "", qty: 1, auto: !fb.it },
+      { u: r.u + ".fa", rol: "fa", nm: "Flange", cl, dn, it: fa.it || one, qty: 1, auto: !fa.it && !!one },
+      { u: r.u + ".fb", rol: "fb", nm: "Mating flange", cl: fb.cl || cl, dn, it: fb.it || (fb.cl && fb.cl !== cl ? "" : fa.it || one), qty: 1, auto: !fb.it },
       { u: r.u + ".g", rol: "g", nm: "Gasket", cl, dn, it: r.g || g || "", qty: 1, auto: !r.g },
       { u: r.u + ".st", rol: "st", nm: "Studs", cl, dn, it: "B:stud", qty: r.stq != null ? r.stq : J.n || "", auto: r.stq == null },
       { u: r.u + ".nu", rol: "nu", nm: "Nuts", cl, dn, it: "B:nut", qty: r.nuq != null ? r.nuq : J.n ? 2 * J.n : "", auto: r.nuq == null } ]; }
@@ -132,7 +133,9 @@ const Piping = (() => {
   const cos3 = (a, b) => { const d = a.reduce((t, v, k) => t + v * b[k], 0), m = Math.hypot(...a) * Math.hypot(...b); return m ? d / m : 0; };
   const PERP = d => /^[EW]/.test(d) && d.length === 1 ? "N" : /^[NS]$/.test(d) ? "E" : "E";
   const sk = { tool: "sel", dl: null, sel: null };
-  const isElbow = r => /^elbow/i.test(String(r.it || "")), isTee = r => /^tee/i.test(String(r.it || ""));
+  const isElbow = r => /^elbow/i.test(String(r.it || "")), isTee = r => /^(tee|lateral|cross|y piece|junction|tapping saddle)|olet\b/i.test(String(r.it || ""));
+  const isEnd = r => /^(cap|plug|plate, blind|flange, blind|blind)/i.test(String(r.it || "")) || r.sym === "cap";
+  const valveType = r => { if (!/^V:/.test(r.it || "")) return ""; const z = R(r); return String(((z.rows || []).find(x => x[0] === "Type") || [])[1] || ""); };
   function layout(a){ const p = P(a), out = { segs: [], nodes: [], sups: [], ends: [], at: {} }; const placed = new Set(); let guard = 0, nextX = 0;
     while (placed.size < p.lines.length && guard++ < 20) p.lines.forEach(L => { if (placed.has(L.id)) return; let start;
       if (L.off){ if (!out.at[L.off]) return; start = out.at[L.off].p3; } else start = L.id === p.lines[0].id ? [0, 0, 0] : [nextX, -2, 0];
@@ -142,7 +145,7 @@ const Piping = (() => {
         if (r.k === "it" && isPipe(r)){ const d = r.dir || (prev && isElbow(prev) && pd ? PERP(pd) : pd) || "E", n = Math.max(1, +r.gl || 3), s = { r, L, a3: cur, b3: add3(cur, DIRS[d], n), d, n };
           out.segs.push(s); cur = s.b3; pd = d; last = s; prev = r; return; }
         const nd = { r, L, p3: cur, d: pd || "E" }; out.nodes.push(nd); out.at[r.u] = nd; prev = r; });
-      { const lr = [...L.rows].reverse().find(x => x.k !== "sup"); if (!(lr && /^cap/i.test(lr.it || ""))) out.ends.push({ L, p3: cur, d: pd }); } nextX = Math.max(nextX, ...out.segs.map(s => Math.max(s.a3[0], s.b3[0]) + 4)); });
+      (out.lastPt = out.lastPt || {})[L.id] = cur; { const lr = [...L.rows].reverse().find(x => x.k !== "sup"); if (!(lr && isEnd(lr))) out.ends.push({ L, p3: cur, d: pd }); } nextX = Math.max(nextX, ...out.segs.map(s => Math.max(s.a3[0], s.b3[0]) + 4)); });
     return out; }
   /* the symbols, ISO style: a joint two short bars across the pipe, a valve a bow tie, a reducer a taper, a tee a dot, a cap an arc,
      a support a stem off the pipe with a bar across its end (the same mark on every plane); tags boxed */
@@ -160,12 +163,15 @@ const Piping = (() => {
     if (th(x) && th(y)) return !(x.length === 3 && x === y);
     if (x === y) return x === "BW" || x === "FL" || (x === "PE" && hd);
     return ["PE|SW", "PE|PR", "EF|PE", "PE|TF"].includes(k); }
-  const sizesIn = r => r.k === "joint" || r.k === "it" ? (r.dn ? (PipeSpec.reducing(r.it) && r.dn2 && !isTee(r) ? [r.dn, r.dn2] : [r.dn]) : []) : [];
+  const nd = (cl, v) => (cl && PipeSpec.dnOf(cl, v)) || v;   /* (sizes compared as DN, so OD110 PE meets DN100 steel) */
+  const sizesIn = r => r.k === "joint" || r.k === "it" ? (r.dn ? (PipeSpec.reducing(r.it) && r.dn2 && !isTee(r) ? [r.dn, r.dn2] : [r.dn]).map(v => nd(r.cl, v)) : []) : [];
   function checks(a, Lo){ const p = P(a), out = [], name = (L, r) => { let n = 0; for (const x of L.rows){ if (x.k !== "sup") n++; if (x === r) break; } return L.id + n + " " + (r.k === "joint" ? "Flange joint" : itemTxt(r)); };
     const lab = r => r.cl && r.dn ? PipeSpec.lab(r.cl, r.dn) : "";
     const meet = (L1, r1, L2, r2, p3, branch) => { const m = [];
-      const s1 = branch ? [r1.dn2 || r1.dn].filter(Boolean) : sizesIn(r1), s2 = sizesIn(r2);
+      const s1 = branch ? [r1.dn2 || r1.dn].filter(Boolean).map(v => nd(r1.cl, v)) : sizesIn(r1), s2 = sizesIn(r2);
       if (s1.length && s2.length && !s1.some(v => s2.includes(v))) m.push({ t: "Size change with no reducer", d: name(L1, r1) + " is " + (branch && r1.dn2 ? PipeSpec.lab(r1.cl, r1.dn2) + " on its branch" : lab(r1)) + ", " + name(L2, r2) + " is " + lab(r2) + ". Put a reducer between them, or change one of the sizes." });
+      const cs = r => r.k === "joint" ? [(r.fa && r.fa.cl) || r.cl, (r.fb && r.fb.cl) || r.cl] : [r.cl], k1 = cs(r1), k2 = cs(r2), c1 = k1.find(x => !k2.includes(x)) || k1[0], c2 = k2.find(x => !k1.includes(x)) || k2[0], adp = x => /adapt|transition|stub flange/i.test(itemTxt(x));   /* (a joint suits either of its flanges' specs) */
+      if (c1 && c2 && !k1.some(x => k2.includes(x)) && !adp(r1) && !adp(r2)) m.push({ t: "Spec change with no flange or adaptor", d: name(L1, r1) + " is " + c1 + ", " + name(L2, r2) + " is " + c2 + ". Put a flange joint between them (its mating flange can be in the other spec), or an adaptor." });
       const e1 = r1.k === "joint" ? null : endsOf(r1), e2 = r2.k === "joint" ? null : endsOf(r2), hd = famOf(r1.cl) === "hdpe" && famOf(r2.cl) === "hdpe";
       if (e1 && e2 && !e1.cs.some(x => e2.cs.some(y => endsFit(x, y, hd)))) m.push({ t: "Ends that don't join", d: name(L1, r1) + " has " + e1.t.toLowerCase() + ", " + name(L2, r2) + " has " + e2.t.toLowerCase() + ". " + (e1.cs.concat(e2.cs).includes("FL") ? "Put a flange joint between them, or pick" : "Pick") + " items whose ends join (for example a plain end into a socket weld or press fitting)." });
       if (m.length) out.push({ k: r1.u + ">" + r2.u, p3, m }); };
@@ -174,7 +180,8 @@ const Piping = (() => {
       if (L.off){ const T = rowOf(a, L.off), r0 = rs[0]; if (T.r && r0){ const pt = posEnd(T.r); if (pt) meet(T.L, T.r, L, r0, pt, true); } }
       rs.forEach((r, i) => { if (!i) return; const pt = posEnd(rs[i - 1]); if (pt) meet(L, rs[i - 1], L, r, pt, false); }); });
     return out; }
-  function sketchSvg(a, ro){ const Lo = layout(a), B = bom(a), sn = supNo(a), pts = [];
+  const WELD_T = { FW: "Field weld", FFW: "Field fit weld (150 mm pipe green)", FFG: "Field fit groove (150 mm pipe green)" };
+  function sketchSvg(a, ro){ const noteTxt = (q, t, k) => '<text class="iso-note" data-note="' + esc(k) + '" x="' + Math.round(q[0]) + '" y="' + Math.round(q[1]) + '">' + String(t).split(/\n/).map((x, i) => '<tspan x="' + Math.round(q[0]) + '" dy="' + (i ? 13 : 0) + '">' + esc(x) + '</tspan>').join("") + '</text>'; const Lo = layout(a), B = bom(a), sn = supNo(a), pts = [];
     Lo.segs.forEach(s => pts.push(prj(s.a3), prj(s.b3))); Lo.nodes.forEach(n => pts.push(prj(n.p3))); Lo.ends.forEach(e => pts.push(prj(e.p3)));
     if (!pts.length) pts.push([0, 0]);
     const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]), M = 90; let x0 = Math.min(...xs) - M, y0 = Math.min(...ys) - M, w = Math.max(...xs) - x0 + M, hgt = Math.max(...ys) - y0 + M;
@@ -187,7 +194,7 @@ const Piping = (() => {
     /* the dot grid: every point of the iso lattice over the drawing */
     g += '<defs><pattern id="iso-dots" patternUnits="userSpaceOnUse" width="' + f1(2 * CX) + '" height="' + f1(2 * CY) + '"><circle class="iso-dot" cx="0" cy="0" r="1"/><circle class="iso-dot" cx="' + f1(CX) + '" cy="' + f1(CY) + '" r="1"/><circle class="iso-dot" cx="' + f1(2 * CX) + '" cy="0" r="1"/><circle class="iso-dot" cx="0" cy="' + f1(2 * CY) + '" r="1"/><circle class="iso-dot" cx="' + f1(2 * CX) + '" cy="' + f1(2 * CY) + '" r="1"/></pattern></defs><rect class="iso-bg" x="-100000" y="-100000" width="200000" height="200000" fill="url(#iso-dots)"/>';
     /* dimensions run to the face of a valve, reducer, flange joint or cap, to the centre of an elbow or tee (as on the ISOs) */
-    const halfOf = r => !r ? 0 : r.k === "joint" ? 3 : /^V:/.test(r.it || "") || r.sym === "valve" ? 9 : /^reducer/i.test(r.it || "") || r.sym === "red" ? 7 : /^cap/i.test(r.it || "") ? 5 : 0;
+    const halfOf = r => !r ? 0 : r.k === "joint" ? 3 : /^V:/.test(r.it || "") || r.sym === "valve" ? 9 : /^reducer/i.test(r.it || "") || r.sym === "red" ? 7 : isEnd(r) ? 5 : 0;
     const nbr = (s, dir) => { const rs = s.L.rows.filter(x => x.k !== "sup"), i = rs.indexOf(s.r); return rs[i + dir] || null; };
     const face = (s, end) => { const A = prj(s.a3), Bp = prj(s.b3), u = unit(s.d), hf = halfOf(nbr(s, end === "a" ? -1 : 1)); return end === "a" ? [A[0] + u[0] * hf, A[1] + u[1] * hf] : [Bp[0] - u[0] * hf, Bp[1] - u[1] * hf]; };
     const dimLine = (A, Bp, nm, o, txt, need, attr) => { const A2 = [A[0] + nm[0] * o, A[1] + nm[1] * o], B2 = [Bp[0] + nm[0] * o, Bp[1] + nm[1] * o], mid = [(A2[0] + B2[0]) / 2, (A2[1] + B2[1]) / 2], sg = Math.sign(o) || 1;
@@ -199,16 +206,27 @@ const Piping = (() => {
       g += '<g data-u="' + esc(s.r.u) + '" class="iso-seg' + (on ? " on" : "") + '">' + L2(A, Bp, "iso-p") + L2(A, Bp, "iso-hit") + '</g>';
       /* the dimension: end to end, beside the run, its value the real length (? while still to fill in) */
       g += dimLine(face(s, "a"), face(s, "b"), nm, 26, s.r.len ? String(s.r.len) : "?", !s.r.len, 'data-dim="' + esc(s.r.u) + '"');
-      const mp = [(A[0] + Bp[0]) / 2 - nm[0] * 14, (A[1] + Bp[1]) / 2 - nm[1] * 14]; g += tag(mp, lab, s.r.u); });
+      const mp = [(A[0] + Bp[0]) / 2 - nm[0] * 14, (A[1] + Bp[1]) / 2 - nm[1] * 14]; g += tag(mp, lab, s.r.u);
+      const at = f => [A[0] + (Bp[0] - A[0]) * f, A[1] + (Bp[1] - A[1]) * f], uu = unit(s.d);
+      if (s.r.flow){ const c = at(0.3), w = s.r.flow > 0 ? 1 : -1, tp = [c[0] + uu[0] * 9 * w, c[1] + uu[1] * 9 * w], bk = [c[0] - uu[0] * 9 * w, c[1] - uu[1] * 9 * w];
+        g += '<path class="iso-flow" data-flow="' + esc(s.r.u) + '" d="M' + f1(tp[0]) + ' ' + f1(tp[1]) + ' L' + f1(bk[0] + nm[0] * 5) + ' ' + f1(bk[1] + nm[1] * 5) + ' L' + f1(bk[0] - nm[0] * 5) + ' ' + f1(bk[1] - nm[1] * 5) + ' Z"><title>Flow</title></path>'; }
+      (s.r.welds || []).forEach(w => { const c = at(w.at); g += '<g class="iso-fw" data-weld="' + esc(s.r.u + "|" + w.u) + '"><title>' + esc(WELD_T[w.t] || w.t) + ' (click to change)</title><circle cx="' + f1(c[0]) + '" cy="' + f1(c[1]) + '" r="3.2"/>' + tag([c[0] + nm[0] * 14 - 10, c[1] + nm[1] * 14], w.t) + '</g>'; });
+      if (s.r.note) g += noteTxt([mp[0] - nm[0] * 18, mp[1] - nm[1] * 18], s.r.note, s.r.u); });
     Lo.nodes.forEach(n => { const q = prj(n.p3), u = unit(n.d), nm = nrm(n.d), r = n.r, on = r.u === sk.sel; let s = "";
       if (r.k === "joint"){ const ks = jointKids(r), t = [...new Set(ks.map(k => numOf(B, k.u)).filter(Boolean))].join(" ");
         [-3, 3].forEach(dd => { const c = [q[0] + u[0] * dd, q[1] + u[1] * dd]; s += L2([c[0] - nm[0] * 9, c[1] - nm[1] * 9], [c[0] + nm[0] * 9, c[1] + nm[1] * 9], "iso-s"); }); s += tag([q[0] - nm[0] * 18 + 6, q[1] - nm[1] * 18], t || "J", r.u); }
-      else if (/^V:/.test(r.it || "") || r.sym === "valve"){ const a1 = [q[0] - u[0] * 9 + nm[0] * 7, q[1] - u[1] * 9 + nm[1] * 7], a2 = [q[0] - u[0] * 9 - nm[0] * 7, q[1] - u[1] * 9 - nm[1] * 7], b1 = [q[0] + u[0] * 9 + nm[0] * 7, q[1] + u[1] * 9 + nm[1] * 7], b2 = [q[0] + u[0] * 9 - nm[0] * 7, q[1] + u[1] * 9 - nm[1] * 7];
-        s += '<path class="iso-s iso-fill" d="M' + [a1, b2, b1, a2].map(p2 => f1(p2[0]) + " " + f1(p2[1])).join(" L") + ' Z"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
+      else if (/^V:/.test(r.it || "") || r.sym === "valve"){ const vt = valveType(r), P2 = (x, y) => [q[0] + u[0] * x + nm[0] * y, q[1] + u[1] * x + nm[1] * y], pth = (ps, c) => '<path class="iso-s ' + (c || "iso-fill") + '" d="M' + ps.map(p2 => f1(p2[0]) + " " + f1(p2[1])).join(" L") + ' Z"/>';
+        if (/butterfly/i.test(vt)){ s += L2(P2(-3, -9), P2(-3, 9), "iso-s") + L2(P2(3, -9), P2(3, 9), "iso-s") + '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="2.6"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
+        else if (/check|non.?return/i.test(vt)){ s += pth([P2(-9, 7), P2(9, -7), P2(9, 7), P2(-9, -7)]) + pth([P2(-9, 7), P2(0, 0), P2(-9, -7)], "iso-dotf") + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
+        else s += pth([P2(-9, 7), P2(9, -7), P2(9, 7), P2(-9, -7)]) + (/ball/i.test(vt) ? '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="3"/>' : "") + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
       else if (/^reducer/i.test(r.it || "") || r.sym === "red"){ s += '<path class="iso-s iso-fill" d="M' + [[-7, 8], [7, 4], [7, -4], [-7, -8]].map(([a1, b1]) => f1(q[0] + u[0] * a1 + nm[0] * b1) + " " + f1(q[1] + u[1] * a1 + nm[1] * b1)).join(" L") + ' Z"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
+      else if (/^(coupling|union|induction e-coupler)/i.test(r.it || "") || r.sym === "cpl"){ s += '<path class="iso-s iso-fill" d="M' + [[-4, 6], [4, 6], [4, -6], [-4, -6]].map(([a1, b1]) => f1(q[0] + u[0] * a1 + nm[0] * b1) + " " + f1(q[1] + u[1] * a1 + nm[1] * b1)).join(" L") + ' Z"/>' + tag([q[0] - nm[0] * 20 + 6, q[1] - nm[1] * 20], numOf(B, r.u), r.u); }
       else if (isTee(r)){ s += '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="3.2"/>' + tag([q[0] + 8, q[1] + 14], numOf(B, r.u), r.u); }
-      else if (/^cap/i.test(r.it || "")){ s += '<circle class="iso-s" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="5"/>' + tag([q[0] + 8, q[1] + 14], numOf(B, r.u), r.u); }
+      else if (/blind/i.test(r.it || "")){ s += L2([q[0] - nm[0] * 9, q[1] - nm[1] * 9], [q[0] + nm[0] * 9, q[1] + nm[1] * 9], "iso-s") + L2([q[0] + u[0] * 3 - nm[0] * 9, q[1] + u[1] * 3 - nm[1] * 9], [q[0] + u[0] * 3 + nm[0] * 9, q[1] + u[1] * 3 + nm[1] * 9], "iso-s iso-bar") + tag([q[0] - nm[0] * 18 + 6, q[1] - nm[1] * 18], numOf(B, r.u), r.u); }
+      else if (/^plug/i.test(r.it || "")){ s += '<rect class="iso-s iso-dotf" x="' + f1(q[0] - 3.5) + '" y="' + f1(q[1] - 3.5) + '" width="7" height="7"/>' + tag([q[0] + 8, q[1] + 14], numOf(B, r.u), r.u); }
+      else if (isEnd(r)){ s += '<circle class="iso-s" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="5"/>' + tag([q[0] + 8, q[1] + 14], numOf(B, r.u), r.u); }
       else s += '<circle class="iso-s iso-dotf" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="2"/>' + tag([q[0] + 6, q[1] + 16], numOf(B, r.u), r.u);
+      if (r.note) s += noteTxt([q[0] + nm[0] * 30, q[1] + nm[1] * 30], r.note, r.u);
       g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(r.u) + '">' + s + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>'; });
     Lo.sups.forEach(n => { const q = prj(n.p3), lvl = !/[UD]/.test(n.d), sd = lvl ? [0, 1] : nrm(n.d), e = [q[0] + sd[0] * 12, q[1] + sd[1] * 12], on = n.r.u === sk.sel;
       g += '<g class="iso-n' + (on ? " on" : "") + '" data-u="' + esc(n.r.u) + '">' + L2(q, e, "iso-s") + L2([e[0] - sd[1] * 6, e[1] + sd[0] * 6], [e[0] + sd[1] * 6, e[1] - sd[0] * 6], "iso-s iso-bar") + tag(lvl ? [e[0] + 8, e[1] + 4] : [e[0] + sd[0] * 6 + 2, e[1] + sd[1] * 6 + 6], sn[n.r.sid] || n.r.sid, n.r.u) + '<circle class="iso-hitn" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="9"/></g>';
@@ -216,23 +234,21 @@ const Piping = (() => {
       g += dimLine(end === "a" ? fp : q, end === "a" ? q : fp, nrm(s.d), -34, n.r.dd ? String(n.r.dd) : "?", !n.r.dd, 'data-sdim="' + esc(n.r.u) + '" data-se="' + end + '"'); });
     checks(a, Lo).forEach(c => { const q = prj(c.p3), x = q[0] + 10, y = q[1] - 26;
       g += '<g class="iso-warn" data-warn="' + esc(c.k) + '"><title>' + esc(c.m.map(m => m.t).join("; ") + " (click for more)") + '</title><path d="M' + f1(x) + ' ' + f1(y - 9) + ' L' + f1(x + 10) + ' ' + f1(y + 8) + ' L' + f1(x - 10) + ' ' + f1(y + 8) + ' Z"/><text x="' + f1(x) + '" y="' + f1(y + 6) + '">!</text></g>'; });
+    P(a).lines.forEach(L => { if (!L.endNote) return; const e = Lo.lastPt && Lo.lastPt[L.id]; if (e) g += noteTxt([prj(e)[0] + 12, prj(e)[1] + 36], L.endNote, "end:" + L.id); });
     if (!ro) Lo.ends.forEach(e => { const q = prj(e.p3); g += '<circle class="iso-end' + (sk.dl === e.L.id ? " on" : "") + '" data-end="' + esc(e.L.id) + '" cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" r="6"><title>Draw line ' + esc(e.L.id) + ' on from here</title></circle>'; });
     if (!Lo.segs.length && !ro) g += '<text class="iso-hint" x="' + f1(prj([0, 0, 0])[0] + 12) + '" y="' + f1(prj([0, 0, 0])[1] - 12) + '">Click the dot, then click where the pipe runs to</text>';
     const fit = [x0, y0, w, hgt].map(f1).join(" "), vb = sk.vb && sk.vbA === a.id ? sk.vb.map(f1).join(" ") : fit;
     return '<svg class="iso" viewBox="' + vb + '" data-fit="' + fit + '" preserveAspectRatio="xMidYMid meet">' + g + '<line class="iso-ghost" x1="0" y1="0" x2="0" y2="0" hidden/><text class="iso-gt" hidden></text></svg>'; }
   /* the tool buttons show the very symbol each places (drawn the same way as on the sketch, along a level pipe) */
   const IC = d => '<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">' + d + '</svg>', PL = '<path d="M1 10H19" stroke-width="2"/>';
-  const TOOLS = [["sel", "Select", IC('<path d="M5 3v13l3.5-3.5 2.5 5 2-1-2.5-5H15z" fill="currentColor" stroke="none"/>')], ["del", "Remove: click a part", IC('<path d="M5 5l10 10M15 5L5 15" stroke-width="2"/>')], ["pipe", "Pipe: click a line's end, then where it runs to", IC('<path d="M3 15L17 5" stroke-width="2.2"/><circle cx="3" cy="15" r="1.8" fill="currentColor" stroke="none"/>')],
-    ["joint", "Flange joint: click a pipe", IC(PL + '<path d="M8.5 3.5v13M11.5 3.5v13"/>')], ["valve", "Valve: click a pipe", IC(PL + '<path d="M5 5v10l10-10v10z" fill="var(--panel)"/>')],
-    ["sup", "Support: click a pipe", IC('<path d="M1 7H19" stroke-width="2"/><path d="M10 7v7M6 14h8" stroke-width="2"/>')], ["tee", "Tee: click a pipe; a new line runs off it", IC('<path d="M1 7H19M10 7v12" stroke-width="2"/><circle cx="10" cy="7" r="2.2" fill="currentColor" stroke="none"/>')],
-    ["red", "Reducer: click a pipe", IC('<path d="M1 10h5M14 10h5" stroke-width="2"/><path d="M6 4l8 3v6l-8 3z" fill="var(--panel)"/>')], ["cap", "Cap: click a line's end", IC('<path d="M1 10h11" stroke-width="2"/><circle cx="14" cy="10" r="3.5"/>')]];
-  const sketchHtml = (a, ro) => '<div class="iso-w' + (sk.fs ? " iso-full" : "") + '">' + (ro ? "" : '<div class="iso-tb">' + TOOLS.map(([k, t, s], i) => (i === 2 ? '<span class="iso-gap"></span>' : "") + '<button type="button" class="iso-tl' + (sk.tool === k ? " on" : "") + '" data-tool="' + k + '" title="' + esc(t) + '" aria-label="' + esc(t) + '">' + s + '</button>').join("") + '<button type="button" class="iso-tl iso-af" data-isofit="1" title="Autofit: even, readable spacing (lengths aren\'t to scale)">Autofit</button></div>') + '<div class="iso-sc">' + sketchSvg(a, ro) + '<button type="button" class="iso-fs" data-fs="1" title="' + (sk.fs ? "Leave full screen (Esc)" : "Full screen") + '" aria-label="' + (sk.fs ? "Leave full screen" : "Full screen") + '">' + (sk.fs ? FS_OUT : FS_IN) + '</button></div></div>';
+  const TOOLS = [["sel", "Select: click a part to find it in the list; click a dimension to type it", IC('<path d="M5 3v13l3.5-3.5 2.5 5 2-1-2.5-5H15z" fill="currentColor" stroke="none"/>')], ["del", "Remove: click a part", IC('<path d="M5 5l10 10M15 5L5 15" stroke-width="2"/>')], 0, ["pipe", "Pipe: click a line\x27s end, then where it runs to", IC('<path d="M3 15L17 5" stroke-width="2.2"/><circle cx="3" cy="15" r="1.8" fill="currentColor" stroke="none"/>')], 0, ["joint", "Flange joint: click a pipe", IC(PL + '<path d="M8.5 3.5v13M11.5 3.5v13"/>')], ["cpl", "Coupling or union: click a pipe (pick which in the list)", IC(PL + '<rect x="7" y="5" width="6" height="10" fill="var(--panel)"/>')], ["valve", "Valve: click a pipe (pick the valve in the list; its symbol follows its type)", IC(PL + '<path d="M5 5v10l10-10v10z" fill="var(--panel)"/>')], ["red", "Reducer: click a pipe (concentric or eccentric in the list)", IC('<path d="M1 10h5M14 10h5" stroke-width="2"/><path d="M6 4l8 3v6l-8 3z" fill="var(--panel)"/>')], ["tee", "Branch: a tee, reducing tee or olet; click a pipe, a new line runs off it", IC('<path d="M1 7H19M10 7v12" stroke-width="2"/><circle cx="10" cy="7" r="2.2" fill="currentColor" stroke="none"/>')], ["cap", "End: a cap, blind flange or plug on a line\x27s open end (pick which in the list)", IC('<path d="M1 10h11" stroke-width="2"/><circle cx="14" cy="10" r="3.5"/>')], 0, ["sup", "Support: click a pipe", IC('<path d="M1 7H19" stroke-width="2"/><path d="M10 7v7M6 14h8" stroke-width="2"/>')], ["weld", "Field weld: click a pipe (FW; click the mark again for FFW or FFG)", IC(PL + '<circle cx="10" cy="10" r="3" fill="currentColor" stroke="none"/><path d="M10 7V3"/>')], 0, ["flow", "Flow arrow: click a pipe (again to turn it round, a third time to take it off)", IC('<path d="M1 10h7" stroke-width="2"/><path d="M18 10l-10 5V5z" fill="currentColor" stroke="none"/>')], ["note", "Note: click a part or a line\x27s end to write beside it (CONT. ON, CONN. TO, RL, spindle…)", IC('<path d="M3 5h14M3 10h14M3 15h9"/>')]];
+  const sketchHtml = (a, ro) => '<div class="iso-w' + (sk.fs ? " iso-full" : "") + '">' + (ro ? "" : '<div class="iso-tb">' + TOOLS.map(x => x === 0 ? '<span class="iso-gap"></span>' : x).map(x => typeof x === "string" ? x : ((k, t, s) => '<button type="button" class="iso-tl' + (sk.tool === k ? " on" : "") + '" data-tool="' + k + '" title="' + esc(t) + '" aria-label="' + esc(t) + '">' + s + '</button>')(...x)).join("") + '<button type="button" class="iso-tl iso-af" data-isofit="1" title="Autofit: even, readable spacing (lengths aren\'t to scale)">Autofit</button></div>') + '<div class="iso-sc">' + sketchSvg(a, ro) + '<button type="button" class="iso-fs" data-fs="1" title="' + (sk.fs ? "Leave full screen (Esc)" : "Full screen") + '" aria-label="' + (sk.fs ? "Leave full screen" : "Full screen") + '">' + (sk.fs ? FS_OUT : FS_IN) + '</button></div></div>';
   const FS_IN = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>', FS_OUT = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2v4H2M14 6h-4V2M10 14v-4h4M2 10h4v4"/></svg>';
   /* ---------- the sketch's changes ---------- */
   const lineOf = (a, id) => P(a).lines.find(L => L.id === id);
   const lastOf = (L, f) => [...L.rows].reverse().find(f);
   const specItem = (cl, dn, re) => { const x = cl ? PipeSpec.items(cl, dn || null).find(i => re.test(i.v)) : null; return x ? x.v : ""; };
-  function drawPipe(a, L, d, n){ const p = P(a), lp = lastOf(L, r => r.k === "it" && isPipe(r)), base = lastOf(L, r => r.cl) || (L.off && rowOf(a, L.off).r) || {}, cl = base.cl || p.spec, dn = base.dn || null;
+  function drawPipe(a, L, d, n){ const p = P(a), lp = lastOf(L, r => r.k === "it" && isPipe(r)), base = lastOf(L, r => r.cl) || (L.off && rowOf(a, L.off).r) || {}, cl = p.spec || base.cl, dn = base.cl === cl && base.dn ? base.dn : null;
     const pd = lp ? (lp.dir || "E") : null, c = pd ? cos3(DIRS[pd], DIRS[d]) : 1, rows = [];
     if (pd && c < -0.01) return note("A pipe can't double back on itself");
     if (pd && c < 0.99){ const e45 = c > 0.5; rows.push({ u: uid(), k: "it", cl, dn, it: specItem(cl, dn, e45 ? /^elbow, 45/i : /^elbow, 90/i) || (e45 ? "Elbow, 45°" : "Elbow, 90°"), qty: 1 }); }
@@ -243,10 +259,11 @@ const Piping = (() => {
     if (sk.tool === "sup"){ const sid = "S" + (SUP(a).reduce((m, s) => Math.max(m, +s.sid.slice(1) || 0), 0) + 1); let i = L.rows.indexOf(r) + 1; while (L.rows[i] && L.rows[i].k === "sup") i++;
       return save(a, () => { L.rows.splice(i, 0, { u: uid(), k: "sup", sid, at: Math.round(t * 100) / 100 }); SUP(a).push({ sid, from: "", parts: [] }); }, "Placed a pipe support on"); }
     const nn = Math.max(2, n), kk = n < 2 ? 1 : k, len = +r.len || 0, r2 = Object.assign({}, r, { u: uid(), gl: nn - kk, len: len ? Math.round(len * (nn - kk) / nn) : "" });
-    const node = sk.tool === "joint" ? { u: uid(), k: "joint", cl: r.cl, dn: r.dn } : { u: uid(), k: "it", cl: r.cl, dn: r.dn, qty: 1, sym: sk.tool, it: sk.tool === "valve" ? "" : sk.tool === "red" ? specItem(r.cl, r.dn, /^reducer/i) : specItem(r.cl, r.dn, /^tee, equal/i) || "Tee, equal" };
+    const node = sk.tool === "joint" ? { u: uid(), k: "joint", cl: r.cl, dn: r.dn } : { u: uid(), k: "it", cl: r.cl, dn: r.dn, qty: 1, sym: sk.tool, it: sk.tool === "valve" ? "" : sk.tool === "cpl" ? specItem(r.cl, r.dn, /^coupling(, (standard|sliding))?$/i) || specItem(r.cl, r.dn, /^(coupling(?!, reducing)|induction e-coupler)/i) || specItem(r.cl, r.dn, /^union(?!, reducing)/i) : sk.tool === "red" ? specItem(r.cl, r.dn, /^reducer/i) : specItem(r.cl, r.dn, /^tee, equal/i) || "Tee, equal" };
     let nl = null; if (sk.tool === "tee"){ const p = P(a); nl = { id: String.fromCharCode(65 + p.lines.length), off: node.u, rows: [] }; }
     save(a, () => { const i = L.rows.indexOf(r); let j = i + 1; while (L.rows[j] && L.rows[j].k === "sup") j++; const ss = L.rows.splice(i + 1, j - i - 1);   /* (the pipe's supports stay where they are: each goes with the half it's on) */
       const pos = x => (x.at != null ? x.at : 0.5) * nn, s1 = ss.filter(x => pos(x) <= kk), s2 = ss.filter(x => pos(x) > kk); s1.forEach(x => { x.at = Math.round(pos(x) / kk * 100) / 100; if (x.from === "b"){ delete x.dd; delete x.from; } }); s2.forEach(x => { x.at = Math.round((pos(x) - kk) / (nn - kk) * 100) / 100; if (x.from !== "b"){ delete x.dd; delete x.from; } });   /* (a distance from an end that's now the new part's face is asked for again: ?) */
+      const ws = r.welds || []; r.welds = ws.filter(w => w.at * nn <= kk).map(w => Object.assign(w, { at: Math.round(w.at * nn / kk * 100) / 100 })); r2.welds = ws.filter(w => w.at * nn > kk).map(w => Object.assign({}, w, { at: Math.round((w.at * nn - kk) / (nn - kk) * 100) / 100 })); delete r2.flow; delete r2.note;
       r.gl = kk; if (len) r.len = Math.round(len * kk / nn); L.rows.splice(i + 1, 0, ...s1, node, r2, ...s2); if (nl) P(a).lines.push(nl); }, "Placed a part on the piping of");
     sk.sel = node.u; if (nl){ sk.tool = "pipe"; sk.dl = nl.id; } }
   function removeAt(a, u){ const { L, r } = rowOf(a, u); if (!L || !r) return; const i = L.rows.indexOf(r); let pi = i - 1; while (L.rows[pi] && L.rows[pi].k === "sup") pi--; const pv = L.rows[pi], nx = L.rows[i + 1];
@@ -256,6 +273,7 @@ const Piping = (() => {
     save(a, () => { L.rows.splice(i, 1); if (pv && nx && isPipe(pv) && isPipe(nx) && (pv.dir || "E") === (nx.dir || "E")){   /* (the two pipes join up again, their supports kept where they were) */
         const g1 = +pv.gl || 3, g2 = +nx.gl || 3, t = g1 + g2; L.rows.slice(pi + 1, i).forEach(x => { x.at = Math.round((x.at != null ? x.at : 0.5) * g1 / t * 100) / 100; });
         let j = L.rows.indexOf(nx) + 1; while (L.rows[j] && L.rows[j].k === "sup"){ const x = L.rows[j]; x.at = Math.round((g1 + (x.at != null ? x.at : 0.5) * g2) / t * 100) / 100; j++; }
+        pv.welds = (pv.welds || []).map(w => Object.assign(w, { at: Math.round(w.at * g1 / t * 100) / 100 })).concat((nx.welds || []).map(w => Object.assign(w, { at: Math.round((g1 + w.at * g2) / t * 100) / 100 })));
         pv.gl = t; pv.len = (+pv.len && +nx.len) ? +pv.len + +nx.len : pv.len || ""; L.rows.splice(L.rows.indexOf(nx), 1); }
       P(a).lines = P(a).lines.filter(x => x.off !== r.u || x.rows.length); }, "Removed a part from"); }
   /* Esc while drawing or placing stops that (back to Select) and leaves the action open */
@@ -274,7 +292,7 @@ const Piping = (() => {
     svg.onwheel = e => { e.preventDefault(); const q = pt(e), v = seen(), f = Math.exp((e.deltaY > 0 ? 1 : -1) * Math.min(Math.abs(e.deltaY), 120) * 0.0018), nw = Math.min(Math.max(v[2] * f, 80), 40000), k = nw / v[2];
       setVb([q[0] - (q[0] - v[0]) * k, q[1] - (q[1] - v[1]) * k, v[2] * k, v[3] * k]); };
     let pan = null, panned = false;
-    const paper = t => !t.closest("[data-u],[data-end],[data-dim],[data-sdim],[data-warn],.iso-fs");
+    const paper = t => !t.closest("[data-u],[data-end],[data-dim],[data-sdim],[data-warn],[data-weld],[data-flow],[data-note],.iso-fs");
     svg.onpointerdown = e => { panned = false; if (e.button !== 0 && e.button !== 1) return; if (e.button === 0 && !paper(e.target)) return; pan = { x: e.clientX, y: e.clientY, v: seen(), s: svg.getScreenCTM().a, id: e.pointerId }; };
     svg.addEventListener("pointermove", e => { if (!pan) return; const dx = e.clientX - pan.x, dy = e.clientY - pan.y; if (!panned && Math.hypot(dx, dy) < 4) return;
       if (!panned){ panned = true; try { svg.setPointerCapture(pan.id); } catch (_){} svg.classList.add("panning"); }
@@ -286,18 +304,36 @@ const Piping = (() => {
       const n = Math.max(1, Math.round(m / best.wm)), end = prj(add3(en.p3, DIRS[best.d], n)); return { L: lineOf(a, sk.dl), d: best.d, n, s0, end }; };
     svg.onpointermove = e => { const g0 = aim(e); if (!g0){ ghost.setAttribute("hidden", ""); gt.setAttribute("hidden", ""); return; } ghost.removeAttribute("hidden"); gt.removeAttribute("hidden");
       ghost.setAttribute("x1", g0.s0[0]); ghost.setAttribute("y1", g0.s0[1]); ghost.setAttribute("x2", g0.end[0]); ghost.setAttribute("y2", g0.end[1]); gt.setAttribute("x", g0.end[0] + 8); gt.setAttribute("y", g0.end[1] - 8); gt.textContent = g0.d; };
-    svg.onclick = e => { if (panned){ panned = false; return; } const wn = e.target.closest("[data-warn]"); if (wn) return callout(a, wn); const end = e.target.closest("[data-end]"); if (end && sk.tool === "cap") return capAt(a, lineOf(a, end.dataset.end), "end"); if (end){ sk.tool = "pipe"; sk.dl = end.dataset.end; App.render(); return; }
+    svg.onclick = e => { if (panned){ panned = false; return; } const wn = e.target.closest("[data-warn]"); if (wn) return callout(a, wn);
+      const wd = e.target.closest("[data-weld]"); if (wd && (sk.tool === "sel" || sk.tool === "weld" || sk.tool === "del")) return weldAt(a, wd.dataset.weld, sk.tool === "del");
+      const fl = e.target.closest("[data-flow]"); if (fl && (sk.tool === "flow" || sk.tool === "del")) return flowOn(a, fl.dataset.flow, sk.tool === "del");
+      const nt = e.target.closest("[data-note]"); if (nt && (sk.tool === "note" || sk.tool === "sel")) return editNote(a, nt.dataset.note, nt);
+      const end = e.target.closest("[data-end]"); if (end && sk.tool === "note") return editNote(a, "end:" + end.dataset.end, end); if (end && sk.tool === "cap") return capAt(a, lineOf(a, end.dataset.end), "end"); if (end){ sk.tool = "pipe"; sk.dl = end.dataset.end; App.render(); return; }
       const dim = e.target.closest("[data-dim],[data-sdim]"); if (dim && sk.tool === "sel") return editDim(a, dim);
       if (sk.tool === "pipe"){ const g0 = aim(e); if (g0 && g0.L) drawPipe(a, g0.L, g0.d, g0.n); return; }
       const hit = e.target.closest("[data-u]"); if (!hit) return; const u = hit.dataset.u;
       if (sk.tool === "sel"){ sk.sel = sk.sel === u ? null : u; App.render(); return; }
       if (sk.tool === "del") return removeAt(a, u);
+      if (sk.tool === "note") return editNote(a, u, hit);
       if (sk.tool === "cap"){ const { L, r } = rowOf(a, u); if (!L || !r || !isPipe(r)) return note("Click a line's end, or the pipe at either end of it"); const rs = L.rows.filter(x => x.k !== "sup"), Lo0 = layout(a), s0 = Lo0.segs.find(x => x.r === r), A0 = prj(s0.a3), B0 = prj(s0.b3), q0 = pt(e), nearB = Math.hypot(q0[0] - B0[0], q0[1] - B0[1]) < Math.hypot(q0[0] - A0[0], q0[1] - A0[1]);
-        const first = rs[0] === r && !L.off, last = rs[rs.length - 1] === r; if (last && (nearB || !first)) return capAt(a, L, "end"); if (first) return capAt(a, L, "start"); return note("A cap goes on an open end: this pipe has parts at both ends"); }
+        const first = rs[0] === r && !L.off, last = rs[rs.length - 1] === r; if (last && (nearB || !first)) return capAt(a, L, "end"); if (first) return capAt(a, L, "start"); return note("An end closure goes on an open end: this pipe has parts at both ends"); }
+      if (sk.tool === "flow"){ const { r } = rowOf(a, u); if (!r || !isPipe(r)) return note("Click a pipe to show its flow"); return flowOn(a, u); }
       const { r } = rowOf(a, u); if (!r || !isPipe(r)) return note("Click on a pipe to put it there");
       const Lo = layout(a), s = Lo.segs.find(x => x.r.u === u), A = prj(s.a3), Bq = prj(s.b3), q = pt(e), dx = Bq[0] - A[0], dy = Bq[1] - A[1], t = Math.max(0, Math.min(1, ((q[0] - A[0]) * dx + (q[1] - A[1]) * dy) / (dx * dx + dy * dy || 1)));
+      if (sk.tool === "weld") return save(a, () => { (r.welds = r.welds || []).push({ u: uid(), at: Math.round(t * 100) / 100, t: "FW" }); }, "Marked a field weld on");
       placeOn(a, u, t); };
     svg.ondblclick = e => { const dim = e.target.closest("[data-dim],[data-sdim]"); if (dim) return editDim(a, dim); if (sk.tool === "sel" && paper(e.target)){ sk.vb = null; svg.setAttribute("viewBox", svg.dataset.fit); } }; }
+  /* a field weld: FW, then FFW, then FFG on each click (Remove takes it off) */
+  function weldAt(a, key, del){ const [u, wu] = key.split("|"), { r } = rowOf(a, u); if (!r || !r.welds) return; const w = r.welds.find(x => x.u === wu); if (!w) return;
+    save(a, () => { if (del) r.welds = r.welds.filter(x => x !== w); else w.t = w.t === "FW" ? "FFW" : w.t === "FFW" ? "FFG" : "FW"; }, del ? "Removed a field weld from" : "Changed a field weld on"); }
+  /* a pipe's flow arrow: on, turned round, off */
+  function flowOn(a, u, del){ const { r } = rowOf(a, u); if (!r) return; save(a, () => { r.flow = del ? 0 : r.flow === 1 ? -1 : r.flow === -1 ? 0 : 1; if (!r.flow) delete r.flow; }, "Set the flow arrow on"); }
+  /* a note beside a part or a line's end, typed in place; Enter keeps it, Shift+Enter starts a second line, empty takes it off */
+  function editNote(a, key, el){ const isEndK = /^end:/.test(key), L = isEndK ? lineOf(a, key.slice(4)) : null, { r } = isEndK ? {} : rowOf(a, key); if (!L && !r) return; const cur = (isEndK ? L.endNote : r.note) || "";
+    const b = el.getBoundingClientRect(), i = h('<textarea class="in iso-din iso-nin" rows="2" placeholder="CONT. ON…, CONN. TO…, RL…, spindle…">' + esc(cur) + '</textarea>');
+    Object.assign(i.style, { position: "fixed", left: Math.min(innerWidth - 268, b.right + 6) + "px", top: (b.top - 4) + "px", width: "260px", zIndex: 9000 }); document.body.appendChild(i); i.focus(); i.select();
+    let gone = false; const done = ok => { if (gone) return; gone = true; const v = i.value.trim(); i.remove(); if (ok && v !== cur) save(a, () => { if (isEndK){ if (v) L.endNote = v; else delete L.endNote; } else { if (v) r.note = v; else delete r.note; } }, "Wrote a note on the sketch of"); };
+    i.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); done(true); } if (e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); done(false); } }; i.onblur = () => done(true); }
   /* an alert's callout: what doesn't fit and how to put it right; ✕, Esc or a click elsewhere closes it */
   function callout(a, el){ const c = checks(a, layout(a)).find(x => x.k === el.dataset.warn); if (!c) return; $$(".iso-co").forEach(x => x.remove());
     const b = el.getBoundingClientRect(), d = h('<div class="iso-co" role="dialog"><button type="button" class="ic-b sm" aria-label="Close">✕</button>' + c.m.map(m => '<p><b>' + esc(m.t) + '</b><br>' + esc(m.d) + '</p>').join("") + '</div>');
@@ -311,7 +347,7 @@ const Piping = (() => {
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && sk.fs){ sk.fs = false; App.render(); } });
   /* a cap on a line's open end, the start or the end (the start of a branch is its tee, so no cap there) */
   function capAt(a, L, at){ if (!L) return; const rs = L.rows.filter(x => x.k !== "sup"), r = at === "end" ? rs[rs.length - 1] : rs[0], src = r || { cl: P(a).spec, dn: null };
-    if (r && /^cap/i.test(r.it || "")) return note("That end is capped already");
+    if (r && isEnd(r)) return note("That end is closed already");
     if (at === "start" && L.off) return note("A branch starts at its tee: cap its other end");
     const c = { u: uid(), k: "it", cl: src.cl, dn: src.dn, it: specItem(src.cl, src.dn, /^cap/i) || "Cap", qty: 1 };
     save(a, () => { if (at === "end") L.rows.push(c); else L.rows.unshift(c); }, "Capped a line on"); sk.sel = c.u; }
@@ -364,7 +400,6 @@ const Piping = (() => {
     $$(".pp-dd", el).forEach(b => b.onclick = e => { e.stopPropagation(); if (b.dataset.c === "from") return pickSup(a, b, b.dataset.r); pick(a, b, b.dataset.r || "", b.dataset.c || b.dataset.pk); });
     const ln = $(".pp-line", el); if (ln) ln.onclick = () => { const p = P(a), id = String.fromCharCode(65 + p.lines.length); save(a, () => { p.lines.push({ id, rows: [] }); }, "Started line " + id + " on"); };
     $$("[data-x]", el).forEach(b => b.onclick = async () => { const u = b.dataset.x, { L, r } = rowOf(a, u); if (!r) return;
-      if (!await confirmBox("Remove " + (r.k === "sup" ? "support " + r.sid : r.k === "joint" ? "this flange joint" : "this row") + " from line " + L.id + "?", "Remove", true)) return;
       save(a, () => { L.rows.splice(L.rows.indexOf(r), 1); if (r.k === "sup"){ const S = SUP(a), i = S.findIndex(s => s.sid === r.sid); if (i >= 0) S.splice(i, 1); } }, "Removed from the piping of"); });
     $$("[data-xs]", el).forEach(b => b.onclick = async () => { const sid = b.dataset.xs; if (!await confirmBox("Remove support " + sid + " and its parts?", "Remove", true)) return;
       save(a, () => { const S = SUP(a), i = S.findIndex(s => s.sid === sid); if (i >= 0) S.splice(i, 1); P(a).lines.forEach(L => { const k = L.rows.findIndex(r => r.k === "sup" && r.sid === sid); if (k >= 0) L.rows.splice(k, 1); }); }, "Removed a pipe support from"); });
