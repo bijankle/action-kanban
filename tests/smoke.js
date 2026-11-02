@@ -174,6 +174,13 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
       const ys = [...document.querySelectorAll(".yn-yes")], y = ys[ys.length - 1]; if (!y) return "didn't ask"; window.__q = (y.closest(".ynmodal, .modal, dialog, .fw-win") || y.parentElement).innerText; y.click(); await new Promise(r => setTimeout(r, 400)); const a1 = App.act(App.selRef), gone = a1.pip.lines.length + "/" + a1.sups.length;
       Store.undo(); await new Promise(r => setTimeout(r, 400)); const a2 = App.act(App.selRef); return gone + " " + a2.pip.lines.length + "/" + a2.sups.length + (gone === "1/0" ? "" : " [" + window.__q + "]"); });
     check("removing a tee asks, takes its drawn branch and support, and one Ctrl+Z brings them back", rq === "1/0 2/1", rq);
+    /* the tool keys: each letter picks its tool, with Caps Lock or another keyboard layout, and an (i) card left open doesn't stop them */
+    await a.p.evaluate(() => { const c = document.createElement("div"); c.className = "pop tip-pop"; c.textContent = "an (i) card"; document.body.appendChild(c); window.__tc = c; });
+    await a.p.evaluate(() => document.querySelectorAll(".ynmodal").forEach(m => m.remove())); await a.p.waitForTimeout(200);   /* (notes earlier checks left open) */
+    const tkq = []; for (const [k, t] of [["KeyP", "pipe"], ["KeyV", "valve"], ["Shift+KeyS", "sup"], ["KeyN", "note"], ["KeyA", "sel"]]){ await a.p.keyboard.press(k); await a.p.waitForTimeout(250); const on = await a.p.evaluate(() => (document.querySelector(".iso-tr.on") || {}).dataset?.tool); tkq.push(on === t ? "ok" : k + ">" + on); }
+    await a.p.evaluate(() => { document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "\u062d", code: "KeyP", bubbles: true })); }); await a.p.waitForTimeout(250);
+    tkq.push(await a.p.evaluate(() => (document.querySelector(".iso-tr.on") || {}).dataset?.tool)); await a.p.keyboard.press("Escape"); await a.p.keyboard.press("Escape"); await a.p.evaluate(() => window.__tc.remove());
+    check("the drawing's tool keys pick their tool, whatever the keyboard layout, with an (i) card open", tkq.join() === "ok,ok,ok,ok,ok,pipe", tkq.join());
     /* an elbow set to 45°: the run after it swings halfway and the next bend becomes a 45° the other way (an offset); the spacing stays even */
     const eq45 = await a.p.evaluate(async () => { const pid = Store.selected()[0]; let x; const P = (u, d) => ({ u, k: "it", it: "Pipe", dir: d, gl: 5 }), E = u => ({ u, k: "it", it: "Elbow, 90°" });
       Store.mutate("a:" + pid, () => { x = Store.newAction(pid, { title: "Elbow test" }); x.pip = { spec: "", lines: [{ id: "A", at: [0, 0, 0], rows: [P("q1", "E"), E("e1"), P("q2", "N"), E("e2"), P("q3", "E")] }] }; });

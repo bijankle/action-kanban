@@ -342,9 +342,17 @@ const Piping = (() => {
     if (sk.tool !== "sel"){ e.stopPropagation(); e.preventDefault(); sk.tool = "sel"; sk.dl = null; sk.st = null; App.render(); return; }
     if (sk.fs){ e.stopPropagation(); e.preventDefault(); fullScreen(false); } }, true);
   /* each tool's key (its letter in the table): press it to pick the tool, again to put it away; never while typing in a box or with a list open */
-  addEventListener("keydown", e => { if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || !/^[a-z]$/i.test(e.key) || !document.querySelector("svg.iso")) return; const t = e.target;
-    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return; if (document.querySelector(".pop, .ynmodal, .ppv, .iso-co, .iso-din, .look, .lk")) return;
-    const k = Object.keys(TKEY).find(x => TKEY[x] === e.key.toUpperCase()), row = k && document.querySelector('.iso-tr[data-tool="' + k + '"]'); if (!row) return; e.preventDefault(); row.click(); });
+  /* (the key is read from its place on the keyboard, so Caps Lock or another language's layout still picks the tool; an (i) note or a
+     hover card left open doesn't stop the keys, only a box being typed in, a question, or an open list does) */
+  const seen = el => el && el.isConnected && el.getClientRects().length > 0; let inList = false;
+  const pipAt = e => !!(e.target.closest && e.target.closest(".iso-sc, .iso-tt, .iso-tx, .pp-seg"));   /* (clicked last, or the pointer over it now) */
+  addEventListener("pointerdown", e => { inList = !pipAt(e) && !!(e.target.closest && e.target.closest("td.cell-sel, td.ed")); }, true); addEventListener("pointerover", e => { if (pipAt(e)) inList = false; }, true);
+  addEventListener("keydown", e => { if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return; const L = /^Key([A-Z])$/.test(e.code || "") ? e.code.slice(3) : /^[a-z]$/i.test(e.key) ? e.key.toUpperCase() : "";
+    if (!L || !seen(document.querySelector("svg.iso"))) return; const t = document.activeElement;
+    if (t && seen(t) && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if ([...document.querySelectorAll(".ynmodal, .ppv, .iso-co, .iso-din, .lk-card, .calpop, .tmpop, .tgp, .tagpop, .ltpop, .holdpop")].some(seen)) return;
+    if (inList && seen(document.querySelector("td.cell-sel"))) return;   /* (a list cell clicked last, the pointer not on the drawing since, takes the typing as in Excel) */
+    const k = Object.keys(TKEY).find(x => TKEY[x] === L), row = k && [...document.querySelectorAll('.iso-tr[data-tool="' + k + '"]')].find(seen); if (!row) return; e.preventDefault(); e.stopPropagation(); row.click(); }, true);
   const isoGap = () => Math.max(1, Math.min(6, +lsGet("adIsoGap", 1) || 1));
   /* the drawing keeps itself evenly spaced: every pipe piece the dots gap plus one long (more with supports on it, each in its own space); the real lengths are the dimensions */
   const respace = a => P(a).lines.forEach(L => L.rows.forEach((r, i) => { if (!isPipe(r) || r.k !== "it") return; const ss = []; for (let j = i + 1; L.rows[j] && L.rows[j].k === "sup"; j++) ss.push(L.rows[j]);
