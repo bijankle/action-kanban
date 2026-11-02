@@ -1826,3 +1826,21 @@ svg.iso{display:block;width:100%;height:100%;font:calc(11px * var(--k, 1)) var(-
 .fd-s{color:var(--muted);font-size:var(--fs);overflow-wrap:anywhere}.fd-m{border:0;background:none;padding:0;color:var(--th);font:inherit;cursor:pointer;text-decoration:underline}.fd-mt{display:block;margin-top:4px}
 .fd-sk{display:block;max-width:100%}.fd-l{font:700 11px var(--font);fill:var(--ink)}
 .iso-45{pointer-events:none}.iso-h45{stroke:#1d2430;stroke-width:.8}.iso-h45s{stroke:#1d2430;stroke-width:1}
+/* the phone's work pack: the PDF's band and contact box, then each section a card on the grey */
+.wp-dl{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:#fff}
+.wp-strip{position:sticky;top:var(--mtop,57px);z-index:4;display:flex;gap:6px;overflow-x:auto;padding:7px 12px;background:var(--panel);border-bottom:1px solid var(--line);scrollbar-width:none}.wp-strip::-webkit-scrollbar{display:none}
+.wp-strip button{flex:none;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--muted);font:600 var(--fl) var(--font);padding:4px 11px;white-space:nowrap}.wp-strip button.on{background:var(--th);border-color:var(--th);color:#fff}
+.wp{display:flex;flex-direction:column;gap:10px;padding:10px;background:var(--bg)}
+.wp-c{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:2px 12px 12px;scroll-margin-top:calc(var(--mtop,57px) + 52px);min-width:0}
+.wp-c h3{font-size:var(--fs);color:var(--th);letter-spacing:.03em;margin:10px 0 8px;padding-bottom:3px;border-bottom:1.5px solid var(--th)}html.dark .wp-c h3{color:var(--accent);border-color:var(--accent)}
+.wp-cb{padding:0;overflow:hidden}
+.wp-band{background:var(--th);color:#fff;padding:12px 14px;display:flex;gap:10px;justify-content:space-between}.wp-band small{display:block;font-size:calc(var(--fl) * .85);font-weight:700;letter-spacing:.05em;opacity:.85}.wp-band h2{font-size:var(--fh);margin:3px 0 0;line-height:1.25}
+.wp-ref{text-align:right;flex:none}.wp-ref b{display:block;font-size:var(--fs);margin:2px 0}
+.wp-ct{display:flex;gap:12px;margin:10px 12px;padding:8px 10px;background:var(--panel2);border-left:3px solid var(--th);font-size:var(--fb);line-height:1.45}.wp-ct small{flex:none;width:78px;font-size:calc(var(--fl) * .85);font-weight:700;color:var(--muted);line-height:1.3}
+.wp-c p{margin:0;white-space:pre-wrap;line-height:1.5;font-size:var(--fb)}
+.wp-kv{border-collapse:collapse;width:100%;font-size:var(--fb)}.wp-kv th{text-align:left;vertical-align:top;color:var(--muted);font-weight:700;width:34%;padding:3px 8px 3px 0}.wp-kv td{padding:3px 0;overflow-wrap:anywhere}
+.wp-g{border-collapse:collapse;width:100%;table-layout:auto;font-size:var(--fb)}.wp-g th,.wp-g td{border:1px solid var(--line);height:22px;padding:0 5px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:1%}
+.wp-g th{background:var(--hdr);color:var(--muted);font-weight:600}.wp-g td:first-child,.wp-g th:first-child{text-align:center}.wp-g td:nth-child(2),.wp-g th:nth-child(2){width:auto;max-width:0}
+.wp-mp img{display:block;width:100%;border:1px solid var(--line)}.wp-cap{font-size:var(--fl) !important;color:var(--muted);font-style:italic;margin:4px 0 0 !important}
+.wp-phs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:6px}.wp-phs img{width:100%;aspect-ratio:4/3;object-fit:cover;cursor:pointer}
+.wp-iso{background:#fff;border:1px solid var(--line);margin-bottom:8px;width:100%}.wp-iso svg.iso{width:100%;height:100%}

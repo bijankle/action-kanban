@@ -14,10 +14,20 @@ const Workpack = (() => {
       g.drawImage(i, (480 - w) / 2, (360 - h) / 2, w, h); try { res(c.toDataURL("image/jpeg", 0.82)); } catch (e){ rej(e); } };
     i.onerror = () => alt && alt !== src ? thumb(alt).then(res, rej) : rej(new Error("photo")); i.src = src; });
   const size = src => new Promise(res => { const i = new Image(); i.onload = () => res([i.naturalWidth, i.naturalHeight]); i.onerror = () => res([4, 3]); i.src = src; });
+  /* the job's lines (the phone's work pack shows the same): where, what's done, on hold, the equipment, the contractor */
+  function jobRows(a){ const tags = Array.isArray(a.f.equipment) ? a.f.equipment.filter(Boolean) : []; const names = tags.map(t => { const e = Equip.get(t); return e && e.n ? t + "  " + e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : t; });
+        return [["Location", a.f.location], ["Done", Store.fields().filter(f => f.type === "check" && a.f[f.id] === true).map(f => f.label).join(", ")], ...Hold.lines(a).map(([k, v]) => [k === "Waiting on" ? "On hold, waiting on" : k, v]), ["Equipment", names.join("\n")], ["Contractor", [a.f.contractor, /^\d{4}-\d\d-\d\d(T\d\d:\d\d)?$/.test(a.f.contractorDate || "") ? "on site " + fmtDate(a.f.contractorDate) : ""].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")], ["Contractor contact", [a.f.contractorContact, a.f.contractorPhone].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")]].filter(r => r[1]); }
+  /* who to contact: the action's owner (their details from the people who've signed in), else whoever is making it */
+  function contact(a){ const ow = Store.owner(a), pf = ow.n ? { email: ow.e } : Profile.get(), who = ow.n || Profile.name();
+    const cl = ow.n ? [ow.n + (ow.role ? ", " + ow.role : ""), [ow.mobile && "Mobile " + ow.mobile, ow.e].filter(Boolean).join("   ")].filter(Boolean) : Profile.lines(); return { who, cl, pf, mobile: ow.n ? ow.mobile : (Profile.get() || {}).mobile }; }
+  /* the references: the documents ticked on References, each with its link */
+  async function refList(a){ await Equip.load().catch(() => {}); const tags = Array.isArray(a.f.equipment) ? a.f.equipment.filter(Boolean) : []; if (!tags.length || typeof Docs === "undefined") return [];
+    try { await Docs.load(); const dm = Drawings.collect(a), pick = new Set(a.dwgPick || []), seen = new Set(), out = []; tags.forEach(t => (dm.get(t) || []).forEach(d => { if (!pick.has(d.n) || seen.has(d.n)) return; seen.add(d.n); out.push({ n: d.n + (d.rev ? "_" + d.rev : ""), t: d.t || "", of: d.of || t, url: d.pdf ? d.pdf.split("#")[0] : d.url }); })); return out; }
+    catch (e){ console.warn("documents", e); return []; } }
   /* the work pack's window: a tick for each of its headings (only the ones this action has), the site map too; remembered */
-  const WP = [["job", "Job and scope"], ["map", "Site map"], ["isol", "Isolations"], ["parts", "Parts"], ["cut", "Cutting list"], ["reg", "References"], ["photos", "Photos"], ["att", "Attachments"]];
-  function dialog(a){ if (!a) return; const pk = lsGet("adWpSec", {}) || {}, has = { job: 1, map: 1, isol: (a.isol || []).length, parts: (a.mto || []).length + (a.spares || []).length, cut: Mto.hasCuts(a), reg: (a.dwgPick || []).length, photos: a.photos.length, att: a.files.length };
-    const m = modal('<h3>Export the work pack' + tipI("One PDF for the trades: the job, where it is, the isolations, parts, cutting list, references (the documents ticked on References, each linked to its PDF copy), photos and attachments.") + '</h3><div class="lbl">What\'s in it</div><div class="pr-sec">'
+  const WP = [["job", "Job and scope"], ["map", "Site map"], ["isol", "Isolations"], ["pip", "Piping"], ["parts", "Parts"], ["cut", "Cutting list"], ["reg", "References"], ["photos", "Photos"], ["att", "Attachments"]];
+  function dialog(a){ if (!a) return; const pk = lsGet("adWpSec", {}) || {}, has = { job: 1, map: 1, isol: (a.isol || []).length, pip: typeof Piping !== "undefined" && Piping.hasIso(a), parts: (a.mto || []).length + (a.spares || []).length, cut: Mto.hasCuts(a), reg: (a.dwgPick || []).length, photos: a.photos.length, att: a.files.length };
+    const m = modal('<h3>Export the work pack' + tipI("One PDF for the trades: the job, where it is, the isolations, the piping drawing and its list, parts, cutting list, references (the documents ticked on References, each linked to its PDF copy), photos and attachments.") + '</h3><div class="lbl">What\'s in it</div><div class="pr-sec">'
       + WP.filter(([k]) => has[k]).map(([k, n]) => '<label class="tp-o"><input type="checkbox" data-sec="' + k + '"' + (pk[k] !== false ? " checked" : "") + '><span>' + n + '</span></label>').join("") + '</div>'
       + '<div class="yn-btns"><button class="yn-no" type="button">Cancel</button><button class="yn-yes" type="button">Export</button></div>', { cls: "pr-win" });
     $(".yn-no", m).onclick = () => m.close();
@@ -44,7 +54,7 @@ const Workpack = (() => {
     const all = new Map(); dm.forEach(l => l.forEach(d => { if (!all.has(d.n)) all.set(d.n, d); }));
     /* the parts, in reading order; each one present gets a line in the contents and starts a page */
     const parts = Mto.orderRows(a).map(it => Object.assign({ src: "New" }, it, { qty: Mto.ord(it) })).concat((a.spares || []).map(it => Object.assign({ src: "Site spares" }, it)));
-    const S = [["job", "Job and scope", true], ["isol", "Isolations", (a.isol || []).length], ["parts", "Parts", parts.length], ["cut", "Cutting list", Mto.hasCuts(a)], ["reg", "References", all.size], ["photos", "Photos (" + a.photos.length + ")", a.photos.length],
+    const S = [["job", "Job and scope", true], ["isol", "Isolations", (a.isol || []).length], ["pip", "Piping", typeof Piping !== "undefined" && Piping.hasIso(a)], ["parts", "Parts", parts.length], ["cut", "Cutting list", Mto.hasCuts(a)], ["reg", "References", all.size], ["photos", "Photos (" + a.photos.length + ")", a.photos.length],
       ["att", "Attachments", a.files.length]].filter(x => x[2] && sec[x[0]] !== false);   /* (and ticked in the window) */
     /* cover: the job, who to contact, the contents */
     doc.setFillColor(...rgb); doc.rect(0, 0, W, 32, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.text("WORK PACK", M, 9);
@@ -53,8 +63,7 @@ const Workpack = (() => {
     doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.text("Issued " + new Date().toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }), W - M, 22.5, { align: "right" });
     y = 41;
     /* who to contact: the action's owner (their details from the people who've signed in), else whoever is making it */
-    const ow = Store.owner(a), pf = ow.n ? { email: ow.e } : Profile.get(), who = ow.n || Profile.name();
-    const cl = ow.n ? [ow.n + (ow.role ? ", " + ow.role : ""), [ow.mobile && "Mobile " + ow.mobile, ow.e].filter(Boolean).join("   ")].filter(Boolean) : Profile.lines(); if (who){ const bh = 6 + cl.length * 5; doc.setFillColor(243, 244, 246); doc.setDrawColor(...rgb); doc.setLineWidth(0.6); doc.roundedRect(M, y, CW, bh, 2, 2, "F"); doc.line(M, y, M, y + bh);
+    const { who, cl, pf } = contact(a), ow = Store.owner(a); if (who){ const bh = 6 + cl.length * 5; doc.setFillColor(243, 244, 246); doc.setDrawColor(...rgb); doc.setLineWidth(0.6); doc.roundedRect(M, y, CW, bh, 2, 2, "F"); doc.line(M, y, M, y + bh);
       doc.setFontSize(8); doc.setTextColor(110); doc.setFont("helvetica", "bold"); doc.text("CONTACT FOR QUERIES", M + 4, y + 4.5); doc.setFontSize(10); doc.setTextColor(30);
       cl.forEach((l, i) => { doc.setFont("helvetica", i ? "normal" : "bold"); doc.text(l, M + 52, y + 4.6 + i * 5); });
       if (pf.email){ doc.link(M + 52, y + 1 + (cl.length - 1) * 5, CW - 52, 5, { url: "mailto:" + pf.email }); } y += bh + 6; }
@@ -69,8 +78,7 @@ const Workpack = (() => {
       /* the cutting list: its own landscape pages, drawn as in its own export (pieces, green, saw cuts, where to cut, offcuts) */
       if (id === "cut"){ doc.addPage("a4", "landscape"); if (tocE.cut) tocE.cut.page = doc.getNumberOfPages(); cutAt = Mto.cutDraw(doc, a, { back: partsPage }); y = BOT + 1; continue; }
       start(id);
-      if (id === "job"){ head("Job"); const names = tags.map(t => { const e = Equip.get(t); return e && e.n ? t + "  " + e.n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : t; });
-        const job = [["Location", a.f.location], ["Done", Store.fields().filter(f => f.type === "check" && a.f[f.id] === true).map(f => f.label).join(", ")], ...Hold.lines(a).map(([k, v]) => [k === "Waiting on" ? "On hold, waiting on" : k, v]), ["Equipment", names.join("\n")], ["Contractor", [a.f.contractor, /^\d{4}-\d\d-\d\d(T\d\d:\d\d)?$/.test(a.f.contractorDate || "") ? "on site " + fmtDate(a.f.contractorDate) : ""].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")], ["Contractor contact", [a.f.contractorContact, a.f.contractorPhone].filter(x => x && x !== "TBC" && x !== "N/A").join(", ")]].filter(r => r[1]);
+      if (id === "job"){ head("Job"); const job = jobRows(a);
         if (job.length){ doc.autoTable({ startY: y, body: job, margin: { top: 16, left: M, right: M, bottom: 16 }, theme: "plain", styles: { font: "helvetica", fontSize: 10, cellPadding: 1.5 }, columnStyles: { 0: { cellWidth: 34, textColor: [90, 100, 112], fontStyle: "bold" } } }); y = doc.lastAutoTable.finalY + 4; }
         /* the expected location, with a few of the photos beside it (a link to the rest above them) */
         let sm = null; if (sec.map !== false) try { sm = await SiteMap.forAction(a, true); } catch (e){ console.warn("site map", e); }   // (the whole site, the colour map: red circles on the area)
@@ -90,6 +98,11 @@ const Workpack = (() => {
           if (sm){ doc.setFontSize(8); doc.setTextColor(110); doc.setFont("helvetica", "italic"); doc.splitTextToSize(sm.note, CW).forEach(l => { doc.text(l, M, y + 2.5); y += 3.6; }); doc.setFont("helvetica", "normal"); }
           y += 5; }
         [["Problem", a.f.problem], ["Work required", a.f.solution], ["Notes", a.f.notes]].forEach(([k, v]) => { if (String(v || "").trim()){ head(k); para(v); } }); }   // (anything blank is left out)
+      /* the piping: the ISO drawing across the page, then its list in line order */
+      if (id === "pip"){ let im = null; try { im = await Piping.isoPng(a); } catch (e){ console.warn("piping drawing", e); }
+        let iw = CW, ih = im ? iw * im.h / im.w : 0; if (ih > 150){ ih = 150; iw = ih * im.w / im.h; } need(ih + 30); head("Piping");
+        if (im){ doc.addImage(im.url, "PNG", M + (CW - iw) / 2, y, iw, ih, undefined, "FAST"); doc.setDrawColor(201, 206, 214); doc.setLineWidth(0.2); doc.rect(M, y, CW, ih); y += ih + 4; }
+        table(["#", "Item", "Size", "Length or qty"], Piping.listRows(a), { 0: { cellWidth: 14, halign: "center" }, 2: { cellWidth: 26 }, 3: { cellWidth: 26 } }); }
       if (id === "isol"){ head("Isolations"); table(["#", "Equipment number", "Equipment name", "Note"], a.isol.map((it, i) => [i + 1, it.tag || "", it.name || "", it.nu ? it.note || "" : ""]), { 0: { cellWidth: 12, halign: "center" }, 1: { cellWidth: 40 }, 2: { cellWidth: 62 } }); }
       /* a steel or plate parent says where its cutting diagram is: "See cutting list p." and the page, put in once that page exists, and clicks through to it */
       if (id === "parts"){ head("Parts"); partsPage = doc.getNumberOfPages(); const SEE = "See cutting list p.";
@@ -135,5 +148,5 @@ const Workpack = (() => {
     P.y = doc.lastAutoTable.finalY + 2.5; doc.setFontSize(7.8); doc.setTextColor(110); doc.setFont("helvetica", "italic");
     doc.splitTextToSize("Click a number or title to download its PDF copy (no SharePoint login needed). Check each revision against SharePoint before use.", P.CW).forEach(l => { P.need(4); doc.text(l, P.M, P.y + 2); P.y += 3.6; });
     doc.setFont("helvetica", "normal"); P.y += 4; }
-  return { run, build, dialog };
+  return { run, build, dialog, jobRows, contact, refList };
 })();

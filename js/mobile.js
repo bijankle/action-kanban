@@ -1,7 +1,7 @@
 /* Phone view: look only. A tab bar along the bottom: Actions (filter pills by stage, a search box, a card per
    action; the Organizer board is desktop only) and Settings (theme, dark mode, text size, font,
-   how to use, about). Tap an action for its problem, solution, photos (tap for full screen, swipe between them)
-   and details. */
+   how to use, about). Tap an action to see it laid out as its work pack (the PDF's sections, each a card;
+   photos full screen, swipe between them), the real work pack PDF a tap away. */
 "use strict";
 const Mobile = (() => {
   let open = null, tab = ["actions", "settings"].includes(lsGet("adMTab", "actions")) ? lsGet("adMTab", "actions") : "actions", stab = lsGet("adMSt", "view");
@@ -60,16 +60,47 @@ const Mobile = (() => {
     if (stab === "about"){ body.innerHTML = '<div class="ap"><div class="ap-r"><span>Version</span><b class="ap-v">' + APP_VERSION + '</b></div><div class="ap-r"><span>Actions</span><b class="ap-v">' + Store.visible().length + ' in ' + Store.selected().length + ' project' + (Store.selected().length === 1 ? "" : "s") + '</b></div>'
         + '<div class="ap-r"><span>App</span><button type="button" class="btn sm m-upd">Update app</button></div></div><p class="dim m-abt">Action Database tracks plant maintenance actions from the issue to the fix. View only on a phone.</p>';
       $(".m-upd", body).onclick = e => { e.target.disabled = true; e.target.textContent = "Updating…"; App.update(); }; } }
-  function detail(root, a){ const s = Store.stage(a.stage), p = Store.project(a._p) || {}, skip = new Set(["title", "problem", "solution", "notes"]);
-    root.innerHTML = '<div class="m-top"><button type="button" class="ic-b m-back" aria-label="Back">‹</button><span class="aid big">' + esc(Store.actId(a)) + '</span><span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span></div>'
-      + '<div class="m-det"><h2>' + esc(a.f.title || "") + '</h2><div class="dim">' + esc(p.name || "") + '</div><h4>Problem</h4><p>' + (esc(a.f.problem) || '<span class="dim">–</span>') + '</p><h4>Solution</h4><p>' + (esc(a.f.solution) || '<span class="dim">–</span>') + '</p>'
-      + '<h4>Photos <span class="cnt">' + (a.photos.length || "") + '</span></h4><div class="m-ph">' + (a.photos.map((ph, i) => '<img alt="" loading="lazy" data-i="' + i + '" src="' + esc(Media.src(a, ph, true)) + '">').join("") || '<span class="dim">None</span>') + '</div>'
-      + (a.f.notes ? '<h4>Notes</h4><p>' + esc(a.f.notes) + '</p>' : "")
-      + (a.files.length ? '<h4>Attachments</h4>' + a.files.map((f, i) => '<button type="button" class="link m-f" data-i="' + i + '">📎 ' + esc(f.name) + '</button>').join("") : "")
-      + '<h4>Details</h4><dl>' + Store.fields().filter(f => !skip.has(f.id)).map(f => '<dt>' + esc(f.label) + '</dt><dd>' + (Fields.show(a, f) || '<span class="dim">–</span>') + '</dd>').join("") + '</dl></div>';
+  /* an action, opened: laid out as its work pack (the PDF's band, contact box and sections in its order), each section a card; look only.
+     The strip under the top row jumps to a section and follows the scroll; the red PDF page top right makes the real work pack */
+  const PDF_I = '<svg viewBox="0 0 20 24" width="18" height="21" aria-hidden="true"><path d="M3 1h10l5 5v17H3z" fill="#fff" stroke="#c0392b" stroke-width="1.6"/><path d="M13 1v5h5" fill="none" stroke="#c0392b" stroke-width="1.6"/><path d="M10.5 9v7M7.5 13l3 3 3-3" fill="none" stroke="#c0392b" stroke-width="1.8" stroke-linecap="round"/><text x="10.5" y="21.3" font-size="5" font-weight="800" fill="#c0392b" text-anchor="middle" font-family="Arial">PDF</text></svg>';
+  const tel = v => esc(v).replace(/(\+?\d[\d ]{7,}\d)/g, m => '<a href="tel:' + m.replace(/ /g, "") + '">' + m + '</a>');
+  const grid = (hd, rows) => '<table class="wp-g"><thead><tr>' + hd.map(x => '<th>' + esc(x) + '</th>').join("") + '</tr></thead><tbody>' + rows.map(r => '<tr>' + r.map(c => '<td title="' + esc(c) + '">' + esc(c) + '</td>').join("") + '</tr>').join("") + '</tbody></table>';
+  function detail(root, a){ const s = Store.stage(a.stage), W = typeof Workpack !== "undefined" ? Workpack : null, cn = W ? W.contact(a) : { cl: [] };
+    const job = W ? W.jobRows(a) : [], txt = v => String(v || "").trim(), isol = a.isol || [], pip = typeof Piping !== "undefined" && Piping.hasIso(a);
+    const parts = Mto.orderRows(a).map(it => [it.desc || "", String(Mto.ord(it) == null ? "" : Mto.ord(it)) + (it.unit && it.unit !== "ea" ? " " + it.unit : ""), "New"]).concat((a.spares || []).map(it => [it.desc || "", String(it.qty || "") + (it.unit && it.unit !== "ea" ? " " + it.unit : ""), "Site spares"]));
+    const S = [["job", "Job", job.length ? '<table class="wp-kv">' + job.map(([k, v]) => '<tr><th>' + esc(k) + '</th><td>' + tel(v).replace(/\n/g, "<br>") + '</td></tr>').join("") + '</table>' : ""],
+      ["map", "Photos", (a.photos.length ? '<div class="wp-mp" hidden></div><div class="wp-phs">' + a.photos.map((ph, i) => '<img alt="" loading="lazy" data-i="' + i + '" src="' + esc(Media.src(a, ph, true)) + '">').join("") + '</div>' : '<div class="wp-mp" hidden></div>'), true],
+      ["prob", "Problem", txt(a.f.problem) && '<p>' + esc(a.f.problem) + '</p>'], ["work", "Work required", txt(a.f.solution) && '<p>' + esc(a.f.solution) + '</p>'], ["notes", "Notes", txt(a.f.notes) && '<p>' + esc(a.f.notes) + '</p>'],
+      ["isol", "Isolations", isol.length && grid(["#", "Equipment", "Name", "Note"], isol.map((it, i) => [String(i + 1), it.tag || "", it.name || "", it.nu ? it.note || "" : ""]))],
+      ["pip", "Piping", pip && '<div class="wp-iso">' + Piping.isoSvg(a) + '</div>' + grid(["#", "Item", "Size", "Length or qty"], Piping.listRows(a))],
+      ["parts", "Parts", parts.length && grid(["#", "Description", "Qty", "From"], parts.map((r, i) => [String(i + 1)].concat(r)))],
+      ["refs", "References", '', true],
+      ["att", "Attachments", a.files.length && a.files.map((f, i) => '<button type="button" class="link m-f" data-i="' + i + '">📎 ' + esc(f.name) + '</button>').join("")]];
+    const shown = S.filter(x => x[2] || x[3]);
+    root.innerHTML = '<div class="m-top"><button type="button" class="ic-b m-back" aria-label="Back">‹</button><span class="aid big">' + esc(Store.actId(a)) + '</span><span class="stg" style="--c:' + esc(s.color) + '">' + esc(s.name) + '</span><span class="grow"></span><button type="button" class="ic-b wp-dl" title="Download the work pack PDF" aria-label="Download the work pack PDF">' + PDF_I + '</button></div>'
+      + '<nav class="wp-strip">' + shown.map(([k, t, c]) => '<button type="button" data-go="' + k + '"' + (c ? "" : " hidden") + '>' + esc(k === "map" ? "Location" : t) + '</button>').join("") + '</nav>'
+      + '<div class="wp"><div class="wp-c wp-cb"><div class="wp-band"><div><small>WORK PACK</small><h2>' + esc(a.f.title || "Work pack") + '</h2></div><div class="wp-ref"><small>Job ref</small><b>' + esc(Store.actId(a)) + '</b><small>' + esc(fmtDate(new Date().toISOString().slice(0, 10))) + '</small></div></div>'
+      + (cn.who ? '<div class="wp-ct"><small>CONTACT FOR QUERIES</small><div>' + cn.cl.map((l, i) => i ? tel(l) : '<b>' + esc(l) + '</b>').join("<br>") + '</div></div>' : "") + '</div>'
+      + shown.map(([k, t, c]) => '<section class="wp-c" id="wp-' + k + '"' + (c ? "" : " hidden") + '><h3>' + esc(t).toUpperCase() + '</h3><div class="wp-in">' + (c || "") + '</div></section>').join("") + '</div>';
     $(".m-back", root).onclick = () => history.back();
-    $$(".m-ph img", root).forEach(im => im.onclick = () => { history.pushState({ m: 2 }, ""); Media.view(a, +im.dataset.i); });
-    $$(".m-f", root).forEach(b => b.onclick = () => Media.openFile(a, a.files[+b.dataset.i])); scrollTo(0, 0); }
+    $(".wp-dl", root).onclick = () => W && W.run(a);
+    $$(".wp-phs img", root).forEach(im => im.onclick = () => { history.pushState({ m: 2 }, ""); Media.view(a, +im.dataset.i); });
+    $$(".m-f", root).forEach(b => b.onclick = () => Media.openFile(a, a.files[+b.dataset.i]));
+    $$(".wp-g td", root).forEach(td => td.onclick = () => { if (td.scrollWidth > td.clientWidth + 1) note(td.title, 6000); });   /* (a cell cut off for length shows in full) */
+    const iso = $(".wp-iso svg", root); if (iso) requestAnimationFrame(() => { const vb = iso.getAttribute("viewBox").split(" ").map(Number); iso.style.setProperty("--k", Math.max(1, vb[2] / (iso.clientWidth || 340)).toFixed(3)); iso.parentElement.style.aspectRatio = vb[2] + " / " + vb[3]; });
+    /* the strip: a tap jumps to the section; the section in view is the one lit */
+    const strip = $(".wp-strip", root), lit = () => { const off = (parseFloat(getComputedStyle(document.body.querySelector("#mobile") || root).getPropertyValue("--mtop")) || 57) + strip.offsetHeight + 12; let cur = null;
+      $$("section.wp-c:not([hidden])", root).forEach(x => { if (x.getBoundingClientRect().top <= off) cur = x.id.slice(3); }); cur = cur || ($("section.wp-c:not([hidden])", root) || { id: "wp-" }).id.slice(3);
+      if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4){ const L = $$("section.wp-c:not([hidden])", root).pop(); if (L) cur = L.id.slice(3); }   /* (at the very end, the last section) */
+      $$("[data-go]", strip).forEach(b => { const on = b.dataset.go === cur; if (on !== b.classList.contains("on")){ b.classList.toggle("on", on); if (on) b.scrollIntoView({ block: "nearest", inline: "nearest" }); } }); };
+    $$("[data-go]", strip).forEach(b => b.onclick = () => { const x = $("#wp-" + b.dataset.go, root); if (x) x.scrollIntoView({ block: "start", behavior: "smooth" }); });
+    if (window.__wpScroll) removeEventListener("scroll", window.__wpScroll); window.__wpScroll = () => { if (!root.isConnected || !$(".wp-strip", root)) return removeEventListener("scroll", window.__wpScroll); lit(); }; addEventListener("scroll", window.__wpScroll, { passive: true });
+    /* behind it: the site map (the expected location) and the documents, shown when they come */
+    const show = k => { const x = $("#wp-" + k, root), b = $('[data-go="' + k + '"]', strip); if (x) x.hidden = false; if (b) b.hidden = false; };
+    if (typeof SiteMap !== "undefined") SiteMap.forAction(a, true).then(sm => { if (!sm || !root.isConnected) return; const m = $(".wp-mp", root); if (!m) return; m.innerHTML = '<img alt="Expected location" src="' + esc(sm.url) + '"><p class="wp-cap">' + esc(sm.note || "") + '</p>'; m.hidden = false; $("#wp-map h3", root).textContent = a.photos.length ? "LOCATION AND PHOTOS" : "LOCATION"; show("map"); }).catch(() => {});
+    if (W) W.refList(a).then(L => { if (!L.length || !root.isConnected) return; const x = $("#wp-refs .wp-in", root); if (!x) return;
+      x.innerHTML = '<table class="wp-g"><thead><tr><th>#</th><th>Document</th><th>Title</th></tr></thead><tbody>' + L.map((d, i) => '<tr><td>' + (i + 1) + '</td><td>' + (d.url ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener">' + esc(d.n) + '</a>' : esc(d.n)) + '</td><td title="' + esc(d.t) + '">' + esc(d.t) + '</td></tr>').join("") + '</tbody></table>'; show("refs"); }).catch(() => {});
+    scrollTo(0, 0); requestAnimationFrame(lit); }
   addEventListener("popstate", () => { if (Media.open){ Media.close(); return; } if (open){ open = null; App.render(); } });
   return { render, show: ref => { open = ref; history.pushState({ m: 1 }, ""); } };
 })();

@@ -196,7 +196,7 @@ const Piping = (() => {
     if (!pts.length) pts.push([0, 0]);
     const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]), M = 90; let x0 = Math.min(...xs) - M, y0 = Math.min(...ys) - M, w = Math.max(...xs) - x0 + M, hgt = Math.max(...ys) - y0 + M;
     /* (room to draw into, since the view stays still while drawing: at least 860 by 500, the drawing in the middle) */
-    if (w < 860){ x0 -= (860 - w) / 2; w = 860; } if (hgt < 500){ y0 -= (500 - hgt) / 2; hgt = 500; }
+    const mw = ro ? 320 : 860, mh = ro ? 180 : 500; if (w < mw){ x0 -= (mw - w) / 2; w = mw; } if (hgt < mh){ y0 -= (mh - hgt) / 2; hgt = mh; }   /* (to look at, as in a work pack, just the drawing with a margin) */
     const unit = d => { const q = prj(DIRS[d]), m = Math.hypot(q[0], q[1]); return [q[0] / m, q[1] / m]; }, nrm = d => { const u = unit(d); return [u[1], -u[0]]; };
     const f1 = v => Math.round(v * 10) / 10, L2 = (p, q, c, extra) => '<line class="' + c + '" x1="' + f1(p[0]) + '" y1="' + f1(p[1]) + '" x2="' + f1(q[0]) + '" y2="' + f1(q[1]) + '"' + (extra || "") + '/>';
     if (!ro){ if (!sk.vb || sk.vbA !== AK(a)){ sk.vb = [x0, y0, w, hgt]; sk.vbA = AK(a); }   /* (the view stays still while drawing: it fits on opening, Autofit or a double click, else only slides to keep the line's end in sight) */
@@ -551,5 +551,23 @@ const Piping = (() => {
     wire(el, a, ro, which); if (which !== "supports"){ if (view.tab === "iso") wireSketch(el, a, ro); $$(".pp-tbl tr[data-u] td.pt-no", el).forEach(td => td.onclick = () => { const u = td.parentElement.dataset.u; sk.sel = sk.sel === u ? null : u; App.render(); }); }
     if (view.showSel){ view.showSel = false; const on = $(".pp-tbl tr.on", el); if (on) requestAnimationFrame(() => on.scrollIntoView({ block: "nearest" })); }   /* (the part picked on the drawing, edged and in sight on the List) */
     $$(".pp-tbl", el).forEach(t => gridCols(t, "pp" + (t.classList.contains("pp-bom") ? "B" : t.classList.contains("pp-sups") ? "S" : "L"), { sort: false, fixed: { x: 24 }, cap: { Description: 520 } })); }
-  return { renderFor, bom, order, supNo, has, stdsFor, rowsFor, qtyOf, jointKids, checks: a => checks(a, layout(a)), cuts, setElbow, viewKey: () => [view.by, view.tab, view.sv, sk.tool, sk.dl, sk.st ? sk.st.p3.join(",") : "", sk.sel, sk.pt ? sk.pt.u + sk.pt.t : "", sk.fs ? 1 : 0].join("|"), layout, autofit };
+  /* the drawing for a work pack (the phone's and the PDF's): look only, the whole drawing in view */
+  const isoSvg = a => sketchSvg(a, true).replace(/viewBox="[^"]*" data-fit="([^"]*)"/, 'viewBox="$1" data-fit="$1"');
+  const hasIso = a => !!(a.pip && (a.pip.lines || []).some(L => L.rows.length));
+  /* the same drawing as a picture (for the PDF): drawn off screen so it takes the app's look, each line's look written onto it, then onto a canvas */
+  async function isoPng(a, wpx){ wpx = wpx || 1400; const box = document.createElement("div"); box.style.cssText = "position:fixed;left:-99999px;top:0;width:" + wpx + "px;background:#fff"; box.innerHTML = isoSvg(a); document.body.appendChild(box);
+    try { const svg = $("svg", box), vb = svg.getAttribute("viewBox").split(" ").map(Number), hpx = Math.round(wpx * vb[3] / vb[2]); svg.setAttribute("width", wpx); svg.setAttribute("height", hpx); svg.style.width = wpx + "px"; svg.style.height = hpx + "px"; svg.style.setProperty("--k", Math.max(1, vb[2] / wpx * 1.6).toFixed(3));
+      $$(".iso-ghost,.iso-gt,[data-pd],.iso-end,.iso-hit,.iso-hitn", svg).forEach(x => x.remove());
+      const P = ["fill", "stroke", "stroke-width", "stroke-dasharray", "stroke-linecap", "stroke-linejoin", "font-size", "font-family", "font-weight", "font-style", "text-anchor", "opacity"];
+      const els = [svg, ...$$("*", svg)], got = els.map(el => { const cs = getComputedStyle(el); return { v: P.map(p => cs.getPropertyValue(p)), hide: cs.display === "none" || cs.visibility === "hidden", t: cs.transform }; });   /* (every look read first, then written, so no parent loses its look before its children are read) */
+      els.forEach((el, i) => { const g0 = got[i]; P.forEach((p, k) => { if (g0.v[k]) el.setAttribute(p, g0.v[k]); }); if (g0.hide) el.setAttribute("display", "none");
+        if (g0.t && g0.t !== "none" && el.tagName !== "svg" && !el.hasAttribute("transform")) el.setAttribute("transform", g0.t);   /* (a part's own placing is already on it; only a look's scaling is added) */ el.removeAttribute("class"); el.removeAttribute("style"); });
+      const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" })), im = new Image(); await new Promise((ok, no) => { im.onload = ok; im.onerror = no; im.src = url; });
+      const c = document.createElement("canvas"); c.width = wpx; c.height = hpx; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, wpx, hpx); g.drawImage(im, 0, 0, wpx, hpx); URL.revokeObjectURL(url); return { url: c.toDataURL("image/png"), w: wpx, h: hpx }; }
+    finally { box.remove(); } }
+  /* the List as rows for a work pack: #, item, size, length or quantity (the supports by their number) */
+  const listRows = a => { const out = []; ((a.pip || {}).lines || []).forEach(L => { let n = 0; L.rows.forEach(r => { if (r.k === "sup") return out.push([r.sid, "Pipe support " + r.sid + " (see Supports)", "", ""]);
+      const id = L.id + (++n), sz = r.cl && r.dn ? PipeSpec.lab(r.cl, r.dn) : ""; if (r.k === "joint") return out.push([id, "Flange joint" + (r.cl ? ", " + r.cl : ""), sz, "1"]);
+      out.push([id, lineTxt(r) || r.it || "", sz, isPipe(r) ? (r.len ? r.len + " mm" : "") : String(r.qty || "")]); }); }); return out; };
+  return { isoSvg, isoPng, hasIso, listRows, renderFor, bom, order, supNo, has, stdsFor, rowsFor, qtyOf, jointKids, checks: a => checks(a, layout(a)), cuts, setElbow, viewKey: () => [view.by, view.tab, view.sv, sk.tool, sk.dl, sk.st ? sk.st.p3.join(",") : "", sk.sel, sk.pt ? sk.pt.u + sk.pt.t : "", sk.fs ? 1 : 0].join("|"), layout, autofit };
 })();

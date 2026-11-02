@@ -179,6 +179,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
       Store.mutate("a:" + pid, () => { x = Store.newAction(pid, { title: "Elbow test" }); x.pip = { spec: "", lines: [{ id: "A", at: [0, 0, 0], rows: [P("q1", "E"), E("e1"), P("q2", "N"), E("e2"), P("q3", "E")] }] }; });
       Piping.setElbow(x, "e1", 45); await new Promise(r => setTimeout(r, 300)); return x.pip.lines[0].rows.map(r => r.dir ? r.dir + r.gl : r.it).join(","); });
     check("an elbow set to 45° makes an offset: the run swings halfway, the next bend turns 45° back, the spacing even", eq45 === "E2,Elbow, 45°,EN2,Elbow, 45°,E2", eq45);
+    /* the work pack's piping: the drawing (look only) and its list in line order, for the phone and the PDF */
+    const wpq = await a.p.evaluate(() => { const x = { pip: { spec: "", lines: [{ id: "A", at: [0, 0, 0], rows: [{ u: "w1", k: "it", it: "Pipe", dir: "E", gl: 2, len: 900 }, { u: "w2", k: "it", it: "Elbow, 90°", qty: 1 }, { u: "w3", k: "it", it: "Pipe", dir: "N", gl: 2 }, { u: "w4", k: "sup", sid: "S1" }] }] } };
+      return [Piping.hasIso(x), /<svg class="iso"/.test(Piping.isoSvg(x)), !/data-tool/.test(Piping.isoSvg(x)), Piping.listRows(x).map(r => r[0] + ":" + r[3]).join(" ")].join(" "); });
+    check("a work pack shows the piping drawing, look only, and its list in line order", wpq === "true true true A1:900 mm A2:1 A3: S1:", wpq);
     check("no errors for the admin", !a.errs.length, a.errs.join(" | "));
   } catch (e) { console.log("  FAIL  the checks stopped: " + e.message); code = 1; }
   await browser.close(); srv.kill(); fs.rmSync(dir, { recursive: true, force: true });
