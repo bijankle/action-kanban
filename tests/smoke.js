@@ -105,10 +105,10 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
       a.mto = a.mto.concat([[1200, 600], [800, 400]].map((d, i) => Object.assign({ id: "p" + i, pl: String(d[0]), pw: String(d[1]) }, pb)));
       const o = Mto.orderRows(a); return o.length + " | " + o.map(r => Mto.ord(r) + " " + r.unit).join(", ") + " | " + Mto.hasCuts(a); });
     check("steel cuts and plate pieces group under their parents, and only the parents are exported", /^3 \| [1-9]\d* lengths, 2 ea, [1-9]\d* sheets \| true$/.test(st), st);
-    /* another action opens on the tab you were on, and back returns to the one before */
-    const nv = await p.evaluate(async () => { const v = Store.visible(); App.select(v[0]._p + ":" + v[0].u, "mto"); await new Promise(r => setTimeout(r, 500)); App.select(v[1]._p + ":" + v[1].u); await new Promise(r => setTimeout(r, 500));
-      const sub = App.sub; document.querySelector("#navB").click(); await new Promise(r => setTimeout(r, 500)); return sub + " " + (App.selRef === v[0]._p + ":" + v[0].u); });
-    check("another action keeps the tab, and back returns to the last one", nv === "mto true", nv);
+    /* next opens the next action on the tab you were on, and back returns to the one before */
+    const nv = await p.evaluate(async () => { const v = Store.visible(); App.select(v[0]._p + ":" + v[0].u, "mto"); await new Promise(r => setTimeout(r, 500)); const was = App.selRef; document.querySelector('.av-nav [data-k="next"]').click(); await new Promise(r => setTimeout(r, 500));
+      const sub = App.sub + (App.selRef !== was ? "" : " (didn't move)"); document.querySelector("#navB").click(); await new Promise(r => setTimeout(r, 500)); return sub + " " + (App.selRef === was); });
+    check("next keeps the tab, and back returns to the last one", nv === "mto true", nv);
     /* the steps run in the order of their tick columns, and a step marked not needed is skipped */
     const wf = await p.evaluate(() => { const st = Store.stages().filter(s => s.kind === "open").map(s => s.id), fl = Store.fields().filter(f => f.stage && st.includes(f.stage)).map(f => f.stage);
       const same = JSON.stringify(st.filter(id => fl.includes(id))) === JSON.stringify(fl), f1 = Store.fields().find(f => f.stage && f.type === "check"); if (!f1) return same + " no ticks";
@@ -181,6 +181,11 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     await a.p.evaluate(() => { document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "\u062d", code: "KeyP", bubbles: true })); }); await a.p.waitForTimeout(250);
     tkq.push(await a.p.evaluate(() => (document.querySelector(".iso-tr.on") || {}).dataset?.tool)); await a.p.keyboard.press("Escape"); await a.p.keyboard.press("Escape"); await a.p.evaluate(() => window.__tc.remove());
     check("the drawing's tool keys pick their tool, whatever the keyboard layout, with an (i) card open", tkq.join() === "ok,ok,ok,ok,ok,pipe", tkq.join());
+    /* the action's tab: next keeps it (Materials stays Materials); closing and opening another, or clicking another row, starts on Overview */
+    const tbq = await a.p.evaluate(async () => { const w = () => new Promise(r => setTimeout(r, 300)), rows = [...document.querySelectorAll("tr[data-ref]")].map(t => t.dataset.ref); if (rows.length < 3) return "too few rows";
+      const on = () => App.sub; App.select(rows[0], "mto"); await w(); const nx = document.querySelector('.av-nav [data-k="next"]'); nx && nx.click(); await w(); const r1 = on();
+      App.select(null); await w(); App.select(rows[2]); await w(); const r2 = on(); App.select(rows[1], "mto"); await w(); App.select(rows[0]); await w(); return [r1, r2, on()].join(); });
+    check("next keeps the action's tab; an action opened afresh starts on Overview", tbq === "mto,overview,overview", tbq);
     /* a slow double click (two clicks 0.7 s apart) still counts as a double click; 1.3 s apart is two single clicks */
     await a.p.evaluate(() => { const d = document.createElement("div"); d.id = "dbt"; d.style.cssText = "position:fixed;left:5px;top:300px;width:40px;height:40px;z-index:99999"; d.ondblclick = () => d.dataset.n = +(d.dataset.n || 0) + 1; document.body.appendChild(d); });
     const dbq = []; for (const gap of [700, 1300]){ await a.p.click("#dbt"); await a.p.waitForTimeout(gap); await a.p.click("#dbt"); await a.p.waitForTimeout(200); dbq.push(await a.p.evaluate(() => document.getElementById("dbt").dataset.n || 0)); await a.p.waitForTimeout(1200); }
