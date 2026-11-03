@@ -90,6 +90,18 @@ const tipI = (text, label) => '<span class="tip-i" role="button" tabindex="0" da
     if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("[data-tip]")){ e.preventDefault(); e.target.click(); } }, true);
   addEventListener("scroll", close, true); addEventListener("resize", close); })();
 
+/* a double click may take twice as long as the computer's own setting allows: a second click within DBL ms, near the
+   first, counts as a double click everywhere in the app (the browser's own double click still works as before) */
+const DBL = 1000;
+(() => { let last = null;
+  document.addEventListener("click", e => { if (!e.isTrusted || e.button !== 0) return;
+    if (e.detail >= 2){ last = null; return; }   /* (the browser saw a double click itself, and sends it) */
+    const t = performance.now(), near = last && Math.abs(e.clientX - last.x) + Math.abs(e.clientY - last.y) <= 8;
+    if (near && t - last.t <= DBL){ last = null; const tg = e.target; setTimeout(() => { if (!tg.isConnected) return;
+      tg.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true, composed: true, detail: 2, clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, altKey: e.altKey, metaKey: e.metaKey, view: window })); }); return; }
+    last = { t, x: e.clientX, y: e.clientY }; }, true);
+  document.addEventListener("pointerdown", e => { if (e.pointerType !== "mouse") last = null; }, true); })();
+
 /* search that ignores spaces, dashes and dots: CV 402, CV-402 and CV402 all find each other. Every word typed has to be
    somewhere in the text */
 const squash = s => String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9]+/g, "");

@@ -181,6 +181,11 @@ const results = []; const check = (name, ok, more) => { results.push([name, !!ok
     await a.p.evaluate(() => { document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "\u062d", code: "KeyP", bubbles: true })); }); await a.p.waitForTimeout(250);
     tkq.push(await a.p.evaluate(() => (document.querySelector(".iso-tr.on") || {}).dataset?.tool)); await a.p.keyboard.press("Escape"); await a.p.keyboard.press("Escape"); await a.p.evaluate(() => window.__tc.remove());
     check("the drawing's tool keys pick their tool, whatever the keyboard layout, with an (i) card open", tkq.join() === "ok,ok,ok,ok,ok,pipe", tkq.join());
+    /* a slow double click (two clicks 0.7 s apart) still counts as a double click; 1.3 s apart is two single clicks */
+    await a.p.evaluate(() => { const d = document.createElement("div"); d.id = "dbt"; d.style.cssText = "position:fixed;left:5px;top:300px;width:40px;height:40px;z-index:99999"; d.ondblclick = () => d.dataset.n = +(d.dataset.n || 0) + 1; document.body.appendChild(d); });
+    const dbq = []; for (const gap of [700, 1300]){ await a.p.click("#dbt"); await a.p.waitForTimeout(gap); await a.p.click("#dbt"); await a.p.waitForTimeout(200); dbq.push(await a.p.evaluate(() => document.getElementById("dbt").dataset.n || 0)); await a.p.waitForTimeout(1200); }
+    await a.p.evaluate(() => document.getElementById("dbt").remove());
+    check("a double click may take twice as long: 0.7 s apart counts, 1.3 s apart doesn't", dbq.join() === "1,1", dbq.join());
     /* an elbow set to 45°: the run after it swings halfway and the next bend becomes a 45° the other way (an offset); the spacing stays even */
     const eq45 = await a.p.evaluate(async () => { const pid = Store.selected()[0]; let x; const P = (u, d) => ({ u, k: "it", it: "Pipe", dir: d, gl: 5 }), E = u => ({ u, k: "it", it: "Elbow, 90°" });
       Store.mutate("a:" + pid, () => { x = Store.newAction(pid, { title: "Elbow test" }); x.pip = { spec: "", lines: [{ id: "A", at: [0, 0, 0], rows: [P("q1", "E"), E("e1"), P("q2", "N"), E("e2"), P("q3", "E")] }] }; });
