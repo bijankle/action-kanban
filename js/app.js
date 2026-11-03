@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.301";
+const APP_VERSION = "1.10.302";
 const LOGO = (s, c) => '<svg class="logo" width="' + s + '" height="' + s + '" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="' + (c || "var(--thb)") + '"/><rect x="6" y="6" width="52" height="52" rx="13" fill="none" stroke="#fff" stroke-width="2.5"/><text x="29" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-weight="800" font-size="38" fill="#fff">A</text><g transform="translate(46 19)" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><line x1="0" y1="-5.5" x2="0" y2="5.5"/><line x1="-4.8" y1="-2.75" x2="4.8" y2="2.75"/><line x1="-4.8" y1="2.75" x2="4.8" y2="-2.75"/></g></svg>';
 /* fonts to pick from (View): the default, then web fonts loaded only when picked */
 const FONTS = [["default", "Default", "'Aptos',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif"], ["inter", "Inter", "'Inter',system-ui,sans-serif", "Inter:wght@400;500;600;700;800"], ["roboto", "Roboto", "'Roboto',system-ui,sans-serif", "Roboto:wght@400;500;700;900"],
@@ -420,8 +420,13 @@ const App = (() => {
        so the Desktop site setting and Chrome's zoom don't shrink or blow it up; the app's own Text size setting still works */
     const phone = () => { const s = Math.min(screen.width || 0, screen.height || 0); return s > 0 && s <= 600 && matchMedia("(pointer: coarse) and (hover: none)").matches; };
     A.mobile = phone() || matchMedia("(max-width: 760px)").matches; document.body.classList.toggle("mobile", A.mobile);
-    if (phone()){ const fit = () => { const de = document.documentElement, sw = innerWidth > innerHeight ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height), z = innerWidth / (sw || innerWidth); de.style.zoom = Math.abs(z - 1) > 0.04 ? z.toFixed(3) : ""; };
-      fit(); addEventListener("resize", fit); addEventListener("orientationchange", () => setTimeout(fit, 200)); }
+    /* (the page is always laid out 400 wide on a phone, 400 × the screen's shape on its side: the page's own width is measured with no
+       scaling, so whatever Chrome reports as the screen size, its zoom, Text scaling or Desktop site can't change the result) */
+    if (phone()){ const PW = 400, de = document.documentElement;
+      const fit = () => { const was = de.style.zoom; de.style.zoom = ""; const w = de.clientWidth || innerWidth, h = de.clientHeight || innerHeight, sw = screen.width || w, sh = screen.height || h;
+        const t = w > h ? PW * Math.max(sw, sh) / Math.min(sw, sh) : PW, z = w / t, v = Math.abs(z - 1) > 0.02 ? z.toFixed(3) : ""; if (v !== was) de.style.zoom = v; else de.style.zoom = was; };
+      fit(); [150, 600, 1500].forEach(ms => setTimeout(fit, ms)); addEventListener("resize", fit); addEventListener("pageshow", fit); addEventListener("orientationchange", () => setTimeout(fit, 200));
+      if (window.visualViewport) visualViewport.addEventListener("resize", () => { if (visualViewport.scale === 1) fit(); }); }
     const sw = lsGet("adSideW", null); if (sw) $("#main").style.setProperty("--side-w", sw + "px"); splitter(); splitterL();
     $$("[data-fico]").forEach(x => x.outerHTML = fileIco(x.dataset.fico)); $$("[data-ai]").forEach(x => x.outerHTML = aiIco()); $$("[data-upico]").forEach(x => x.outerHTML = upIco(x.dataset.upico)); $("#brand").innerHTML = LOGO(34); $("#brand").setAttribute("aria-label", "Action Database, home");   $("#boot .bl").innerHTML = LOGO(84);   // (the project box sits where the name was)
     $("#navB").onclick = Nav.back; $("#navF").onclick = Nav.fwd; Nav.btns();

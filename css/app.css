@@ -34,7 +34,10 @@ a{color:var(--accent)}
 [hidden]{display:none!important}
 
 /* boot screen */
-#boot{position:fixed;inset:0;z-index:20000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px}
+#boot{position:fixed;inset:0;z-index:20000;background:var(--bg)}
+/* (the logo sits where and as big as the phone's own launch screen shows it, the bar and words under it, so the hand over doesn't jump) */
+#boot .bl{position:absolute;left:50%;top:50%;width:168px;height:168px;transform:translate(-50%,-50%)}
+#boot .bar{position:absolute;left:50%;top:calc(50% + 124px);transform:translateX(-50%)}#boot .bt{position:absolute;left:0;right:0;text-align:center;top:calc(50% + 146px)}
 #boot .bar{width:220px;height:4px;border-radius:2px;background:var(--panel2);overflow:hidden}#boot .bar i{display:block;width:40%;height:100%;background:var(--th);border-radius:2px;animation:bootbar 1.2s ease-in-out infinite}
 @keyframes bootbar{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
 #boot .bt{color:var(--muted);font-size:var(--fl)}
