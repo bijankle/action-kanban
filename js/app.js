@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.303";
+const APP_VERSION = "1.10.304";
 /* the app's symbol (a clipboard with a tick: an action list being worked through), in the theme colour; it is the app icon everywhere
    (home screen, opening screen, browser tab, top left). LOGO_A is the old A* tile, kept for the PDF header */
 const CLIP = c => '<rect x="12" y="10" width="40" height="48" rx="6" fill="none" stroke="' + c + '" stroke-width="5"/><rect x="23" y="5" width="18" height="10" rx="3" fill="' + c + '"/><path d="M21 35 L29 43 L44 26" fill="none" stroke="' + c + '" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -313,7 +313,8 @@ const App = (() => {
     if (fo[3] && !document.getElementById("wf-" + fo[0])){ const l = document.createElement("link"); l.id = "wf-" + fo[0]; l.rel = "stylesheet"; l.href = "https://fonts.googleapis.com/css2?family=" + fo[3] + "&display=swap"; document.head.appendChild(l); }
     if (v.theme === "custom"){ const c = v.custom; r.style.setProperty("--thb", c); r.style.setProperty("--thd", "color-mix(in srgb," + c + " 78%,#000)"); r.style.setProperty("--tht", "color-mix(in srgb," + c + " 10%,#fff)"); r.style.setProperty("--th-btn", "color-mix(in srgb," + c + " 85%,#fff)"); }
     else ["--thb", "--thd", "--tht", "--th-btn"].forEach(k => r.style.removeProperty(k));
-    const fav = $('link[rel="icon"]'); if (fav){ const col = (getComputedStyle(r).getPropertyValue("--thb") || "#475569").trim(); fav.href = "data:image/svg+xml," + encodeURIComponent(LOGO(64, col.startsWith("color-mix") ? "#475569" : col).replace('class="logo" ', 'xmlns="http://www.w3.org/2000/svg" ')); } }
+    const fav = $('link[rel="icon"]'); if (fav){ const col = (getComputedStyle(r).getPropertyValue("--thb") || "#475569").trim(); const bg = col.startsWith("color-mix") ? "#475569" : col;   /* (the browser tab and bookmark: a white clipboard on a tile of the theme colour) */
+      fav.href = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="' + bg + '"/><g transform="translate(32 32) scale(.7) translate(-32 -32)">' + CLIP("#fff") + '</g></svg>'); } }
   function viewMenu(drop){ const v = viewGet();
     drop.innerHTML = '<div class="mi-sub">Theme colour</div><div class="thp">' + THEMES.map(([id, n, c]) => '<button type="button" data-th="' + id + '" title="' + n + '" style="--c:' + c + '"' + (v.theme === id ? ' class="on"' : "") + '></button>').join("") + '<label class="thp-c' + (v.theme === "custom" ? " on" : "") + '" title="Make your own colour"><input type="color" value="' + esc(v.custom) + '"><span>Custom</span></label></div>'
       + '<div class="mi-sub">Appearance</div><div class="mi-seg"><button type="button" data-d="0"' + (!v.dark ? ' class="on"' : "") + '>Light</button><button type="button" data-d="1"' + (v.dark ? ' class="on"' : "") + '>Dark</button></div>'
