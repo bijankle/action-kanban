@@ -1,6 +1,7 @@
 {
   "name": "Action Database",
   "short_name": "Actions",
+  "id": "/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

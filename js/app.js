@@ -1,6 +1,6 @@
 /* Start up, the header (menus, project box, tabs, save light), settings and keyboard shortcuts. */
 "use strict";
-const APP_VERSION = "1.10.304";
+const APP_VERSION = "1.10.305";
 /* the app's symbol (a clipboard with a tick: an action list being worked through), in the theme colour; it is the app icon everywhere
    (home screen, opening screen, browser tab, top left). LOGO_A is the old A* tile, kept for the PDF header */
 const CLIP = c => '<rect x="12" y="10" width="40" height="48" rx="6" fill="none" stroke="' + c + '" stroke-width="5"/><rect x="23" y="5" width="18" height="10" rx="3" fill="' + c + '"/><path d="M21 35 L29 43 L44 26" fill="none" stroke="' + c + '" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>';

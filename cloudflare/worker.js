@@ -100,6 +100,11 @@ export default {
       return new Response(r.body, { headers: fileHeaders(o.n || o.p.split("/").pop(), r, "private, max-age=86400") }); }
 
     /* ---------- everything else needs a sign in ---------- */
+    /* the app's install details and icons are open to all (no data in them): Chrome reads the manifest without the sign in cookie, and
+       Google's install service fetches the icons from outside, so behind the sign in the phone only gets a shortcut, not an installed app */
+    if (m === "GET" && /^\/(manifest\.json|icon[\w-]*\.(png|svg)|sym\.svg|apple-touch-icon\.png|favicon\.ico)$/.test(p)){
+      const o = (env.APP_ORIGIN || "https://bijankle.github.io/action-kanban").replace(/\/+$/, ""), r = await fetch(o + p, { cf: { cacheTtl: 300 } });
+      return new Response(r.body, { status: r.status, headers: { "Content-Type": p.endsWith(".json") ? "application/manifest+json" : r.headers.get("Content-Type") || "application/octet-stream", "Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*" } }); }
     const who = await me();
     if (!who){ if (p.startsWith("/api/")) return json({ message: "Sign in again" }, 401); return new Response(null, { status: 302, headers: { Location: "/login" + (p === "/" || p === "/index.html" ? "" : "?next=" + encodeURIComponent(p + url.search)) } }); }
     const isAdmin = who.email === admin;
